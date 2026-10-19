@@ -227,7 +227,7 @@ export async function loadReengagementCandidates(
       candidates.push({
         userEmail: email,
         reason: "draft_note",
-        title: "쓰다 만 임장노트가 있어요",
+        title: "작성 중인 임장노트",
         body:
           myDrafts.length === 1
             ? `${named}임장노트가 아직 작성 중이에요.`
@@ -246,7 +246,7 @@ export async function loadReengagementCandidates(
       candidates.push({
         userEmail: email,
         reason: "watchlist_idle",
-        title: "담아둔 관심 단지가 있어요",
+        title: "관심 단지 소식",
         body:
           myWatch.length === 1
             ? `${named}을(를) 관심 단지로 담아 두셨어요.`

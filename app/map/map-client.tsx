@@ -124,7 +124,7 @@ const MAP_TOUR_STEPS: CoachmarkStep[] = [
     target: "map-price-panel",
     keepIfMissing: true,
     title: "금액은 실거래가 평균",
-    body: "지도와 목록의 금액은 국토교통부 실거래가 평균이에요. 매물 호가와 다른 값이에요.",
+    body: "지도·목록 금액은 국토교통부 실거래가 평균 · 매물 호가와 다름",
   },
 ];
 
@@ -5296,7 +5296,7 @@ export function MapClient({
           )}
           {txType === "rent" && (
             <div className="px-5 pb-1.5 t-caption text-text-3">
-              목록 가격은 매매 실거래 평균이에요. 전세 보증금은 지도 마커에 표시돼요.
+              목록 가격은 매매 실거래 평균 · 전세 보증금은 지도 마커
             </div>
           )}
           {!danjiLoadFailed && (rangeActive || commuteActive || cxOn) && filteredDanji.length === 0 && (

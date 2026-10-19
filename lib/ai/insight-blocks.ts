@@ -150,7 +150,7 @@ export function riskFlags(ctx: LiveToolContext): RiskFlag[] {
     flags.push({
       key: "liquidity",
       level: "warn",
-      title: "거래가 드물어요",
+      title: "거래 드묾",
       detail: `지역 한 달 거래 ${snap.tradeCount}건이에요. 팔고 싶을 때 바로 못 팔 수 있어요.`,
     });
   }
@@ -161,7 +161,7 @@ export function riskFlags(ctx: LiveToolContext): RiskFlag[] {
     flags.push({
       key: "wolse",
       level: "info",
-      title: "월세 계약이 많아요",
+      title: "월세 계약 비중 높음",
       detail: `신고 기준 월세 비중 ${ctx.rent.wolseSharePct}%예요. 전세를 끼고 사는 계산이 빠듯해질 수 있어요.`,
     });
   }
@@ -169,7 +169,7 @@ export function riskFlags(ctx: LiveToolContext): RiskFlag[] {
     flags.push({
       key: "supply",
       level: "warn",
-      title: "입주 물량이 많아요",
+      title: "입주 물량 많음",
       detail: `앞으로 입주 ${ctx.supply.upcomingHouseholds.toLocaleString("ko-KR")}세대예요. 입주 무렵 전세·매매 가격이 흔들릴 수 있어요.`,
     });
   }
@@ -178,7 +178,7 @@ export function riskFlags(ctx: LiveToolContext): RiskFlag[] {
     flags.push({
       key: "unsold",
       level: "warn",
-      title: "미분양이 쌓였어요",
+      title: "미분양 누적",
       detail: `미분양 ${unsold.toLocaleString("ko-KR")}호예요. 새 아파트가 잘 안 팔리는 지역이에요.`,
     });
   }
@@ -189,7 +189,7 @@ export function riskFlags(ctx: LiveToolContext): RiskFlag[] {
     flags.push({
       key: "gapRisk",
       level: "warn",
-      title: "전세가율이 높아요",
+      title: "전세가율 높음",
       detail: `전세가율 ${snap.jeonseRatio}%예요. 집값이 조금만 내려도 전세금 돌려주기가 어려워질 수 있어요.`,
     });
   }

@@ -925,14 +925,14 @@ function Details({
           </div>
           <div className="flex flex-wrap items-center gap-2 t-sub text-text-2">
             {feedback === "sent" ? (
-              "의견 고마워요. 다음 판에 반영할게요."
+              "의견 반영 · 다음 결과에 적용"
             ) : (
               <>
                 <span className="font-bold">이 결과가 도움이 됐나요?</span>
-                <button type="button" aria-label="도움 됐어요" aria-busy={feedback === "busy"} disabled={feedback === "busy"} onClick={() => void sendFeedback("up")} className="btn-secondary btn-md px-3 disabled:opacity-60">
+                <button type="button" aria-label="도움됨" aria-busy={feedback === "busy"} disabled={feedback === "busy"} onClick={() => void sendFeedback("up")} className="btn-secondary btn-md px-3 disabled:opacity-60">
                   <Icon name="thumbs-up" size={16} />
                 </button>
-                <button type="button" aria-label="아쉬워요" aria-busy={feedback === "busy"} disabled={feedback === "busy"} onClick={() => void sendFeedback("down")} className="btn-secondary btn-md px-3 disabled:opacity-60">
+                <button type="button" aria-label="도움 안 됨" aria-busy={feedback === "busy"} disabled={feedback === "busy"} onClick={() => void sendFeedback("down")} className="btn-secondary btn-md px-3 disabled:opacity-60">
                   <Icon name="thumbs-down" size={16} />
                 </button>
                 <input

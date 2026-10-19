@@ -65,7 +65,8 @@ export function GlossarySearch({ groups }: { groups: GlossaryGroupData[] }) {
             <a
               key={g.category}
               href={`#${encodeURIComponent(g.category)}`}
-              className="rounded-full border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1"
+              /* [1079] 폰 실측 31px → 40px(PC 32px) — 손으로 만든 알약이라 .chip 의 터치 규칙 밖이었다 */
+              className="inline-flex min-h-10 items-center rounded-full border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1 md:min-h-8"
             >
               {g.category} {g.terms.length}
             </a>

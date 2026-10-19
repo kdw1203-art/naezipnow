@@ -191,7 +191,7 @@ export default async function TemperatureRegionPage({
             기록이 쌓입니다.
             <br />
             <Link href="/analysis/timing" className="font-bold text-primary underline">
-              지금 이 순간의 시장 온도 보기
+              현재 시장 온도 보기
             </Link>
           </p>
         </section>

@@ -179,7 +179,7 @@ test("T5 다이제스트 — 뉴스 항목에 href·사진·원문, 메일은 �
   assert.match(verify, /AbortController/);
   assert.doesNotMatch(cron, /주요 지역 시세/);
   const page = code("app/digest/(index)/page.tsx");
-  assert.match(page, /<DigestThumb src=\{n\.imageUrl\}/);
+  assert.match(page, /\{n\.imageUrl && <DigestThumb src=\{newsThumbPath\(n\.id\)\}/); // [1079] 원본 → 글 id 썸네일 라우트
   assert.match(page, /href=\{n\.sourceUrl\}/);
   assert.doesNotMatch(page, /주요 지역 시세/);
 

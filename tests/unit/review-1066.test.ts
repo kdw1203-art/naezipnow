@@ -73,7 +73,7 @@ test("Y3 h1 하나 — 스켈레톤 머리는 h2, 부품의 기본값은 h1 그�
   const SKELETONS: [string, RegExp][] = [
     ["app/apply/loading.tsx", /<TownHero as="h2"/],
     ["app/auctions/loading.tsx", /<TownHero as="h2"/],
-    ["app/qna/loading.tsx", /<TownHero as="h2"/],
+    ["app/qna/loading.tsx", /<PageHead icon="help" title="단지 Q&A" sub="단지별 질문 · 답변" as="h2"/], // [1079] 보관 영역 — PageHead 직접
     ["app/redevelopment/(index)/loading.tsx", /<TownHero as="h2"/],
     ["app/supply/loading.tsx", /<TownHero as="h2"/],
     ["app/town/news/(index)/loading.tsx", /<NewsHead as="h2"/],

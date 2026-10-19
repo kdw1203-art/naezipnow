@@ -256,13 +256,13 @@ export function DevDealsListClient({
           <div className="flex flex-wrap gap-1.5">
             <Link
               href="/dev-deals/partners"
-              className="glass rounded-full px-3.5 py-2 t-sub font-bold text-text-1 no-underline press"
+              className="glass inline-flex min-h-10 items-center rounded-full px-3.5 py-2 t-sub font-bold text-text-1 no-underline press md:min-h-8"
             >
               협력업체 디렉토리
             </Link>
             <Link
               href="/dev-deals/fees"
-              className="glass rounded-full px-3.5 py-2 t-sub font-bold text-primary no-underline press"
+              className="glass inline-flex min-h-10 items-center rounded-full px-3.5 py-2 t-sub font-bold text-primary no-underline press md:min-h-8"
             >
               수수료 안내
             </Link>

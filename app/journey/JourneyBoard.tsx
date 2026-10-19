@@ -332,8 +332,8 @@ export function JourneyBoard() {
     if (countDone(next) === total) {
       showMoment({
         kind: "celebrate",
-        title: "여정 완주",
-        subtitle: "여섯 단계를 모두 체크했어요.",
+        title: "6단계 완료",
+        subtitle: "내 집 마련 여정 6단계 전부 완료",
         pill: "내 집 마련 여정 완료",
       });
       return;

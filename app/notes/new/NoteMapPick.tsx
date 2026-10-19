@@ -229,7 +229,7 @@ export function NoteMapPick({
           type="button"
           onClick={toggle}
           aria-expanded={open}
-          className="shrink-0 py-[5px] t-sub font-bold text-primary"
+          className="tap-line shrink-0 py-[5px] t-sub font-bold text-primary"
         >
           {open ? "접기" : "펼치기"}
         </button>

@@ -11,6 +11,7 @@ import { logger } from "@/lib/log";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { newsHref, storyHref } from "@/lib/town/post-href";
 import { DigestThumb } from "../DigestThumb";
+import { newsThumbPath } from "@/lib/news/thumb";
 
 export const metadata = buildPageMetadata({
   title: "주간 다이제스트",
@@ -160,7 +161,7 @@ export default async function DigestPage() {
           {/* [1061] 원문 사진 썸네일(있을 때만 · 실패하면 상자째 사라짐) + 제목은 우리 뉴스 상세(정식 경로) + 원문 링크 */}
           {news.map((n) => (
             <div key={n.id} className="-mx-1 flex items-start gap-3 rounded-lg px-1 py-1">
-              {n.imageUrl && <DigestThumb src={n.imageUrl} href={n.href || newsHref(n.id)} />}
+              {n.imageUrl && <DigestThumb src={newsThumbPath(n.id)} href={n.href || newsHref(n.id)} />}
               <div className="min-w-0 flex-1">
                 <Link href={n.href || newsHref(n.id)} className="tap-line group press block no-underline">
                   <div className="t-sub font-bold text-ink group-hover:text-primary">{n.title}</div>

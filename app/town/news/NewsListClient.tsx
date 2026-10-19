@@ -18,6 +18,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@/app/components/Icon";
 import { CoverImage } from "@/app/components/CoverImage";
 import { findNewsRegionChip, type NewsRegionChip } from "@/lib/town/news-regions";
+import { newsThumbPath } from "@/lib/news/thumb";
 import { NEWS_LIST_PAGE, type NewsCategoryTab, type NewsRow } from "@/lib/town/news-row";
 
 /* 칩 전환은 서버 왕복 없는 얕은 URL 갱신으로 한다. Next 14.1+ 는
@@ -81,14 +82,15 @@ function NewsRowView({ row, lead = false }: { row: NewsRow; lead?: boolean }) {
     <article className={`news-row news-row--thumb ${lead ? "news-row--lead" : ""}`}>
       <Link href={`/town/news/${row.id}`} className="news-row__thumb block bg-divider" tabIndex={-1} aria-hidden="true">
         {thumb ? (
+          /* [1079] 원본(매체 og:image · 최대 3.3MB)이 아니라 글 id 로 받는 176×132 webp(/api/town/news/thumb) —
+             폰 한 번에 8.5MB 받던 목록이 수백 KB 로. 원본 주소가 없는 글은 종전처럼 요청하지 않는다(row.image 조건). */
           <CoverImage
-            src={row.image}
+            src={newsThumbPath(row.id)}
             /* [1066 · 이미지 설명] 운영 실측 2026-10-13: /town/news 의 <img> 40장 전부 alt="" 였다 —
                이미지 검색에 한 장도 잡히지 않는다. 이 썸네일 링크는 aria-hidden 장식(제목 링크가 옆에 있다)이라
                읽기 보조기기에는 영향이 없고, 크롤러만 이 문장을 읽는다. 기사 제목 그대로 — 없는 말을 붙이지 않는다. */
             alt={row.title}
             imgClassName="absolute inset-0 h-full w-full object-cover"
-            sizes="88px"
             fallback={thumbFallback}
             onFailed={() => setThumbFailed(true)}
           />

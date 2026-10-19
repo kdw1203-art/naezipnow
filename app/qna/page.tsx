@@ -5,7 +5,7 @@ import { Icon } from "@/app/components/Icon";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
-import { TownHero } from "@/app/town/TownHero";
+import { PageHead } from "@/app/components/PageHead";
 import { listQuestions } from "@/lib/qna/store";
 import { complexHrefKey, resolveComplexHrefs } from "@/lib/newui/complex-link";
 import { seoAlternates } from "@/lib/seo/alternates";
@@ -100,7 +100,9 @@ export default async function QnaListPage() {
        브레드크럼 "동네이야기 › …" + 카테고리 줄 + TownPageHead(아이콘 칩·제목·한 줄).
        PageShell title(맨 h1)은 이 패턴 밖이었다. */
     <PageShell breadcrumb="동네이야기 › 단지 Q&A" wide>
-      <TownHero href="/qna" />
+      {/* [1079] /qna 는 보관 영역(lib/seo/archived-routes · 카테고리 목록에 없음)이라 TownHero 가 아무것도 그리지 않았다 —
+          운영 실측 h1 0 · 제목 없이 카테고리 줄 아래 바로 검색 칸. 보관은 그대로(메뉴·색인 없음) 두고 머리 한 줄만 직접 그린다. */}
+      <PageHead icon="help" title="단지 Q&A" sub="단지별 질문 · 답변" className="mb-4" />
       <TownCategoryNav stick />
 
       <div className={QNA_THEME_CLASS}>

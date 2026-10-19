@@ -10,6 +10,7 @@ import { getWeeklyDigest, type WeeklyDigest } from "@/lib/newui/digest";
 import { NEWS_TAGS } from "@/lib/news/tags";
 import { NewsListClient } from "../NewsListClient";
 import { CoverImage } from "@/app/components/CoverImage";
+import { newsThumbPath } from "@/lib/news/thumb";
 import { NewsAlertSubscribe } from "../NewsAlertSubscribe";
 import { ErrorState } from "@/app/components/ui";
 import { logger } from "@/lib/log";
@@ -169,7 +170,7 @@ export default async function TownNewsPage() {
                       </span>
                       {r.image && (
                         <span className="relative h-[52px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-divider">
-                          <CoverImage src={r.image} alt="" sizes="72px" imgClassName="absolute inset-0 h-full w-full object-cover" />
+                          <CoverImage src={newsThumbPath(r.id)} alt="" imgClassName="absolute inset-0 h-full w-full object-cover" />
                         </span>
                       )}
                     </Link>

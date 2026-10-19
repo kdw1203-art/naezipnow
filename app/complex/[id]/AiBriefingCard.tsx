@@ -139,7 +139,7 @@ export function AiBriefingCard({
           {draft.todo.length > 0 && (
             <div>
               {/* [1012 · 규칙 8] 800 → 700 */}
-              <div className="t-sub font-bold text-text-1">현장에서 확인할 것</div>
+              <div className="t-sub font-bold text-text-1">현장 확인 사항</div>
               <ul className="mt-1 flex flex-col gap-1">
                 {draft.todo.slice(0, 5).map((t, i) => (
                   /* [1012 · 규칙 4] "☐" 활자 → 선 아이콘(빈 네모). Icon.tsx 에 square 가 없어 같은

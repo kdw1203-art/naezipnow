@@ -430,8 +430,8 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
         /* [961] 환영 장면 — 네이비 면에 온점 도장 + 슬로건(인터랙션 라이브러리 03).
            로그인이 단순 통과가 아니라 맞이함이 된다. */
         showMoment({
-          title: "다시 오셨네요",
-          subtitle: "기록해 둔 임장노트를 이어서 볼 수 있어요",
+          title: "로그인 완료",
+          subtitle: "저장한 임장노트 · 관심 단지 · 알림 이어서",
           kind: "welcome",
         });
         router.push(resolveCallbackUrl());

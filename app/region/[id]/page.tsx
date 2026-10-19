@@ -1342,7 +1342,7 @@ export default async function RegionHubPage({
         >
           <span className="min-w-0 flex-1">
             <span className="block t-body font-bold text-ink">{name} 실시간 토론</span>
-            <span className="mt-0.5 block t-sub text-text-3">한 줄 이야기 · 지수 · 거래 · 뉴스 소식</span>
+            <span className="mt-0.5 block t-sub text-text-3">요약 · 지수 · 거래 · 뉴스</span>
           </span>
           <span aria-hidden="true" className="t-body text-text-3">
             ›

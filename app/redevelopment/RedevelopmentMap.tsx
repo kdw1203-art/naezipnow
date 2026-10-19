@@ -216,7 +216,7 @@ export function RedevelopmentMap({
             type="button"
             onClick={() => setTypePanelOpen((v) => !v)}
             aria-expanded={typePanelOpen}
-            className={`press inline-flex items-center gap-1.5 rounded-full border px-3.5 py-2 t-body font-bold ${
+            className={`press inline-flex min-h-10 items-center gap-1.5 rounded-full border px-3.5 py-2 t-body font-bold md:min-h-9 ${
               typePanelOpen || types.size > 0
                 ? "border-primary bg-primary-soft text-primary"
                 : "border-line bg-surface text-text-1"
@@ -237,7 +237,7 @@ export function RedevelopmentMap({
           <button
             type="button"
             onClick={handleReset}
-            className="press ml-auto inline-flex items-center gap-1 rounded-full border border-line bg-surface px-3 py-2 t-sub font-semibold text-text-2"
+            className="press ml-auto inline-flex min-h-10 items-center gap-1 rounded-full border border-line bg-surface px-3 py-2 t-sub font-semibold text-text-2 md:min-h-9"
           >
             <Icon name="x" size={13} />
             초기화

@@ -20,8 +20,9 @@ test("[1038 · 1·4·5·8·9·10] 노트 상세 — 링+레이더 · 점 3개 ·
   assert.match(page, /bg-current" : "bg-line"/); // 항목 평가 점
   assert.match(page, /border-l-4 border-success/);
   assert.match(page, /border-l-4 border-danger/);
-  assert.match(page, /v\.aiBadge\.startsWith\("규칙"\) && v\.totalScore != null \? \(/);
-  assert.match(page, /<ScoreRing score=\{v\.totalScore\} size=\{72\}/);
+  /* [1078] 규칙 기반 "요약" 남색 판(링 72 + 칩)은 맨 위 판단 카드와 같은 수라 그리지 않는다 — AI 모델 요약일 때만 AIPanel */
+  assert.match(page, /const aiSummaryPanel = v\.aiBadge\.startsWith\("규칙"\) \? \(/);
+  assert.doesNotMatch(page, /<ScoreRing score=\{v\.totalScore\} size=\{72\}/);
   assert.doesNotMatch(page, /conic-gradient/); // 레일 링도 SVG
   assert.ok(page.includes("/^(.+?)\\s(\\S+?)→(\\S+)$/.exec(c)")); // 재방문 표 파서
   assert.match(page, /fd\.subwayWalkMin/);

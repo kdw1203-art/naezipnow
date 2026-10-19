@@ -3,6 +3,7 @@ import { Icon } from "@/app/components/Icon";
 import type { HomeNewsItem, HomeStoryItem } from "@/lib/newui/home-data";
 import { storyHref, newsHref } from "@/lib/town/post-href";
 import { CoverImage } from "@/app/components/CoverImage";
+import { newsThumbPath } from "@/lib/news/thumb";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
 
 /* ============================================================
@@ -43,7 +44,8 @@ export function HomeTownBlock({
       aria-label="동네이야기와 뉴스룸"
     >
       {/* ── 동네이야기 — 사람의 기록 ───────────────────────────────── */}
-      <div className={storiesEmpty ? "card flex flex-col gap-2 rounded-2xl px-4 py-3 md:col-span-2 md:flex-row md:items-center md:gap-3" : "card flex flex-col gap-2 rounded-2xl px-4 py-4"}>
+      {/* [1078] 0건 띠는 뉴스룸(내용 있음) 아래로(order-2) — 빈 칸이 내용 있는 칸보다 먼저 서지 않게 */}
+      <div className={storiesEmpty ? "order-2 card flex flex-col gap-2 rounded-2xl px-4 py-3 md:col-span-2 md:flex-row md:items-center md:gap-3" : "card flex flex-col gap-2 rounded-2xl px-4 py-4"}>
         <div className="flex items-center justify-between gap-2">
           {/* [1015 · 규칙 C] 제목 옆 부연("사람의 기록") 삭제 — 소유자 지시 */}
           <h2 className="t-section text-ink">동네이야기</h2>
@@ -142,7 +144,7 @@ export function HomeTownBlock({
                 <Link href={newsHref(n.id)} className="flex items-center gap-3 py-2 no-underline">
                   {n.image && (
                     <span className="relative h-[52px] w-[72px] shrink-0 overflow-hidden rounded-lg bg-divider">
-                      <CoverImage src={n.image} alt={n.title} sizes="72px" imgClassName="absolute inset-0 h-full w-full object-cover" />
+                      <CoverImage src={newsThumbPath(n.id)} alt={n.title} imgClassName="absolute inset-0 h-full w-full object-cover" />
                     </span>
                   )}
                   <span className="flex min-w-0 flex-1 flex-col gap-0.5">

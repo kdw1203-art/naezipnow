@@ -224,7 +224,7 @@ export default async function TemperatureHubPage() {
             </div>
             <p className="mt-3 t-body text-text-2">아직 쌓인 주가 없습니다.</p>
             <Link href="/analysis/timing" className="inline-flex min-h-10 items-center t-sub font-bold text-primary no-underline">
-              지금 이 순간의 시장 온도 보기 ›
+              현재 시장 온도 보기 ›
             </Link>
           </section>
         ) : (

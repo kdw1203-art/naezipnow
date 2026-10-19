@@ -104,7 +104,7 @@ export function AiPendingCard({
         </div>
       ) : (
         <div role="status" aria-live="polite" className="flex flex-col gap-1.5">
-          <p className="t-body font-bold text-white">AI 정리가 늦어지고 있어요</p>
+          <p className="t-body font-bold text-white">AI 정리 지연 중</p>
           <p className="t-sub text-ai-muted">
             노트는 저장돼 있어요. 서버가 바쁘거나 요청이 전달되지 않았을 수 있어요.{" "}
             {canRetry
@@ -117,7 +117,7 @@ export function AiPendingCard({
             onClick={() => setPhase("dismissed")}
             className="press mt-1 inline-flex min-h-[40px] w-fit items-center rounded-lg bg-white/10 px-3 py-2 t-sub font-bold text-ai-text"
           >
-            나중에 볼게요
+            나중에 보기
           </button>
         </div>
       )}

@@ -47,10 +47,10 @@ test("임장노트 — 표 · 폰 격자: 첫 누름 펼침(피드 카드) · �
   /* [1052] 펼친 칸에 role=region · Esc 접기가 붙었다 */
   assert.match(f, /<td\s+colSpan=\{span\}\s+className="bg-bg p-2 md:p-3"[\s\S]{0,500}?<PostCard n=\{n\} \/>/, "펼친 줄 = 피드 카드 그대로");
   assert.match(f, /if \(isOpen\) router\.push\(href\);/, "링크 밖을 다시 눌러도 노트");
-  assert.match(f, /grid grid-flow-row-dense grid-cols-3/, "격자 — 누른 줄 아래에 펼침");
-  /* [1054] 첫 줄 세 칸 priority(LCP 가 두 번째 타일 사진이었다) */
-  assert.match(f, /<GridTile n=\{n\} priority=\{i < 3\} open=\{gridOpen === n\.id\} onOpen=\{\(\) => setGridOpen\(n\.id\)\} \/>/);
-  assert.match(f, /className="col-span-3 bg-bg px-2 pb-1 pt-2">\s*<PostCard n=\{n\} \/>/);
+  assert.match(f, /grid grid-flow-row-dense grid-cols-2/, "격자 — 누른 줄 아래에 펼침([1078] 3열 → 2열)");
+  /* [1054] 첫 줄 priority(LCP 가 두 번째 타일 사진이었다) · [1078] 2열이라 첫 줄 두 칸 */
+  assert.match(f, /<GridTile n=\{n\} priority=\{i < 2\} open=\{gridOpen === n\.id\} onOpen=\{\(\) => setGridOpen\(n\.id\)\} \/>/);
+  assert.match(f, /className="col-span-2 bg-bg px-2 pb-1 pt-2">\s*<PostCard n=\{n\} \/>/);
   assert.match(f, /접기 ▴/);
   assert.match(f, /노트 열기 ›/, "펼친 줄 · 펼친 타일에 다음 동작");
 });

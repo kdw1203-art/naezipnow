@@ -50,7 +50,7 @@ export default function ExplainSheet({
         )}
         {howList.length > 0 && (
           <div className="rounded-xl bg-bg px-3.5 py-3">
-            <div className="t-sub font-bold text-text-2">이 화면은 이렇게 계산했어요</div>
+            <div className="t-sub font-bold text-text-2">계산 방법</div>
             <ul className="mt-1.5 flex flex-col gap-1 t-sub text-text-1 break-words">
               {howList.map((p, i) => (
                 <li key={i} className="flex gap-1.5">

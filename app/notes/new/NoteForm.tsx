@@ -3085,8 +3085,8 @@ export function NoteForm({
                   시간대: timeSlotFromClock(),
                 }));
               }}
-              /* [989] 실측 세로 18px — 칩 줄 옆에 붙는 텍스트 버튼이라 24px 로만 키운다 */
-              className="shrink-0 py-1 t-sub font-bold text-primary"
+              /* [989] 실측 세로 18px — 칩 줄 옆에 붙는 텍스트 버튼이라 24px 로만 키운다 · [1079] 폰은 .tap-line(32px) */
+              className="tap-line shrink-0 py-1 t-sub font-bold text-primary"
             >
               지금 시간대
             </button>

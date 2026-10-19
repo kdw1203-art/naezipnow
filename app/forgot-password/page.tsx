@@ -112,8 +112,8 @@ export default function ForgotPasswordPage() {
       style={{ paddingTop: "max(20px, env(safe-area-inset-top, 0px))" }}
     >
       <div className="flex justify-end">
-        {/* [966] .tap — ✕ 링크 주변 8px 까지 눌린다 */}
-        <Link href={loginHref} className="tap text-[15px] text-text-3" aria-label="닫기">
+        {/* [966] .tap — ✕ 링크 주변 8px 까지 눌린다 · [1079] 로그인·가입 화면과 같은 40×40 실상자(폰 실측 23px) */}
+        <Link href={loginHref} className="-mr-[12px] -mt-[12px] inline-flex h-10 w-10 items-center justify-center text-[15px] text-text-3" aria-label="닫기">
           ✕
         </Link>
       </div>
@@ -244,7 +244,7 @@ export default function ForgotPasswordPage() {
             비었다(min-h-dvh). 폼 바로 아래로 올린다 — 스페이서는 그 아래에 남겨 상단 정렬 유지. */}
         <div className="rise-in-5 mt-2 text-center text-xs text-text-3">
           비밀번호를 기억한다면{" "}
-          <Link href={loginHref} className="font-bold text-primary">
+          <Link href={loginHref} className="tap-line font-bold text-primary">
             로그인
           </Link>
         </div>

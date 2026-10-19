@@ -224,7 +224,7 @@ test("D7 쿠키 배너 — 서버 HTML 에 있고(data-cc 로 숨김) · 동의 
 test("D7 목록 상태 — 노트 실패≠없음 · 동네 ?mine=1 · 재설정 링크 확인 실패 · 홈 검색 실패 · 카운트업 새 값 · 롤링 터치", () => {
   const notes = read("app/notes/notes-feed-client.tsx");
   assert.match(notes, /\) : activeLoadError \? \(\s*\/\*[^*]*\*\/\s*null/);
-  assert.match(notes, /priority=\{i < 3\}/);
+  assert.match(notes, /priority=\{i < 2\}/); /* [1078] 폰 격자 2열 — 첫 줄 두 칸 eager */
   const feed = read("app/town/feed-client.tsx");
   assert.match(feed, /\(mineCount > 0 \|\| onlyMine\)/);
   assert.match(feed, /if \(onlyMine && myRegions !== null && myRegions\.length === 0\) setOnlyMine\(false\)/);

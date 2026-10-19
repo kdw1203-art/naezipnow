@@ -330,7 +330,7 @@ export function HomeTodayLine({
         /* [1054] 폰 배율에서 24px 단추가 24px 그대로(px 값)라 40px 하한 아래였다(운영 실측). 높이를 40px 로 올리고
             자란 16px 은 위 6 · 아래 10px 음수 여백으로 되돌린다 — 점의 자리는 그대로, 아래는 카드 패딩(12px) 안,
             위는 큰 슬라이드 링크의 끝 6px 만 겹친다. 폭은 28px(점 사이가 좁아 40 으로 벌리면 셋이 겹친다). */
-        <div ref={tabsRef} role="tablist" aria-label="오늘의 한 줄 넘기기" className="-mb-[10px] -mt-[6px] flex items-center gap-1">
+        <div ref={tabsRef} role="tablist" aria-label="오늘의 시장 넘기기" className="-mb-[10px] -mt-[6px] flex items-center gap-1">
           {slides.map((s, n) => (
             <button
               key={s.key}

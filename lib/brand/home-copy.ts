@@ -80,10 +80,10 @@ export const HOME_AI_BRIEFING_LABEL = "오늘의 시장 브리핑";
  * 같은 판에 Q 가 만든 "실거래가 게임"(app/quiz)이다.
  * 서버 렌더·클라이언트 JS 없음(app/components/home/HomeStartDoors.tsx).
  */
-export const HOME_START_DOORS_TITLE = "어디서부터 시작할까요?";
+export const HOME_START_DOORS_TITLE = "시작 지점";
 export const HOME_START_DOORS = [
-  { title: "구경하러 왔어요", sub: "실거래가 게임", href: "/quiz", icon: "compass" },
-  { title: "후보가 있어요", sub: "단지 종합 진단", href: "/analysis/ai/ai-diagnosis", icon: "target" },
-  { title: "계약을 앞두고 있어요", sub: "계약·잔금 일정표", href: "/journey/contract", icon: "key" },
-  { title: "처음부터 차근차근", sub: "내 집 마련 여정 6단계", href: "/journey", icon: "footprints" },
+  { title: "둘러보기", sub: "실거래가 게임", href: "/quiz", icon: "compass" },
+  { title: "후보 단지 진단", sub: "단지 종합 진단", href: "/analysis/ai/ai-diagnosis", icon: "target" },
+  { title: "계약 준비", sub: "계약·잔금 일정표", href: "/journey/contract", icon: "key" },
+  { title: "처음부터 단계별로", sub: "내 집 마련 여정 6단계", href: "/journey", icon: "footprints" },
 ] as const;

@@ -170,6 +170,8 @@ export default async function TownRegionHomePage({
   })();
   const nearbyMax = nearbyTop.reduce((m, r) => Math.max(m, r.avg), 0);
   const postsFailed = postsR.status === "rejected";
+  /* [1078] 이웃 글 0건(실패 아님) — 빈 블록을 공개 임장노트 아래로 */
+  const storiesEmpty = !postsFailed && communityPosts.length === 0;
   /* [970 · C-17] "다른 동네" 접기에서 기본으로 펼칠 시·도 = 지금 보는 동네의 시·도 */
   const ownCity = cityOfRegion(id);
 
@@ -310,7 +312,9 @@ export default async function TownRegionHomePage({
       )}
 
       {/* [1044] 2단(이웃 글 | 이 동네 뉴스) → 이웃 글 한 단. 뉴스 칸이 빠져 격자가 필요 없다 */}
-      <div>
+      {/* [1078] 이웃 글이 0건이면 빈 카드가 공개 임장노트(내용 있음)보다 위에 섰다(운영 실측) → 빈 블록은 아래로(order) · 한 줄로 */}
+      <div className="flex flex-col">
+      <div className={storiesEmpty ? "order-2 mt-6 max-md:mt-3" : ""}>
         {/* 이웃 글 — 사람의 기록. 이야기 카드 규칙(.story-*): 작성자가 먼저, 그다음 제목·댓글·사진
             [1015] 제목 옆 "사람의 기록"·"뉴스룸" 부연 라벨을 걷었다(소유자 지시 4 · 브리프 규칙 C). 행 목록은
             리퀴드 판 hanji(사람이 쓴 글). 행 메타는 당근 동네 글 카드 순서(작성자 · N시간 전 · 공감 · 댓글 · 사진). */}
@@ -329,12 +333,12 @@ export default async function TownRegionHomePage({
 이웃 글 불러오기 실패 · 잠시 후 다시
             </div>
           ) : communityPosts.length === 0 ? (
-            <div className="story-card flex flex-col items-start gap-2 px-5 py-6 max-md:px-3.5 max-md:py-4">
-              {/* [970 · C-20] 해요체 통일 · [1006] 0건은 0건이라고 — 지어낸 글 없음 · [1015] 한 줄로 */}
-              <p className="t-body text-text-2">{region.name} 이웃 글 없음</p>
+            /* [1006] 0건은 0건이라고 — 지어낸 글 없음 · [1078] 큰 빈 카드 → 한 줄(글 + 링크) */
+            <div className="card flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3 max-md:px-3.5">
+              <p className="m-0 t-body text-text-2">{region.name} 이웃 글 없음</p>
               <Link
                 href={`/town/write?region=${encodeURIComponent(region.name)}`}
-                className="btn-soft rounded-lg px-3.5 py-2 t-sub font-bold"
+                className="tap-line t-sub font-bold text-primary no-underline"
               >
                 첫 이야기 쓰기 ›
               </Link>
@@ -392,7 +396,7 @@ export default async function TownRegionHomePage({
       {/* 공개 임장노트
           [1015] 카드 왼쪽에 44px 정사각 썸네일(noteCoverUrl — 템플릿/첫 사진, 없으면 단색 칸)을 붙였다(브리프 규칙 H).
           정사각 자리라 wide 판은 필요 없다. "Lab 데이터"·"직접방문" 배지는 걷고 작성자 이름을 메타 줄에 둔다(규칙 C). */}
-      <section className="rise-in-3 mt-6 max-md:mt-3">
+      <section className={`rise-in-3 ${storiesEmpty ? "order-1" : "mt-6 max-md:mt-3"}`}>
         <div className="mb-2 flex items-baseline justify-between px-1">
           <h2 className="t-section text-ink">
             {region.name} 공개 임장노트{" "}
@@ -453,6 +457,7 @@ export default async function TownRegionHomePage({
           </div>
         )}
       </section>
+      </div>
 
       {/* 다른 동네 + 지도 — [970 · C-17] 예전엔 카탈로그 앞 16곳(서울 위주)만 보였다.
           시·도별 <details> 로 전량을 접어 두고, 지금 보는 동네의 시·도만 기본 펼침. */}

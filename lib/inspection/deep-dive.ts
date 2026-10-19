@@ -716,7 +716,7 @@ function buildTrade(note: InspectionNote, g: NoteGrounding): DeepDiveSection {
   return section({
     id: "trade",
     label: "매매 분석",
-    eyebrow: "지금 가격이 어디쯤인가",
+    eyebrow: "현재 가격 위치",
     headline: grounded
       ? "실거래 신고분으로 본 가격 구간입니다"
       : "가격 구간을 판정할 실거래 자료를 확인하지 못했습니다",

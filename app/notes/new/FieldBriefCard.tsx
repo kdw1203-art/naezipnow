@@ -50,7 +50,7 @@ export function FieldBriefCard({
   return (
     <div className="rise-in card flex flex-col gap-2.5 rounded-lg p-4">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="t-body font-bold text-ink">지금 이 지역은</span>
+        <span className="t-body font-bold text-ink">이 지역 현황</span>
         {fetched && <span className="shrink-0 t-caption text-text-3">{fetched}</span>}
       </div>
       {brief.lines.length > 0 && (
@@ -65,7 +65,7 @@ export function FieldBriefCard({
       )}
       {brief.checks.length > 0 && (
         <div className="flex flex-col gap-1.5">
-          <span className="t-caption font-bold text-text-3">이 지역에서 특히 볼 것</span>
+          <span className="t-caption font-bold text-text-3">이 지역 중점 확인 항목</span>
           <div className="flex flex-wrap gap-1.5">
             {brief.checks.map((c) => {
               /* [1026b] 누르는 칩(24px · 폰 40px) — 담기/빼기. 담긴 것은 체크 아이콘 + 선택 칸 모양(한지 + 남색, 현장 체크 칸과 같은 세 토큰).

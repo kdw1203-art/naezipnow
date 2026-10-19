@@ -160,7 +160,7 @@ export function JourneyBanner() {
     return (
       <div className="card flex flex-col gap-3 rounded-2xl px-[18px] py-4">
         <div className="flex items-baseline justify-between gap-2">
-          <div className="t-body font-bold text-ink">지금 어디부터 할까요?</div>
+          <div className="t-body font-bold text-ink">지금 단계</div>
           <p className="hidden t-sub text-text-3 sm:block">
             임장(臨場) = 현장에서 직접 확인 — 기록 → AI 정리 → 지도 비교 순서
           </p>

@@ -285,10 +285,11 @@ export function ApplySearchClient({ initial }: Props) {
   const hasResults = !error && !loading && state.items.length > 0;
 
   /* [970 · B-06] 네이비 알약 글자 text-surface → text-on-dark(다크에서 안 보였다) */
+  /* [1079] 폰 실측 29~31px → 40px(PC 32px) — .chip 규칙 밖의 손수 만든 알약 */
   const sortPill = (on: boolean) =>
     on
-      ? "press rounded-full bg-brand-navy px-3 py-1.5 t-sub font-bold text-on-dark"
-      : "press glass rounded-full px-3 py-1.5 t-sub font-semibold text-text-2";
+      ? "press inline-flex min-h-10 items-center rounded-full bg-brand-navy px-3 py-1.5 t-sub font-bold text-on-dark md:min-h-8"
+      : "press glass inline-flex min-h-10 items-center rounded-full px-3 py-1.5 t-sub font-semibold text-text-2 md:min-h-8";
 
   return (
     <div className="flex flex-col gap-3">

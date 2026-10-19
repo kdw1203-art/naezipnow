@@ -37,6 +37,8 @@ export type FeedNote = {
   score: number; // 0~100
   scoreTone: "primary" | "muted";
   title: string;
+  /** [1078] 노트 제목(한 줄 총평) 원문 — title 은 단지 이름이 앞서므로 표 줄은 이것을 굵게 적는다 */
+  headline: string;
   excerpt: string;
   tags: { label: string; tone: TagTone }[];
   footer: string[];
@@ -162,6 +164,7 @@ export function toFeedNote(
     score,
     scoreTone: avg >= 3.5 ? "primary" : "muted",
     title: n.aptName ? `${n.aptName}` : n.title,
+    headline: n.title,
     excerpt,
     tags: deriveTags(n),
     /* [1028] "자가체크 2.4/5" 를 뺐다 — 카드 머리의 "기록 48점"과 같은 값(평점 × 20)을 다른 눈금으로 한 번 더 적던 것 */

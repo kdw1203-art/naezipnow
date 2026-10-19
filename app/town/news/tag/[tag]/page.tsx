@@ -15,6 +15,7 @@ import { formatKstShortDate } from "@/lib/format/kst";
 import { CoverImage } from "@/app/components/CoverImage";
 import { Icon } from "@/app/components/Icon";
 import { newsImageUrl } from "@/lib/town/shared";
+import { newsThumbPath } from "@/lib/news/thumb";
 
 /* [#103] 뉴스 태그 허브 — /town/news/tag/[slug]
    자동 수집 뉴스(우리 요약 보유분 중심)를 주제별로 묶은 색인 표면.
@@ -136,10 +137,9 @@ export default async function NewsTagPage({
                 {/* [1013] 뉴스룸 목록과 같은 썸네일 칸(모든 행 · 사진 없으면 매체 이름) */}
                 <Link href={`/town/news/${p.id}`} className="news-row__thumb block bg-divider" tabIndex={-1} aria-hidden="true">
                   <CoverImage
-                    src={newsImageUrl(p)}
+                    src={newsImageUrl(p) ? newsThumbPath(p.id) : null}
                     alt=""
                     imgClassName="absolute inset-0 h-full w-full object-cover"
-                    sizes="88px"
                     fallback={
                       <span className="absolute inset-0 flex items-center justify-center text-text-3" aria-hidden="true">
                         <Icon name="newspaper" size={18} />

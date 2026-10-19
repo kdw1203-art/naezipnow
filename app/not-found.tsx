@@ -50,7 +50,7 @@ export default function NotFound() {
       </svg>
       <div className="rise-in t-caption font-bold tracking-[0.2em] text-text-3">404</div>
       <h1 className="rise-in-1 t-title text-ink">
-        이 집은 이사 갔어요<span className="text-brand-red">.</span>
+        페이지 없음<span className="text-brand-red">.</span>
       </h1>
       {/* [1015 · 규칙 D] 두 문장 → 사실 한 줄(검색창이 곧 다음 행동이다) */}
       <p className="rise-in-2 t-body leading-[1.6] text-text-3">주소가 바뀌었거나 삭제된 페이지</p>

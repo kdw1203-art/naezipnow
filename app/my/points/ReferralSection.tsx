@@ -46,7 +46,7 @@ function MilestoneStrip({ invitedCount }: { invitedCount: number }) {
     <section className="card flex flex-col gap-4 rounded-3xl p-5">
       <div className="flex items-center gap-2">
         <Icon name="trophy" size={16} className="text-primary" />
-        <div className="t-section text-text-1">초대 여정</div>
+        <div className="t-section text-text-1">초대 진행</div>
       </div>
 
       {/* 배지 4종 */}
@@ -209,7 +209,7 @@ export async function ReferralSection({ email }: { email: string }) {
 
         {/* ── 이렇게 초대돼요 ── */}
         <section className="card flex flex-col gap-3 rounded-3xl p-5">
-          <div className="t-section text-text-1">이렇게 초대돼요</div>
+          <div className="t-section text-text-1">초대 방법</div>
           <ol className="flex flex-col gap-2.5">
             {[
               {

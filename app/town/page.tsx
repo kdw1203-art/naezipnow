@@ -238,6 +238,10 @@ export default async function TownPage() {
           이 페이지도 revalidate=600 공유 캐시라 보는 사람의 플랜을 알 수 없어 plan={null}.
           유료 플랜의 광고 제거는 AdSlot 안의 AdFreeGate 가 클라이언트에서 처리한다(캐시 유지).
           등록 배너도 하우스 광고도 없으면 AdSlot 이 null 을 반환해 자리를 안 만든다. */}
+      {/* [1078] 이웃 글이 0건이면 빈 피드 카드가 화면을 먼저 차지하고 동네 홈 인덱스(107곳 · 내용 있음)가 그 아래 있었다(운영 실측)
+          → 0건일 때는 인덱스가 먼저, 빈 피드는 그 아래(order). 글이 생기면 예전 순서 그대로. */}
+      <div className="flex flex-col">
+      <div className={!loadFailed && firstPage.length === 0 ? "order-2" : ""}>
       <TownFeed
         cards={firstPage}
         hasMore={hasMore}
@@ -245,12 +249,16 @@ export default async function TownPage() {
         now={now}
         ad={<AdZone placement="community_feed" seed={0} plan={null} />}
       />
+      </div>
 
       {/* [970 · C-17] 동네 홈 전체 인덱스 — 카탈로그 전량을 시·도별 <details> 로 접어 둔다.
           예전엔 위 바로가기 8곳 + 각 동네 홈의 "다른 동네" 16곳만 UI 로 닿았고 나머지는
           고아 페이지였다. 피드 아래에 두어 첫 화면(LCP)에는 끼어들지 않는다. 서울만 기본
           펼침 — 노트·글이 가장 많은 곳이고, 전부 펼치면 100여 칩이 한 번에 쏟아진다. */}
+      <div className={!loadFailed && firstPage.length === 0 ? "order-1" : ""}>
       <TownIndex />
+      </div>
+      </div>
 
     </PageShell>
   );

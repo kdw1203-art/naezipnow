@@ -192,7 +192,7 @@ export function SubscriptionManageClient(props: Props) {
         <ModalHeader title="자동결제 해지" onClose={() => state !== "working" && setOpen(false)} />
         <div className="flex flex-col gap-4">
           <div className="rounded-xl bg-bg px-3.5 py-3">
-            <p className="t-sub font-bold text-ink">해지하면 이렇게 돼요</p>
+            <p className="t-sub font-bold text-ink">해지 시 변경 사항</p>
             <ul className="mt-1.5 flex list-disc flex-col gap-1 pl-4 t-sub text-text-2">
               <li>
                 {a.nextChargeAt && !suspended

@@ -71,7 +71,7 @@ const BY_SUB: Record<string, Template[]> = {
   ],
   info: [
     {
-      title: "이번 주 지역 부동산 뉴스, 같이 정리해요",
+      title: "이번 주 지역 부동산 뉴스 정리",
       body: "재건축·분양·금리 관련해서 궁금한 기사나 공공데이터 링크를 모아 댓글로 보태 주세요.",
       tags: "뉴스, 정보",
     },

@@ -36,7 +36,7 @@ export function CloseConsult({ expertId, consultationId }: { expertId: string; c
   if (!confirm) {
     return (
       <button type="button" onClick={() => setConfirm(true)} className="btn-ghost btn-sm text-text-3">
-        더 기다리지 않을래요
+        상담 종료
       </button>
     );
   }

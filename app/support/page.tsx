@@ -322,16 +322,18 @@ export default async function SupportPage() {
 
           {/* 제휴 · 광고 */}
           <div className="rise-in-5 grid gap-3 md:grid-cols-2">
-            <section id="partner" aria-labelledby="partner-title" className="ai-panel flex scroll-mt-24 flex-col gap-2 rounded-2xl p-5">
-              <h2 id="partner-title" className="t-body font-bold text-white">투자 · 제휴 문의</h2>
-              <div className="t-sub leading-[1.6] text-ai-text">
+            {/* [1079] 두 문의 카드가 같은 재질 — 예전엔 "투자·제휴"만 AI 남색 판(ai-panel)이라 옆의 "광고 문의"(흰 카드)와
+                무게가 달랐고, AI 가 답하는 칸으로 읽혔다(운영 실측 2026-10-18). 둘 다 메일 한 통 받는 같은 일이다. */}
+            <section id="partner" aria-labelledby="partner-title" className="card flex scroll-mt-24 flex-col gap-2 rounded-2xl p-5">
+              <h2 id="partner-title" className="t-body font-bold text-ink">투자 · 제휴 문의</h2>
+              <div className="t-sub leading-[1.6] text-text-2">
                 IR 자료 · 데이터 제휴 · 금융사 제휴 제안은 메일로 받습니다.
               </div>
               {/* partner@ · ad@ 는 받는 사람이 없는 주소였다. 실제로 운영진이 읽는 주소 한 곳
                   (business-info)으로 모으고 용건 구분은 제목 프리필로 한다. */}
               <a
                 href={`mailto:${supportEmail}?subject=${encodeURIComponent("[제휴] 투자·데이터 제휴 문의")}`}
-                className="inline-block py-[5px] t-sub font-bold text-ai-accent"
+                className="inline-block py-[5px] t-sub font-bold text-primary"
               >
                 {supportEmail}
               </a>

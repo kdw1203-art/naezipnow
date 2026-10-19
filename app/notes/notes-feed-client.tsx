@@ -667,13 +667,16 @@ function NotesTable({
                         fallback={<span className="absolute inset-0" style={{ background: seedGradient(n.id) }} />}
                       />
                     </span>
+                    {/* [1078] 표 줄의 굵은 글자 = 노트 제목(한 줄 총평). 예전엔 단지 이름만 보여 무엇을 말하는 노트인지
+                        펼쳐야 알 수 있었다(운영 실측). 단지 이름은 아랫줄 맨 앞. */}
                     <span className="min-w-0 flex-1">
                       <span className="flex min-w-0 items-center gap-1">
-                        <span className="truncate t-body font-bold text-ink">{n.title}</span>
+                        <span className="truncate t-body font-bold text-ink">{n.headline || n.title}</span>
                         {n.isExample && <ExampleBadge />}
                       </span>
                       <span className="flex min-w-0 items-center gap-1 t-caption text-text-3">
                         <span className="truncate">
+                          {n.aptName && n.headline && n.headline !== n.title ? `${n.title} · ` : ""}
                           {n.author}
                           {n.meta ? ` · ${n.meta}` : ""}
                         </span>
@@ -1526,17 +1529,19 @@ export function NotesFeedClient({
           )
         ) : (
           <>
-            {/* 폰 격자 보기: 가장자리까지 붙는 촘촘한 3열(인스타 앱). md+ 에서는 그리지 않는다(아래 피드가 항상) */}
+            {/* 폰 격자 보기: 가장자리까지 붙는 촘촘한 격자(인스타 앱). md+ 에서는 그리지 않는다(아래 피드가 항상)
+                [1078] 3열 → 2열 — 연구소 커버는 글자가 많은 포스터라 128px 정사각에서는 제목이 읽히지 않았다(운영 실측 390px).
+                190px 이면 커버의 큰 제목이 읽힌다. */}
             {view === "grid" && (
-              <div className="-mx-3.5 grid grid-flow-row-dense grid-cols-3 gap-0.5 md:hidden">
+              <div className="-mx-3.5 grid grid-flow-row-dense grid-cols-2 gap-0.5 md:hidden">
                 {/* [968 · 17] 첫 타일만 priority — 폰 격자 첫 칸(LCP 후보)
                     [1054] 첫 줄 세 칸 — 운영 Lighthouse(폰) LCP 요소가 두 번째 타일 사진이었는데 lazy 라 3.4s. 같은 줄은 같이 먼저 */}
                 {/* [1050 · 펼침] 누른 타일 줄 바로 아래 피드 카드 — 같은 줄의 나머지 타일은 dense 로 제 줄에 남는다 */}
                 {visible.map((n, i) => (
                   <Fragment key={n.id}>
-                    <GridTile n={n} priority={i < 3} open={gridOpen === n.id} onOpen={() => setGridOpen(n.id)} />
+                    <GridTile n={n} priority={i < 2} open={gridOpen === n.id} onOpen={() => setGridOpen(n.id)} />
                     {gridOpen === n.id && (
-                      <div id={`grid-open-${n.id}`} className="col-span-3 bg-bg px-2 pb-1 pt-2">
+                      <div id={`grid-open-${n.id}`} className="col-span-2 bg-bg px-2 pb-1 pt-2">
                         <PostCard n={n} />
                         <FoldButton onClose={() => setGridOpen(null)} label={n.title} />
                       </div>

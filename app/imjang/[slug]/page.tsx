@@ -194,7 +194,7 @@ export default async function ImjangRegionPage({
       {/* 표준 체크포인트 — 가야만 확인되는 것들. [1015 · 규칙 I] 카드 격자 → 리퀴드 행 목록(sand, 이웃 목록과 다른 톤) */}
       <section className="mb-6 max-md:mb-4">
         <h2 className="t-section text-ink">현장 체크포인트 {IMJANG_CHECKPOINTS.length}</h2>
-        <p className="mb-2 t-caption text-text-3">데이터로는 알 수 없는 것</p>
+        <p className="mb-2 t-caption text-text-3">데이터로 확인되지 않는 항목</p>
         <ol data-tone="sand" className="lq-panel m-0 flex list-none flex-col divide-y p-0">
           {IMJANG_CHECKPOINTS.map((c, i) => (
             <li key={c.title} className="flex gap-2.5 py-2.5">

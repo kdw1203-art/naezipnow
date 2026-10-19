@@ -1818,7 +1818,7 @@ export default async function ComplexHubPage({
                   <h2 id="complex-talk-title" className="t-section text-ink">
                     단지 토론
                   </h2>
-                  <span className="t-caption text-text-3">이 단지 한 줄 · 새 글 30초마다</span>
+                  <span className="t-caption text-text-3">이 단지 토론 · 새 글 30초마다</span>
                 </div>
                 <Link href={`/talk?region=${encodeURIComponent(talkScope.regionId)}`} className="tap-line t-sub font-bold text-primary no-underline">
                   {talkScope.regionName} 토론 ›

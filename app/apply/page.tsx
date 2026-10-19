@@ -140,7 +140,7 @@ export default async function ApplyPage() {
             href={APPLYHOME_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="glass press rounded-full px-3.5 py-2 text-xs font-bold text-primary no-underline"
+            className="glass press inline-flex min-h-10 items-center rounded-full px-3.5 py-2 t-sub font-bold text-primary no-underline md:min-h-8"
           >
             청약홈 공고 보기 ↗
           </a>

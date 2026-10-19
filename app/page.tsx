@@ -105,7 +105,7 @@ function HomeAiGateway({
         {exampleNoteId && (
           <Link
             href={`/notes/${exampleNoteId}`}
-            className="w-fit py-1.5 t-sub font-bold text-ai-accent no-underline"
+            className="tap-line w-fit py-1.5 t-sub font-bold text-ai-accent no-underline"
           >
             정리된 공개 노트 보기 ›
           </Link>

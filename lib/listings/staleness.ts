@@ -126,14 +126,14 @@ function composeMessage(
     const one = rows[0];
     if (one.stage === 2) {
       return {
-        title: "오래된 매물 정리할까요?",
+        title: "오래된 매물 정리",
         body: `「${one.complexName}」 매물이 ${one.ageDays}일째 그대로예요. 거래가 끝났다면 마감하고, 아직이면 끌어올려 주세요.`,
         refreshCount: 0,
         closeCount: 1,
       };
     }
     return {
-      title: "매물 끌어올릴 시간이에요",
+      title: "매물 끌어올리기 시점",
       body: `「${one.complexName}」 매물이 ${one.ageDays}일째 갱신되지 않았어요. 아직 거래 중이면 끌어올려 주세요.`,
       refreshCount: 1,
       closeCount: 0,
@@ -150,7 +150,7 @@ function composeMessage(
 
   return {
     title:
-      closes.length > 0 ? "오래된 매물 정리할까요?" : "매물 끌어올릴 시간이에요",
+      closes.length > 0 ? "오래된 매물 정리" : "매물 끌어올리기 시점",
     body: `등록하신 매물 ${rows.length}건 중 ${parts.join(", ")}. 가장 오래된 건 ${oldest.ageDays}일째예요. 아직 거래 중이면 끌어올리고, 끝났으면 마감해 주세요.`,
     refreshCount: refreshes.length,
     closeCount: closes.length,

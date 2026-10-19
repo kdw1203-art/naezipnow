@@ -346,7 +346,7 @@ export function welcomeEmail(params: { name: string }) {
     <h1 style="margin:0 0 8px;font-size:19px;color:#191f28;">${name}님, 내집나우에 오신 것을 환영해요</h1>
     <p style="margin:0 0 18px;font-size:14px;line-height:1.7;color:#4a5568;">
       집 보러 다니는 날의 기록이 흩어지지 않게 — 내집나우가 도와드릴게요.<br />
-      지금 바로 할 수 있는 것들이에요.
+      지금 할 수 있는 일
     </p>
     <table style="width:100%;border-collapse:collapse;margin:0 0 18px;">
       ${item("📝", "첫 임장노트 쓰기", "체크리스트·사진·음성메모로 현장을 기록해요. AI가 데이터 초안도 잡아줘요.", "https://naezipnow.com/notes/new")}

@@ -914,39 +914,21 @@ export default async function NoteDetailPage({
 
   /* [1005 · A4] AI 요약 패널 — pending 이면 이 자리에 폴링 카드가 서고, 이 패널은 "나중에 볼게요"
      뒤의 폴백이 된다(규칙 기반 요약 + 재시도). 결과가 오면 폴링 카드가 ?ai=ok 로 다시 렌더한다. */
-  const aiSummaryPanel = (
-    /* [1028] 규칙으로 만든 요약에는 "AI"를 붙이지 않는다(제목·배지) — AI 모델이 쓴 요약일 때만 "AI 요약" */
-    <AIPanel title={v.aiBadge.startsWith("규칙") ? "요약" : "AI 요약"} ai={!v.aiBadge.startsWith("규칙")}>
-      <span
-        className={`mb-1.5 inline-flex items-center rounded px-1.5 py-0.5 t-caption font-bold ${
-          v.aiBadge.startsWith("규칙")
-            ? "border border-amber-400/50 bg-amber-500/15 text-amber-100"
-            : "border border-emerald-400/40 bg-emerald-500/15 text-emerald-100"
-        }`}
-      >
+  /* [1078] 규칙 기반 "요약" 남색 판은 맨 위 판단 카드(기록 점수 링 · 레이더 · 약한 축)와 같은 수를 한 번 더 그렸다(운영 실측) →
+     규칙 기반이면 그리지 않는다(소유자에게는 다시 요청 단추 한 줄만). AI 모델이 쓴 요약일 때만 남색 "AI 요약" 판. */
+  const aiSummaryPanel = v.aiBadge.startsWith("규칙") ? (
+    isOwner && !hasLlmAi ? (
+      <div className="card flex flex-wrap items-center justify-between gap-2 rounded-2xl px-4 py-3">
+        <span className="t-sub text-text-3">AI 요약 없음 · 기록 점수는 위 판단 카드</span>
+        <AiRetryButton noteId={id} defaultIntent={retryDefaultIntent(realNote)} />
+      </div>
+    ) : null
+  ) : (
+    <AIPanel title="AI 요약" ai>
+      <span className="mb-1.5 inline-flex items-center rounded border border-emerald-400/40 bg-emerald-500/15 px-1.5 py-0.5 t-caption font-bold text-emerald-100">
         {v.aiBadge}
       </span>
-      {/* [1038 · 5] 규칙 요약은 문장 대신 링 + 칩 3개 + 한 줄(같은 숫자) — AI 모델 글은 그대로 문장 */}
-      {v.aiBadge.startsWith("규칙") && v.totalScore != null ? (
-        <div className="flex flex-wrap items-center gap-3">
-          <ScoreRing score={v.totalScore} size={72} label="/ 100" className="text-white" />
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <div className="flex flex-wrap gap-1.5">
-              <span className="rounded-md border border-on-dark-faint px-1.5 py-0.5 t-caption font-bold text-on-dark">항목 평균 {v.avgScore}/5</span>
-              <span className="rounded-md border border-on-dark-faint px-1.5 py-0.5 t-caption font-bold text-on-dark">입력 {v.scoredAxisCount}개 축</span>
-              {v.weakestAxis && (
-                <span className="rounded-md border border-on-dark-faint px-1.5 py-0.5 t-caption font-bold text-on-dark">{v.weakestAxis.label} {v.weakestAxis.score}/5 감점</span>
-              )}
-            </div>
-            {v.weakestAxis && <p className="m-0 t-body">{v.weakestAxis.label} 축이 점수를 낮춘 요인</p>}
-          </div>
-        </div>
-      ) : (
-        <p className="t-body">{v.aiInline}</p>
-      )}
-      {isOwner && !hasLlmAi && (
-        <AiRetryButton noteId={id} defaultIntent={retryDefaultIntent(realNote)} />
-      )}
+      <p className="t-body">{v.aiInline}</p>
     </AIPanel>
   );
 
@@ -1024,70 +1006,9 @@ export default async function NoteDetailPage({
       <div className="grid grid-cols-1 gap-3 md:gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         {/* ===== 좌측: 노트 본문 (20a 표준 구조) ===== */}
         <div className="flex min-w-0 flex-col gap-3 md:gap-4">
-          {/* [993] 판단 카드 — 이 노트가 말하려는 것 한 장. 모바일에서도 맨 위. */}
-          <NoteVerdictCard
-            verdict={reportVerdict ?? v.aiSummary}
-            sourceBadge={reportVerdict ? (hasLlmAi ? "AI 생성" : v.aiBadge) : "규칙 기반 요약"}
-            recommendedAction={reportAction}
-            totalScore={v.totalScore}
-            scoredAxisCount={v.scoredAxisCount}
-            weakestAxis={v.weakestAxis}
-            radar={v.radar}
-            goodCount={v.goodPoints.filter((g) => g !== "기록 없음").length}
-            cautionCount={v.cautionPoints.filter((c) => c !== "기록 없음").length}
-            visitDate={realNote.visitDate}
-            checklistDone={v.checklistDone}
-            checklistTotal={v.checklistTotal}
-            price={verdictPrice}
-            complexHref={complexHref}
-            /* [996 · 4] 내 판단이 있으면 헤드라인, 없으면 소유자에게 "판단 남기기"(수정 3단계) */
-            decision={noteDecision}
-            decisionEditHref={isOwner && !noteDecision ? `/notes/${realNote.id}/edit#decision` : null}
-            next={
-              isOwner
-                ? /* [995 · 3] apt·region 만 넘기던 것을 회차 프리필로 — 단지 id·좌표·태그·
-                     체크리스트를 잇고 round 를 +1 한다(app/notes/new?revisit=). */
-                  {
-                    label: "이전 기록 불러와 다시 쓰기",
-                    href: `/notes/new?revisit=${encodeURIComponent(realNote.id)}`,
-                  }
-                : realNote.aptName?.trim()
-                  ? {
-                      label: `${realNote.aptName.trim()} AI 종합 진단 받기`,
-                      href: `/analysis/ai/ai-diagnosis?apt=${encodeURIComponent(realNote.aptName.trim())}&region=${encodeURIComponent(realNote.region)}`,
-                    }
-                  : { label: "지도에서 이 지역 보기", href: mapCompareHref }
-            }
-          />
-          {/* [1005 · A4] 저장 직후에만 — 히어로 다음, 본문 앞. pending 동안은 안 그린다.
-              [1026 · 노트 쓰기] 작성 화면이 단 ?saved=1(작성자)이면 같은 자리에 "저장 완료" 카드 — 결론 한 줄 + 공유(공개일 때) ·
-              결정 카드에 담기 · 같은 단지 다른 노트. 이 카드가 있으면 다음 행동 카드는 그리지 않는다(같은 순간의 카드 두 장). */}
-          {isOwner && isSavedFlag(savedRaw) ? (
-            <NoteSavedCard
-              noteId={realNote.id}
-              {...savedCardView({
-                aptName: realNote.aptName,
-                title: realNote.title,
-                totalScore: v.totalScore,
-                decision: noteDecision?.choice ?? null,
-                visitDate: realNote.visitDate,
-                checklistDone: v.checklistDone,
-                checklistTotal: v.checklistTotal,
-                photoCount: realNote.photos.length,
-              })}
-              isPublic={realNote.isPublic}
-              complex={
-                visitComplexId || complexIdFromHref
-                  ? { id: visitComplexId || (complexIdFromHref as string), name: visitApt || realNote.title, region: realNote.region }
-                  : null
-              }
-              sameComplex={sameComplexLink({ noteId: realNote.id, visitCount: v.visits.length, complexHref })}
-            />
-          ) : (
-            nextActionCard
-          )}
-          {/* 노트 카드 — 20a 표준 11항목 */}
-          <div className="rise-in card flex flex-col gap-3.5 rounded-3xl p-6 max-md:gap-3 max-md:p-3.5">
+          {/* [1078] 머리(지역 칩 · 제목 · 방문 메타)를 판단 카드 **앞**으로 — 운영 실측: 노트를 열면 점수·레이더·AI 단추가 먼저 서고
+              제목은 그 아래에 있었다(읽는 순서가 거꾸로). 무엇을 읽는지(제목)가 먼저, 판단은 그다음. 칩·제목·메타 마크업은 그대로. */}
+          <div className="rise-in card flex flex-col gap-3 rounded-3xl p-6 max-md:gap-2.5 max-md:p-3.5">
             {/* ① 지역·단지 칩 */}
             <div className="flex flex-wrap items-center gap-1.5">
               {v.chips.map((c, i) => (
@@ -1177,7 +1098,71 @@ export default async function NoteDetailPage({
               {/* [1015 · 규칙 C] "운영진 예시" 설명 배지는 뺐다 — visitMeta 끝의 작성자 이름이 이미
                   "내집나우 Lab"(displayAuthorLabel)이라 메타 줄의 이름만으로 구분된다. */}
             </div>
-
+          </div>
+          {/* [993] 판단 카드 — 이 노트가 말하려는 것 한 장. [1078] 머리 다음 · 본문 앞. */}
+          <NoteVerdictCard
+            verdict={reportVerdict ?? v.aiSummary}
+            sourceBadge={reportVerdict ? (hasLlmAi ? "AI 생성" : v.aiBadge) : "규칙 기반 요약"}
+            recommendedAction={reportAction}
+            totalScore={v.totalScore}
+            scoredAxisCount={v.scoredAxisCount}
+            weakestAxis={v.weakestAxis}
+            radar={v.radar}
+            goodCount={v.goodPoints.filter((g) => g !== "기록 없음").length}
+            cautionCount={v.cautionPoints.filter((c) => c !== "기록 없음").length}
+            visitDate={realNote.visitDate}
+            checklistDone={v.checklistDone}
+            checklistTotal={v.checklistTotal}
+            price={verdictPrice}
+            complexHref={complexHref}
+            /* [996 · 4] 내 판단이 있으면 헤드라인, 없으면 소유자에게 "판단 남기기"(수정 3단계) */
+            decision={noteDecision}
+            decisionEditHref={isOwner && !noteDecision ? `/notes/${realNote.id}/edit#decision` : null}
+            next={
+              isOwner
+                ? /* [995 · 3] apt·region 만 넘기던 것을 회차 프리필로 — 단지 id·좌표·태그·
+                     체크리스트를 잇고 round 를 +1 한다(app/notes/new?revisit=). */
+                  {
+                    label: "이전 기록 불러와 다시 쓰기",
+                    href: `/notes/new?revisit=${encodeURIComponent(realNote.id)}`,
+                  }
+                : realNote.aptName?.trim()
+                  ? {
+                      label: `${realNote.aptName.trim()} AI 종합 진단 받기`,
+                      href: `/analysis/ai/ai-diagnosis?apt=${encodeURIComponent(realNote.aptName.trim())}&region=${encodeURIComponent(realNote.region)}`,
+                    }
+                  : { label: "지도에서 이 지역 보기", href: mapCompareHref }
+            }
+          />
+          {/* [1005 · A4] 저장 직후에만 — 히어로 다음, 본문 앞. pending 동안은 안 그린다.
+              [1026 · 노트 쓰기] 작성 화면이 단 ?saved=1(작성자)이면 같은 자리에 "저장 완료" 카드 — 결론 한 줄 + 공유(공개일 때) ·
+              결정 카드에 담기 · 같은 단지 다른 노트. 이 카드가 있으면 다음 행동 카드는 그리지 않는다(같은 순간의 카드 두 장). */}
+          {isOwner && isSavedFlag(savedRaw) ? (
+            <NoteSavedCard
+              noteId={realNote.id}
+              {...savedCardView({
+                aptName: realNote.aptName,
+                title: realNote.title,
+                totalScore: v.totalScore,
+                decision: noteDecision?.choice ?? null,
+                visitDate: realNote.visitDate,
+                checklistDone: v.checklistDone,
+                checklistTotal: v.checklistTotal,
+                photoCount: realNote.photos.length,
+              })}
+              isPublic={realNote.isPublic}
+              complex={
+                visitComplexId || complexIdFromHref
+                  ? { id: visitComplexId || (complexIdFromHref as string), name: visitApt || realNote.title, region: realNote.region }
+                  : null
+              }
+              sameComplex={sameComplexLink({ noteId: realNote.id, visitCount: v.visits.length, complexHref })}
+            />
+          ) : (
+            nextActionCard
+          )}
+          {/* 노트 카드 — 20a 표준 11항목 */}
+          <div className="rise-in card flex flex-col gap-3.5 rounded-3xl p-6 max-md:gap-3 max-md:p-3.5">
             {/* ④ 4축 항목 평가 — 채광·소음·주차·교통 상중하. [970 · B-10] 미입력 축은 빠지고,
                 하나도 없으면 "미입력"이라고 적는다(보통으로 채우지 않는다) */}
             <div className="flex flex-col gap-1.5 rounded-lg border border-line bg-surface p-3.5">

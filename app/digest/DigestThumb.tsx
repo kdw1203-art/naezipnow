@@ -4,7 +4,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { CoverImage } from "@/app/components/CoverImage";
 
-/* [1061] 다이제스트 뉴스 썸네일 — 원문 og:image 56px. 핫링크 차단·삭제로 못 받으면 상자째 사라진다
+/* [1061] 다이제스트 뉴스 썸네일 — 56px. 핫링크 차단·삭제로 못 받으면 상자째 사라진다
+ * [1079] src 는 원문 og:image 가 아니라 /api/town/news/thumb/<id>(176×132 webp) — 호출부(digest/(index))가 넣는다.
  * (NewsHero 와 같은 규칙 · 빈 상자 금지). 사진은 장식이라 alt 비움 · 링크는 제목 링크의 보조라 탭 순서에서 뺀다. */
 export function DigestThumb({ src, href }: { src: string; href: string }) {
   const [failed, setFailed] = useState(false);

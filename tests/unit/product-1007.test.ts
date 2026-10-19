@@ -105,7 +105,7 @@ test("홈 — HomeTownBlock 이 .story-card 재질 + 흰 뉴스 카드(원문 �
   assert.match(block, /story-avatar/);
   /* [1015] 뉴스 칸은 한지 스트립(.news-strip) → 흰 카드 + 원문 사진 행(소유자: "튀지 않게 테마에 맞추고 뉴스는 원문 사진") */
   assert.doesNotMatch(block, /news-strip/);
-  assert.match(block, /<CoverImage src=\{n\.image\}/);
+  assert.match(block, /<CoverImage src=\{newsThumbPath\(n\.id\)\}/); // [1079] 원본 → 글 id 썸네일 라우트
   assert.match(block, /storyHref\(p\.id\)/);
   assert.match(block, /newsHref\(n\.id\)/);
   /* 0건·실패를 다르게 말한다 */
