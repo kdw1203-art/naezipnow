@@ -173,11 +173,10 @@ test("D5 탭 크기 — 헤더 벨·메뉴 h-10/w-10 · 점 40px · 내 위치 4
     "app/components/home/HomeMyRail.tsx",
     "app/components/AreaError.tsx",
     "app/error.tsx",
-    "app/components/BetaNoticeModal.tsx",
+    /* [1077] BetaNoticeModal 은 삭제됐다(홈 베타 띠 걷음) */
   ]) {
     assert.match(read(f), /tap-line/, f);
   }
-  assert.match(read("app/components/BetaNoticeModal.tsx"), /min-h-\[40px\] min-w-\[40px\]/);
   /* 운영 전수 점검(폰)에서 남은 20px 소식 링크·밀집 글 링크·✕ */
   assert.match(read("app/components/talk/TalkPanel.tsx"), /tap-line mt-0\.5 block t-sub no-underline/);
   assert.match(read("app/login/LoginClient.tsx"), /inline-flex h-10 w-10 items-center justify-center text-\[15px\] text-text-3" aria-label="닫기"/);
@@ -264,7 +263,8 @@ test("D8 '시세' — 단지 제목·JSON-LD·단지 실거래 설명·지역 �
   for (const l of titleLine) assert.doesNotMatch(l, /시세/, l);
   assert.match(hub, /name: `\$\{v\.name\} 실거래가·임장노트`/);
   assert.doesNotMatch(read("app/complex/tx/[slug]/page.tsx").split("const description")[1].split(";")[0], /시세/);
-  assert.match(read("app/region/[id]/RegionHero.tsx"), /아파트 실거래·가격지수 한눈에/);
+  /* [1077] 머리 제목 "○○ 아파트 실거래·가격지수 한눈에" → "○○ 실거래·가격지수 요약"(h1 이 "○○ 아파트 실거래 · 지역 분석") — "시세" 없음은 그대로 */
+  assert.match(read("app/region/[id]/RegionHero.tsx"), /\$\{name\} 실거래·가격지수 요약/);
   assert.doesNotMatch(read("app/complex/[id]/MyRecordsTab.tsx"), /시세/);
   assert.match(read("app/town/news/[id]/page.tsx"), /실거래 보기 ›/);
 });

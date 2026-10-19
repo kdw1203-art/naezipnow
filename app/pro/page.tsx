@@ -122,7 +122,7 @@ export default async function ProPage() {
             {PRO_CONCLUSION}
           </h2>
           {/* [1062 · 글 줄이기] 중점으로 이어 붙인 한 문장 → 읽는 칩(같은 낱말 그대로) + 저장 위치 한 줄 */}
-          <KeywordChips className="mt-2" label="브리핑에 들어가는 것" items={["개요 8칸", "타입별 12개월 미니 차트", "최근 실거래 표", "전세가율", "주의", "QR"]} />
+          <KeywordChips className="mt-2" label="브리핑 구성 항목" items={["개요 8칸", "타입별 12개월 미니 차트", "최근 실거래 표", "전세가율", "주의", "QR"]} />
           <p className="m-0 mt-1.5 t-caption text-text-3">사무소명은 이 기기에만 저장</p>
           <StepLine className="mt-3" current={0} steps={PRO_STEPS} />
           <div id={SEARCH_ID} className="mt-3 scroll-mt-20">

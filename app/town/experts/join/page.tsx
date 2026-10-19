@@ -121,9 +121,9 @@ export default function ExpertJoinPage() {
         </div>
       </section>
 
-      {/* ---------- 인증되면 열리는 것 ---------- */}
+      {/* ---------- 인증 후 이용 범위 ---------- */}
       <section className="mb-6">
-        <h2 className="mb-3 t-section text-ink">인증되면 열리는 것</h2>
+        <h2 className="mb-3 t-section text-ink">인증 후 이용 범위</h2>
         <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
           {OPENS.map((o) => (
             <div key={o.title} className="card flex gap-3 rounded-2xl p-4">
@@ -233,7 +233,7 @@ export default function ExpertJoinPage() {
 
       {/* ---------- 규칙 ---------- */}
       <section className="mb-6">
-        <h2 className="mb-3 t-section text-ink">지켜야 할 것</h2>
+        <h2 className="mb-3 t-section text-ink">준수 사항</h2>
         <ul className="flex list-none flex-col gap-2">
           {RULES.map((r) => (
             <li key={r.text} className="flex items-start gap-2.5 t-sub text-text-2">

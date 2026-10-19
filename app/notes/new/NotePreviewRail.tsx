@@ -153,7 +153,19 @@ export function NotePreviewRail(p: NotePreviewRailProps) {
             <h3 className="t-sub font-bold text-ink">5축 점수</h3>
             <span className="t-caption text-text-3 t-num">{total != null ? `기록 점수 ${total} / 100` : "현장 체크 미입력"}</span>
           </div>
-          <ScoreRadar items={previewRadarItems(p.scores)} />
+          {/* [1077] 현장 체크를 하나도 안 했으면 오각형에 "자료 없음" 다섯 개가 선다(운영 실측 — 빈 벽) → 사실 한 줄.
+              하나라도 표시하면 예전처럼 레이더(없는 축은 "자료 없음"). */}
+          {total != null ? (
+            <ScoreRadar items={previewRadarItems(p.scores)} />
+          ) : (
+            <button
+              type="button"
+              onClick={() => p.onGoStep(2)}
+              className="mt-2 inline-flex min-h-10 items-center text-left t-sub text-text-2 hover:text-primary"
+            >
+              현장 체크(2단계)를 표시하면 5축 점수가 채워짐 ›
+            </button>
+          )}
         </div>
       </section>
 

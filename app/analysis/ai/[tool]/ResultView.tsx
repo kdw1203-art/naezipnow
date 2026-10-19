@@ -1,7 +1,7 @@
 "use client";
 /* [1026b · AI 분석 8종] 12종 모두 한 순서 — 예전 8종 순서(결과 요약 카드 → 주인공 그림 → 실거래 → 다음 할 일 버튼 3개(도구 색 채움) →
    AI 해설 → 자세히)와 NextActions 를 걷었다. 8종 결론 히어로는 tool-signature.tsx(SummaryLine + 대표 수치 + 대표 그림 한 카드):
-   리스크 점검 위험 신호 5가지 · 수익률 계산 대출 계산 · 비교 나란히 비교 · 체크리스트 확인할 항목 · 계약 점검 계약 전에 확인할 것을
+   리스크 점검 위험 신호 5가지 · 수익률 계산 대출 계산 · 비교 나란히 비교 · 체크리스트 확인할 항목 · 계약 점검 계약 전 확인 사항을
    히어로 카드 안 SigFigure 로. 비교의 "함께 비교해 볼 단지"는 손잡이(폰 내 조건 뒤). 실거래 흐름은 데스크톱 펼침·폰 닫힘(FoldCard) ·
    근거·출처 닫힘 · 다른 도구 칩 줄(비교·자산 구성 제외). 다음 행동은 레일·폰 하단 바(ResultRail). "② 에 …" → "내 조건에 …". */
 /* [1026 · 단지 분석 4종] 1025 표준 — variant="complex" 순서: 결론 히어로(대표 그림 카드 첫 줄: t-title 결론 + 판정 칩 +
@@ -198,7 +198,7 @@ const ISSUE_META = {
 
 function ContractCard({ contract }: { contract: ContractCheck }) {
   return (
-    <SigFigure title="계약 전에 확인할 것" sub={contract.ratioSource === "region" ? "전세가율은 지역 평균 · 이 집 값을 넣으면 다시 계산" : "내 조건에 넣은 값으로 계산"}>
+    <SigFigure title="계약 전 확인 사항" sub={contract.ratioSource === "region" ? "전세가율은 지역 평균 · 이 집 값을 넣으면 다시 계산" : "내 조건에 넣은 값으로 계산"}>
       {contract.issues.length > 0 ? (
         <ul className="flex flex-col gap-2">
           {contract.issues.map((it, i) => (

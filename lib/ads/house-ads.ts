@@ -54,7 +54,7 @@ export const HOUSE_ADS: HouseAd[] = [
   {
     id: "house_note_start",
     eyebrow: "임장노트",
-    title: "다녀온 집 기록",
+    title: "임장노트 기록",
     body: "단지별 저장 · 항목 점수 · 사진 · 메모", /* [1029 · 3] 낱말 꼴 */
     ctaLabel: "임장노트 쓰기",
     href: "/notes/new",

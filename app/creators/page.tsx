@@ -40,11 +40,7 @@ const WHY = [
     title: "실거래가·임장 준비 방문자",
     desc: "내집나우 방문자는 실거래가를 확인하고 임장을 준비하러 온 사람들입니다. 리포트는 리포트 상세 직접 링크로 전달되며, 자료실 목록·검색 노출은 현재 없습니다.",
   },
-  {
-    icon: "rocket" as const,
-    title: "요율은 한 곳에서",
-    desc: "수수료 요율은 거래·수수료 안내의 공표값만 적용됩니다. 이 페이지에 별도 요율은 없습니다.",
-  },
+  /* [1077] "요율은 한 곳에서" 칸을 걷었다 — 아래 "고지사항" 셋째 줄과 같은 말(한 화면에 같은 사실 두 번 금지) */
 ];
 
 const STEPS = [
@@ -92,12 +88,13 @@ export default function CreatorsPage() {
         </h1>
         <p className="mt-2 t-sub leading-[1.7] text-text-2">
           발로 뛰어 만든 지역 분석과 임장 기록(비공개 노트)을 유료 리포트로 등록하고 직접 링크로 판매하는 구조입니다.
-          수익을 약속하지 않습니다 · 구조와 현재 보상 방식(정산 없음)을 전부 공개합니다.
+          {/* [1077] "정산 없음"은 아래 고지·FAQ 가 말한다 — 머리에서 되풀이하지 않는다 */}
+          수익을 약속하지 않습니다 · 구조와 보상 방식은 아래 고지에 그대로.
         </p>
       </div>
 
-      {/* 왜 내집나우인가 */}
-      <div className="mb-8 grid gap-3 sm:grid-cols-3">
+      {/* 왜 내집나우인가 — [1077] 칸 둘(요율 칸은 고지로) */}
+      <div className="mb-8 grid gap-3 sm:grid-cols-2">
         {WHY.map((w) => (
           <div key={w.title} className="card rounded-2xl px-4 py-4">
             <Icon name={w.icon} size={20} className="text-primary" />
@@ -127,13 +124,11 @@ export default function CreatorsPage() {
 
       {/* 사실 고지 — 이 정직함이 브랜드다 */}
       <div className="mb-8 max-w-[720px] rounded-2xl border border-line bg-bg px-4 py-3.5">
-        <div className="t-sub font-bold text-ink">있는 그대로의 고지</div>
+        <div className="t-sub font-bold text-ink">고지사항</div>
         <ul className="mt-1.5 flex flex-col gap-1 t-caption leading-[1.65] text-text-2">
           <li>· 판매 수익 규모는 보장하지도, 전망으로 제시하지도 않습니다.</li>
-          <li>
-            · 현재 크리에이터 정산·포인트 적립 없음 — 구매 시 구매자 포인트 차감 · 구매 기록 · 크리에이터 구매 알림까지입니다.
-            현금 전환·출금도 없습니다.
-          </li>
+          {/* [1077] 흐름(포인트 차감 · 구매 기록 · 알림)은 FAQ 한 곳에만 — 여기는 사실 한 줄 */}
+          <li>· 현재 크리에이터 정산·포인트 적립·현금 전환 없음(흐름은 아래 FAQ).</li>
           <li>
             · 수수료는{" "}
             <Link href="/legal/fees" className="tap-line font-bold text-primary underline underline-offset-2">
@@ -145,7 +140,7 @@ export default function CreatorsPage() {
       </div>
 
       {/* FAQ */}
-      <h2 className="mb-3 t-section text-ink">자주 묻는 것</h2>
+      <h2 className="mb-3 t-section text-ink">자주 묻는 질문</h2>
       <div className="mb-8 flex max-w-[720px] flex-col gap-3">
         {FAQ.map((f) => (
           <div key={f.q} className="card rounded-2xl px-4 py-3.5">

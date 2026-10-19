@@ -8,7 +8,6 @@ import { maskNoteAuthor } from "@/app/town/shared";
 import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { isLabAuthor } from "@/lib/notes/author-label";
 import { CoverImage } from "@/app/components/CoverImage";
-import { Icon } from "@/app/components/Icon";
 import { PageHead } from "@/app/components/PageHead";
 import { ARCHIVED_ROBOTS } from "@/lib/seo/archived-routes";
 
@@ -152,23 +151,15 @@ export default async function NotesMarketPage() {
                       본문 {textLen.toLocaleString("ko-KR")}자
                     </span>
                   </div>
+                  {/* [1077] 카드마다 있던 눌리지 않는 "판매 오픈 준비 중" 단추(12개)를 걷었다 — 같은 말은 머리 칩 하나가 한다.
+                      [1012] 규칙 4 의 자물쇠 아이콘도 그 단추와 함께 사라졌다. */}
                   <div className="mt-auto flex items-center gap-2 pt-2.5">
                     <Link
                       href={`/notes/${note.id}`}
-                      className="rounded-lg border border-line-strong bg-bg px-3.5 py-2 t-body font-bold text-text-1 no-underline"
+                      className="inline-flex min-h-10 flex-1 items-center justify-center rounded-lg border border-line-strong bg-bg px-3.5 py-2 t-body font-bold text-text-1 no-underline"
                     >
                       노트 전문 읽기
                     </Link>
-                    {/* [1012] 규칙 4 — 🔒 이모지 → 자물쇠 선 아이콘 */}
-                    <button
-                      type="button"
-                      disabled
-                      title="결제 기능 오픈 후 판매가 시작됩니다"
-                      className="inline-flex min-h-10 flex-1 cursor-not-allowed items-center justify-center gap-1 rounded-lg bg-bg px-3.5 py-2 t-body font-bold text-text-3"
-                    >
-                      <Icon name="lock" size={15} />
-                      판매 오픈 준비 중
-                    </button>
                   </div>
                 </div>
               </div>

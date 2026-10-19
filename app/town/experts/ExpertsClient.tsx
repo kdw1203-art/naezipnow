@@ -291,9 +291,10 @@ export function ExpertsClient({ items, truncated }: { items: ExpertPublicRow[]; 
           </p>
           {/* [1015] 빈 화면은 한 줄(브리프 규칙 D) */}
           <p className="max-w-xs t-sub text-text-3">
+            {/* [1077] 해요체 → 사실 낱말 */}
             {!filtersActive
-              ? "인증 심사가 끝나는 대로 여기에 올라와요."
-              : "견적 요청을 남겨 두면 인증 전문가가 먼저 제안을 보내요."}
+              ? "인증 심사 통과 순으로 공개"
+              : "견적 요청을 남기면 인증 전문가가 먼저 제안"}
           </p>
           <div className="mt-1 flex flex-wrap items-center justify-center gap-2">
             {filtersActive && (

@@ -755,7 +755,8 @@ export default async function RegionHubPage({
   return (
     <PageShell
       breadcrumb={`홈 › 지역 시세 › ${name}`}
-      title={`${name}에 산다는 것`}
+      /* [1077b] "○○구에 산다는 것"(문학 투) → 표준 이름. 소유자(2026-10-18): "이런 말투는 안 써 … 다른 곳도 정리" */
+      title={`${name} 아파트 실거래 · 지역 분석`}
     >
       {/* JSON-LD(BreadcrumbList + Place) — 지역 SEO 구조화 데이터 */}
       <script
@@ -874,7 +875,7 @@ export default async function RegionHubPage({
         <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="t-section text-ink">
-              {name} 시장 흐름 읽기
+              {name} 시장 흐름 요약
             </h2>
             {/* [개선 #13] 지역 이름 키워드로 뉴스·동네글 알림 원탭 구독 */}
             <KeywordAlertButton scope="news" query={name} label={`${name} 새 소식`} />

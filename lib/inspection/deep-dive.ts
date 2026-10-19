@@ -295,7 +295,7 @@ function buildIssues(note: InspectionNote, g: NoteGrounding): DeepDiveSection {
   return section({
     id: "issues",
     label: "문제점",
-    eyebrow: "이 매물에서 걸리는 것",
+    eyebrow: "이 매물의 문제점",
     headline: grounded
       ? "노트 기록과 공개 데이터가 함께 지목한 지점입니다"
       : "노트 기록에서 확인된 지점입니다",
@@ -393,7 +393,7 @@ function buildChecks(note: InspectionNote, g: NoteGrounding): DeepDiveSection {
   return section({
     id: "checks",
     label: "체크해야 할 점",
-    eyebrow: "다음 방문 전에 확인할 것",
+    eyebrow: "다음 방문 전 확인 사항",
     headline: "지금 노트에서 비어 있거나 확인이 필요한 항목입니다",
     bullets,
     facts,

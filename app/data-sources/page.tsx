@@ -191,7 +191,7 @@ export default async function DataSourcesPage() {
             상자는 내용이 아니다. 설명 문장("직접 센 값" · "성공한 갱신만 셉니다")은 접기 뒤로. */}
         <div className="rise-in-1 card mt-5 flex flex-col gap-4 p-5">
           <div>
-            <h2 className="t-section font-bold text-ink">지금 실제로 가지고 있는 것</h2>
+            <h2 className="t-section font-bold text-ink">보유 데이터</h2>
             <Fineprint className="mt-1" label="세는 방법">
               아래 수치는 이 페이지를 열 때 데이터베이스에서 직접 센 값입니다.
               소개용으로 적어 둔 숫자가 아닙니다.

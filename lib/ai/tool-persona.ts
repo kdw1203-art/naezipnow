@@ -488,7 +488,9 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     character: "체온",
     premise: "매주 기록한 0~100점 추세",
     composition: "atlas",
-    palette: p("#B45309", "#F0AC4E", "#FDF3E5", "rgba(240,172,78,.14)"),
+    /* [1077] 앰버(#B45309) → 사이트 파랑. 지역 시세 네 화면(면적대별·타이밍·온도·전세가율) 중 이 화면만 주황 채움이 남아
+       "알림 받기" 단추가 주황이었다(운영 실측 2026-10-18 · 1025 "채움 파랑 하나 · 초록·주황 채움 금지"). 타이밍·격차와 같은 값. */
+    palette: p("#1D4FD8", "#88AAFF", "#EEF4FF", "rgba(136,170,255,.14)"),
     runMotion: "pulse",
     reveal: "fill",
     runStages: [

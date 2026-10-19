@@ -8417,3 +8417,31 @@ html[data-mscale] li .fineprint-body :is(p, div):is(.t-sub, .t-caption) {
   --primary-strong: inherit;
   --primary-fill: inherit;
 }
+
+/* ============================================================
+   [1077 · 헤더 회원가입 네이비] 1076 이 헤더 회원가입을 채움 파랑(btn-primary)으로 두자 화면마다 있던 주 행동
+   (알림 받기 · 노트 쓰기 · 검색 …)과 **채움 파랑이 한 화면에 둘**이 됐다(운영 50쪽 실측 전부). 1025 규칙 "화면의 채움 파랑 하나"를
+   지키면서 회원가입이 눈에 띄게 — 브랜드 네이비 채움(홈 "오늘의 한 줄" 카드와 같은 면 · 한지색 글자 대비 약 15:1).
+   다크에서는 네이비가 바탕에 묻히므로 한지색 면에 잉크 글자. 쓰는 곳: app/components/HeaderAuth.tsx 하나. */
+.btn-navy {
+  background: var(--brand-navy);
+  color: var(--on-dark);
+  font-weight: 700;
+  transition: background var(--dur-xs) var(--ease-out), transform var(--dur-xs) var(--ease-out);
+}
+.btn-navy:hover {
+  background: color-mix(in srgb, var(--brand-navy) 86%, var(--surface));
+}
+.dark .btn-navy {
+  background: var(--on-dark);
+  color: var(--brand-navy);
+}
+.dark .btn-navy:hover {
+  background: color-mix(in srgb, var(--on-dark) 90%, var(--surface));
+}
+
+/* [1077 · 시장 온도] 기록 없는 시·도 칸 — 이름만(안의 "기록 없음" 글자는 걷었다) · 가운데 · 옅게. 세는 말은 지도 아래 한 줄. */
+.tm-sido[data-empty] {
+  justify-content: center;
+  opacity: 0.72;
+}

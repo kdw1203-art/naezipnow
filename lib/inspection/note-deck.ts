@@ -566,7 +566,7 @@ export function buildNoteDeck({ note, plan }: BuildDeckInput): NoteDeck {
         kind: "memo",
         theme: "tint",
         eyebrow: "메모",
-        title: "그밖에 적어둔 것",
+        title: "기타 메모",
         body: memo,
         source: "노트 원문",
       }),

@@ -443,8 +443,9 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
         <Link href={loginHref} className="-ml-3 inline-flex h-10 w-10 items-center justify-center text-[15px] text-text-1" aria-label="뒤로">
           ‹
         </Link>
-        <Link href="/" className="-mr-2 inline-flex min-h-10 items-center px-2 t-body text-text-3">
-          건너뛰기
+        {/* [1077] "건너뛰기"(앱 온보딩 말) → 로그인 화면과 같은 닫기 ✕ — 가입 화면에서 건너뛸 단계는 없다 */}
+        <Link href="/" className="-mr-[12px] inline-flex h-10 w-10 items-center justify-center text-[15px] text-text-3" aria-label="닫기">
+          ✕
         </Link>
       </div>
 

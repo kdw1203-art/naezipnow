@@ -289,7 +289,7 @@ export function HomeTodayLine({
       </svg>
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <h2 id="home-today" className="t-sub font-bold" style={{ color: "var(--on-dark-muted)" }}>
-          오늘의 한 줄
+          오늘의 시장
         </h2>
         {/* 근거 배지 — 이 지역이 어디서 왔는지 밝힌다. 없으면 사용자는
             자기 지역이라고 오해하거나 "왜 강남?" 에서 멈춘다.

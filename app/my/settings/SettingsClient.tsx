@@ -367,9 +367,8 @@ function usePrefs() {
 function GuestCard() {
   return (
     <div className="card flex flex-col items-center gap-2.5 rounded-2xl px-4 py-8 text-center">
-      <div className="t-body font-bold text-ink">
-        로그인하면 설정을 저장할 수 있어요
-      </div>
+      {/* [1077] 해요체 → 사실 낱말 */}
+      <div className="t-body font-bold text-ink">설정 저장 · 로그인 필요</div>
       <Link
         href={`/login?callbackUrl=${encodeURIComponent("/my/settings")}`}
         className="btn-primary rounded-xl px-5 py-2.5 t-body no-underline"

@@ -482,8 +482,8 @@ function DecideCard({
         value={memo}
         maxLength={MEMO_MAX}
         onChange={(e) => setMemo(e.target.value)}
-        placeholder="메모 한 줄"
-        aria-label="메모 한 줄"
+        placeholder="메모"
+        aria-label="메모"
         className="mt-2 min-h-10 w-full rounded-lg border border-line-strong bg-surface px-3 t-body text-ink"
       />
       {button && <div className="mt-2">{button}</div>}

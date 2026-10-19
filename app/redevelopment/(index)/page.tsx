@@ -24,7 +24,7 @@ import { STAGE_GUIDES, REDEV_GLOSSARY } from "@/lib/redevelopment/stage-guide";
 /* ============================================================
    정비사업 추적 라이트 (재개발닷컴 벤치마크 D2 축소판)
    — 도시정비법 일반 절차 기준 7단계 진행 트래커(정보성 콘텐츠)
-     · 각 단계 설명·유의점·"이 단계에서 확인할 것" 체크리스트
+     · 각 단계 설명·유의점·"확인 사항" 체크리스트
    — board_posts 자동 수집 뉴스에서 재건축·재개발·정비사업 키워드
      매칭 최신 기사 리스트 (실데이터, 없으면 빈 상태)
    — 관심 등록 CTA → /my/saved-searches (실제 존재하는 저장 검색 알림)
@@ -277,7 +277,7 @@ export default async function RedevelopmentPage() {
             설명·유의점·확인할 것은 줄마다 접기(기준 · 출처 접기와 같은 부품) 뒤에 **문장 그대로** 둔다.
             글은 한 줄도 지우지 않았다 — DOM 에 그대로 있고(검색·심사 문구 유지) 접혀만 있다. */}
         <section className="rise-in-1 card rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
-          <h2 className="t-section font-bold text-ink">단계별 상세 · 이 단계에서 확인할 것</h2>
+          <h2 className="t-section font-bold text-ink">단계별 상세 · 확인 사항</h2>
           {/* 줄 사이 선은 판이 아니라 선만(data-tone="plain") — 흰 카드 안에 색판이 또 들어가면 액자가 둘이다 */}
           <ol data-tone="plain" className="mt-2 flex list-none flex-col divide-y divide-line p-0">
             {STAGE_GUIDES.map((s, i) => (
@@ -296,7 +296,7 @@ export default async function RedevelopmentPage() {
                   </span>
                 </div>
 
-                <Fineprint label="설명 · 유의점 · 확인할 것">
+                <Fineprint label="설명 · 유의점 · 확인 사항">
                   {/* [1030 · G2] 단계 설명·유의점은 목록 메타가 아니라 본문 — 폰 한 줄 규칙에서 뺀다(.mscale-wrap) */}
                   <p className="mscale-wrap mt-1 t-sub text-text-1">{s.desc}</p>
 
@@ -313,10 +313,10 @@ export default async function RedevelopmentPage() {
                     </p>
                   </div>
 
-                  {/* 이 단계에서 확인할 것 */}
+                  {/* 확인 사항 — [1077] 문학 투 제목을 표준 이름으로 */}
                   <div className="mt-2">
                     <div className="t-sub font-bold text-text-2">
-                      이 단계에서 확인할 것
+                      확인 사항
                     </div>
                     <ul className="mt-1 flex list-none flex-col gap-1 p-0">
                       {s.checklist.map((c) => (

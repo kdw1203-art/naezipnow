@@ -161,6 +161,8 @@ export function TempMapClient({
 
   /* [1022] 1단계 전국 타일(시/도 평균·지역 수) · 2단계 시/도 안 lat/lng 배치(데스크톱·폰 두 열 수) */
   const nation = useMemo(() => sidoTiles(week?.rows ?? []), [week]);
+  /* [1077] 기록 있는/없는 시·도 수 — 지도 아래 한 줄(빈 칸마다 "기록 없음"을 적는 대신) */
+  const nationHas = nation.filter((t) => t.count > 0 && t.avg !== null).length;
   const sidoLayout = useMemo(() => {
     if (!sido || rows.length === 0) return null;
     const inputs = layoutInputs(rows);
@@ -430,6 +432,7 @@ export function TempMapClient({
               <p className="t-sub py-6 text-center text-text-3">{sido} 기록 없음</p>
             ) : view === "tile" && !sido ? (
               /* [1022] 1단계 — 전국 시/도 타일(한반도 모양 6열 격자). 타일 = 버튼 → 2단계 */
+              <>
               <ul
                 className="tm-grid tm-nation mt-3"
                 style={{ "--tm-cols": KOREA_TILE_COLS, "--tm-cols-m": KOREA_TILE_COLS } as CSSProperties}
@@ -451,15 +454,23 @@ export function TempMapClient({
                       </button>
                     </li>
                   ) : (
+                    /* [1077] "기록 없음" 글자를 칸마다 적지 않는다 — 16칸 중 13칸이 같은 말이라 지도가 빈 벽으로 읽혔다(운영 실측).
+                       이름만 옅은 점선 칸으로 두고(자리는 지도 모양을 지킨다), 세는 말은 아래 한 줄이 한다 */
                     <li key={t.key} className="tm-cell min-w-0" style={cellStyle(t)}>
-                      <span className="tmp-tile tm-sido" data-empty="" aria-disabled="true">
+                      <span className="tmp-tile tm-sido" data-empty="" aria-disabled="true" title={`${t.label} 기록 없음`}>
                         <span className="tmp-tile-k">{t.label}</span>
-                        <span className="tmp-tile-d">기록 없음</span>
+                        <span className="sr-only">기록 없음</span>
                       </span>
                     </li>
                   ),
                 )}
               </ul>
+              {nation.length - nationHas > 0 && (
+                <p className="mt-2 t-caption text-text-3">
+                  기록 있는 시·도 {nationHas}곳 · 기록 없는 시·도 {nation.length - nationHas}곳(점선 칸)
+                </p>
+              )}
+              </>
             ) : view === "tile" && sidoLayout ? (
               /* [1022] 2단계 — 시/도 안 시군구를 lat/lng 로 배치(경도→열 · 위도→행). 타일은 기존 온도 타일 그대로 */
               <ul

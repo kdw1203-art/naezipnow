@@ -373,7 +373,7 @@ export default async function AssistantPage() {
             <section className="card p-[var(--pad-card)]" aria-labelledby="as-watch-title">
               <div className="flex items-center justify-between gap-2">
                 <h2 id="as-watch-title" className="t-section text-ink">
-                  지켜보는 것
+                  관심 항목
                 </h2>
                 <span className="t-caption text-text-3">매일 15:00 점검</span>
               </div>

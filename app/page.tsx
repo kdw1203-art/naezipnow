@@ -6,7 +6,6 @@ import { AIPanel } from "./components/AIPanel";
 import { Fineprint } from "./components/Fineprint";
 import { ResumeDraftPopup } from "./components/home/ResumeDraftPopup";
 import { EmptyState, ErrorState } from "./components/ui/EmptyState";
-import { BetaNoticeModal } from "./components/BetaNoticeModal";
 import { AdZone } from "./components/ads/AdZone";
 import { AdSenseUnit } from "./components/ads/AdSenseUnit";
 import { Footer } from "./components/Footer";
@@ -236,8 +235,8 @@ export default async function Home() {
           {/* 이 문서의 유일한 H1. 히어로 제목은 <p> 다. */}
           <h1 className="sr-only">{HOME_PAGE_H1}</h1>
 
-          {/* [968 · 39] 클로즈 베타 안내 — 본문 위 한 줄. 서버 HTML 에는 없다(null). */}
-          <BetaNoticeModal />
+          {/* [968 · 39] 클로즈 베타 안내 한 줄(BetaNoticeModal)은 [1077] 에 걷었다 — 소유자(2026-10-18) "신뢰도":
+              처음 온 사람이 가장 먼저 읽는 글자가 "베타"였다. 값이 없으면 "—" 로 비워 두는 규칙은 그대로다. */}
           {/* 작성 중 노트 복귀 — 우하단 팝업(소유자 지시 2026-08-16) */}
           <ResumeDraftPopup />
 

@@ -46,7 +46,7 @@ export type CardPreset = {
 export const CARD_PRESETS: readonly CardPreset[] = [
   {
     id: "field",
-    label: "현장 그대로",
+    label: "현장 기록",
     premise: "가서 본 것과 느낀 것을 순서대로",
     /* 종이 계열 — 현장 기록은 밝은 바탕이 어울린다(분석 화면의 네이비와 일부러 다르게) */
     themeId: "sand",

@@ -175,11 +175,12 @@ export function HeaderAuth() {
           로그인
         </Link>
         {/* [1076] 소유자 "회원가입이 잘 보이도록" — 폰에서는 아예 숨었고 PC 에서도 로그인보다 옅은 글자였다 → 채움 단추,
-            폰에도 보인다(폰은 "노트 쓰기"가 숨어 있어 헤더의 채움 단추는 이것 하나). 손끝 칸 40px. */}
+            폰에도 보인다(폰은 "노트 쓰기"가 숨어 있어 헤더의 채움 단추는 이것 하나). 손끝 칸 40px.
+            [1077] 채움 파랑 → 브랜드 네이비(.btn-navy) — 파랑이면 화면마다의 주 행동 단추와 채움 파랑이 둘이 된다(운영 50쪽 실측). */}
         <Link
           href="/signup"
           prefetch={false}
-          className="btn-primary press inline-flex min-h-10 shrink-0 items-center whitespace-nowrap rounded-full px-3 t-body font-bold no-underline md:min-h-9 md:px-3.5"
+          className="btn-navy press inline-flex min-h-10 shrink-0 items-center whitespace-nowrap rounded-full px-3 t-body font-bold no-underline md:min-h-9 md:px-3.5"
         >
           회원가입
         </Link>

@@ -35,10 +35,11 @@ export default function MessagesPage() {
           </div>
           {/* [992 · A1] 임장 모임 채팅(/town/groups)은 보관(비노출) — 안내 링크를 뺐다.
               이 화면 자체도 보관 목록(lib/seo/archived-routes.ts)에 있다. */}
+          {/* [1077] 해요체 → 사실 낱말 */}
           <p className="t-body leading-[1.7] text-text-2">
-            1:1 쪽지는 아직 열리지 않았어요.
+            1:1 쪽지 아직 없음
             <br />
-            지금은 공개 임장노트의 댓글로 이웃과 이야기할 수 있어요.
+            이웃과의 이야기는 공개 임장노트 댓글
           </p>
           <Link
             href="/notes"
@@ -59,8 +60,7 @@ export default function MessagesPage() {
         </div>
 
         <div className="rise-in-2 mt-3 text-center t-sub text-text-3">
-          쪽지는 닉네임으로만 오가도록 준비하고 있어요 · 연락처 요구는 신고
-          대상입니다
+          쪽지는 닉네임으로만 · 연락처 요구는 신고 대상
         </div>
       </div>
     </PageShell>

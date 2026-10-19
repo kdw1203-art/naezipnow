@@ -45,19 +45,19 @@ export const TOOL_TUNING: Record<AiAnalysisToolId, readonly TuningField[]> = {
   "ai-risk": [],
   /* engine 168~234 · 671: compareMemo */
   "ai-compare": [
-    { kind: "textarea", key: "compareMemo", label: "비교에서 중요한 것", placeholder: "예: 학군보다 출퇴근 시간이 먼저", hint: "AI 해설이 이 기준으로 비교해요" },
+    { kind: "textarea", key: "compareMemo", label: "비교 기준", placeholder: "예: 학군보다 출퇴근 시간이 먼저", hint: "AI 해설이 이 기준으로 비교해요" },
   ],
   /* engine 402~443 · 782~790: goal · mustHaves · maxTravelMinutes · preferredInspectionDays */
   "ai-inspection": [
     { kind: "text", key: "goal", label: "이번 임장의 목적", placeholder: "예: 3년 내 실거주 갈아타기" },
-    { kind: "text", key: "mustHaves", label: "꼭 볼 것", placeholder: "예: 초품아, 역 10분", hint: "쉼표로 나눠 적어 주세요" },
+    { kind: "text", key: "mustHaves", label: "필수 조건", placeholder: "예: 초품아, 역 10분", hint: "쉼표로 나눠 적어 주세요" },
     { kind: "number", key: "maxTravelMinutes", label: "이동 시간 한도", unit: "분", placeholder: "예: 40", hint: "동선을 묶는 범위가 돼요" },
     { kind: "text", key: "preferredInspectionDays", label: "다닐 수 있는 날", placeholder: "예: 주말 오전" },
   ],
   /* engine 329~347 · 743~748: propertyName · checklistFocus */
   "my-checklist": [
     { kind: "text", key: "propertyName", label: "점검할 대상", placeholder: "예: 은마아파트 34평" },
-    { kind: "text", key: "checklistFocus", label: "중점적으로 볼 것", placeholder: "예: 권리관계", hint: "그 항목이 앞으로 나와요" },
+    { kind: "text", key: "checklistFocus", label: "중점 항목", placeholder: "예: 권리관계", hint: "그 항목이 앞으로 나와요" },
   ],
   /* engine 384~401 · 766: 브라우저 로컬 보유 자산 — 별도 입력 없음 */
   "ai-portfolio": [],

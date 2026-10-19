@@ -1274,7 +1274,7 @@ export function ComplexInfoPanel({
           {/* 이야기 6건 */}
           {posts.length > 0 && (
             <div className="rounded-lg border border-line bg-surface px-3.5 py-2.5">
-              <SectionHead title="단지 이야기" sub={`${posts.length}건 · 공개 글`} />
+              <SectionHead title="단지 공개 글" sub={`${posts.length}건`} />
               <div className="flex flex-col gap-1">
                 {posts.slice(0, 6).map((p, i) => (
                   <div

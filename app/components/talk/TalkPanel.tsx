@@ -802,8 +802,8 @@ export function TalkPanel({
                     value={text}
                     onChange={(e) => setText(clipTalkInput(e.target.value))}
                     disabled={!selected || loggedIn === null}
-                    placeholder={placeName ? `${placeName} 이야기 한 줄` : "지역을 고르면 쓰기"}
-                    aria-label="토론 한 줄"
+                    placeholder={placeName ? `${placeName} 의견 쓰기` : "지역을 고르면 쓰기"}
+                    aria-label="토론 의견"
                     className="min-h-10 min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 t-body text-ink"
                   />
                   <button type="submit" disabled={posting || !selected || text.trim().length < 2} className="btn-primary inline-flex min-h-10 shrink-0 items-center px-4 t-sub">
