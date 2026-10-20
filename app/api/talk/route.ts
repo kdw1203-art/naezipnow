@@ -4,7 +4,7 @@ import { isAdmin } from "@/lib/auth/is-admin";
 import { findBlockedWord } from "@/lib/community/moderation";
 import { DUPE_WINDOW_MS, judgeFlood } from "@/lib/community/flood-guard";
 import { decodeComplexId } from "@/lib/complex/complex-store";
-import { applyRateLimit, rateLimit, tooManyRequests, WRITE_RATE_LIMIT } from "@/lib/rate-limit";
+import { applyRateLimit, getClientIp, rateLimit, READ_RATE_LIMIT, tooManyRequests, WRITE_RATE_LIMIT } from "@/lib/rate-limit";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
 import { logger } from "@/lib/log";
 import { checkTalkBody, complexInRegion, talkAuthorLabel, talkBodyMessage, TALK_FLOOD_MAX, TALK_FLOOD_WINDOW_MS } from "@/lib/talk/rules";
@@ -28,6 +28,9 @@ function regionParam(req: NextRequest) {
 }
 
 export async function GET(req: NextRequest) {
+  /* [1080] 폴링 경로에 상한이 없었다 — IP 당 분 60회(정상 폴링은 분 2회 이하 · KV 고정 창) */
+  const limited = await applyRateLimit(req, { ...READ_RATE_LIMIT, keyFn: (r) => `talk-feed:${getClientIp(r)}` });
+  if (limited) return limited;
   const region = regionParam(req);
   if (!region) return NextResponse.json({ error: "지역을 찾을 수 없어요." }, { status: 404 });
   const session = await safeAuth();

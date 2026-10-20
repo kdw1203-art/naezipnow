@@ -5,12 +5,13 @@
  *    프로세스 내 Map 사용 → 인스턴스별 best-effort (아래 함수 주석 참고).
  *
  * 2) `applyRateLimit(req, opts)` — 기존 요청 기반 헬퍼 (다수 라우트 사용 중).
- *    UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN 설정 시 Upstash Redis,
- *    미설정이면 프로세스 내 고정 윈도우로 처리.
+ *    UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN **또는** KV_REST_API_URL + KV_REST_API_TOKEN(Vercel KV)
+ *    설정 시 KV 고정 윈도우([1080] lib/kv/rest), 미설정이면 프로세스 내 고정 윈도우로 처리.
  */
 
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { kvAvailable, kvIncrWindow } from "@/lib/kv/rest";
 
 export interface RateLimitOptions {
   /** 윈도우 내 최대 요청 수 (기본 60) */
@@ -148,40 +149,22 @@ function memoryRateLimit(
   return { ok: bucket.count <= max, remaining, resetAt: bucket.resetAt };
 }
 
-async function upstashRateLimit(
+/* [1080] 공용 KV 클라이언트(lib/kv/rest)로 — UPSTASH_* 가 없고 Vercel KV(KV_REST_API_*)만 있는 운영에서도
+   인스턴스를 가로지르는 카운터가 된다. 고정 창(첫 증가에만 만료) — 예전 인라인 구현은 매 호출 EXPIRE 라
+   창이 "마지막 요청부터" 미끄러졌다. */
+async function kvRateLimit(
   key: string,
   max: number,
   windowMs: number,
-  url: string,
-  token: string,
 ): Promise<{ ok: boolean; remaining: number; resetAt: number; degraded: boolean }> {
-  const windowSec = Math.ceil(windowMs / 1000);
-  try {
-    const pipeline = [
-      ["INCR", key],
-      ["EXPIRE", key, windowSec.toString()],
-    ];
-    const res = await fetch(`${url}/pipeline`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(pipeline),
-    });
-    if (!res.ok) throw new Error(`upstash ${res.status}`);
-    const json = (await res.json()) as Array<{ result: number }>;
-    const count = Number(json?.[0]?.result);
-    if (!Number.isFinite(count)) throw new Error("upstash bad response");
-    const remaining = Math.max(0, max - count);
-    const resetAt = Date.now() + windowMs;
-    return { ok: count <= max, remaining, resetAt, degraded: false };
-  } catch {
+  const count = await kvIncrWindow(key, windowMs / 1000);
+  if (count === null) {
     /* 세지 못했다. 판단은 호출자(= failClosed 여부)에게 맡긴다 —
        예전에는 여기서 무조건 ok:true 라, Redis 만 죽이면 로그인 시도 제한이
        통째로 사라졌다는 사실이 호출자에게 아예 보이지 않았다. */
     return { ok: true, remaining: max, resetAt: Date.now() + windowMs, degraded: true };
   }
+  return { ok: count <= max, remaining: Math.max(0, max - count), resetAt: Date.now() + windowMs, degraded: false };
 }
 
 export async function requestRateLimit(
@@ -195,11 +178,8 @@ export async function requestRateLimit(
     "unknown";
   const key = keyFn ? keyFn(req) : `rl:${ip}:${req.nextUrl.pathname}`;
 
-  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
-
-  if (upstashUrl && upstashToken) {
-    const result = await upstashRateLimit(key, max, windowMs, upstashUrl, upstashToken);
+  if (kvAvailable()) {
+    const result = await kvRateLimit(key, max, windowMs);
     // 인증 프리셋만 fail-closed. 비인증 경로는 종전대로 통과시킨다(가용성 우선).
     if (result.degraded && failClosed) {
       return { ...result, ok: false };
@@ -267,39 +247,8 @@ export async function keyRateLimit(
   key: string,
   { max, windowMs }: { max: number; windowMs: number },
 ): Promise<DetailedRateLimitResult> {
-  const upstashUrl = process.env.UPSTASH_REDIS_REST_URL?.trim();
-  const upstashToken = process.env.UPSTASH_REDIS_REST_TOKEN?.trim();
-
-  if (upstashUrl && upstashToken) {
-    try {
-      const windowSec = Math.ceil(windowMs / 1000);
-      const pipeline = [
-        ["INCR", key],
-        ["EXPIRE", key, windowSec.toString()],
-      ];
-      const res = await fetch(`${upstashUrl}/pipeline`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${upstashToken}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(pipeline),
-      });
-      if (!res.ok) throw new Error(`upstash ${res.status}`);
-      const json = (await res.json()) as Array<{ result: number }>;
-      const count = Number(json?.[0]?.result);
-      if (!Number.isFinite(count)) throw new Error("upstash bad response");
-      return {
-        ok: count <= max,
-        remaining: Math.max(0, max - count),
-        resetAt: Date.now() + windowMs,
-        degraded: false,
-      };
-    } catch {
-      /* fail-open — 판단(로깅·완화)은 호출자에게 맡긴다 */
-      return { ok: true, remaining: max, resetAt: Date.now() + windowMs, degraded: true };
-    }
-  }
+  /* [1080] 같은 KV 백엔드 — fail-open(degraded) 은 호출자가 본다 */
+  if (kvAvailable()) return kvRateLimit(key, max, windowMs);
 
   return { ...memoryRateLimit(key, max, windowMs), degraded: false };
 }

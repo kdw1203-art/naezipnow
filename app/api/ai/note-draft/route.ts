@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { applyRateLimit, WRITE_RATE_LIMIT } from "@/lib/rate-limit";
 import { generateNoteDraft } from "@/lib/ai/note-draft";
+import { aiBudgetExceededResponse, consumeAiDailyBudget } from "@/lib/ai/global-budget";
 import { checkDraftQuota, incrementDraftUsage } from "@/lib/inspection/quota";
 import { recordFunnelEvent, FUNNEL_EVENT } from "@/lib/platform-funnel-events";
 import { logger } from "@/lib/log";
@@ -59,6 +60,10 @@ export async function POST(req: NextRequest) {
       usage: { used: quota.used, limit: quota.limit, plan: quota.plan },
     });
   }
+
+  /* [1080] 사이트 전체 일일 상한 — 사용자 할당량(quota) 다음, 모델 호출 직전 */
+  const budget = await consumeAiDailyBudget("note-draft");
+  if (!budget.allowed) return aiBudgetExceededResponse();
 
   try {
     const draft = await generateNoteDraft({

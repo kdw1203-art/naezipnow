@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { logger } from "@/lib/log";
-import { countRow, isCrossSite, normalizeRoute, type CountFacts } from "@/lib/metrics/page-count";
+import { countRow, isBotAgent, isCrossSite, normalizeRoute, type CountFacts } from "@/lib/metrics/page-count";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -102,6 +102,10 @@ export async function POST(req: NextRequest): Promise<Response> {
 
   const sb = getServiceSupabase();
   if (!sb) return NextResponse.json({ ok: true, stored: false });
+
+  /* [1080] 로봇·측정 도구(JS 를 돌리는 크롤러 · Lighthouse · 모니터)의 view/leave 는 행을 만들지 않는다 —
+     count 경로는 이미 거르고 있었는데 view 경로만 그대로였다. 응답은 같다(클라이언트가 재시도하지 않게). */
+  if (isBotAgent(req.headers.get("user-agent"))) return NextResponse.json({ ok: true, stored: false });
 
   if (body.t === "view") {
     const rawPath = String(body.path ?? "");

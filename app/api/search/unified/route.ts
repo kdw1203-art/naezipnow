@@ -9,6 +9,7 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { formatPriceKrw, formatRentLabel } from "@/lib/listings/format";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
 import { logger } from "@/lib/log";
+import { getClientIp, keyRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { expandComplexAlias, normalizeSearchQuery } from "@/lib/search/normalize-query";
 import { isStoryPost } from "@/lib/town/post-href";
 import {
@@ -152,6 +153,9 @@ function ilikePattern(term: string): string {
 }
 
 export async function GET(req: Request) {
+  /* [1080] 속도 제한이 없었다 — 다섯 표를 ilike 로 훑는 질의라 스크립트 하나가 DB 를 밀 수 있다. IP 당 분 60회(KV 고정 창) */
+  const rl = await keyRateLimit(`search-unified:${getClientIp(req)}`, { max: 60, windowMs: 60_000 });
+  if (!rl.ok) return tooManyRequests(Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000)));
   const { searchParams } = new URL(req.url);
   const rawQ = searchParams.get("q")?.trim() ?? "";
   // [개선 #31] 통용 약칭·"아파트" 꼬리 정규화 — 응답의 query 는 사용자가 친 원문 유지

@@ -160,10 +160,10 @@ export async function getDeal(id: string): Promise<DevDeal | null> {
   }
 }
 
-/** 상세 조회수 +1 — best-effort(원자성 미보장, 실패 무시). */
-export async function incrementDealView(id: string): Promise<void> {
+/** 상세 조회수 +by(기본 1) — best-effort(원자성 미보장, 실패 무시). [1080] 버퍼 반영 크론이 묶음(by)으로 부른다. */
+export async function incrementDealView(id: string, by = 1): Promise<boolean> {
   const sb = getServiceSupabase();
-  if (!sb || !id) return;
+  if (!sb || !id || !(by > 0)) return false;
   try {
     const { data, error } = await sb
       .from("dev_deals")
@@ -174,18 +174,21 @@ export async function incrementDealView(id: string): Promise<void> {
        덮어써진다 — best-effort 인 +1 이 데이터 파괴가 된다. 못 읽었으면 쓰지 않는다. */
     if (error) {
       logger.warn(`[dev-deals] view_count 조회 실패 (${id}) — +1 을 건너뜁니다.`, error);
-      return;
+      return false;
     }
+    if (!data) return false;
     const current =
-      data && (data as Record<string, unknown>).view_count != null
+      (data as Record<string, unknown>).view_count != null
         ? Number((data as Record<string, unknown>).view_count)
         : 0;
-    await sb
+    const { error: upError } = await sb
       .from("dev_deals")
-      .update({ view_count: current + 1 })
+      .update({ view_count: current + Math.floor(by) })
       .eq("id", id);
+    return !upError;
   } catch (e) {
     logger.warn("[dev-deals] incrementDealView", e);
+    return false;
   }
 }
 

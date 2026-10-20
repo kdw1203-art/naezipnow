@@ -1,7 +1,8 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { getOpenAiApiKey, getOpenAiModel } from "@/lib/ai/env-keys";
-import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { getClientIp, keyRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { aiBudgetExceededResponse, consumeAiDailyBudget } from "@/lib/ai/global-budget";
 
 export const runtime = "nodejs";
 
@@ -58,8 +59,8 @@ export async function POST(req: NextRequest) {
   /* 2026-08-01: 이 라우트는 인증 없이 OpenAI 유료 호출로 이어진다.
      스크립트 한 개가 과금을 무한정 태울 수 있어 IP 기준 상한을 건다.
      (사람의 정상 사용은 비교 화면에서 분당 몇 번 수준이다.) */
-  const rl = rateLimit(`ai-compare:${getClientIp(req)}`, { limit: 10, windowMs: 60_000 });
-  if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
+  const rl = await keyRateLimit(`ai-compare:${getClientIp(req)}`, { max: 10, windowMs: 60_000 }); // [1080] KV 고정 창
+  if (!rl.ok) return tooManyRequests(Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000)));
   let body: {
     left?: Side;
     right?: Side;
@@ -90,6 +91,10 @@ export async function POST(req: NextRequest) {
       : winner === "left"
         ? `${left?.name ?? "A"}가 ${right?.name ?? "B"} 대비 현재 조건에서 우세합니다.`
         : `${right?.name ?? "B"}가 ${left?.name ?? "A"} 대비 현재 조건에서 우세합니다.`;
+
+  /* [1080] 사이트 전체 일일 상한 — 넘으면 모델을 부르지 않는다(규칙 요약만) */
+  const budget = await consumeAiDailyBudget("compare");
+  if (!budget.allowed) return aiBudgetExceededResponse();
 
   const narrative = await llmCompareNarrative({
     left: left ?? {},

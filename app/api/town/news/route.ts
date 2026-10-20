@@ -15,6 +15,7 @@
  */
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { unstable_cache } from "next/cache";
 import { applyRateLimit, READ_RATE_LIMIT } from "@/lib/rate-limit";
 import { readTownPosts } from "@/lib/newui/board-posts";
 import {
@@ -24,9 +25,18 @@ import {
   pageNewsRows,
 } from "@/lib/town/news-list";
 import { logger } from "@/lib/log";
+import { TOWN_POSTS_TAG } from "@/lib/town/cache-tags";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+/* [1080] 행 조립을 데이터 캐시에 5분 — 예전엔 "더 보기" 호출마다 board_posts 전량을 읽어 메모리에서 정렬·클러스터링했다
+   (CDN 미적중마다). 뉴스는 하루 1회 적재라 5분 묵은 행이 틀릴 일이 없고, 적재·글 작성은 TOWN_POSTS_TAG 로 비운다.
+   이 라우트만 읽는 캐시라 페이지 TTL 을 끌어내리지 않는다(lib/town/cache-tags 주석). */
+const cachedNewsRows = unstable_cache(async () => buildNewsRows(await readTownPosts()), ["town-news-rows-v1"], {
+  revalidate: 300,
+  tags: [TOWN_POSTS_TAG],
+});
 
 export async function GET(req: NextRequest) {
   const limited = await applyRateLimit(req, READ_RATE_LIMIT);
@@ -39,7 +49,7 @@ export async function GET(req: NextRequest) {
   const limit = Number.isFinite(limitRaw) && limitRaw > 0 ? Math.min(100, limitRaw) : NEWS_LIST_PAGE;
 
   try {
-    const rows = buildNewsRows(await readTownPosts());
+    const rows = await cachedNewsRows();
     return NextResponse.json(pageNewsRows(rows, offset, limit), {
       headers: { "Cache-Control": "public, s-maxage=600, stale-while-revalidate=86400" },
     });

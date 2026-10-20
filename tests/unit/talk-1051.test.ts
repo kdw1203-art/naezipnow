@@ -138,7 +138,7 @@ test("홈 — 맨 아래 실시간 토론(전폭) · 판은 화면 가까이 오
   assert.match(lazy, /IntersectionObserver/);
   assert.doesNotMatch(read("app/components/home/HomeTalkSection.tsx"), /"use client"/);
   const panel = code("app/components/talk/TalkPanel.tsx");
-  assert.match(panel, /TALK_POLL_MS/);
+  assert.match(panel, /talkPollDelayMs\(quietStreakRef\.current\)/); // [1080] 고정 30초 → 30·60·120초(새 글 없으면 늘린다)
   assert.match(panel, /document\.visibilityState === "visible"/);
   assert.match(panel, /사람 글 없음 · 아래는 자동 소식/);
   assert.equal((panel.match(/btn-primary/g) ?? []).length, 1);

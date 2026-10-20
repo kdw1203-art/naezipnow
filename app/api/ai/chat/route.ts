@@ -3,7 +3,8 @@ import { auth } from "@/auth";
 import { getOpenAiApiKey, getOpenAiModel } from "@/lib/ai/env-keys";
 import { buildAiPublicContext } from "@/lib/ai/public-data-context";
 import { NUGUZIP_AI_SYSTEM } from "@/lib/ai/system-prompt";
-import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { getClientIp, keyRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { aiBudgetExceededResponse, consumeAiDailyBudget } from "@/lib/ai/global-budget";
 import { logger } from "@/lib/log";
 
 export const runtime = "nodejs";
@@ -44,12 +45,9 @@ export async function POST(req: Request) {
     );
   }
 
-  // 사용자별 별도 버킷: 시간당 10회 (IP 버킷과 분리)
-  const rl = rateLimit(`ai-chat:${email || getClientIp(req)}`, {
-    limit: 10,
-    windowMs: 60 * 60_000,
-  });
-  if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
+  // 사용자별 별도 버킷: 시간당 10회 (IP 버킷과 분리) · [1080] KV 고정 창(인스턴스를 가로질러 센다)
+  const rl = await keyRateLimit(`ai-chat:${email || getClientIp(req)}`, { max: 10, windowMs: 60 * 60_000 });
+  if (!rl.ok) return tooManyRequests(Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000)));
 
   let body: unknown;
   try {
@@ -108,6 +106,10 @@ export async function POST(req: Request) {
       { status: 503 },
     );
   }
+
+  /* [1080] 사이트 전체 일일 상한 — 모델을 실제로 부르기 직전에만 소비 */
+  const budget = await consumeAiDailyBudget("chat");
+  if (!budget.allowed) return aiBudgetExceededResponse();
 
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {

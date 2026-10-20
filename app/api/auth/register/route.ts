@@ -18,6 +18,7 @@ import { mapSignUpRejection } from "@/lib/auth/signup-error";
 import { findAuthUserByEmail } from "@/lib/auth/find-auth-user";
 import { EMAIL_RE, NAME_MAX } from "@/lib/auth/signup-form";
 import { safeInternalPath } from "@/lib/safe-path";
+import { verifyTurnstile } from "@/lib/auth/verify-turnstile";
 
 export const runtime = "nodejs";
 
@@ -411,6 +412,15 @@ export async function POST(req: NextRequest) {
   const source = String(b.source ?? "auth_signup").trim().slice(0, 80) || "auth_signup";
   const campaign = String(b.campaign ?? "default").trim().slice(0, 80) || "default";
   const resendOnly = Boolean(b.resendConfirmation);
+
+  /* [1080] 캡차(Turnstile) — 새 가입만(재발송은 이미 만든 계정 · 속도 제한이 받는다). 키가 없으면 통과(미도입 구성 · verify-turnstile 주석) */
+  if (!resendOnly) {
+    const captchaToken = typeof b.captchaToken === "string" ? b.captchaToken : undefined;
+    const captchaOk = await verifyTurnstile(captchaToken, getClientIp(req));
+    if (!captchaOk) {
+      return NextResponse.json({ error: "보안 확인 실패 · 새로고침 후 다시", code: "captcha" }, { status: 403 });
+    }
+  }
 
   const consentRaw = (b.consent ?? {}) as Record<string, unknown>;
   const consent = {

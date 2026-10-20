@@ -18,7 +18,9 @@ import { callLlmChat, type LlmMessage } from "@/lib/ai/llm-provider";
 
 import { isOpenAiConfigured } from "@/lib/ai/env-keys";
 
-import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { getClientIp, keyRateLimit, tooManyRequests } from "@/lib/rate-limit";
+
+import { consumeAiDailyBudget } from "@/lib/ai/global-budget";
 
 
 
@@ -310,6 +312,12 @@ async function maybePolishWithLlm(base: NoteOut, memo: string, intent: Inspectio
 
 
 
+  /* [1080] 사이트 전체 일일 상한 — 넘으면 다듬기만 건너뛴다(규칙 기반 초안은 그대로) */
+
+  const budget = await consumeAiDailyBudget("inspection-note");
+
+  if (!budget.allowed) return base;
+
   const result = await callLlmChat(option, messages);
 
   if (!result.ok) return base;
@@ -362,15 +370,9 @@ export async function POST(req: NextRequest) {
 
      임장노트 작성 흐름에서 사람은 분당 몇 번을 넘지 않는다. */
 
-  const rl = rateLimit(`ai-inspection-note:${getClientIp(req)}`, {
+  const rl = await keyRateLimit(`ai-inspection-note:${getClientIp(req)}`, { max: 6, windowMs: 60_000 }); // [1080] KV 고정 창
 
-    limit: 6,
-
-    windowMs: 60_000,
-
-  });
-
-  if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
+  if (!rl.ok) return tooManyRequests(Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000)));
 
   let body: In;
 

@@ -5,6 +5,7 @@ import crypto from "node:crypto";
 import { resolveNaverMapClientId } from "@/lib/map/naver-maps-sdk";
 import { haversineDistanceM } from "@/lib/map/geo-haversine";
 import { logger } from "@/lib/log";
+import { kstDayKey, kvGet, kvIncrWindow, kvSet } from "@/lib/kv/rest";
 
 /**
  * NCP Maps Directions(자동차 길찾기) 클라이언트 — 출퇴근 소요시간 추정용.
@@ -167,6 +168,33 @@ function haversineMinutes(from: LatLng, to: LatLng): number {
   return Math.max(1, Math.round(minutes));
 }
 
+/* ── [1080] 캐시·일일 상한 ───────────────────────────────────────────── */
+const DIRECTIONS_CACHE_SECONDS = 7 * 24 * 3600;
+const DIRECTIONS_MISS_SECONDS = 6 * 3600;
+const DIRECTIONS_MISS_MARK = "-";
+const DIRECTIONS_DAILY_CAP_DEFAULT = 3000;
+
+function directionsCacheKey(from: LatLng, to: LatLng, option: string): string {
+  const r = (v: number) => (Math.round(v * 1e4) / 1e4).toFixed(4);
+  return `naver:dir:v1:${option}:${r(from.lat)},${r(from.lng)}:${r(to.lat)},${r(to.lng)}`;
+}
+
+export function directionsDailyCap(): number {
+  const raw = Number(process.env.NAVER_DIRECTIONS_DAILY_CAP?.trim());
+  return Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : DIRECTIONS_DAILY_CAP_DEFAULT;
+}
+
+/** 오늘(한국 시간) 실제 호출 1건을 소비 — 상한을 넘으면 false. KV 가 없으면 세지 못하므로 true(종전과 같다) */
+async function consumeDirectionsDailyCap(): Promise<boolean> {
+  const n = await kvIncrWindow(`naver:dir:day:${kstDayKey()}`, 48 * 3600);
+  if (n === null) return true;
+  if (n > directionsDailyCap()) {
+    if (n === directionsDailyCap() + 1) logger.warn("[map/directions] 일일 상한 도달 — 직선거리 추정으로 전환", { cap: directionsDailyCap() });
+    return false;
+  }
+  return true;
+}
+
 /** 실제 Directions API 호출 → 분(성공 시). 실패/파싱불가 시 null. */
 async function callDirections(from: LatLng, to: LatLng): Promise<number | null> {
   const full = await fetchDrivingRoute(from, to);
@@ -183,6 +211,20 @@ export async function fetchDrivingRoute(
   option: "trafast" | "traoptimal" | "traavoidcaronly" = "traoptimal",
 ): Promise<RoutePathResult | null> {
   if (!isDirectionsConfigured()) return null;
+  /* [1080] ① KV 캐시 7일(좌표 소수 4자리 ≈ 10m 격자 — 단지 좌표는 고정이라 같은 출발·도착은 한 번만 부른다)
+     ② 사이트 전체 일일 상한(NAVER_DIRECTIONS_DAILY_CAP · 기본 3,000회) — 넘으면 null → 호출부가 직선거리 추정으로.
+     예전엔 fetch 의 next.revalidate(15분)뿐이라 통근 조회 한 번(최대 60점)이 그대로 60회 과금이었다. */
+  const cacheKey = directionsCacheKey(from, to, option);
+  const cached = await kvGet(cacheKey);
+  if (cached === DIRECTIONS_MISS_MARK) return null;
+  if (cached) {
+    try {
+      return JSON.parse(cached) as RoutePathResult;
+    } catch {
+      /* 깨진 캐시 — 다시 받는다 */
+    }
+  }
+  if (!(await consumeDirectionsDailyCap())) return null;
   try {
     const params = new URLSearchParams();
     params.set("start", `${from.lng},${from.lat}`);
@@ -191,7 +233,10 @@ export async function fetchDrivingRoute(
 
     const { url, headers } = buildRequest(DIRECTIONS_PATH, params);
     const res = await fetch(url, { headers, next: { revalidate: 900 } });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (res.status === 400 || res.status === 404) await kvSet(cacheKey, DIRECTIONS_MISS_MARK, DIRECTIONS_MISS_SECONDS);
+      return null;
+    }
 
     const json = (await res.json()) as DirectionsResponse;
     if (json.code != null && json.code !== 0) return null;
@@ -202,20 +247,14 @@ export async function fetchDrivingRoute(
     const distanceM = Number(entry.summary?.distance);
     const durationMs = Number(entry.summary?.duration);
     if (!Number.isFinite(distanceM) || distanceM <= 0) return null;
-    if (path.length < 2) {
-      return {
-        path: [from, to],
-        distanceM: Math.round(distanceM),
-        durationMin: Math.max(1, Math.round((durationMs || 0) / 60_000)),
-        basis: "directions",
-      };
-    }
-    return {
-      path,
+    const result: RoutePathResult = {
+      path: path.length < 2 ? [from, to] : path,
       distanceM: Math.round(distanceM),
       durationMin: Math.max(1, Math.round((durationMs || 0) / 60_000)),
       basis: "directions",
     };
+    await kvSet(cacheKey, JSON.stringify(result), DIRECTIONS_CACHE_SECONDS);
+    return result;
   } catch (e) {
     logger.warn("[map/directions] 경로 path 조회 실패", e);
     return null;

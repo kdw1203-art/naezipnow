@@ -30,6 +30,7 @@ import { buildVerdict, verdictToSummary, type Verdict } from "@/lib/ai/verdict";
 import { AI_PROMPT_VERSION } from "@/lib/ai/system-prompt";
 
 import { dbUnavailable } from "@/lib/api/db-unavailable";
+import { consumeAiDailyBudget } from "@/lib/ai/global-budget";
 import { kstMonthStart } from "@/lib/subscriptions/usage-period";
 
 export const runtime = "nodejs";
@@ -396,11 +397,25 @@ export async function POST(req: Request) {
     }
   }
 
+  /* [1080] 사이트 전체 **일일** 상한(AI_DAILY_REQUEST_BUDGET · KV 카운터) — 월 예산과 같은 방식으로 규칙 기반에 고지.
+     외부 모델을 실제로 부를 때만 소비한다(키 없음·월 예산 초과는 세지 않는다). */
+  let dailyBudgetExceeded = false;
+  if (!llmBudgetExceeded && ((option.vendor === "openai" && hasOpenAI) || (option.vendor === "anthropic" && hasAnthropic))) {
+    const daily = await consumeAiDailyBudget("analysis");
+    dailyBudgetExceeded = !daily.allowed;
+  }
+
   if (llmBudgetExceeded) {
     source = "stub";
     markdown = buildStubMarkdown(tid, {
       ...input,
       _notice: `이번 달 AI 서술 예산(${llmMonthlyCap}회)을 모두 사용해 규칙 기반 결과로 대신합니다. 다음 달에 자동으로 다시 열립니다.`,
+    });
+  } else if (dailyBudgetExceeded) {
+    source = "stub";
+    markdown = buildStubMarkdown(tid, {
+      ...input,
+      _notice: "오늘 AI 요청 한도에 닿아 규칙 기반 결과로 대신합니다. 내일 자동으로 다시 열립니다.",
     });
   } else if (option.vendor === "openai" && !hasOpenAI) {
     source = "stub";

@@ -1,4 +1,5 @@
 import { SignupClient } from "./SignupClient";
+import { turnstileSiteKey } from "@/lib/auth/turnstile-site-key";
 import { getConfiguredSocialProviders } from "@/lib/auth/configured-social";
 
 export const dynamic = "force-dynamic";
@@ -10,5 +11,6 @@ export const metadata = {
 };
 
 export default function SignupPage() {
-  return <SignupClient social={getConfiguredSocialProviders()} />;
+  /* [1080] 캡차 사이트 키는 서버가 읽어 넘긴다 — 키를 넣으면 재배포만으로 켜진다 */
+  return <SignupClient social={getConfiguredSocialProviders()} captchaSiteKey={turnstileSiteKey()} />;
 }

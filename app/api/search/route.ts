@@ -3,6 +3,7 @@ import { readPosts } from "@/lib/posts-store";
 import { listMeetings } from "@/lib/meetings/store-db";
 import { listExperts } from "@/lib/experts/store-db";
 import { logger } from "@/lib/log";
+import { getClientIp, keyRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { postHref } from "@/lib/town/post-href";
 
 export const runtime = "nodejs";
@@ -28,6 +29,9 @@ function excerptAroundQuery(text: string, q: string, maxLen = 200): string {
 }
 
 export async function GET(req: Request) {
+  /* [1080] 호출마다 posts 500행을 읽어 메모리에서 거르는 길이라 IP 당 분 30회(KV 고정 창) + CDN 5분 */
+  const rl = await keyRateLimit(`search-legacy:${getClientIp(req)}`, { max: 30, windowMs: 60_000 });
+  if (!rl.ok) return tooManyRequests(Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000)));
   const { searchParams } = new URL(req.url);
   const q = searchParams.get("q")?.trim() ?? "";
   const type = searchParams.get("type") ?? "all";
@@ -167,15 +171,19 @@ export async function GET(req: Request) {
     );
   }
 
-  return NextResponse.json({
-    results: paged,
-    total,
-    page,
-    limit,
-    query: q,
-    /* 부분 실패 공개: 이 필드가 있으면 total 은 "전체"가 아니라
-       "읽는 데 성공한 소스 기준"이다. */
-    partial: failedSources.length > 0,
-    ...(failedSources.length > 0 ? { failedSources } : {}),
-  });
+  return NextResponse.json(
+    {
+      results: paged,
+      total,
+      page,
+      limit,
+      query: q,
+      /* 부분 실패 공개: 이 필드가 있으면 total 은 "전체"가 아니라
+         "읽는 데 성공한 소스 기준"이다. */
+      partial: failedSources.length > 0,
+      ...(failedSources.length > 0 ? { failedSources } : {}),
+    },
+    /* [1080] 같은 검색어는 CDN 이 5분 받아 준다(부분 실패는 캐시하지 않는다) */
+    { headers: { "Cache-Control": failedSources.length > 0 ? "no-store" : "public, s-maxage=300, stale-while-revalidate=600" } },
+  );
 }

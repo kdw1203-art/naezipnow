@@ -5,6 +5,8 @@ import { buildStubMarkdown } from "@/lib/ai/analysis-engine";
 import { defaultModelIdFromEnv, getModelOption } from "@/lib/ai/llm-models";
 import { callLlmChat, type LlmMessage } from "@/lib/ai/llm-provider";
 import { isOpenAiConfigured } from "@/lib/ai/env-keys";
+import { keyRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { aiBudgetExceededResponse, consumeAiDailyBudget } from "@/lib/ai/global-budget";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { fetchNationalPlan } from "@/lib/national-data/fetch";
 import { parseDistrict } from "@/lib/inspection/public-data-context";
@@ -95,6 +97,9 @@ export async function POST(req: Request) {
   if (!email) {
     return NextResponse.json({ error: "로그인이 필요합니다." }, { status: 401 });
   }
+  /* [1080] 이 라우트만 속도 제한·할당량이 없었다 — 사용자당 시간 10회(KV 고정 창) */
+  const rl = await keyRateLimit(`ai-pattern-summary:${email.trim().toLowerCase()}`, { max: 10, windowMs: 60 * 60_000 });
+  if (!rl.ok) return tooManyRequests(Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000)));
 
   let modelId = defaultModelIdFromEnv();
   try {
@@ -230,6 +235,10 @@ export async function POST(req: Request) {
       markdown: buildStubMarkdown("ai-diagnosis", { digest, _notice: "Anthropic 키 없음" }),
     });
   }
+
+  /* [1080] 사이트 전체 일일 상한 */
+  const budget = await consumeAiDailyBudget("pattern-summary");
+  if (!budget.allowed) return aiBudgetExceededResponse();
 
   const result = await callLlmChat(option, messages);
   if (!result.ok) {

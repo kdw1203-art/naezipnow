@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isAdminApiRequest } from "@/lib/admin/api-auth";
+import { authorizeCron } from "@/lib/cron/authorize";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { trySendViaResend } from "@/lib/notifications/resend-send";
 import { isEmailConfigured } from "@/lib/email/send";
@@ -25,19 +25,15 @@ export const maxDuration = 300;
  * - 발송 실패는 attempts 를 올리고 오류 원문을 남긴다. 5회 넘게 실패한 건은
  *   dead 로 옮겨 매일 같은 주소로 재시도하는 스팸을 막는다.
  *
- * 보호: CRON_SECRET(?secret= / x-cron-secret) · x-vercel-cron · 관리자 세션
- * (plan-expiry-sweep 과 같은 규칙).
+ * 보호: lib/cron/authorize.ts (Authorization: Bearer · x-cron-secret · 관리자 세션) — 다른 크론과 같은 규칙.
+ * [1080] 예전 검사는 누구나 붙일 수 있는 `x-vercel-cron: 1` 헤더를 믿었고 CRON_SECRET 이 없으면 전부 통과였다.
+ * Vercel 크론은 CRON_SECRET 을 Authorization: Bearer 로 보내므로 공용 검사로 충분하다.
+ *
+ * [1080] 동시 실행 보호 — 보내기 전에 attempts 를 조건부(현재값과 같을 때만)로 올려 **먼저 잡은 실행만** 보낸다.
+ * 예전엔 select 와 update 가 조건 없이 떨어져 두 실행이 겹치면 같은 메일이 두 번 나갔다(주기를 15분으로 당기므로 필요).
  */
 export async function GET(req: Request) {
-  const expected = process.env.CRON_SECRET?.trim();
-  const url = new URL(req.url);
-  const provided = url.searchParams.get("secret") ?? req.headers.get("x-cron-secret");
-  const fromVercelCron = req.headers.get("x-vercel-cron") === "1";
-  const authorized =
-    fromVercelCron ||
-    (expected ? provided === expected : true) ||
-    (await isAdminApiRequest());
-  if (!authorized) {
+  if (!(await authorizeCron(req))) {
     return NextResponse.json({ error: "권한이 필요합니다." }, { status: 403 });
   }
 
@@ -79,6 +75,15 @@ export async function GET(req: Request) {
         dead += 1;
         continue;
       }
+      /* [1080] 잡기(CAS) — attempts 가 읽은 값 그대로일 때만 +1. 0행이면 다른 실행이 먼저 잡았다 */
+      const { data: claimed, error: claimError } = await sb
+        .from("notification_outbox")
+        .update({ attempts: attempts + 1 })
+        .eq("id", id)
+        .eq("status", "pending")
+        .eq("attempts", attempts)
+        .select("id");
+      if (claimError || !claimed || claimed.length === 0) continue;
       /* 고도화 49 — 표준 레이아웃(수신거부·사업자 푸터) 적용.
          body 는 사용자 입력(댓글 미리보기 등)이 올 수 있어 반드시 이스케이프한다
          — 이전 코드는 원문을 그대로 HTML 에 끼워 넣고 있었다. */
@@ -101,13 +106,14 @@ export async function GET(req: Request) {
       } else if (attempts + 1 >= 5) {
         await sb
           .from("notification_outbox")
-          .update({ status: "dead", attempts: attempts + 1, last_error: result.error ?? null })
+          .update({ status: "dead", last_error: result.error ?? null })
           .eq("id", id);
         dead += 1;
       } else {
+        /* attempts 는 위 잡기 단계에서 이미 +1 — 오류 원문만 남긴다 */
         await sb
           .from("notification_outbox")
-          .update({ attempts: attempts + 1, last_error: result.error ?? null })
+          .update({ last_error: result.error ?? null })
           .eq("id", id);
         failed += 1;
       }

@@ -8,7 +8,7 @@ import {
   type CommuteBasis,
 } from "@/lib/map/naver-directions";
 import { logger } from "@/lib/log";
-import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { getClientIp, keyRateLimit, tooManyRequests } from "@/lib/rate-limit";
 
 /**
  * POST /api/map/commute
@@ -97,8 +97,8 @@ export async function POST(req: NextRequest) {
   /* 2026-08-01: 인증 없이 네이버 지오코딩·길찾기(NCP 과금) 호출로 이어지는
      라우트 — IP 기준 상한. 지도 조작은 잦으니 비교적 넉넉히 잡되,
      스크립트의 무한 과금은 막는다. */
-  const rl = rateLimit(`map-commute:${getClientIp(req)}`, { limit: 30, windowMs: 60_000 });
-  if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
+  const rl = await keyRateLimit(`map-commute:${getClientIp(req)}`, { max: 20, windowMs: 60_000 }); // [1080] KV 고정 창 · 한 번에 최대 60점
+  if (!rl.ok) return tooManyRequests(Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000)));
   let body: Record<string, unknown>;
   try {
     body = (await req.json()) as Record<string, unknown>;

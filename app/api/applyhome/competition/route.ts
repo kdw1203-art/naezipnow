@@ -4,6 +4,7 @@
  */
 import { NextResponse } from "next/server";
 import { logger } from "@/lib/log";
+import { getClientIp, keyRateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { fetchAptCompetition } from "@/lib/applyhome/adapters/apt-competition";
 import type { ApplyhomeCompetitionEndpoint } from "@/lib/applyhome/types";
 
@@ -18,6 +19,10 @@ const ENDPOINTS: ApplyhomeCompetitionEndpoint[] = [
 ];
 
 export async function GET(request: Request) {
+  /* [1080] 요청마다 공공데이터(청약홈 odcloud) 호출로 이어지는 길 — IP 당 분 30회(KV 고정 창) + CDN 1시간
+     (자료는 하루 단위로 바뀐다). 일 한도(data.go.kr)를 방문자 수가 그대로 밀어붙이지 않게. */
+  const rl = await keyRateLimit(`applyhome-competition:${getClientIp(request)}`, { max: 30, windowMs: 60_000 });
+  if (!rl.ok) return tooManyRequests(Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000)));
   const { searchParams } = new URL(request.url);
   const endpointParam = searchParams.get("endpoint") ?? "getAPTLttotPblancCmpet";
   const endpoint = ENDPOINTS.includes(endpointParam as ApplyhomeCompetitionEndpoint)
@@ -32,7 +37,7 @@ export async function GET(request: Request) {
       houseManageNo: searchParams.get("houseManageNo") ?? undefined,
       pblancNo: searchParams.get("pblancNo") ?? undefined,
     });
-    return NextResponse.json(data);
+    return NextResponse.json(data, { headers: { "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400" } });
   } catch (err) {
     /* 업스트림 원문 에러는 서버 로그로만 — 익명 응답에는 일반 문구. */
     logger.warn("[api/applyhome/competition] 조회 실패", err);

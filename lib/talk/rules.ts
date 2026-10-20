@@ -12,8 +12,19 @@ export const TALK_MAX_LEN = 200;
 export const TALK_MIN_LEN = 2;
 /** 신고 누적 숨김 — 커뮤니티 글(CONTENT_REPORT_HIDE_THRESHOLD)과 같은 3건 */
 export const TALK_REPORT_HIDE_THRESHOLD = 3;
-/** 오른쪽 글 목록 새로 고침 간격(보이는 동안만) */
+/** 오른쪽 글 목록 새로 고침 간격(보이는 동안만) — 새 글이 없는 폴링이 이어지면 늘어난다([1080] talkPollDelayMs) */
 export const TALK_POLL_MS = 30_000;
+/** [1080] 조용한 폴링의 간격 상한 */
+export const TALK_POLL_MAX_MS = 120_000;
+/**
+ * [1080] 다음 폴링까지 — 새 글 없는 연속 폴링 수(quietStreak)로 30초 → 60초 → 120초(상한).
+ * 0·1회면 30초(막 열었거나 새 글이 방금 왔다) · 2~3회면 60초 · 4회부터 120초.
+ */
+export function talkPollDelayMs(quietStreak: number): number {
+  if (quietStreak < 2) return TALK_POLL_MS;
+  if (quietStreak < 4) return Math.min(TALK_POLL_MAX_MS, TALK_POLL_MS * 2);
+  return TALK_POLL_MAX_MS;
+}
 /** 도배 상한 — 10분에 10줄(같은 글 24시간 금지는 커뮤니티 글 규칙 그대로) */
 export const TALK_FLOOD_WINDOW_MS = 10 * 60_000;
 export const TALK_FLOOD_MAX = 10;

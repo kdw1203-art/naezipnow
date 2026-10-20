@@ -17,7 +17,8 @@ import {
   tryLlmText,
   type AnalysisRegionSnapshot,
 } from "@/lib/ai/market-insight";
-import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { getClientIp, keyRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { consumeAiDailyBudget } from "@/lib/ai/global-budget";
 
 export const runtime = "nodejs";
 
@@ -73,11 +74,8 @@ function ruleComment(snaps: AnalysisRegionSnapshot[]): string {
 export async function POST(req: Request) {
   const session = await safeAuth();
   const rlKey = session?.user?.email?.trim().toLowerCase() || getClientIp(req);
-  const rl = rateLimit(`ai-compare:${rlKey}`, {
-    limit: 10,
-    windowMs: 60 * 60_000,
-  });
-  if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
+  const rl = await keyRateLimit(`ai-compare-summary:${rlKey}`, { max: 10, windowMs: 60 * 60_000 }); // [1080] KV 고정 창
+  if (!rl.ok) return tooManyRequests(Math.max(1, Math.ceil((rl.resetAt - Date.now()) / 1000)));
 
   const body = (await req.json().catch(() => ({}))) as { regions?: unknown };
   const names = [
@@ -106,7 +104,9 @@ export async function POST(req: Request) {
   let mode: "llm" | "rule" = "rule";
   let engine: string | null = null;
 
-  if (snapshots.length > 0) {
+  /* [1080] 사이트 전체 일일 상한 — 넘으면 모델을 부르지 않고 규칙 코멘트만(화면은 mode:"rule") */
+  const budget = snapshots.length > 0 ? await consumeAiDailyBudget("compare-summary") : null;
+  if (snapshots.length > 0 && budget && budget.allowed) {
     const llm = await tryLlmText(
       "당신은 naezipnow.com의 한국어 부동산 비교 분석 보조 AI입니다. 과장·투자 권유 없이, 제공된 지역 실시세만 근거로 3~4문장 종합 코멘트를 평문 한 단락으로 작성하세요.",
       [

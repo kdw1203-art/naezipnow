@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
 import { ReportButton } from "../../components/ReportButton";
 import { RefreshButton } from "./RefreshButton";
+import { ListingViewPing } from "./ViewPing";
 import { InquiryForm } from "./InquiryForm";
 import { ListingSaveButton } from "@/components/ListingSaveButton";
 import { Explain } from "@/app/components/explain/Explain";
@@ -12,7 +13,6 @@ import { safeAuth } from "@/lib/safe-auth";
 import { isBookmarked } from "@/lib/bookmarks/store";
 import {
   getListingById,
-  incrementView,
   isListingStale,
   LISTING_TYPE_LABEL,
   LISTING_SOURCE_LABEL,
@@ -153,10 +153,10 @@ export default async function ListingDetailPage({
   // 승인 전 매물은 소유주 본인만 열람 가능
   if (listing.status !== "approved" && !isOwner) notFound();
 
-  // 조회수 +1 — 공개(승인) 매물이며 본인 조회가 아닐 때만 (best-effort)
-  if (listing.status === "approved" && !isOwner) {
-    await incrementView(id);
-  }
+  /* 조회수 +1 — 공개(승인) 매물이며 본인 조회가 아닐 때만 (best-effort)
+     [1080] 렌더 중 DB 쓰기(force-dynamic 이라 크롤러·미리보기·새로고침까지 전부)를 떼고 클라이언트 핑(ListingViewPing →
+     /api/listings/<id>/view → KV 버퍼 → 시간 단위 반영)으로. JS 없는 열람은 이제 세지 않는다 — 사람 조회에 가까운 수. */
+  const countView = listing.status === "approved" && !isOwner;
 
   // #1 관심 저장 초기 상태 · #6 신선도("확인 필요") 판정
   const savedInitial = viewerEmail
@@ -233,6 +233,7 @@ export default async function ListingDetailPage({
 
   return (
     <PageShell breadcrumb="홈 › 실매물 › 상세">
+      {countView && <ListingViewPing listingId={listing.id} />}
       {/* JSON-LD(RealEstateListing) — SEO 구조화 데이터 */}
       <script
         type="application/ld+json"

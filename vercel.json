@@ -10,7 +10,7 @@
   "crons": [
     {
       "path": "/api/cron/site-probe",
-      "schedule": "15 */12 * * *"
+      "schedule": "15 */3 * * *"
     },
     {
       "path": "/api/cron/social-autopost",
@@ -71,6 +71,26 @@
     {
       "path": "/api/cron/kapt-mgmt-fee-ingest",
       "schedule": "10 3 * * *"
+    },
+    {
+      "path": "/api/cron/notification-outbox-drain",
+      "schedule": "*/15 * * * *"
+    },
+    {
+      "path": "/api/cron/price-alerts",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/watchlist-new-tx",
+      "schedule": "30 */6 * * *"
+    },
+    {
+      "path": "/api/cron/view-count-flush",
+      "schedule": "20 * * * *"
+    },
+    {
+      "path": "/api/cron/events-retention",
+      "schedule": "30 3 * * *"
     }
   ]
 }

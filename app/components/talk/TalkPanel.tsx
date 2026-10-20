@@ -21,8 +21,8 @@ import { Icon } from "@/app/components/Icon";
 import {
   TALK_LAST_REGION_KEY,
   TALK_MAX_LEN,
-  TALK_POLL_MS,
   TALK_TABS,
+  talkPollDelayMs,
   addTalkTombstone,
   bumpBoardTalk,
   clipTalkInput,
@@ -113,6 +113,8 @@ export function TalkPanel({
   const feedAbortRef = useRef<AbortController | null>(null);
   /* 지금 화면의 글 목록(새 글 수 셈용) — setState 갱신 함수 안에서 세면 React 가 나중에 불러 0 이 된다 */
   const feedNowRef = useRef<FeedState>({ status: "idle" });
+  /* [1080] 새 글 없는 조용한 폴링의 연속 횟수 — 폴링 간격 계산(lib/talk/rules talkPollDelayMs) */
+  const quietStreakRef = useRef(0);
   useEffect(() => {
     feedNowRef.current = feed;
   }, [feed]);
@@ -254,6 +256,8 @@ export function TalkPanel({
         /* 위에서 읽는 중이면 그대로 맨 위에 보인다 — 아래로 내려 읽는 중일 때만 알림 단추 */
         if ((feedScrollRef.current?.scrollTop ?? 0) > 40) setFresh((n) => n + added);
       }
+      /* [1080] 조용한 폴링 연속 횟수 — 새 글이 없으면 간격을 늘리고, 생기면 되돌린다 */
+      quietStreakRef.current = quiet && added === 0 ? quietStreakRef.current + 1 : 0;
       setNow(Date.now());
     } catch {
       if (ac.signal.aborted || wantRef.current !== id) return;
@@ -274,21 +278,35 @@ export function TalkPanel({
     }
   }, [selectedId, loadFeed, variant, scoped]);
 
-  /* 보이는 동안만 — 글은 30초, 왼쪽 순위는 2분마다. 다른 탭에서 돌아오면 바로 한 번 */
+  /* 보이는 동안만 — 글은 30초, 왼쪽 순위는 2분마다. 다른 탭에서 돌아오면 바로 한 번.
+     [1080] 새 글이 없는 폴링이 이어지면 간격을 늘린다(30초 → 60 → 120초 상한 · lib/talk/rules) — 열어 둔 탭마다 분 2회
+     함수 호출이 방문자 수에 비례해 쌓였다. 새 글이 오거나 탭에 돌아오면 30초로 되돌린다. */
   useEffect(() => {
     if (!selectedId || !visible) return;
-    const t = window.setInterval(() => {
-      if (document.visibilityState === "visible") void loadFeed(selectedId, true);
-    }, TALK_POLL_MS);
+    let timer = 0;
+    let stopped = false;
+    const schedule = () => {
+      if (stopped) return;
+      const delay = talkPollDelayMs(quietStreakRef.current);
+      timer = window.setTimeout(async () => {
+        if (document.visibilityState === "visible") await loadFeed(selectedId, true);
+        schedule();
+      }, delay);
+    };
+    schedule();
     const tb = window.setInterval(() => {
       if (!scoped && document.visibilityState === "visible") void loadBoard();
     }, 120_000);
     const onVis = () => {
-      if (document.visibilityState === "visible") void loadFeed(selectedId, true);
+      if (document.visibilityState === "visible") {
+        quietStreakRef.current = 0;
+        void loadFeed(selectedId, true);
+      }
     };
     document.addEventListener("visibilitychange", onVis);
     return () => {
-      window.clearInterval(t);
+      stopped = true;
+      window.clearTimeout(timer);
       window.clearInterval(tb);
       document.removeEventListener("visibilitychange", onVis);
     };

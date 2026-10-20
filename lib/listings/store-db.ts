@@ -1000,10 +1000,10 @@ export async function listMyListings(email: string): Promise<ListingDetail[]> {
   }
 }
 
-/** 상세 조회수 +1 — best-effort(원자성 미보장, 실패 무시). */
-export async function incrementView(id: string): Promise<void> {
+/** 상세 조회수 +by(기본 1) — best-effort(원자성 미보장, 실패 무시). [1080] 버퍼 반영 크론이 묶음(by)으로 부른다. */
+export async function incrementView(id: string, by = 1): Promise<boolean> {
   const sb = getServiceSupabase();
-  if (!sb || !id) return;
+  if (!sb || !id || !(by > 0)) return false;
   try {
     const { data, error } = await sb
       .from("listings")
@@ -1013,17 +1013,20 @@ export async function incrementView(id: string): Promise<void> {
     /* 같은 이유 — 못 읽은 채 0+1 로 쓰면 누적 조회수가 1 로 리셋된다. */
     if (error) {
       logger.warn("[listings] incrementView 조회 실패 — 조회수를 건드리지 않음", error);
-      return;
+      return false;
     }
+    if (!data) return false;
     const current =
-      data && (data as Record<string, unknown>).view_count != null
+      (data as Record<string, unknown>).view_count != null
         ? Number((data as Record<string, unknown>).view_count)
         : 0;
-    await sb
+    const { error: upError } = await sb
       .from("listings")
-      .update({ view_count: current + 1 })
+      .update({ view_count: current + Math.floor(by) })
       .eq("id", id);
+    return !upError;
   } catch (e) {
     logger.warn("[listings] incrementView", e);
+    return false;
   }
 }

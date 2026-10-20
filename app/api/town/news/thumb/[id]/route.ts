@@ -9,6 +9,10 @@
  * 응답: image/webp · CDN 30일(s-maxage) · 브라우저 1일. 원본을 못 받거나(차단·삭제·시간 초과·12MB 초과·이미지 아님)
  * 글이 없으면 404 — 표시단 CoverImage 가 onError 로 선 아이콘 칸으로 돌아간다(빈 상자 금지 규칙 그대로).
  * 404 도 CDN 1시간 캐시 — 죽은 원본을 매 조회마다 다시 두드리지 않는다.
+ *
+ * [1080] 두 겹 더 — ① KV 캐시(lib/kv/rest · 30일): CDN 미적중(리전·만료)마다 매체 서버를 다시 두드리던 것을 KV 에서 꺼낸다.
+ *   죽은 원본도 6시간 기억한다. KV 가 없으면 종전대로. ② 끄기 스위치 `NEWS_THUMB_DISABLED=1` — 매체·저작권 문제가 생기면
+ *   배포 없이 환경 변수만으로 전부 404(아이콘 칸)로 돌린다.
  */
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
@@ -18,6 +22,7 @@ import { getTownPost } from "@/lib/newui/board-posts";
 import { isNewsPost } from "@/lib/town/news-list";
 import { newsImageUrl } from "@/lib/town/shared";
 import { isFetchableImageOrigin, NEWS_THUMB_H, NEWS_THUMB_ID_RE, NEWS_THUMB_W } from "@/lib/news/thumb";
+import { kvGet, kvSet } from "@/lib/kv/rest";
 import { logger } from "@/lib/log";
 
 export const runtime = "nodejs";
@@ -32,9 +37,32 @@ const THUMB_RATE_LIMIT = { max: 240, windowMs: 60_000 } as const;
 
 const OK_CACHE = "public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800";
 const MISS_CACHE = "public, max-age=600, s-maxage=3600";
+/** [1080] KV 캐시 — 성공 30일 · 실패 6시간. 값은 webp base64(장당 3~12KB) · 실패는 "-" */
+const KV_OK_SECONDS = 30 * 24 * 3600;
+const KV_MISS_SECONDS = 6 * 3600;
+const KV_MISS_MARK = "-";
+
+/** Buffer → 독립 ArrayBuffer 위의 Uint8Array(Response 본문 타입) */
+function toBytes(buf: Buffer): Uint8Array<ArrayBuffer> {
+  const out = new Uint8Array(new ArrayBuffer(buf.byteLength));
+  out.set(buf);
+  return out;
+}
 
 function miss(status = 404) {
   return new NextResponse(null, { status, headers: { "Cache-Control": MISS_CACHE } });
+}
+
+function webp(out: Uint8Array<ArrayBuffer>) {
+  return new NextResponse(out, {
+    status: 200,
+    headers: {
+      "Content-Type": "image/webp",
+      "Content-Length": String(out.byteLength),
+      "Cache-Control": OK_CACHE,
+      "X-Content-Type-Options": "nosniff",
+    },
+  });
 }
 
 async function fetchOrigin(url: string): Promise<Buffer | null> {
@@ -57,11 +85,18 @@ async function fetchOrigin(url: string): Promise<Buffer | null> {
 }
 
 export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string }> }) {
+  if (process.env.NEWS_THUMB_DISABLED?.trim() === "1") return miss();
+
   const limited = await applyRateLimit(req, THUMB_RATE_LIMIT);
   if (limited) return limited;
 
   const { id } = await ctx.params;
   if (!NEWS_THUMB_ID_RE.test(id)) return miss(400);
+
+  const cacheKey = `news:thumb:v1:${id}`;
+  const cached = await kvGet(cacheKey);
+  if (cached === KV_MISS_MARK) return miss();
+  if (cached) return webp(toBytes(Buffer.from(cached, "base64")));
 
   let origin: string | null = null;
   try {
@@ -76,24 +111,21 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ id: string 
 
   try {
     const raw = await fetchOrigin(origin);
-    if (!raw) return miss();
+    if (!raw) {
+      await kvSet(cacheKey, KV_MISS_MARK, KV_MISS_SECONDS);
+      return miss();
+    }
     const out = await sharp(raw, { limitInputPixels: 40_000_000 })
       .rotate()
       .resize(NEWS_THUMB_W, NEWS_THUMB_H, { fit: "cover", position: "centre" })
       .webp({ quality: 74 })
       .toBuffer();
-    return new NextResponse(new Uint8Array(out), {
-      status: 200,
-      headers: {
-        "Content-Type": "image/webp",
-        "Content-Length": String(out.byteLength),
-        "Cache-Control": OK_CACHE,
-        "X-Content-Type-Options": "nosniff",
-      },
-    });
+    await kvSet(cacheKey, out.toString("base64"), KV_OK_SECONDS);
+    return webp(toBytes(out));
   } catch (e) {
-    /* 원본 차단·시간 초과·깨진 파일 — 경고만 남기고 404(표시단은 아이콘 칸) */
+    /* 원본 차단·시간 초과·깨진 파일 — 경고만 남기고 404(표시단은 아이콘 칸) · 6시간은 다시 두드리지 않는다 */
     logger.warn("[api/town/news/thumb] 원본 변환 실패", { id, host: new URL(origin).hostname, err: String(e).slice(0, 120) });
+    await kvSet(cacheKey, KV_MISS_MARK, KV_MISS_SECONDS);
     return miss();
   }
 }

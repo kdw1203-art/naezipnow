@@ -17,6 +17,7 @@ import type { SocialProvider } from "@/lib/auth/configured-social";
 import { InAppBrowserNotice, useInAppBrowser } from "@/app/components/auth/InAppBrowserNotice";
 import { markOncePerSession, useFirstInteraction } from "@/lib/client/human-gate";
 import { browserFamily, deviceClass } from "@/lib/client/browser-family";
+import { TurnstileWidget } from "@/app/components/TurnstileWidget";
 import {
   NAME_MAX,
   PASSWORD_MIN,
@@ -71,7 +72,14 @@ type RegisterResponse = {
   user?: { id: string | number; email: string; name: string };
 };
 
-export function SignupClient({ social: socialAll }: { social: SocialProvider[] }) {
+export function SignupClient({
+  social: socialAll,
+  captchaSiteKey = null,
+}: {
+  social: SocialProvider[];
+  /** [1080] Turnstile 사이트 키 — 서버(page.tsx)가 런타임 환경에서 읽어 넘긴다(빌드 시 박히는 NEXT_PUBLIC 치환에 기대지 않는다). 없으면 캡차 없음 */
+  captchaSiteKey?: string | null;
+}) {
   /* [1053] 앱 안 브라우저에서는 구글 단추 대신 "기본 브라우저로 열기" — 로그인 화면과 같은 규칙 */
   const inApp = useInAppBrowser();
   const social = inApp ? socialAll.filter((p) => p !== "google") : socialAll;
@@ -101,6 +109,9 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
   const [dupEmail, setDupEmail] = useState<string | null>(null);
   /* [1039] 자동 입력 봇 덫 — 사람 눈에 안 보이는 칸. 채워져 오면 서버가 거절한다 */
   const [hp, setHp] = useState("");
+  /* [1080] Turnstile — 사이트 키가 있을 때만 위젯을 그리고 토큰을 가입 요청에 싣는다 */
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0);
   /* [1039] 인증 메일 안내 화면 — 예전 "done" 분기("가입이 완료됐어요")는 도달할 수 없는 코드였다(자동 로그인 뒤 /welcome 으로 떠난다) */
   const [done, setDone] = useState(false);
   const [confirmHint, setConfirmHint] = useState<string | null>(null);
@@ -230,6 +241,10 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
       document.getElementById(firstBad)?.focus();
       return;
     }
+    if (captchaSiteKey && !captchaToken) {
+      setError("보안 확인 필요 · 아래 확인 칸을 완료한 뒤 다시");
+      return;
+    }
     setBusy(true);
     try {
       // 구 회원가입 API 스펙(/api/auth/register)에 맞춘 전송 필드
@@ -245,6 +260,7 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
           /* [1039] 인증 메일 링크를 누른 뒤에도 목적지(/welcome[?next])를 잃지 않게 서버로 보낸다 */
           next: welcomeHref,
           website: hp,
+          ...(captchaToken ? { captchaToken } : {}),
           consent: {
             terms: true,
             privacy: true,
@@ -269,6 +285,11 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
         /* [1039] 서버 원문(영문 DB·인증 메시지)은 화면에 붙이지 않는다 — 한글로 풀어 준 설명만 */
         const detail = data.detail && /[가-힣]/.test(data.detail) ? ` · ${data.detail}` : "";
         setError(`${data.error ?? "가입 실패 · 잠시 후 다시"}${detail}`);
+        /* [1080] 토큰은 한 번만 쓴다 — 실패했으면 위젯을 새로 그려 새 토큰을 받는다 */
+        if (captchaSiteKey) {
+          setCaptchaToken(null);
+          setCaptchaKey((k) => k + 1);
+        }
         return;
       }
       /* [1039] 재발송(이미 만든 미인증 계정)은 새 가입이 아니다 — 완료로 세지 않는다 */
@@ -730,6 +751,11 @@ export function SignupClient({ social: socialAll }: { social: SocialProvider[] }
           >
             {error}
           </div>
+        )}
+
+        {captchaSiteKey && (
+          /* [1080] 보안 확인(Turnstile) — 키가 있을 때만. 폭은 칸에 맞춘다 */
+          <TurnstileWidget key={captchaKey} siteKey={captchaSiteKey} action="signup" onToken={setCaptchaToken} className="min-h-[65px]" />
         )}
 
         <button

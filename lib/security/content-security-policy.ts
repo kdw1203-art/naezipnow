@@ -45,12 +45,14 @@ export function buildContentSecurityPolicy(
   const tossConnect =
     "https://cdn.toss.im https://*.cert.toss.im https://*.tosspayments.com";
   const tossFrame = "https://js.tosspayments.com https://*.tosspayments.com https://payment-gateway.tosspayments.com";
+  /* [1080] Cloudflare Turnstile(가입 캡차) — 스크립트와 챌린지 프레임. 키가 없을 때 열어 둬도 해가 없다(위젯을 안 그린다) */
+  const turnstile = "https://challenges.cloudflare.com";
 
   return [
     "default-src 'self'",
     isDev
-      ? `script-src 'self' 'unsafe-eval' 'unsafe-inline' ${naverMapScript} ${tossScript} https://*.vercel-scripts.com https://va.vercel-scripts.com ${vercelLive}${kakaoScript}`
-      : `script-src 'self' 'unsafe-inline' ${naverMapScript} ${tossScript} https://*.vercel-scripts.com https://va.vercel-scripts.com ${vercelLive} ${googleAdsScript}${kakaoScript}`,
+      ? `script-src 'self' 'unsafe-eval' 'unsafe-inline' ${naverMapScript} ${tossScript} ${turnstile} https://*.vercel-scripts.com https://va.vercel-scripts.com ${vercelLive}${kakaoScript}`
+      : `script-src 'self' 'unsafe-inline' ${naverMapScript} ${tossScript} ${turnstile} https://*.vercel-scripts.com https://va.vercel-scripts.com ${vercelLive} ${googleAdsScript}${kakaoScript}`,
     /* [969 · 16] 폰트 셀프호스팅 — style-src 의 fonts.googleapis.com·cdn.jsdelivr.net,
        font-src 의 fonts.gstatic.com·cdn.jsdelivr.net 을 뺐다. 브라우저가 이 도메인에서
        CSS·폰트를 받는 곳이 더는 없다(app/layout.tsx 는 /fonts/, 슬로건 @font-face 는
@@ -62,7 +64,7 @@ export function buildContentSecurityPolicy(
     `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com ${naverMapConnect} https://maps.apigw.ntruss.com https://naveropenapi.apigw.ntruss.com https://sens.apigw.ntruss.com https://nid.naver.com http://openapi.seoul.go.kr:8088 https://openapi.seoul.go.kr ${tossConnect} https://*.vercel-insights.com https://vitals.vercel-insights.com ${vercelLive} https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://accounts.google.com ${googleAdsConnect}${kakaoConnect}`,
     "worker-src 'self' blob:",
     "child-src 'self' blob:",
-    `frame-src 'self' https://www.openstreetmap.org https://*.openstreetmap.org ${tossFrame} ${vercelLive} ${googleAdsFrame}`,
+    `frame-src 'self' https://www.openstreetmap.org https://*.openstreetmap.org ${tossFrame} ${turnstile} ${vercelLive} ${googleAdsFrame}`,
     "object-src 'none'",
     "base-uri 'self'",
     "form-action 'self'",

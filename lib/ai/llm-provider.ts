@@ -9,11 +9,23 @@ export type LlmCallResult =
   | { ok: false; error: string; vendor: "stub" };
 
 const MAX_OUT = 4096;
+/** [1080] 벤더 응답 대기 상한(ms) — 긴 분석도 90초 안에 끝난다(실측 10~40초) · 넘으면 ok:false 로 규칙 기반 폴백 */
+const LLM_TIMEOUT_MS = Number(process.env.AI_LLM_TIMEOUT_MS ?? "90000");
 
 export async function callLlmChat(
   option: LlmModelOption,
   messages: LlmMessage[],
 ): Promise<LlmCallResult> {
+  /* [1080] 시간 초과·네트워크 오류를 ok:false 로 — 예전엔 던져서 호출부마다 처리가 달랐다(규칙 기반 폴백이 있는 곳도 500) */
+  try {
+    return await callLlmChatInner(option, messages);
+  } catch (e) {
+    const timeout = e instanceof Error && e.name === "TimeoutError";
+    return { ok: false, error: timeout ? `응답 시간 초과(${Math.round(LLM_TIMEOUT_MS / 1000)}초)` : String(e).slice(0, 160), vendor: "stub" };
+  }
+}
+
+async function callLlmChatInner(option: LlmModelOption, messages: LlmMessage[]): Promise<LlmCallResult> {
   const sys = messages.filter((m) => m.role === "system").map((m) => m.content);
   const rest = messages.filter((m) => m.role !== "system");
 
@@ -40,6 +52,8 @@ export async function callLlmChat(
           ...rest.map((m) => ({ role: m.role, content: m.content })),
         ],
       }),
+      /* [1080] 상한 없는 대기 금지 — 벤더가 멈추면 함수 시간(과금)만 쌓인다 */
+      signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
     });
     const data = (await res.json()) as {
       error?: { message?: string };
@@ -76,6 +90,7 @@ export async function callLlmChat(
         content: m.content,
       })),
     }),
+    signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
   });
 
   const data = (await res.json()) as {
