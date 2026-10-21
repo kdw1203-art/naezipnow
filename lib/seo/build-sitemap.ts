@@ -18,6 +18,7 @@ import { AI_TOOL_IDS } from "@/lib/ai/ai-tools";
 import { complexIndexTier, kstYm, tierInSitemap } from "@/lib/seo/complex-index-policy";
 import { NEWS_TAGS } from "@/lib/news/tags";
 import { GUIDES } from "@/lib/guides/catalog";
+import { COMPLEX_SITEMAP_CHUNK_SIZE } from "@/lib/seo/sitemap-slugs";
 
 /**
  * 단지 사이트맵에 실을 최소 매매 실거래 건수.
@@ -252,7 +253,9 @@ export function loadStaticEntries(): MetadataRoute.Sitemap {
   }
   /* [945 #25] 실전 가이드 10편 — 카탈로그 상수(dynamicParams=false 라 전부 실존) */
   for (const g of GUIDES) {
-    entries.push({ url: `${BASE_URL}/guides/${g.slug}`, priority: 0.6 });
+    /* [1081 · lastmod] 가이드는 catalog 의 updatedAt(YYYY-MM-DD · 글을 고친 날)이 있을 때만 싣는다 — 없는 날짜를 지어내지 않는다 */
+    const updated = g.updatedAt ? new Date(`${g.updatedAt}T00:00:00Z`) : undefined;
+    entries.push({ url: `${BASE_URL}/guides/${g.slug}`, ...(updated && !Number.isNaN(updated.getTime()) ? { lastModified: updated } : {}), priority: 0.6 });
   }
   return entries;
 }
@@ -337,6 +340,49 @@ export async function loadComplexEntries(): Promise<MetadataRoute.Sitemap> {
   });
 }
 
+/**
+ * [1081] 단지 사이트맵 조각 — 통짜(loadComplexEntries)와 같은 목록(거래 많은 순)을 5,000개씩 자르고, 앞 조각일수록 priority 를
+ * 높인다(1~5,000 → 0.9 · 5,001~10,000 → 0.8 · 나머지 0.7). 2.4만 URL 한 파일(350KB 이상)은 크롤러가 한 번에 다 읽지 않는다 —
+ * 거래가 활발한 단지부터 읽히게 순서와 가중치를 준다. 조각이 비면 빈 urlset 을 내지 않고 허브 한 줄(sitemapSectionRoute 규칙).
+ */
+/* [1082] 조각 6개가 같은 목록을 쓴다 — 따뜻한 람다 안에서는 10분 동안 한 번만 읽는다(크롤러는 인덱스를 읽고 조각을 잇달아 받는다).
+   빈 결과(조회 실패)는 기억하지 않는다. */
+let complexListMemo: { at: number; p: Promise<MetadataRoute.Sitemap> } | null = null;
+const COMPLEX_LIST_MEMO_MS = 10 * 60_000;
+function loadComplexEntriesMemo(): Promise<MetadataRoute.Sitemap> {
+  const now = Date.now();
+  if (complexListMemo && now - complexListMemo.at < COMPLEX_LIST_MEMO_MS) return complexListMemo.p;
+  const p = loadComplexEntries().then(
+    (list) => {
+      if (list.length === 0) complexListMemo = null;
+      return list;
+    },
+    (e: unknown) => {
+      complexListMemo = null;
+      throw e;
+    },
+  );
+  complexListMemo = { at: now, p };
+  return p;
+}
+
+export async function loadComplexChunkEntries(chunkIndex: number): Promise<MetadataRoute.Sitemap> {
+  const all = await loadComplexEntriesMemo();
+  const start = chunkIndex * COMPLEX_SITEMAP_CHUNK_SIZE;
+  return all.slice(start, start + COMPLEX_SITEMAP_CHUNK_SIZE).map((e, i) => {
+    const rank = start + i;
+    return { ...e, priority: rank < 5000 ? 0.9 : rank < 10_000 ? 0.8 : 0.7 };
+  });
+}
+
+/** [1081] 월간 리포트 슬러그("2026-08") → 그 달 표가 확정되는 시각(두 달 뒤 1일 UTC). 꼴이 다르면 undefined */
+export function reportClosedAt(slug: string): Date | undefined {
+  const m = /^(\d{4})-(\d{2})$/.exec(slug);
+  if (!m) return undefined;
+  const d = new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1 + 2, 1));
+  return Number.isNaN(d.getTime()) ? undefined : d;
+}
+
 /** [967 · 28b] 둘 중 더 최근 시각. 둘 다 없으면 undefined(lastmod 생략 — 기존 규칙). */
 function latestOf(a: Date | undefined, b: Date | null | undefined): Date | undefined {
   const valid = [a, b].filter(
@@ -392,8 +438,13 @@ export async function loadRegionEntries(): Promise<MetadataRoute.Sitemap> {
         priority: 0.5,
       });
       for (const slug of reportSlugs) {
+        /* [1081 · lastmod] 끝난 달의 표가 **확정되는 시점**(신고 기한 = 다음 달 말 → 두 달 뒤 1일)을 lastmod 로 — 고정값이라
+           1069 가 걷어낸 "방금 바뀌었다" 잡음이 아니고, 아직 신고 중인 달은 지역 페이지와 같은 at 을 쓴다. */
+        const closedAt = reportClosedAt(slug);
+        const lastModified = closedAt && closedAt.getTime() <= Date.now() ? closedAt : at;
         entries.push({
           url: `${BASE_URL}/region/${s.regionId}/report/${slug}`,
+          ...(lastModified ? { lastModified } : {}),
           priority: 0.5,
         });
       }

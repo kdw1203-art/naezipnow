@@ -1,3 +1,4 @@
+import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
 import { unstable_cache } from "next/cache";
 import { listPublicNotesPage } from "@/lib/inspection/store-db";
 import { listPublicNotesWithFallback } from "@/lib/inspection/public-notes-cached";
@@ -102,6 +103,8 @@ export default async function NotesFeedPage() {
   })();
 
   return (
+    <>
+      <HubBreadcrumbLd trail={[{ name: "공개 임장노트", path: "/notes" }]} />
     <NotesFeedClient
       notes={notes}
       loadError={loadError}
@@ -113,5 +116,6 @@ export default async function NotesFeedPage() {
       /* [1016] 데스크톱 오른쪽 레일(페이스북 구성) 광고 — lg+ 에서만 그려지는 레일 안 */
       adSide={<AdZone placement="sidebar" seed={6} plan={null} />}
     />
+    </>
   );
 }

@@ -91,6 +91,10 @@
     {
       "path": "/api/cron/events-retention",
       "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/seo-weekly-report",
+      "schedule": "40 0 * * 1"
     }
   ]
 }

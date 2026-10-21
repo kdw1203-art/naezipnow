@@ -5,6 +5,7 @@ import type { MetadataRoute } from "next";
 import { logger } from "@/lib/log";
 import {
   loadBandEntries,
+  loadComplexChunkEntries,
   loadComplexEntries,
   loadDigestEntries,
   loadGlossaryEntries,
@@ -94,6 +95,8 @@ type SitemapSection = {
    */
   required: boolean;
   load: () => MetadataRoute.Sitemap | Promise<MetadataRoute.Sitemap>;
+  /** [1081] false 면 /sitemap.xml 인덱스에 싣지 않는다(주소는 살아 있다) — 통짜 단지 사이트맵 */
+  indexed?: boolean;
   /**
    * [956] optional 유형이 정말로 0개일 때 대신 싣는 허브 페이지.
    *
@@ -138,7 +141,14 @@ async function loadPagesEntries(): Promise<MetadataRoute.Sitemap> {
 
 export const SITEMAP_SECTIONS: readonly SitemapSection[] = [
   { slug: "pages", label: "정적 페이지", required: true, load: loadPagesEntries, hub: "/" },
-  { slug: "complexes", label: "단지", required: true, load: loadComplexEntries, hub: "/map" },
+  /* [1081] 통짜 단지 사이트맵은 인덱스에서 뺀다(indexed:false) — 조각 6개가 대신 실린다. 주소는 살아 있다(콘솔 직접 제출분). */
+  { slug: "complexes", label: "단지(통짜)", required: true, load: loadComplexEntries, hub: "/map", indexed: false },
+  { slug: "complexes-1", label: "단지 1/6", required: true, load: () => loadComplexChunkEntries(0), hub: "/map" },
+  { slug: "complexes-2", label: "단지 2/6", required: true, load: () => loadComplexChunkEntries(1), hub: "/map" },
+  { slug: "complexes-3", label: "단지 3/6", required: true, load: () => loadComplexChunkEntries(2), hub: "/map" },
+  { slug: "complexes-4", label: "단지 4/6", required: true, load: () => loadComplexChunkEntries(3), hub: "/map" },
+  { slug: "complexes-5", label: "단지 5/6", required: true, load: () => loadComplexChunkEntries(4), hub: "/map" },
+  { slug: "complexes-6", label: "단지 6/6", required: true, load: () => loadComplexChunkEntries(5), hub: "/map" },
   { slug: "regions", label: "지역 허브", required: true, load: loadRegionEntries, hub: "/map" },
   { slug: "tx", label: "실거래 구간", required: true, load: loadBandEntries, hub: "/tx" },
   /* 단지 비교를 required 로 두는 이유: 조합의 통과 기준(같은 동 · 양쪽 12개월
@@ -298,7 +308,7 @@ export async function buildSitemapIndex(): Promise<{ xml: string; cacheable: boo
   const includeOptional = new Map(decided.map((d) => [d.slug, d.include]));
 
   // 선언 순서를 그대로 유지한다 — 인덱스 순서가 흔들리면 diff 를 읽기 어렵다.
-  const paths = SITEMAP_SECTIONS.filter((s) => s.required || includeOptional.get(s.slug)).map((s) =>
+  const paths = SITEMAP_SECTIONS.filter((s) => s.indexed !== false && (s.required || includeOptional.get(s.slug))).map((s) =>
     sitemapSectionPath(s.slug),
   );
 

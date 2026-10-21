@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
 import Link from "next/link";
 import { ApplyDailyStrip } from "./ApplyDailyStrip";
 import { PageShell } from "@/app/components/PageShell";
@@ -104,6 +105,7 @@ export default async function ApplyPage() {
     /* [970 · C-28] 다른 동네이야기 카테고리와 같은 머리(브레드크럼 "동네이야기 › …" +
        카테고리 줄 + TownPageHead). /qna 와 함께 통일. */
     <PageShell breadcrumb="동네이야기 › 청약 센터" wide>
+      <HubBreadcrumbLd trail={[{ name: "동네이야기", path: "/town" }, { name: "청약 센터", path: "/apply" }]} />
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
       <TownHero href="/apply" />
       <TownCategoryNav stick />

@@ -128,7 +128,7 @@ export function getPlatformIntegrationRows(): PlatformIntegrationRow[] {
       label: "카카오톡 공유 (JS SDK)",
       description: "마이·초대 링크 카카오톡 공유 (로그인 연동 아님)",
       ok: isKakaoShareConfigured(),
-      envKeys: "NEXT_PUBLIC_KAKAO_JS_KEY",
+      envKeys: "NEXT_PUBLIC_KAKAO_JS_KEY 또는 NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY",
       docsUrl: "https://developers.kakao.com/docs/latest/ko/kakaotalk-share/js-link",
     },
     {

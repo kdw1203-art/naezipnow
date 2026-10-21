@@ -3,6 +3,7 @@
    공시가 없으면 금리 칸은 빈칸 — 출처 없는 숫자를 기본값으로 두지 않는다. 대표 금리 = 은행별 변동금리(없으면 고정) 범위
    중간값의 평균(/calculator 의 deriveAverageRate 와 같은 식). */
 import { PageShell } from "@/app/components/PageShell";
+import { CalculatorExplainer } from "../CalculatorExplainer";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { getMortgageRates } from "@/lib/finance/mortgage-rates";
 import { representativeRate } from "@/lib/finance/calc-summary";
@@ -30,6 +31,10 @@ export default async function RentVsBuyPage() {
     <PageShell wide>
       <div className="mx-auto flex w-full max-w-[1200px] flex-col">
         <RentVsBuyClient rateDefault={rateDefault} />
+        {/* [1081 · #13] 계산 방법·예시·확인 사항·관련 — 검색엔진이 읽는 본문 */}
+        <div className="mx-auto w-full max-w-[720px]">
+          <CalculatorExplainer id="rent-vs-buy" />
+        </div>
       </div>
     </PageShell>
   );

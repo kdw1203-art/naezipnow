@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
@@ -29,12 +30,17 @@ import { SupplyClient } from "./SupplyClient";
    바뀌지 않는 날에는 크롤러가 몇 번을 와도 CDN HIT 이면 된다. */
 export const revalidate = 86_400;
 
+/* [1081 · #10] 제목의 해 — "2026 입주 예정 아파트" 류 검색어. 한국 날짜 기준 올해·내년, 매년 자동 */
+const SUPPLY_TITLE_YEARS = (() => {
+  const y = new Date(Date.now() + 9 * 3600_000).getUTCFullYear();
+  return `${y}~${y + 1}년`;
+})();
+
 export const metadata: Metadata = {
-  title: "아파트 입주 예정 물량 | 내집나우",
+  title: `${SUPPLY_TITLE_YEARS} 아파트 입주 예정 물량 — 지역·월별 입주 단지·세대수 | 내집나우`,
   /* "캘린더" 표기는 제거(2026-08-22) — 실제 화면은 월별 물량 막대 + 단지 목록이지
      달력 격자가 아니다. 이름이 화면과 다르면 찾던 것을 못 찾았다고 느낀다. */
-  description:
-    "전국·지역별 아파트 입주 예정 물량(공급). 입주월·단지·세대수와 공급이 많은 시기·지역.",
+  description: `${SUPPLY_TITLE_YEARS} 전국·지역별 아파트 입주 예정 물량(공급). 입주월·단지명·세대수를 시기·지역별로 정리 — 공급이 몰리는 시기와 지역을 청약홈 공고 기준으로.`,
   robots: { index: true, follow: true },
   // N7 — 필터·정렬 파라미터 조합이 별개 URL 로 색인되지 않도록 canonical 고정
   alternates: seoAlternates("/supply"),
@@ -91,6 +97,7 @@ export default async function SupplyPage() {
 
   return (
     <PageShell breadcrumb="동네이야기 › 입주 물량" wide>
+      <HubBreadcrumbLd trail={[{ name: "동네이야기", path: "/town" }, { name: "입주 예정 물량", path: "/supply" }]} />
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
       {/* [978] 홈과 같은 네이비 히어로 — 카테고리별로 제목·설명·색만 바뀐다 */}
       <TownHero href="/supply" />

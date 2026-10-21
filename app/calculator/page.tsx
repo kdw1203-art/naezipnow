@@ -1,5 +1,6 @@
 import { getMortgageRates } from "@/lib/finance/mortgage-rates";
 import { CalculatorClient } from "./calculator-client";
+import { CalculatorExplainer } from "./CalculatorExplainer";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 
 /* P2-4: 금리 실연동 — /api/finance/mortgage-rates 가 쓰는 lib 함수를 서버에서 직접
@@ -22,5 +23,6 @@ export const revalidate = 86_400;
 
 export default async function CalculatorPage() {
   const mortgage = await getMortgageRates();
-  return <CalculatorClient mortgage={mortgage} />;
+  /* [1081 · #13] 계산 방법·예시·확인 사항·관련 — 검색엔진이 읽는 본문(클라이언트 셸의 끝에 꽂는다) */
+  return <CalculatorClient mortgage={mortgage} after={<div className="mx-auto w-full max-w-[720px]"><CalculatorExplainer id="loan" /></div>} />;
 }

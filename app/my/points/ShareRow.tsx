@@ -25,7 +25,8 @@ import { Icon } from "@/app/components/Icon";
 
 /* NEXT_PUBLIC_* 은 빌드 시점에 문자열로 치환된다. 그래서 이 값은 **배포된 번들이
    어떤 상태인지** 를 그대로 말해 준다 — 런타임에 바뀌지 않는다는 뜻이기도 하다. */
-const KAKAO_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY ?? "";
+/* [1081] 두 이름 다 — 운영에는 NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY 만 있었다 */
+const KAKAO_JS_KEY = process.env.NEXT_PUBLIC_KAKAO_JS_KEY || process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY || "";
 
 const KAKAO_SDK_SRC = "https://t1.kakaocdn.net/kakao_js_sdk/2.7.2/kakao.min.js";
 

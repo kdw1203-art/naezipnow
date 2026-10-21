@@ -69,6 +69,11 @@ function GuestView() {
   );
 }
 
+/* [1082] 정적 216쪽 중 유일하게 h1 이 없던 화면(운영 실측 — 로그인 전 화면이 크롤된다) — 세 분기 모두 같은 제목 한 줄 */
+function ShopTitle() {
+  return <h1 className="mx-auto mb-3 w-full max-w-[720px] t-title text-ink">포인트 상점</h1>;
+}
+
 export default async function PointsShopPage() {
   const session = await safeAuth();
   const email = session?.user?.email;
@@ -76,6 +81,7 @@ export default async function PointsShopPage() {
   if (!email) {
     return (
       <PageShell breadcrumb="포인트 상점">
+        <ShopTitle />
         <GuestView />
       </PageShell>
     );
@@ -95,6 +101,7 @@ export default async function PointsShopPage() {
   if (!loaded.ok) {
     return (
       <PageShell breadcrumb="포인트 상점">
+        <ShopTitle />
         <div className="mx-auto w-full max-w-[720px]">
           <ErrorState
             /* [1028 · 제안 3] 오류 문구 표준 — 실패한 것(보유 포인트 조회)만 말한다 */
@@ -110,6 +117,7 @@ export default async function PointsShopPage() {
 
   return (
     <PageShell breadcrumb="포인트 상점">
+      <ShopTitle />
       <ShopClient initialBalance={loaded.balance} />
       {/* [992 · A1] "자료실 유료 리포트도 포인트로 구매" 배너 제거 — 자료실(/town/library)은 보관(비노출) */}
       {/* 무상성 고지 — PG 심사·소비자 오인 방지 공용(단일 출처) */}

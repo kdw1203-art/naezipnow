@@ -1,5 +1,7 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
+import { cache } from "react";
+import { regionReportDescription, regionReportTitle } from "@/lib/region/report-meta";
 import { HScroll } from "@/app/components/HScroll";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -55,6 +57,9 @@ function pct(a: number, b: number): number {
 
 type Params = { id: string; ym: string };
 
+/* [1082] generateMetadata 와 본문이 같은 리포트를 읽는다 — React cache 로 한 요청 안에서는 한 번만 조회(3 질의) */
+const loadReport = cache((id: string, name: string, ym: string) => getRegionMonthlyReport(id, name, ym));
+
 export async function generateMetadata({
   params,
 }: {
@@ -70,9 +75,13 @@ export async function generateMetadata({
     };
   }
   const label = fmtYmLabel(ym);
+  /* [1082] 제목·설명문에 그 달의 수(건수·평균·중앙값·전월세) — 본문과 같은 조회(loadReport · React cache 로 한 요청 안에서 한 번).
+     조회 실패는 수 없는 틀로(메타가 5xx 를 내지 않는다 · 본문은 던진다). 리포트가 없으면 본문이 notFound. */
+  const report = await loadReport(id, region.name, ym).catch(() => null);
+  const open = !reportingClosed(ym, new Date());
   /* [970 · C-25] 접미 없던 제목에 `| 내집나우`(폴백 제목과 동일 접미) */
-  const title = `${region.name} 아파트 시장 ${label} 리포트 — 거래량·평균가·신고 실거래 | 내집나우`;
-  const description = `${label} ${region.name} 아파트 매매 신고 건수, 평균·중앙값 매매가, 상위 실거래, 전월세 신고 건수를 국토교통부·한국부동산원 데이터로 정리한 월간 스냅샷.`;
+  const title = regionReportTitle(region.name, label, report, open);
+  const description = regionReportDescription(region.name, label, report, open);
   return {
     title,
     description,
@@ -93,7 +102,7 @@ export default async function RegionMonthlyReportPage({
 
   let report: RegionMonthlyReport | null = null;
   try {
-    report = await getRegionMonthlyReport(id, region.name, ym);
+    report = await loadReport(id, region.name, ym);
   } catch (e) {
     logger.error(`[report] ${id} ${ym} 조회 실패`, e);
     throw e; // 못 읽음 = 5xx (없음과 다르다 — 크롤러에게 "다시 오라")

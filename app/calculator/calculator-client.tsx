@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import nextDynamic from "next/dynamic";
 import { PageShell } from "@/app/components/PageShell";
@@ -155,7 +155,7 @@ const numInputCls =
 const extLinkCls =
   "inline-flex min-h-[24px] items-center font-bold text-primary no-underline underline-offset-2 hover:underline";
 
-export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) {
+export function CalculatorClient({ mortgage, after }: { mortgage: MortgageRatesProp; after?: ReactNode }) {
   const [section, setSection] = useState<Section>("loan");
   /* [1015 · 규칙 B] 예전 기본값 84,000만원은 우리가 정한 예시 숫자였다 — 실데이터가 아닌 예시 값은 두지 않는다.
      빈 칸에서 시작하고(null), 매매가가 들어오기 전에는 결과 대신 빈 상태 한 줄만 그린다. 저장값·URL 프리필은 그대로 복원한다. */
@@ -976,6 +976,8 @@ export function CalculatorClient({ mortgage }: { mortgage: MortgageRatesProp }) 
           </div>
         </div>
       )}
+      {/* [1081 · #13] 서버가 그린 본문(계산 방법·예시) — page.tsx 가 넘긴다 */}
+      {after}
     </PageShell>
   );
 }

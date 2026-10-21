@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { GUIDES, LEGACY_GUIDES } from "@/lib/guides/catalog";
@@ -49,6 +50,7 @@ export default function GuidesIndexPage() {
 
   return (
     <PageShell breadcrumb="가이드">
+      <HubBreadcrumbLd trail={[{ name: "가이드", path: "/guides" }]} />
       <div className="mx-auto w-full max-w-[720px]">
         <h1 className="rise-in t-title text-ink">부동산 실전 가이드</h1>
         {/* [1015 · 규칙 B] 소개 문단("개념은 짧게, 순서는 구체적으로…") → 사실 한 줄(편 수는 카탈로그 길이) */}

@@ -7,6 +7,8 @@ import {
 } from "@/lib/admin/seo-metrics";
 import type { ReactElement, ReactNode } from "react";
 import { cwvVerdict, type CwvVerdict } from "@/lib/seo/crux";
+import { kvAvailable } from "@/lib/kv/rest";
+import { topSearchQueries } from "@/lib/search/query-stats";
 
 /*
  * SEO 측정 (N5 · N25)
@@ -415,6 +417,14 @@ export default async function AdminSeoPage() {
         </h2>
         <NewsComplexLinkPanel />
       </section>
+
+      {/* [1081 · #29] 사이트 내 검색어 TOP — KV 월별 카운터(lib/search/query-stats). 가이드·용어 주제의 근거 */}
+      <section className={card}>
+        <h2 className="text-[13px] font-bold text-[#e8eef8]">
+          검색어 TOP 30 <span className="text-[10px] font-medium text-[#6b7688]">이번 달 · 1081</span>
+        </h2>
+        <TopQueriesPanel />
+      </section>
     </div>
   );
 }
@@ -560,5 +570,23 @@ async function TitleExperimentPanel() {
         ))}
       </div>
     </div>
+  );
+}
+
+/* [1081 · #29] 이번 달 상위 검색어 — KV 가 없으면 그 사실을 적는다(빈 표를 "검색 없음"으로 읽히게 두지 않는다) */
+async function TopQueriesPanel() {
+  const configured = kvAvailable();
+  const rows = configured ? await topSearchQueries(30) : [];
+  if (!configured) return <p className="m-0 text-[12px] text-[#9aa5b8]">KV 미설정 — 검색어 집계가 꺼져 있다(KV_REST_API_URL).</p>;
+  if (rows.length === 0) return <p className="m-0 text-[12px] text-[#9aa5b8]">이번 달 집계 없음(CDN 적중분은 세지 않는다).</p>;
+  return (
+    <ol className="m-0 grid list-decimal grid-cols-1 gap-x-6 gap-y-1 pl-5 text-[12px] text-[#e8eef8] md:grid-cols-2">
+      {rows.map((r) => (
+        <li key={r.query} className="flex justify-between gap-3">
+          <span className="truncate">{r.query}</span>
+          <span className="shrink-0 tabular-nums text-[#9aa5b8]">{r.count.toLocaleString("ko-KR")}</span>
+        </li>
+      ))}
+    </ol>
   );
 }

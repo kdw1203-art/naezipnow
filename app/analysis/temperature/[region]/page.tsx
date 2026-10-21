@@ -435,6 +435,19 @@ export default async function TemperatureRegionPage({
         >
           {region.name} 지역 허브
         </Link>
+        {/* [1081 · #15] 월간 리포트 · 동네이야기 — 온도 69쪽에서 지역 축의 다른 화면으로 */}
+        <Link
+          href={`/region/${region.id}/report`}
+          className="card tile px-5 py-3 t-body font-bold text-ink"
+        >
+          {region.name} 월간 리포트
+        </Link>
+        <Link
+          href={`/town/${region.id}`}
+          className="card tile px-5 py-3 t-body font-bold text-ink"
+        >
+          {region.name} 동네이야기
+        </Link>
         <Link
           href="/analysis/temperature"
           className="card tile px-5 py-3 t-body font-bold text-ink"

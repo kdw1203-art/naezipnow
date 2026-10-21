@@ -7,6 +7,7 @@ import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import Link from "next/link";
 import { CommentsRetry } from "./comments-retry";
 import { displayAuthorLabel, isLabAuthor } from "@/lib/notes/author-label";
+import { noteDisplayTitle, noteMetaTitle } from "@/lib/notes/title-rule";
 import { authorProfileHref } from "@/lib/profile/author-href";
 import { cache, Suspense } from "react";
 import { loadNote, type LoadResult } from "./load-note";
@@ -383,7 +384,9 @@ export async function generateMetadata({
   }
 
   const displayTitle = note.aptName?.trim() || note.title;
-  const title = `${note.title} · ${note.region} 임장노트 | 내집나우`;
+  /* [1082] 예전 규칙 제목("○○ 임장 기록")은 보여 줄 때 새 규칙으로(lib/notes/title-rule) · "임장노트" 접미 중복 금지 */
+  const seoTitle = noteDisplayTitle(note, unitFromMetadata(note.metadata));
+  const title = noteMetaTitle(seoTitle, note.region);
   const description = (
     note.summary?.trim() ||
     note.sections.memo?.trim() ||
@@ -394,7 +397,7 @@ export async function generateMetadata({
   // 동적 OG 이미지 — 실데이터(제목·점수·4축)를 URL 인코딩 (metadataBase 기준 절대화)
   const view = toView(note);
   const ogQuery = new URLSearchParams({
-    title: note.title,
+    title: seoTitle,
     score: view.totalScore != null ? String(view.totalScore) : "",
     badges: view.axes.map((a) => `${a.label} ${a.level}`).join(","),
   });
@@ -452,7 +455,7 @@ function articleJsonLd(note: InspectionNote): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
     "@type": "Article",
-    headline: note.title,
+    headline: noteDisplayTitle(note, unitFromMetadata(note.metadata)),
     description:
       note.summary?.trim() ||
       `${note.region} ${displayTitle} ${isLabAuthor(note.authorLabel) ? "자료 조사 기록" : "직접 방문 임장 기록"}`,
@@ -487,13 +490,14 @@ function noteJsonLd(
   const apt = note.aptName?.trim() || undefined;
   const author = displayAuthorLabel(note.authorLabel) || "내집나우 스카우트";
   const datePublished = note.createdAt || undefined;
+  const headline = noteDisplayTitle(note, unitFromMetadata(note.metadata)); // [1082] 예전 규칙 제목은 새 규칙으로
   const score = view.totalScore;
 
   if (score != null && score > 0) {
     return {
       "@context": "https://schema.org",
       "@type": "Review",
-      headline: note.title,
+      headline,
       author: { "@type": "Person", name: author },
       reviewRating: {
         "@type": "Rating",
@@ -508,7 +512,7 @@ function noteJsonLd(
   return {
     "@context": "https://schema.org",
     "@type": "Article",
-    headline: note.title,
+    headline,
     author: { "@type": "Person", name: author },
     ...(apt ? { about: apt } : {}),
     ...(datePublished ? { datePublished } : {}),

@@ -35,10 +35,14 @@ test("V3 수정일 — 확인된 시각이 있는 곳만", () => {
   assert.match(src, /newestMonthAt \? \{ lastModified: newestMonthAt \}/);
   /* 지역 리포트 인덱스: 지역 페이지와 같은 시각 */
   assert.match(src, /url: `\$\{BASE_URL\}\/region\/\$\{s\.regionId\}\/report`,\s*\n\s*\.\.\.\(at \? \{ lastModified: at \} : \{\}\)/);
-  /* 끝난 달(/report/<ym>)에는 적지 않는다 — 바뀌지 않는 표에 "방금 바뀌었다"를 적지 않는다(G6 원칙) */
+  /* 끝난 달(/report/<ym>)에 "방금 바뀌었다"(생성 시각)를 적지 않는다(G6 원칙).
+     [1081] 대신 **표가 확정되는 고정 시각**(두 달 뒤 1일 · reportClosedAt)만 — 매번 바뀌는 값이 아니라 잡음이 아니다.
+     아직 신고 중인 달은 지역 페이지와 같은 at. */
   const past = src.slice(src.indexOf("for (const slug of reportSlugs)"));
-  const block = past.slice(0, past.indexOf("}") + 1);
-  assert.ok(!block.includes("lastModified"), "지난달 리포트에 lastmod 가 붙었다");
+  const block = past.slice(0, past.indexOf("entries.push("));
+  assert.match(block, /const closedAt = reportClosedAt\(slug\);/);
+  assert.match(block, /closedAt\.getTime\(\) <= Date\.now\(\) \? closedAt : at/);
+  assert.ok(!block.includes("new Date()"), "지난달 리포트에 생성 시각이 붙었다");
 });
 
 test("V4 허브 제목 — 검색되는 말이 앞", () => {

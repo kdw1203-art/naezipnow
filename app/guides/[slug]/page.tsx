@@ -6,6 +6,7 @@ import { PageShell } from "@/app/components/PageShell";
 import { GUIDES, GUIDE_BY_SLUG } from "@/lib/guides/catalog";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { GuideRelatedLinks } from "../RelatedLinks";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 import { Fineprint } from "@/app/components/Fineprint";
 import { FaqCompact } from "@/app/components/compact/FaqCompact";
@@ -126,11 +127,33 @@ export default async function GuidePage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(breadcrumb) }}
       />
+      {/* [1082] Article — 가이드 17편에 글 스키마가 없었다(브레드크럼·FAQ 만). 날짜는 catalog updatedAt 이 있을 때만(지어내지 않는다).
+          꼴은 월간 리포트의 Article 과 같다(author Organization · publisher @id). */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: jsonLdScript({
+            "@context": "https://schema.org",
+            "@type": "Article",
+            headline: guide.title,
+            description: guide.metaDescription,
+            inLanguage: "ko-KR",
+            author: { "@type": "Organization", name: "내집나우", url: "https://naezipnow.com" },
+            publisher: { "@id": "https://naezipnow.com/#organization" },
+            ...(guide.updatedAt ? { dateModified: guide.updatedAt } : {}),
+            mainEntityOfPage: `https://naezipnow.com/guides/${guide.slug}`,
+          }),
+        }}
+      />
       {/* FAQPage JSON-LD 는 아래 FaqCompact 가 같은 guide.faq 배열에서 낸다 — 여기서 겹쳐 내지 않는다 */}
 
       <div className="mx-auto grid w-full max-w-[1100px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
         <article className="min-w-0 lg:max-w-[720px]">
-          <p className="rise-in t-caption font-bold text-primary">{guide.category} 가이드</p>
+          <p className="rise-in t-caption font-bold text-primary">
+            {guide.category} 가이드
+            {/* [1082] 고친 날(catalog updatedAt · 사이트맵 lastmod 와 같은 값) — 있을 때만 */}
+            {guide.updatedAt && <span className="font-normal text-text-3"> · 갱신 {guide.updatedAt.replace(/-/g, ".")}</span>}
+          </p>
           <h1 className="rise-in mt-1 t-title leading-[1.3] text-ink">{guide.title}</h1>
           <p className="rise-in-1 mt-3 t-body leading-[1.75] text-text-2 max-md:mt-2">{guide.intro}</p>
 
@@ -196,6 +219,9 @@ export default async function GuidePage({
               {relatedRows}
             </section>
           )}
+
+          {/* [1081 · #16] 관련 용어 · 도구 · 지역 — 글 끝에서 바로 가는 길(나가는 링크 2개 → 15개 안팎) */}
+          <GuideRelatedLinks category={guide.category} />
 
           {/* [961] 광고 공간 — 가이드 본문 끝 */}
           <AdZone placement="article_end" seed={1} plan={null} className="mt-8 max-md:mt-5" />

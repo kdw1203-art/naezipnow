@@ -34,10 +34,12 @@ import {
   readNewsMeta,
   extractUuid,
   canonicalNewsUrl,
+  canonicalNewsPath,
   splitSummary,
   buildNewsJsonLd,
 } from "@/lib/news-seo";
 import { newsArticleJsonLd, withNewsArticleDefaults } from "@/lib/town/news-jsonld";
+import { seoAlternates } from "@/lib/seo/alternates";
 import { jsonLdScript } from "@/lib/seo/jsonld";
 
 /* ============================================================
@@ -140,6 +142,8 @@ export async function generateMetadata({
     (body ? body.slice(0, 150) : `${descParts.join(" · ")} 부동산 소식.`);
 
   const canonical = canonicalNewsUrl(seo.slug, uuid);
+  /* [1081 · hreflang] 다른 화면(seoAlternates)과 같은 ko-KR · x-default — 기사만 빠져 있었다(운영 실측 hreflang 0) */
+  const alternates = seoAlternates(canonicalNewsPath(seo.slug, uuid));
   const ogImage = newsImageUrl(post);
   /* 지역 엔티티까지 키워드에 합친다 — 동 단위 질의는 region 컬럼만으로는 안 잡힌다(GEO). */
   const keywords = [...(seo.keywords ?? []), ...(geo.places ?? []), ...(geo.landmarks ?? [])].filter(Boolean);
@@ -148,7 +152,7 @@ export async function generateMetadata({
     title: `${seo.seo_title ?? post.title} | 내집나우`,
     description,
     ...(keywords.length ? { keywords } : {}),
-    alternates: { canonical },
+    alternates,
     robots: { index: indexable, follow: true },
     openGraph: {
       type: "article",

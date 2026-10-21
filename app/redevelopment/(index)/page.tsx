@@ -1,4 +1,5 @@
 import { formatKstDate } from "@/lib/format/kst";
+import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
 import { seoAlternates } from "@/lib/seo/alternates";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
@@ -37,9 +38,10 @@ import { STAGE_GUIDES, REDEV_GLOSSARY } from "@/lib/redevelopment/stage-guide";
 export const revalidate = 86_400;
 
 export const metadata = {
-  title: "정비사업 지도 | 내집나우",
+  /* [1081 · #10] 검색어 꼬리 — 예전 "정비사업 지도"(14자)는 "재개발 재건축 지도 서울" 류 검색을 받지 못했다 */
+  title: "서울 재개발·재건축 지도 — 정비사업 구역·단계·결정 조서 | 내집나우",
   description:
-    "재개발·재건축·소규모 정비사업 지도 · 서울시 도시계획 결정 조서(정비사업·도시개발·지구단위계획) · 7단계 절차 · 정비사업 뉴스.",
+    "서울 재개발·재건축·소규모 정비사업 구역을 지도에서 사업종류·진행 단계별로 찾기 · 자치구별 구역 수 · 서울시 도시계획 결정 조서(정비사업·도시개발·지구단위계획) · 7단계 절차 · 정비사업 뉴스.",
   /* [1031 · 운영 경보 seo.asset] 사이트맵 제출 페이지인데 canonical 이 없었다 — ?zone=·#id 변형 URL 로 색인이 갈라진다 */
   alternates: seoAlternates("/redevelopment"),
 };
@@ -145,6 +147,7 @@ export default async function RedevelopmentPage() {
        (Pixel 5 실측). 브레드크럼도 혼자 "홈 › …" 로 시작했다.
        9칸 공통 머리(TownPageHead: 아이콘 칩 + 제목 + 한 줄)로 맞춘다. */
     <PageShell breadcrumb="동네이야기 › 정비사업 지도" wide>
+      <HubBreadcrumbLd trail={[{ name: "동네이야기", path: "/town" }, { name: "서울 재개발·재건축 지도", path: "/redevelopment" }]} />
       {/* 카테고리 줄 고정 — 형제 카테고리 페이지(청약·입주·공매)와 동일 패턴 */}
       {/* [978] 통계는 이 화면이 이미 들고 있는 값만 쓴다 — 머리를 붙이면서 조회를
           새로 얹지 않는다(976 에서 줄인 DB 왕복을 되돌리는 짓이다). */}

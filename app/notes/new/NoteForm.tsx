@@ -75,6 +75,7 @@ import {
   type NoteUnit,
   type PhotoRole,
 } from "@/lib/notes/unit-core";
+import { noteTitleFor } from "@/lib/notes/title-rule";
 import {
   localDateIso,
   makeCoverPhoto,
@@ -2078,12 +2079,14 @@ export function NoteForm({
       level: t.level,
     }));
     try {
+      const visitDateIso = /^\d{4}-\d{2}-\d{2}$/.test(visitDate) ? visitDate : localDateIso();
       const payload = {
-        title: `${aptName} 임장 기록`,
+        /* [1081 · #17] "단지명 [면적] 임장노트 · YYYY년 M월" — 공개 노트의 <title>·h1 이 검색어 꼴이 되게(lib/notes/title-rule) */
+        title: noteTitleFor({ aptName, areaM2: unit.areaM2, areaLabel: unit.areaLabel, visitDate: visitDateIso }),
         region,
         aptName,
         /* [967 · 2] 폼의 방문일 — 작성·수정 모두 사용자가 정한(또는 촬영일로 채운) 값 */
-        visitDate: /^\d{4}-\d{2}-\d{2}$/.test(visitDate) ? visitDate : localDateIso(),
+        visitDate: visitDateIso,
         transportation: visit["시간대"] ?? null,
         weather: weather.trim() || null,
         summary: memo.trim() || null,

@@ -18,7 +18,9 @@ import { MiniBar } from "@/app/components/compact/MiniBar";
 import { Fineprint } from "@/app/components/Fineprint";
 import { logger } from "@/lib/log";
 import { commonRegionCompare, reportSummary, type CommonCompare } from "./report-compare";
-import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
+import { ShareLinkButton } from "@/app/components/ShareLinkButton";
+import { KakaoShareButton } from "@/app/components/KakaoShareButton";
+import { findCatalogRegionStrict } from "@/lib/region/catalog";
 
 /* ============================================================
    S11/G7/G8/G14 — 월간 실거래 리포트 상세.
@@ -82,11 +84,19 @@ export async function generateMetadata({
   const title = `${label} 아파트 실거래 리포트 — ${report.regionCount}개 지역 ${report.txCount.toLocaleString("ko-KR")}건 | 내집나우`;
   const description = `${label} 전국 집계 지역 아파트 매매 실거래 ${report.txCount.toLocaleString("ko-KR")}건. 지역별 거래량·평균가와 평당가 전월 대비 변동을 국토교통부 신고 기준으로 정리했습니다.`;
   const path = `/reports/${report.ym}`;
+  /* [1082] 공유 카드 — 1081 에서 머리에 공유(링크·카카오톡)가 생겼는데 카드는 기본 정적 그림이었다. 리포트는 30쪽뿐이라
+     제목·건수가 박힌 동적 카드(/api/og · lib/og/cache)를 써도 된다(1027 의 "쪽 수 많은 표면 제외" 규칙 안). */
+  const ogImage = `/api/og?${new URLSearchParams({
+    title: `${label} 아파트 실거래 리포트`,
+    sub: `${report.regionCount}개 지역 · 매매 신고 ${report.txCount.toLocaleString("ko-KR")}건 · 국토교통부`,
+    badge: "월간 리포트",
+  }).toString()}`;
   return {
     title,
     description,
     alternates: seoAlternates(path),
-    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "article", images: DEFAULT_OG_IMAGES },
+    openGraph: { title, description, url: `https://naezipnow.com${path}`, type: "article", images: [{ url: ogImage, width: 1200, height: 630, alt: `${label} 아파트 실거래 리포트` }] },
+    twitter: { card: "summary_large_image", title, description, images: [ogImage] },
   };
 }
 
@@ -226,9 +236,16 @@ export default async function MonthlyReportPage({
       {/* [1015 · 규칙 F·G] 데스크톱 2단 — 본문 + 340px 레일(목차 · 관련 화면 · 데이터 출처 · 광고 1). 폰은 한 열, 광고는 페이지 끝 1. */}
       <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
       <div className="min-w-0">
-        <h1 className="rise-in t-title text-ink">
-          {label} 아파트 실거래 리포트
-        </h1>
+        <div className="rise-in flex flex-wrap items-center justify-between gap-2">
+          <h1 className="t-title text-ink">
+            {label} 아파트 실거래 리포트
+          </h1>
+          {/* [1081 · #23] 공유 — 링크 복사·시스템 공유 + 카카오톡(키 있을 때). 리포트는 공유가 유입의 출발점이라 머리에 둔다 */}
+          <div className="flex flex-wrap gap-2">
+            <ShareLinkButton url={`?utm_source=share&utm_medium=report`} title={`${label} 아파트 실거래 리포트 · 내집나우`} className="press inline-flex min-h-10 items-center gap-1 rounded-full border border-line bg-surface px-3 t-sub font-bold text-text-1 md:min-h-9" />
+            <KakaoShareButton url={`?utm_source=kakao&utm_medium=report`} title={`${label} 아파트 실거래 리포트 · 내집나우`} description={citation} />
+          </div>
+        </div>
         {/* [1009 · H] 결론 → 큰 숫자 → 비교 기준(토스식 한 화면 한 메시지). 아래 첫 문단(G12)은 인용용 전문이라 그대로 둔다 */}
         <section id="summary" aria-label={`${label} 거래 요약`} className="rise-in-1 card mt-3 rounded-2xl p-[var(--pad-card)] max-md:mt-2">
           <p className="m-0 t-caption text-text-3">
@@ -357,9 +374,21 @@ export default async function MonthlyReportPage({
                 </tr>
               </thead>
               <tbody>
-                {report.rows.map((r) => (
+                {report.rows.map((r) => {
+                  /* [1081 · #16] 지역 이름 → 그 지역의 같은 달 리포트(/region/<id>/report/<yyyy-mm>) — 전국 표(249행)에서 지역 리포트
+                     654쪽으로 가는 길. 카탈로그에 없는 지역은 글자 그대로. */
+                  const hub = findCatalogRegionStrict(r.regionName) ?? findCatalogRegionStrict(r.regionName.replace(/^(서울|인천|부산|대구|광주|대전|울산)\s+/, ""));
+                  return (
                   <tr key={r.regionName} className="border-b border-border last:border-b-0">
-                    <td className="py-2.5 pr-2 font-bold text-ink break-words">{r.regionName}</td>
+                    <td className="py-2.5 pr-2 font-bold text-ink break-words">
+                      {hub ? (
+                        <Link href={`/region/${encodeURIComponent(hub.id)}/report/${ym.slice(0, 4)}-${ym.slice(4, 6)}`} className="tap-line text-primary no-underline">
+                          {r.regionName}
+                        </Link>
+                      ) : (
+                        r.regionName
+                      )}
+                    </td>
                     <td className="py-2.5 text-right tabular-nums text-text-2">
                       {r.txCount.toLocaleString("ko-KR")}건
                     </td>
@@ -371,7 +400,8 @@ export default async function MonthlyReportPage({
                       </td>
                     )}
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

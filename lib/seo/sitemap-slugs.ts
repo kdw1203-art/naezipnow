@@ -11,9 +11,21 @@
  * scripts/check-sitemap-index.mjs 가 실패시킨다.
  */
 
+/** [1081] 단지 사이트맵 조각 — 거래 많은 순으로 5,000개씩. 인덱스에는 조각만 싣고, 통짜 /sitemap-complexes.xml 은
+ *  소유자가 콘솔에 직접 제출해 둔 주소라 살려 둔다(인덱스에서만 뺀다). 수용량 6 × 5,000 = 30,000(현재 23,809). */
+export const COMPLEX_SITEMAP_CHUNK_SIZE = 5000;
+export const COMPLEX_SITEMAP_CHUNKS = 6;
+export const COMPLEX_CHUNK_SLUGS = ["complexes-1", "complexes-2", "complexes-3", "complexes-4", "complexes-5", "complexes-6"] as const;
+
 export const SITEMAP_SECTION_SLUGS = [
   "pages",
   "complexes",
+  "complexes-1",
+  "complexes-2",
+  "complexes-3",
+  "complexes-4",
+  "complexes-5",
+  "complexes-6",
   "regions",
   "tx",
   "pairs",
@@ -56,4 +68,15 @@ export const SITEMAP_INDEX_PATH = "/sitemap.xml";
 export const SITEMAP_PATHS: readonly string[] = [
   SITEMAP_INDEX_PATH,
   ...SITEMAP_SECTION_PATHS,
+];
+
+/** [1082] 인덱스·robots.txt 에 싣지 않는 자식(주소는 산다 · 캐시 정책·공개 허용 목록에는 그대로) — 통짜 단지 사이트맵.
+ *  lib/seo/sitemap-sections 의 indexed:false 와 같은 목록이어야 한다(테스트가 잠근다). */
+export const SITEMAP_UNLISTED_SLUGS: readonly SitemapSectionSlug[] = ["complexes"];
+
+/** robots.txt 의 Sitemap: 줄 — 인덱스 + 인덱스에 실리는 자식만. 운영 실측(2026-10-21) robots 가 통짜(23,809)와 조각 6개를
+ *  함께 적으면 같은 URL 2.4만 개가 두 번 제출된다. */
+export const SITEMAP_PATHS_FOR_ROBOTS: readonly string[] = [
+  SITEMAP_INDEX_PATH,
+  ...SITEMAP_SECTION_SLUGS.filter((s) => !SITEMAP_UNLISTED_SLUGS.includes(s)).map(sitemapSectionPath),
 ];

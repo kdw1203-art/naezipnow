@@ -410,11 +410,12 @@ export function HomeHeroSearch({
                 </Link>
               ))}
               {/* 내 동네는 지도에서 — 검색 무결과 화면의 수요 카드는 그대로 살아 있다.
-                  [968 · 9] /map 은 가장 무거운 화면이라 Link 프리페치의 이득이 제일 크다. */}
+                  [968 · 9] /map 은 가장 무거운 화면이라 Link 프리페치의 이득이 제일 크다.
+                  [1081 · #26] 칩이 8개가 되어 폰에서는 줄이 가로로 넘친다 — 이 링크가 스크롤 뒤로 숨지 않게 폰에서는 맨 앞(order-first). PC 는 그대로 끝. */}
               <Link
                 href="/map"
                 prefetch={chipPrefetch}
-                className="chip shrink-0 bg-primary-soft px-3 py-1.5 t-sub font-bold text-primary no-underline transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
+                className="chip shrink-0 bg-primary-soft px-3 py-1.5 t-sub font-bold text-primary no-underline transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)] max-md:order-first"
               >
                 지도에서 내 동네 찾기
               </Link>

@@ -10,6 +10,7 @@ import { formatPriceKrw, formatRentLabel } from "@/lib/listings/format";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
 import { logger } from "@/lib/log";
 import { getClientIp, keyRateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { recordSearchQuery } from "@/lib/search/query-stats";
 import { expandComplexAlias, normalizeSearchQuery } from "@/lib/search/normalize-query";
 import { isStoryPost } from "@/lib/town/post-href";
 import {
@@ -452,6 +453,9 @@ export async function GET(req: Request) {
         if (error && !(fuzzyOnly && error.code === "PGRST204")) logger.warn("[search] 제로결과 로그 실패", error);
       });
   }
+
+  /* [1081 · #29] 검색어 집계(KV · 월별) — 응답을 막지 않는다. CDN 적중분은 세지 못한다(추세용) */
+  void recordSearchQuery(q);
 
   return NextResponse.json(
     {

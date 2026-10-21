@@ -1,5 +1,6 @@
 /* [1023 · 동네 ①] 주제(NEWS_TAGS) 칩 줄 — 오른쪽 레일 끝의 같은 칩은 걷었다(레일엔 정비사업·입주 물량 링크만). [1044] 머리는 NewsHead · 동네 카테고리 줄 없음 · 칩 줄은 머리 아래. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
+import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
 import Link from "next/link";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { PageShell } from "../../../components/PageShell";
@@ -119,6 +120,7 @@ export default async function TownNewsPage() {
 
   return (
     <PageShell wide>
+      <HubBreadcrumbLd trail={[{ name: "부동산 뉴스룸", path: "/town/news" }]} />
       {/* [1044] 소유자 지시(2026-10-06): "뉴스랑 동네글을 분리해줘"(메뉴까지). 뉴스는 동네의 한 칸이 아니라 제 대분류다 —
           빵부스러기("동네이야기 › 뉴스룸")와 머리 아래 동네 카테고리 줄(동네이야기·청약·공매·입주·정비)을 걷었다.
           빵부스러기는 아예 두지 않는다 — 대분류의 첫 화면이라 "뉴스룸" 한 낱말이 제목 바로 위에 한 번 더 설 뿐이다(동네이야기 · 임장노트 첫 화면과 같다).

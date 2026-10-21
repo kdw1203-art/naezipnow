@@ -12,6 +12,7 @@
  *  · 결론 문장은 실제 값의 변화로만 만든다(lib/format/delta changeSentence) — 값이 없으면 null(문장을 쓰지 않는다).
  */
 import { changeLabel, pctChange, pctLabel } from "@/lib/format/delta";
+import { formatKrwShort } from "@/lib/market/format";
 import { reportingClosed, splitByReporting } from "@/lib/newui/reporting-window";
 
 export type SeriesPoint = { period: string; value: number };
@@ -95,6 +96,10 @@ export type RegionOverview = {
   subline: string | null;
   /** 부동산원 수치(지수·전세가율·평균가 중 하나라도)가 있는가 */
   hasReb: boolean;
+  /** [1081 · #14] 데이터로만 쓴 지역 요약 2~4문장 — 지수·평균가·거래·전세가율 중 **있는 것만**. 없으면 빈 배열 */
+  narrative: string[];
+  /** [1081 · #25] 인용 가능한 한 문장(출처·기준월 포함) — AI 검색·요약이 그대로 가져갈 수 있는 사실 문장. 만들 값이 없으면 null */
+  citeLine: string | null;
 };
 
 function finite(n: unknown): n is number {
@@ -204,7 +209,79 @@ export function buildRegionOverview(input: RegionOverviewInput): RegionOverview 
   }
 
   const hasReb = index !== null || (jeonse !== null) || avgPrice?.basis === "reb";
-  return { index, jeonse, volume, volumeOpen, avgPrice, headline, headlineCaption, subline, hasReb };
+  const narrative = buildRegionNarrative(input.name, { index, jeonse, volume, volumeOpen, avgPrice, hasReb });
+  const citeLine = buildRegionCiteLine(input.name, { index, volume, avgPrice });
+  return { index, jeonse, volume, volumeOpen, avgPrice, headline, headlineCaption, subline, hasReb, narrative, citeLine };
+}
+
+/* ───────────── [1081] 데이터 기반 서술 · 인용 문장 ───────────── */
+
+type NarrativeFacts = Pick<RegionOverview, "index" | "jeonse" | "volume" | "volumeOpen" | "avgPrice" | "hasReb">;
+
+/** 지수·평균가·거래·전세가율을 **한 사실 = 한 문장**으로 — 숫자 외 서술(학군·교통 등)은 적지 않는다(데이터에 없는 말은 없다).
+ *  문장을 잘게 두는 이유: 머리 문단(lead)이 이미 말한 수는 narrativeComplement 가 문장째 버린다 — 새 사실만 남는다. */
+export function buildRegionNarrative(name: string, f: NarrativeFacts): string[] {
+  const out: string[] = [];
+  if (f.index) {
+    const mom = f.index.momPct !== null ? pctLabel(f.index.momPct, "전월 대비") : null;
+    out.push(`${name} 아파트 매매가격지수는 ${ymLong(f.index.ym)} 기준 ${f.index.value.toFixed(1)}${mom ? `(${mom})` : ""}로, 한국부동산원 월간 지수입니다.`);
+    if (f.index.yoyPct !== null) out.push(`매매가격지수는 ${pctLabel(f.index.yoyPct, "1년 전 대비")}입니다.`);
+  }
+  if (f.avgPrice) {
+    const when = f.avgPrice.ym ? `${ymLong(f.avgPrice.ym)} ` : "";
+    const basis =
+      f.avgPrice.basis === "reb"
+        ? "한국부동산원 집계"
+        : `국토교통부 신고${f.avgPrice.trades ? ` ${f.avgPrice.trades.toLocaleString("ko-KR")}건` : ""} 평균`;
+    out.push(`${when}평균 매매가는 ${formatKrwShort(f.avgPrice.krw)}(${basis})입니다.`);
+  }
+  if (f.volume) {
+    out.push(`${ymLong(f.volume.ym)} 매매 신고는 ${f.volume.count.toLocaleString("ko-KR")}건입니다.`);
+    if (f.volume.momPct !== null) out.push(`${ymLong(f.volume.ym)} 매매 신고는 ${pctLabel(f.volume.momPct, "전월 대비")}입니다.`);
+    if (f.volumeOpen.length > 0) {
+      out.push(`${f.volumeOpen.map((o) => `${ymLong(o.ym)} ${o.count.toLocaleString("ko-KR")}건`).join(" · ")}은 아직 신고가 들어오는 중입니다.`);
+    }
+  }
+  if (f.jeonse) {
+    out.push(`전세가율은 ${f.jeonse.value.toFixed(1)}%입니다.`);
+    if (f.jeonse.ppChange !== null) {
+      out.push(`전세가율은 전월 대비 ${f.jeonse.ppChange >= 0 ? "▲" : "▼"}${Math.abs(f.jeonse.ppChange).toFixed(1)}%p입니다.`);
+    }
+  }
+  if (!f.hasReb && out.length > 0) out.push("한국부동산원 지수·평균가 기록이 없는 지역이라 국토교통부 실거래 신고만 집계합니다.");
+  return out;
+}
+
+/** 머리 문단(lead)이 이미 말한 수는 뺀다(같은 수 두 번 금지) — 숫자+단위 토큰("27.8억"·"80건"·"43.6%")이 lead 에 있으면 그 문장을 버린다.
+ *  지수 값 문장은 lead 가 "매매가격지수"를 말했으면 버린다(lead 는 소수 둘째 자리라 토큰이 안 잡힌다). 1년 전 대비 문장은 남는다. */
+export function narrativeComplement(narrative: readonly string[], lead: string): string[] {
+  return narrative.filter((s) => {
+    if (s.includes("매매가격지수는") && !s.includes("1년 전 대비") && lead.includes("매매가격지수")) return false;
+    const tokens = s.match(/\d[\d,.]*(?:억|건|%p?)/g) ?? [];
+    return !tokens.some((t) => lead.includes(t));
+  });
+}
+
+/** 출처·기준월이 든 한 문장 — "강남구 아파트 2026년 9월 매매가격지수 98.5(전월 대비 ▼1.6%) · 평균 매매가 27.8억 · 매매 신고 80건 — 출처 …" */
+export function buildRegionCiteLine(name: string, f: Pick<RegionOverview, "index" | "volume" | "avgPrice">): string | null {
+  const parts: string[] = [];
+  let ym: string | null = null;
+  if (f.index) {
+    ym = f.index.ym;
+    const mom = f.index.momPct !== null ? pctLabel(f.index.momPct, "전월 대비") : null;
+    parts.push(`매매가격지수 ${f.index.value.toFixed(1)}${mom ? `(${mom})` : ""}`);
+  }
+  if (f.avgPrice) {
+    ym = ym ?? f.avgPrice.ym;
+    parts.push(`평균 매매가 ${formatKrwShort(f.avgPrice.krw)}`);
+  }
+  if (f.volume) {
+    ym = ym ?? f.volume.ym;
+    parts.push(`매매 신고 ${f.volume.count.toLocaleString("ko-KR")}건`);
+  }
+  if (parts.length === 0 || !ym) return null;
+  const sources = [f.index || f.avgPrice?.basis === "reb" ? "한국부동산원" : null, f.volume || f.avgPrice?.basis === "tx" ? "국토교통부 실거래" : null].filter(Boolean).join("·");
+  return `${name} 아파트 ${ymLong(ym)} 기준 ${parts.join(" · ")} — 출처 ${sources}, 집계 내집나우(naezipnow.com)`;
 }
 
 /* ───────────── 추세 카드(ScrubLine) 데이터 ───────────── */

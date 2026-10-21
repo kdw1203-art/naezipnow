@@ -264,9 +264,10 @@ if (read("app/layout.tsx").includes("#main-content")) {
 // 이 4개 라우트는 DB 곁다리 조회 예산(최대 8초) 동안 loading.tsx 가 없으면
 // 흰 화면이 된다. 한 번 지워지면 아무 테스트도 안 깨지는 종류의 회귀라 여기서 잡는다.
 {
+  /* [1081] 지역 상세(app/region/[id])는 스켈레톤을 뺐다 — ISR(7일) 첫 렌더가 스트리밍되면 본문이 숨은 청크(<div hidden>)로
+     나가 JS 를 돌리지 않는 크롤러(네이버 일부·AI 봇)가 골격만 보고, 없는 달 리포트의 notFound 가 200 으로 나갔다(소프트 404). */
   const heavyRoutes = [
     "app/complex/[id]/loading.tsx",
-    "app/region/[id]/loading.tsx",
     "app/map/loading.tsx",
     "app/tx/[region]/loading.tsx",
   ];

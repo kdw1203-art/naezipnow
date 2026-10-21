@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { SITEMAP_PATHS } from "@/lib/seo/sitemap-slugs";
+import { SITEMAP_PATHS_FOR_ROBOTS } from "@/lib/seo/sitemap-slugs";
 
 /**
  * 색인 정책 — 공개 라우트 allow, 개인 영역 disallow.
@@ -91,7 +91,8 @@ export default function robots(): MetadataRoute.Robots {
        인덱스 하나만 적어도 규격상 충분하지만, 실제로는 사이트맵 인덱스 처리가
        크롤러마다 고르지 않다. 여러 줄로 적는 건 표준이 허용하는 형태이고 비용이
        0 이라, 인덱스를 못 펴는 크롤러도 자식을 직접 집어 가게 둔다. */
-    sitemap: SITEMAP_PATHS.map((p) => `${BASE_URL}${p}`),
+    /* [1082] 통짜 단지 사이트맵은 뺀다(조각 6개가 대신) — 같은 URL 을 두 번 적지 않는다 */
+    sitemap: SITEMAP_PATHS_FOR_ROBOTS.map((p) => `${BASE_URL}${p}`),
     host: BASE_URL,
   };
 }

@@ -32,7 +32,13 @@ test("Y1 진짜 404 — 존재 확인이 layout 에 있고, 그 세그먼트의 
     const src = read(layout);
     assert.match(src, /notFound\(\)/, layout);
     assert.match(src, /from "next\/navigation"/, layout);
-    /* 스켈레톤을 지우는 방식으로 404 를 얻지 않았다(로딩 중 빈 화면 방지) */
+    /* 스켈레톤을 지우는 방식으로 404 를 얻지 않았다(로딩 중 빈 화면 방지).
+       [1081] 지역 상세(app/region/[id])만 예외 — 404 는 layout 이 이미 보장하고, ISR(7일) 첫 렌더가 스트리밍되면 본문이
+       숨은 청크(<div hidden>)로 나가 검색엔진이 읽는 HTML 이 아니었다(운영 실측). 완전한 HTML 을 위해 스켈레톤을 뺐다. */
+    if (seg === "app/region/[id]") {
+      assert.ok(!existsSync(`${seg}/loading.tsx`), `${seg}/loading.tsx 가 돌아왔다 — 본문이 다시 숨은 청크가 된다`);
+      continue;
+    }
     assert.ok(existsSync(`${seg}/loading.tsx`), `${seg}/loading.tsx 가 사라졌다`);
   }
 });

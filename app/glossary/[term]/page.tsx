@@ -10,6 +10,7 @@ import {
 } from "@/lib/seo/glossary-terms";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { glossaryMetaDescription, glossaryUsageLinks } from "@/lib/seo/glossary-related";
 
 /* ============================================================
    N14 — 용어 개별 페이지 (/glossary/{slug}).
@@ -43,13 +44,15 @@ export async function generateMetadata({
   }
   const title = `${t.term} 뜻 — 부동산 용어사전 | 내집나우`;
   const path = `/glossary/${t.slug}`;
+  /* [1081 · #12] 설명문 — short(29자)만으로는 검색 결과에서 잘리거나 비어 보였다 → short + def 155자 */
+  const description = glossaryMetaDescription(t.short, t.def);
   return {
     title,
-    description: t.short,
+    description,
     alternates: seoAlternates(path),
     openGraph: {
       title,
-      description: t.short,
+      description,
       url: `https://naezipnow.com${path}`,
       type: "article",
       siteName: "내집나우",
@@ -59,7 +62,7 @@ export async function generateMetadata({
     twitter: {
       card: "summary_large_image",
       title,
-      description: t.short,
+      description,
       images: ["/og-image"],
     },
   };
@@ -97,6 +100,7 @@ export default async function GlossaryTermPage({
     .map((s) => findGlossaryTerm(s))
     .filter((x): x is GlossaryTerm => x !== null);
 
+  const usage = glossaryUsageLinks(t.category);
   // 같은 분류의 다른 용어 — 관련 용어와 겹치지 않게, 최대 6개.
   const excluded = new Set([t.slug, ...related.map((r) => r.slug)]);
   const siblings = GLOSSARY_TERMS.filter(
@@ -189,6 +193,22 @@ export default async function GlossaryTermPage({
                 </Link>
               ))}
             </div>
+          </section>
+        )}
+
+        {/* [1081 · #12] 이 용어가 쓰이는 화면·도구·가이드 — 분류별 고정 묶음(lib/seo/glossary-related). 풀이는 그대로 두고 쓸모와 길을 더한다 */}
+        {usage.length > 0 && (
+          <section className="rise-in-3 mt-5 max-md:mt-4">
+            <h2 className="t-section text-ink">이 용어가 쓰이는 화면</h2>
+            <ul className="m-0 mt-2 flex list-none flex-col gap-1 p-0">
+              {usage.map((u) => (
+                <li key={u.href}>
+                  <Link href={u.href} className="tap-line t-body font-bold text-primary no-underline">
+                    {u.label} ›
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
 

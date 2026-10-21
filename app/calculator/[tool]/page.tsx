@@ -5,6 +5,7 @@ import { BROKERAGE_BASIS } from "@/lib/finance/brokerage";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { howToJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { CalculatorNav } from "../CalculatorNav";
+import { CalculatorExplainer } from "../CalculatorExplainer";
 import { CALCULATOR_TOOLS, findCalculatorTool } from "../tools";
 
 /* [992] 계산기 4종 — 한 파일. 표(../tools.tsx)에 없는 id(구 Vite 앱의 /calculator/tax·investment
@@ -50,6 +51,8 @@ export default async function CalculatorToolPage({ params }: { params: Promise<{
           )}
         </p>
         <div className="rise-in-1">{t.render()}</div>
+        {/* [1081 · #13] 계산 방법·예시·확인 사항·관련 — 검색엔진이 읽는 본문 */}
+        <CalculatorExplainer id={t.id} />
 
         {t.howTo && (
           <>

@@ -13,6 +13,8 @@ import {
 import { formatKrwShort, formatYm, formatYmRange } from "@/lib/market/format";
 import { breadcrumbJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { findCatalogRegionStrict } from "@/lib/region/catalog";
+import { findTemperatureRegion } from "@/lib/market/temperature";
 import { QaBlock } from "@/app/components/QaBlock";
 import { CoverImage } from "@/app/components/CoverImage";
 import { AdZone } from "@/app/components/ads/AdZone";
@@ -90,6 +92,11 @@ export default async function ImjangRegionPage({
   if (!guide) notFound();
   const { region, topComplexes } = guide;
   const range = formatYmRange(region.firstYm, region.latestYm);
+  /* [1081 · #15] 지역 상세·시장 온도로 가는 길 — tx 지역 이름("서울 강남구"·"고양 덕양구")을 카탈로그 id 로(엄격 일치만 —
+     부분 일치는 "대구 중구"를 서울 중구로 보낼 수 있다). 없으면 그 줄이 빠진다. */
+  const catalogRegion = findCatalogRegionStrict(region.name) ?? findCatalogRegionStrict(region.name.replace(/^(서울|인천|부산|대구|광주|대전|울산)\s+/, ""));
+  const regionHubId = catalogRegion?.id ?? null;
+  const tempRegionId = regionHubId && findTemperatureRegion(regionHubId) ? regionHubId : null;
 
   /* U3 플라이휠 조인 — 이 지역의 공개 임장노트. 곁다리 강화라 실패해도
      페이지는 계속 그리되, 실패와 0건은 화면에서 구분한다(사실 규율). */
@@ -190,6 +197,43 @@ export default async function ImjangRegionPage({
           </ol>
         )}
       </section>
+
+      {/* [1081 · #15] 관련 화면 — 지역 상세(지수·평균가·거래)·시장 온도·실거래 구간. 임장 가이드 200쪽에서 지역 허브로 가는 길이 없었다. */}
+      {(regionHubId || tempRegionId) && (
+        <section aria-labelledby="imjang-related" className="mb-6 max-md:mb-4">
+          <h2 id="imjang-related" className="t-section text-ink">
+            관련
+          </h2>
+          <ul className="m-0 mt-2 flex list-none flex-wrap gap-x-4 gap-y-2 p-0">
+            {regionHubId && (
+              <li>
+                <Link href={`/region/${encodeURIComponent(regionHubId)}`} className="tap-line t-body font-bold text-primary no-underline">
+                  {region.name} 아파트 실거래 · 지역 분석 ›
+                </Link>
+              </li>
+            )}
+            {regionHubId && (
+              <li>
+                <Link href={`/region/${encodeURIComponent(regionHubId)}/report`} className="tap-line t-body font-bold text-primary no-underline">
+                  월간 리포트 ›
+                </Link>
+              </li>
+            )}
+            {tempRegionId && (
+              <li>
+                <Link href={`/analysis/temperature/${encodeURIComponent(tempRegionId)}`} className="tap-line t-body font-bold text-primary no-underline">
+                  시장 온도 주간 기록 ›
+                </Link>
+              </li>
+            )}
+            <li>
+              <Link href={`/tx/${encodeURIComponent(region.slug)}`} className="tap-line t-body font-bold text-primary no-underline">
+                면적대·가격대 실거래 ›
+              </Link>
+            </li>
+          </ul>
+        </section>
+      )}
 
       {/* 표준 체크포인트 — 가야만 확인되는 것들. [1015 · 규칙 I] 카드 격자 → 리퀴드 행 목록(sand, 이웃 목록과 다른 톤) */}
       <section className="mb-6 max-md:mb-4">

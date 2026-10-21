@@ -19,6 +19,8 @@ import { RollingPanel } from "./components/home/RollingPanel";
 import { chunkPages } from "./components/home/chunk-pages";
 import { HomeSeoulMoves } from "./components/home/HomeSeoulMoves";
 import { HomeTownBlock } from "./components/home/HomeTownBlock";
+import { HomeHubLinks } from "./components/home/HomeHubLinks";
+import { getActiveComplexes } from "@/lib/ai/popular-complexes";
 import { HomeTalkSection } from "./components/home/HomeTalkSection";
 import { loadLatestTemperatures } from "./components/MarketTempWidget";
 import { loadNewHomeData } from "@/lib/newui/home-data";
@@ -138,12 +140,14 @@ function HomeAiGateway({
 export default async function Home() {
   /* 세 조회는 서로 의존이 없다 — 한 Promise.all 로 임계 경로를 가장 느린 하나로.
      [991] 다이제스트·신선도 라벨 조회는 티커·"더 알아보기"와 함께 내려갔다. */
-  const [data, baseRateData, coverage] = await Promise.all([
+  const [data, baseRateData, coverage, activeComplexes] = await Promise.all([
     loadNewHomeData(),
     // 기준금리: ECOS(한국은행) 연동 시 실값, 미연동 시 "—" (허위 수치 금지)
     getBaseRate(),
     // [950] 커버리지 실수치(실거래·단지·지역) — 6시간 데이터 캐시, 실패 시 줄 생략
     loadHomeCoverage(),
+    // [1081 · #27] 거래 많은 단지(도시당 1곳 · 1일 데이터 캐시) — 실패·0행이면 빈 배열(그 줄이 빠진다)
+    getActiveComplexes(12),
   ]);
 
   // 실데이터만 사용한다 — 0건이면 빈 상태를 그린다(가짜 카드로 채우지 않는다).
@@ -155,7 +159,8 @@ export default async function Home() {
   /* [950] 공개 노트가 전부 Lab(데이터·AI 편집) 노트면 그 사실을 한 줄로 적는다 */
   const allLabNotes = notes.length > 0 && notes.every((n) => n.kind === "lab");
   /* [950] 검색 아래 지역 칩 — 시세 카드와 같은 지역(실데이터). 지역 카드가 비면 칩도 없다. */
-  const heroRegionChips = regions.slice(0, 4).map((r) => ({
+  /* [1081 · #26] 칩 4 → 8 — 폰은 가로 스크롤 줄, PC 는 접힘(HomeHeroSearch 컨테이너) */
+  const heroRegionChips = regions.slice(0, 8).map((r) => ({
     label: r.name,
     href: `/map?region=${encodeURIComponent(r.name)}`,
   }));
@@ -457,6 +462,9 @@ export default async function Home() {
                   isStoryPost 로 갈라 만든 것이라 추가 왕복이 없고, 클라이언트 JS 도 없다.
                   0건은 0건으로(가짜 카드 없음), 실패는 실패로 말한다. */}
               <HomeTownBlock stories={data.stories} news={data.news} failed={failed.town} now={renderedAt} />
+
+              {/* [1081 · #27] 지역·단지 바로가기 — 홈에서 지역 상세·단지 상세로 가는 직행 링크(크롤 경로) */}
+              <HomeHubLinks regions={regions} complexes={activeComplexes} />
             </div>
           </div>
           {/* [1051] 홈 맨 아래 — 실시간 토론(지역 · 단지 한 줄). 전폭. 판은 화면 가까이 오면 받는다 */}

@@ -21,6 +21,7 @@ import { Fineprint } from "@/app/components/Fineprint";
 import type { RegionMarketSnapshot } from "@/lib/market/types";
 import type { Post } from "@/lib/types/post";
 import { formatKrwShort } from "@/lib/market/format";
+import { townMetaDescription } from "@/lib/seo/town-description";
 import { KeywordAlertButton } from "@/app/components/KeywordAlertButton";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
@@ -77,7 +78,9 @@ export async function generateMetadata({
   /* [970 · C-25] 접미 없던 제목에 `| 내집나우`(폴백 제목과 동일 접미) */
   /* [1044] 제목·설명에서 뉴스를 뺐다 — 이 화면은 더 이상 기사를 싣지 않는다(없는 것을 제목에 적지 않는다) */
   const title = `${region.name} 동네 홈 · 이웃 글 · 시장 요약 | 내집나우`;
-  const description = `${region.name} 이웃 글과 공개 임장노트, 아파트 시장 요약. 키워드 알림 지원.`;
+  /* [1082] 설명문 — 130쪽이 같은 40자 틀이었다. 스냅샷(본문과 같은 조회 · 따뜻한 캐시)의 값이 있으면 지역의 수로 시작한다 */
+  const snap = await getRegionSnapshot(id).catch(() => null);
+  const description = townMetaDescription(region.name, snap);
   return {
     title,
     description,

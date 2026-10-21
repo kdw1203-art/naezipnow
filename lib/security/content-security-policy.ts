@@ -14,7 +14,7 @@ export function buildContentSecurityPolicy(
 ): string {
   /* 카카오 JS SDK 는 **JS 키가 설정된 배포에서만** 내려받는다. 키가 없으면 SDK 를
      띄울 일 자체가 없으니 정책도 그만큼 좁게 유지한다(허용 도메인은 적을수록 좋다). */
-  const kakaoSdkEnabled = Boolean(process.env.NEXT_PUBLIC_KAKAO_JS_KEY?.trim());
+  const kakaoSdkEnabled = Boolean(process.env.NEXT_PUBLIC_KAKAO_JS_KEY?.trim() || process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY?.trim()); // [1081] 두 이름
   const kakaoScript = kakaoSdkEnabled ? " https://t1.kakaocdn.net" : "";
   const kakaoConnect = kakaoSdkEnabled
     ? " https://kapi.kakao.com https://t1.kakaocdn.net"

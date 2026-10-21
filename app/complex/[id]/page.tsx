@@ -130,6 +130,7 @@ import { ComplexAreaMapLazy } from "./ComplexAreaMapLazy";
 import { UpcomingSupply } from "./UpcomingSupply";
 import { ComplexRentSection } from "./ComplexRentSection";
 import { ComplexNearbyPoi } from "./ComplexNearbyPoi";
+import { KakaoShareButton } from "@/app/components/KakaoShareButton";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
 import { ComplexNotesNewsAi } from "./ComplexNotesNewsAi";
 /* [1008 · Q] 브리핑 본체는 누를 때 받는다(번들 상쇄) · 호가 점검 펼침 버튼 */
@@ -603,7 +604,7 @@ function toNearby(rows: ComplexRow[], selfId: string, selfCanonicalId?: string):
       return {
         id: c.id,
         name: c.name,
-        meta: parts.length > 0 ? parts.join(" · ") : `${c.city} ${c.district}`.trim(),
+        meta: parts.length > 0 ? parts.join(" · ") : axisRegionName(c.city, c.district),
       };
     });
 }
@@ -757,7 +758,7 @@ function toView(
   if (row.kapt_code) infoRows.push({ label: "단지코드", value: row.kapt_code });
   infoRows.push({
     label: "주소",
-    value: row.road_address || row.address || `${row.city} ${row.district}`.trim(),
+    value: row.road_address || row.address || axisRegionName(row.city, row.district),
   });
 
   return {
@@ -1062,7 +1063,8 @@ export async function generateMetadata({
   }
 
   const name = row.name;
-  const region = `${row.city} ${row.district}`.trim() || "지역";
+  /* [1081 · #9] 시·구가 같은 도시(원주시·청주시 …)는 한 번만 — 예전엔 "원주시 원주시 명륜동"(설명·OG·주소에 전부) */
+  const region = axisRegionName(row.city, row.district) || "지역";
   /* [995] 읍면동 — 본문(loadView)과 같은 순수 함수·같은 address 라 값이 같다 */
   const emd = parseDong(row.address);
   /* [1009 · C] "시세 준비 중" → "실거래 없음" — 첫 화면과 같은 말(실거래만 있는 곳에 "시세" 낱말을 쓰지 않는다).
@@ -1624,6 +1626,13 @@ export default async function ComplexHubPage({
                 title={`${v.name} 실거래가·임장노트`}
                 className="press inline-flex min-h-10 shrink-0 items-center gap-1 rounded-full border border-line bg-surface px-3 text-xs font-bold text-text-1"
               />
+              {/* [1081 · #23] 카카오톡 공유 — 한국 공유의 대부분. 키 없으면 안 그린다. 설명은 인용 문장(citable) 첫 문장 */}
+              <KakaoShareButton
+                url="?utm_source=kakao&utm_medium=complex"
+                title={`${v.name} 실거래가 · 내집나우`}
+                description={citable?.sentences[0] ?? `${v.name} 실거래가·임장노트`}
+                className="shrink-0 text-xs"
+              />
               {typeof v.lat === "number" && typeof v.lng === "number" && (
                 <RoadviewButton lat={v.lat} lng={v.lng} label={v.name} />
               )}
@@ -1655,7 +1664,7 @@ export default async function ComplexHubPage({
             <p className="fold-lead t-body text-text-1">{citable.sentences[0]}</p>
             <Fineprint className="mt-1" label="기준 · 출처">
               {citable.sentences.slice(1).join(" ")}
-              {citable.sentences.length > 1 ? " · " : ""}국토교통부 실거래 단순 평균 · 매물 호가 아님
+              {citable.sentences.length > 1 ? " · " : ""}국토교통부 실거래 단순 평균 · 매물 호가 아님 · 집계 내집나우(naezipnow.com)
             </Fineprint>
           </section>
         )}

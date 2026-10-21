@@ -88,7 +88,7 @@ function PackSection({ pack, index }: { pack: ComplexPack; index: number }) {
 
 export default async function AdminPromoPage() {
   const kit = await buildPromoKit();
-  const kakaoConfigured = Boolean(process.env.NEXT_PUBLIC_KAKAO_JS_KEY?.trim());
+  const kakaoConfigured = Boolean(process.env.NEXT_PUBLIC_KAKAO_JS_KEY?.trim() || process.env.NEXT_PUBLIC_KAKAO_JAVASCRIPT_KEY?.trim()); // [1081] 두 이름
   const utmTop = (kit.inflow.utm ?? []).slice(0, 8);
 
   return (

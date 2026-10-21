@@ -36,7 +36,7 @@ import { MarketFreshnessLine } from "@/app/components/MarketFreshnessLine";
 import { RegionTrendCard } from "./RegionTrendCard";
 import { buildRegionTrendDatasets } from "./region-trends";
 import { RegionComplexList } from "./RegionComplexList";
-import { buildRegionOverview, countsToTrend, shiftYm, splitByReporting, toYm, ymMonth } from "./region-overview";
+import { buildRegionOverview, countsToTrend, narrativeComplement, shiftYm, splitByReporting, toYm, ymMonth } from "./region-overview";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
 import { Explain } from "@/app/components/explain/Explain";
 import { formatEokMan } from "@/lib/format/eok-man";
@@ -80,7 +80,7 @@ import {
 } from "@/lib/seo/citable-summary";
 import { getMarketFreshnessDateLabel } from "@/lib/newui/freshness";
 import { seoAlternates } from "@/lib/seo/alternates";
-import { regionTitle } from "@/lib/seo/title-experiment";
+import { regionTitle, ymLabelKo } from "@/lib/seo/title-experiment";
 import { formatKrwShort } from "@/lib/market/format";
 import { noteMatchesRegion } from "@/lib/region/changed-region-paths";
 import { talkRegionById } from "@/lib/talk/regions";
@@ -257,7 +257,14 @@ export async function generateMetadata({
     snapshot.avgSale !== undefined ? `평균 매매가 ${formatKrwShort(snapshot.avgSale)}` : "매매가격지수·실거래 추이";
   /* [#102] title CTR 실험 — id 해시로 A/B 결정적 배정(요청 간 불변). 배정표는
      /admin/seo, 판정 기준은 lib/seo/title-experiment.ts 주석. */
-  const { title } = regionTitle(id, name);
+  /* [1081 · #20] 데이터 기준 월을 제목에 — 서울 구 스냅샷은 period '' 라([1009 · H]) 지수 시계열의 최신 달(한 행)로 대신한다.
+     그것도 없으면 월 없이(지어내지 않는다). 조회 실패는 월 없음으로 — 제목이 5xx 를 내지 않는다. */
+  let ymLabel = ymLabelKo(toYm(snapshot.period));
+  if (!ymLabel) {
+    const last = await getRegionSeries(id, "sale_index", "monthly", 1).catch(() => []);
+    ymLabel = ymLabelKo(toYm(last[0]?.period));
+  }
+  const { title } = regionTitle(id, name, ymLabel);
   /* [1029 · 20] 낱말 꼴 */
   const description = `${name} 아파트 ${price}${period ? ` (${period} 기준)` : ""} · 시세 추이 · 최근 실거래 · 월별 거래량 · 입주 예정 물량 · 정비사업 · 이웃 임장노트`;
   const alternates = seoAlternates(`/region/${id}`);
@@ -820,6 +827,18 @@ export default async function RegionHubPage({
       <section data-ai-summary="" id="ai-summary" aria-label={`${name} 시세 요약`} className="rise-in mb-5">
         {/* [1074] 화면 폭 한 줄(89자/줄 실측) → 읽는 폭 */}
         <p className="max-w-[72ch] t-sub text-text-2">{lead}</p>
+        {/* [1081 · #14] 데이터로만 쓴 서술 — 위 lead 가 이미 말한 수가 든 문장은 뺀다(같은 수 두 번 금지 · narrativeComplement).
+            남는 것은 lead 에 없는 사실(1년 전 대비 · 거래 전월 대비 · 집계 중인 달 건수 · 전세가율 %p)뿐이라 지역마다 다른 문장이 된다. */}
+        {(() => {
+          const rest = narrativeComplement(overview.narrative, lead);
+          return rest.length > 0 ? <p className="mt-2 max-w-[72ch] t-sub leading-[1.7] text-text-2">{rest.join(" ")}</p> : null;
+        })()}
+        {/* [1081 · #25] 인용 가능한 한 문장 — 출처·기준월·집계 주체가 든 사실 문장(AI 검색이 그대로 가져가도 출처가 남는다) */}
+        {overview.citeLine && (
+          <p data-cite="" className="mt-2 max-w-[72ch] t-caption text-text-3">
+            {overview.citeLine}
+          </p>
+        )}
       </section>
 
       {/* [1015 · 규칙 F] 데스크톱 2단 — 본문(시세 흐름 ~ 정비사업) + 오른쪽 340px 레일(임장노트·면적대·Q&A·퍼가기·CTA·광고 1).
@@ -1434,6 +1453,55 @@ export default async function RegionHubPage({
         </Link>
         {/* [1027] "시세 알림 받기"는 알림함만 열던 링크였다(그런 알림도 없다) — 실제 지역 구독(청약·새 매물)으로 */}
         <RegionAlertButton region={mapRegion} name={name} />
+      </section>
+      {/* [1081 · #15·#16] 관련 — 이 지역의 다른 화면(임장 가이드·시장 온도·월간 리포트·동네 홈·실거래 구간)과 용어·가이드.
+          실데이터가 있는 주소만(조건부) — 없는 지역은 그 줄이 빠진다. 872쪽 ↔ 임장 200쪽 ↔ 온도 69쪽이 서로 잇는다. */}
+      <section aria-labelledby="region-related" className="card mt-3 flex flex-col gap-2 rounded-2xl p-4">
+        <h2 id="region-related" className="t-body font-bold text-ink">
+          관련
+        </h2>
+        <ul className="m-0 flex list-none flex-col gap-1 p-0">
+          {txBandRegion && (
+            <li>
+              <Link href={`/imjang/${encodeURIComponent(txBandRegion.slug)}`} className="tap-line t-sub font-bold text-primary no-underline">
+                {txBandRegion.name} 임장 가이드 ›
+              </Link>
+            </li>
+          )}
+          {txBandRegion && (
+            <li>
+              <Link href={`/tx/${encodeURIComponent(txBandRegion.slug)}`} className="tap-line t-sub font-bold text-primary no-underline">
+                {txBandRegion.name} 면적대·가격대 실거래 ›
+              </Link>
+            </li>
+          )}
+          {tempRegion && (
+            <li>
+              <Link href={`/analysis/temperature/${encodeURIComponent(id)}`} className="tap-line t-sub font-bold text-primary no-underline">
+                {name} 시장 온도 주간 기록 ›
+              </Link>
+            </li>
+          )}
+          <li>
+            <Link href={`/region/${encodeURIComponent(id)}/report`} className="tap-line t-sub font-bold text-primary no-underline">
+              {name} 월간 리포트 ›
+            </Link>
+          </li>
+          <li>
+            <Link href={`/town/${encodeURIComponent(id)}`} className="tap-line t-sub font-bold text-primary no-underline">
+              {name} 동네이야기 ›
+            </Link>
+          </li>
+        </ul>
+        <p className="m-0 mt-1 t-caption text-text-3">용어 · 가이드</p>
+        <ul className="m-0 flex list-none flex-wrap gap-x-3 gap-y-1 p-0">
+          <li><Link href="/glossary/maemae-gagyeok-jisu" className="tap-line t-sub text-text-2 no-underline">매매가격지수</Link></li>
+          <li><Link href="/glossary/jeonse-garyul" className="tap-line t-sub text-text-2 no-underline">전세가율</Link></li>
+          <li><Link href="/glossary/silgeoraega" className="tap-line t-sub text-text-2 no-underline">실거래가</Link></li>
+          <li><Link href="/guides/index-reading" className="tap-line t-sub text-text-2 no-underline">지수 읽는 법</Link></li>
+          <li><Link href="/guides/real-price-reading" className="tap-line t-sub text-text-2 no-underline">실거래가 읽는 법</Link></li>
+          <li><Link href="/calculator/gap" className="tap-line t-sub text-text-2 no-underline">갭·전세가율 계산기</Link></li>
+        </ul>
       </section>
       {/* [1015 · 규칙 G] 오른쪽 레일 광고 1 — 데스크톱만(폰은 아래 페이지 끝 한 곳) */}
       <div className="hidden lg:block">

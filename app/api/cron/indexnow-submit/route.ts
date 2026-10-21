@@ -22,6 +22,11 @@ import { listReportMonths } from "@/lib/reports/monthly";
 import { listPublicNotes } from "@/lib/inspection/store-db";
 import { withBudget } from "@/lib/async/with-budget";
 import { listFreshComplexPaths } from "@/lib/seo/indexnow-complexes";
+import { getAllRegionSnapshots } from "@/lib/market/store";
+import { recentReportSlugs } from "@/lib/region/monthly-report";
+import { GUIDES, LEGACY_GUIDES } from "@/lib/guides/catalog";
+import { glossaryPaths } from "@/lib/seo/glossary-terms";
+import { TEMPERATURE_REGIONS } from "@/lib/market/temperature";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -40,6 +45,11 @@ const DAILY_HUBS = ["/", "/reports", "/tx"];
  */
 const COLLECT_BUDGET_MS = 25_000;
 
+/** [1081] 한국 시간 월요일인가 — 주 1회 묶음(가이드·용어·시장 온도)의 제출일 */
+function isKstMonday(now: number = Date.now()): boolean {
+  return new Date(now + 9 * 3600_000).getUTCDay() === 1;
+}
+
 type Collected = {
   urls: string[];
   detail: Record<string, number>;
@@ -49,12 +59,12 @@ type Collected = {
 
 async function collectUrls(): Promise<Collected> {
   const urls: string[] = DAILY_HUBS.map((p) => `${BASE}${p}`);
-  const detail: Record<string, number> = { hubs: DAILY_HUBS.length, reports: 0, notes: 0, complexes: 0 };
+  const detail: Record<string, number> = { hubs: DAILY_HUBS.length, reports: 0, regionReports: 0, weekly: 0, notes: 0, complexes: 0 };
   const missing: string[] = [];
 
   /* 둘을 나란히 돌린다 — 순차로 돌리면 예산이 두 배로 쌓여 25초 상한이 50초가
      되고, maxDuration=60 안에 제출까지 끝낼 여유가 없어진다. */
-  const [monthsRun, notesRun, complexRun] = await Promise.all([
+  const [monthsRun, notesRun, complexRun, snapshotsRun] = await Promise.all([
     withBudget(
       Promise.resolve().then(() => listReportMonths()),
       COLLECT_BUDGET_MS,
@@ -67,6 +77,13 @@ async function collectUrls(): Promise<Collected> {
       Promise.resolve().then(() => listFreshComplexPaths()),
       COLLECT_BUDGET_MS,
     ),
+    /* [1082] 지역 스냅샷은 월요일(지역 리포트 묶음)에만 읽는다 — 다른 날은 전량 조회를 내지 않는다 */
+    isKstMonday()
+      ? withBudget(
+          Promise.resolve().then(() => getAllRegionSnapshots()),
+          COLLECT_BUDGET_MS,
+        )
+      : Promise.resolve({ state: "ok" as const, value: new Map<string, unknown>() }),
   ]);
 
   // 최신 2개월 리포트 — 신고 지연 때문에 이 두 달의 수치만 계속 움직인다.
@@ -78,6 +95,36 @@ async function collectUrls(): Promise<Collected> {
     detail.reports = recent.length;
   } else {
     missing.push(monthsRun.state === "timeout" ? "reports(시간 초과)" : "reports(조회 실패)");
+  }
+
+  /* [1081 · #6·#18] 지역 × 최신 완결 월 리포트(/region/<id>/report/<yyyy-mm>) — 신고가 아직 들어오는 달이라 값이 움직인다.
+     데이터가 있는 지역(스냅샷)만 보낸다 — 없는 지역은 404 라 보내면 안 된다.
+     [1082] 주 1회(한국 월요일)만 — 그 페이지는 ISR 7일(app/region/[id]/report/[ym] revalidate 604800)이라 매일 알려도 크롤러가 보는 내용은
+     주 단위로만 바뀐다. "바뀐 것만" 원칙(머리 주석)을 지키고 일일 제출량(265)도 줄인다. */
+  if (snapshotsRun.state === "ok") {
+    const latest = recentReportSlugs(1)[0];
+    if (latest && isKstMonday()) {
+      for (const id of snapshotsRun.value.keys()) urls.push(`${BASE}/region/${id}/report/${latest}`);
+      detail.regionReports = snapshotsRun.value.size;
+    }
+  } else {
+    missing.push(snapshotsRun.state === "timeout" ? "regionReports(시간 초과)" : "regionReports(조회 실패)");
+  }
+
+  /* [1081 · #6] 주 1회 묶음(한국 월요일) — 가이드·용어·시장 온도 지역(주간 스냅샷은 매주 바뀐다). 상한 1,000 안에서 노트·단지보다 앞. */
+  if (isKstMonday()) {
+    const weekly = [
+      ...GUIDES.map((g) => `/guides/${g.slug}`),
+      ...LEGACY_GUIDES.map((g) => `/guides/${g.slug}`),
+      ...glossaryPaths(),
+      ...TEMPERATURE_REGIONS.map((r) => `/analysis/temperature/${r.id}`),
+      "/guides",
+      "/glossary",
+      "/analysis/temperature",
+      "/imjang",
+    ];
+    for (const p of weekly) urls.push(`${BASE}${p}`);
+    detail.weekly = weekly.length;
   }
 
   // 최근 7일 내 갱신된 공개 노트

@@ -19,16 +19,28 @@ export function titleVariantFor(experimentKey: string, id: string): TitleVariant
   return h % 2 === 0 ? "A" : "B";
 }
 
-/** 지역 페이지 title — A: 기존(정보 나열) / B: 질문·총정리형 */
-export function regionTitle(id: string, name: string): { title: string; variant: TitleVariant } {
+/** 지역 페이지 title — A: 기존(정보 나열) / B: 질문·총정리형
+ *  [1081 · #20] 데이터 기준 월(ymLabel · "2026년 9월")을 받으면 끝에 붙인다 — 최신성이 보이는 제목이 클릭을 받고, 달이 바뀌면
+ *  ISR 재생성과 함께 자동으로 갱신된다. 실험 배정(A/B)은 그대로. */
+export function regionTitle(id: string, name: string, ymLabel?: string | null): { title: string; variant: TitleVariant } {
   const variant = titleVariantFor("region-title-v1", id);
+  const tail = ymLabel ? ` — ${ymLabel}` : "";
   return {
     variant,
     title:
       variant === "A"
-        ? `${name} 아파트 시세·실거래·정비사업 | 내집나우`
-        : `${name} 아파트 값 총정리 — 시세·실거래·입주 물량 | 내집나우`,
+        ? `${name} 아파트 시세·실거래·정비사업${tail} | 내집나우`
+        : `${name} 아파트 값 총정리 — 시세·실거래·입주 물량${tail} | 내집나우`,
   };
+}
+
+/** [1081] "202609" → "2026년 9월" (꼴이 다르면 null) */
+export function ymLabelKo(period: string | null | undefined): string | null {
+  const m = /^(\d{4})(\d{2})$/.exec(String(period ?? "").trim());
+  if (!m) return null;
+  const month = Number(m[2]);
+  if (month < 1 || month > 12) return null;
+  return `${m[1]}년 ${month}월`;
 }
 
 /** 실험 메타 — 관리자 배정표·문서가 함께 읽는 단일 정의 */
