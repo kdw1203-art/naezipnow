@@ -163,6 +163,8 @@ export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
      라우트 자체가 revalidate 3600 이라 눈금을 맞춘다. */
   /* [1010] 3600 → 604800 — 라우트 revalidate 와 같은 눈금. 적재 직후 SOURCE_MAP.molit 이 "/tx" 를 비운다. */
   { path: "/tx", sMaxAge: 604800, swr: 86400 },
+  /* [1083] 동별 실거래 허브 — 라우트 revalidate 86_400 과 같은 눈금 */
+  { path: "/dong", sMaxAge: 86400, swr: 86400 },
   /* N10 단지 비교 허브 — 같은 성격의 공개 집계. 라우트 revalidate 와 눈금을 맞춘다.
      [1010] 라우트 revalidate 가 7일이 되면서 같이 올린다 — 내용이 바뀌는 지점(실거래 적재)에서
      revalidatePath("/complex/compare") 가 돌기 때문에 시간은 안전망일 뿐이다. */
@@ -269,6 +271,8 @@ export const PUBLIC_CACHE_PATTERN_RULES: readonly PublicCachePatternRule[] = [
      (lib/region/invalidate-market.ts · SOURCE_MAP.molit). */
   { route: "/region/[id]", test: /^\/region\/[^/]+$/, sMaxAge: 604800, swr: 86400 },
   { route: "/tx/[region]", test: /^\/tx\/[^/]+$/, sMaxAge: 604800, swr: 86400 },
+  /* [1083] 법정동 실거래 — 국토부 실거래 집계만 그린다(auth·cookies·searchParams 없음 · ISR 604_800). 사이트맵 dongs 에 1,100여 쪽 */
+  { route: "/dong/[region]/[dong]", test: /^\/dong\/[^/]+\/[^/]+$/, sMaxAge: 604800, swr: 86400 },
   {
     route: "/tx/[region]/[kind]/[band]",
     test: /^\/tx\/[^/]+\/[^/]+\/[^/]+$/,

@@ -21,6 +21,7 @@ import {
   loadExpertEntries,
   loadTemperatureEntries,
   serializeSitemap,
+  loadDongEntries,
 } from "@/lib/seo/build-sitemap";
 import { capSitemapUrls } from "@/lib/seo/sitemap-entries";
 import {
@@ -181,6 +182,8 @@ export const SITEMAP_SECTIONS: readonly SitemapSection[] = [
   { slug: "story", label: "이웃 이야기", required: false, load: loadStoryEntries, hub: "/town" },
   /* [1027] 정비사업 구역 상세 — 구역 표가 비어 있을 수 있어(공공 API 적재 전환기) optional. */
   { slug: "redevelopment", label: "정비사업 구역", required: false, load: loadRedevelopmentEntries, hub: "/redevelopment" },
+  /* [1083] 법정동 실거래 — 문턱(단지 3곳 · 최근 6개월 50건)을 넘는 동만. 지역마다 RPC 1회(상한 20)로 모은다(lib/dong/landing). */
+  { slug: "dongs", label: "동별 실거래", required: true, load: loadDongEntries, hub: "/dong" },
   /* [992 · A1] 전문가·Q&A 섹션 삭제 — 보관(비노출) 영역(lib/seo/archived-routes.ts).
      X-Robots-Tag noindex 와 사이트맵 제외를 같은 목록에서 맞춘다. */
 ];

@@ -18,6 +18,8 @@ import { seoAlternates } from "@/lib/seo/alternates";
 import { QaBlock } from "@/app/components/QaBlock";
 import { CitationBlock } from "@/app/components/CitationBlock";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
+import { loadDongSiblings } from "@/lib/dong/landing";
+import { dongIndexable, dongPath } from "@/lib/dong/format";
 
 /* ============================================================
    지역 실거래 구간 허브 — /tx/[region]
@@ -177,6 +179,9 @@ export default async function TxRegionPage({
      토큰이 시/도다(좌표 인접 계산은 다음 단계 — 지금은 행정 그룹만). 실재하는
      허브(listTxRegions 결과 = /tx 목록과 동일)만 링크한다 — 죽은 링크 금지.
      조회 실패면 칩 없이 렌더한다(보조 내비게이션이라 페이지를 막지 않는다). */
+  /* [1083] 동별 실거래 — 이 지역의 동(최근 6개월 거래 많은 순 · 상한 20) 중 색인 문턱(단지 3곳 · 30건)을 넘는 것만.
+     실패는 빈 배열(보조 내비게이션). 실거래 구간 214쪽 → 동 1,100여 쪽으로 가는 크롤 경로. */
+  const dongs = (await loadDongSiblings(region.name)).filter((d) => dongIndexable(d.complexCount, d.recentTradeCount));
   const sido = region.name.split(" ")[0] ?? "";
   let siblings: TxRegionSummary[] = [];
   if (sido) {
@@ -248,6 +253,27 @@ export default async function TxRegionPage({
       <div className="min-w-0">
       <BandTable region={region} kind="area" cells={region.areaCells} />
       <BandTable region={region} kind="price" cells={region.priceCells} />
+
+      {/* [1083] 동별 — 법정동 실거래 페이지(/dong/<지역>/<동>)로. 건수는 최근 6개월 매매 신고 */}
+      {dongs.length > 0 && (
+        <section className="rise-in-1 card mb-4 p-[var(--pad-card)] max-md:mb-3">
+          <h2 className="t-section text-ink">동별</h2>
+          <p className="mt-0.5 t-caption text-text-3">법정동 기준 · 최근 6개월 매매 신고 많은 순 · {dongs.length}곳</p>
+          <div className="mt-3 flex flex-wrap gap-2 max-md:mt-2">
+            {dongs.map((d) => (
+              <Link
+                key={d.dong}
+                prefetch={false}
+                href={dongPath(region.name, d.dong)}
+                className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
+              >
+                {d.dong}
+                <span className="ml-1 font-medium text-text-3">{d.recentTradeCount.toLocaleString("ko-KR")}건</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* G5+G13 — 실데이터 기반 Q&A + FAQPage 스키마 (같은 배열에서 생성) */}
       <QaBlock title={`${region.name} 실거래 Q&A`} items={faq} />

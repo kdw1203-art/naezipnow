@@ -90,6 +90,8 @@ const STATIC_ROUTES: Array<{ path: string; priority: number }> = [
   { path: "/complex/compare", priority: 0.7 },
   // 지역 × 면적대·가격대 실거래 랜딩 인덱스 (A5) — 하위는 아래 bandEntries 로 개별 등록
   { path: "/tx", priority: 0.8 },
+  // [1083] 법정동 실거래 허브 — 하위는 dongs 섹션으로 개별 등록
+  { path: "/dong", priority: 0.7 },
   // 실매물 (집주인 직접·중개사 등록) + 중개사 제휴 안내
   { path: "/listings", priority: 0.8 },
   { path: "/partners", priority: 0.5 },
@@ -818,4 +820,17 @@ export function serializeSitemap(entries: MetadataRoute.Sitemap): string {
     })
     .join("\n");
   return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
+}
+
+/**
+ * [1083] 법정동 실거래 — /dong/<지역>/<동>. 문턱(단지 3곳 · 최근 6개월 50건 · lib/dong/format dongInSitemap)을 넘는 동만.
+ * 거래 많은 순으로 priority 를 준다(앞 300곳 0.7 · 나머지 0.6). lastmod 는 적지 않는다(동 집계 뷰의 갱신 시각을 모른다 — 지어내지 않는다).
+ */
+export async function loadDongEntries(): Promise<MetadataRoute.Sitemap> {
+  return section("동별 실거래", async () => {
+    const { listSitemapDongs } = await import("@/lib/dong/landing");
+    const { dongPath } = await import("@/lib/dong/format");
+    const dongs = await listSitemapDongs();
+    return dongs.map((d, i) => ({ url: `${BASE_URL}${dongPath(d.region, d.dong)}`, priority: i < 300 ? 0.7 : 0.6 }));
+  });
 }

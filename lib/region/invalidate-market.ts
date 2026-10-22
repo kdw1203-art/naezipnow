@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
+import { loadDongSiblings } from "@/lib/dong/landing";
+import { dongPath } from "@/lib/dong/format";
 import {
   invalidatePathList,
   invalidateRegionCodes,
@@ -70,6 +72,8 @@ export type MarketInvalidateSummary = {
   regionPaths: number;
   /** 비운 리포트 경로 수 */
   reportPaths: number;
+  /** [1083] 비운 동별 실거래 경로 수(/dong/<지역>/<동> · 바뀐 지역의 동 상한 20씩) */
+  dongPaths?: number;
   /** 조회 실패 사유(있으면) — 실패해도 호출부를 죽이지 않는다 */
   error?: string;
 };
@@ -142,6 +146,15 @@ export async function invalidateChangedMarketRegions(
 
   const txPaths = txPathsForChangedCells(cells);
   summary.txPaths = invalidatePathList(txPaths, { label: "tx-region" }).revalidated;
+
+  /* [1083] 동별 실거래 — 바뀐 지역의 동(상한 20씩)을 같이 비운다. 지역마다 RPC 1회(하루 16~24 지역). 실패는 빈 배열(TTL 7일이 받는다) */
+  const changedRegionNames = [...new Set(cells.map((c) => c.regionName).filter(Boolean))];
+  const dongPaths: string[] = [];
+  for (const name of changedRegionNames) {
+    const dongs = await loadDongSiblings(name);
+    for (const d of dongs) dongPaths.push(dongPath(name, d.dong));
+  }
+  if (dongPaths.length > 0) summary.dongPaths = invalidatePathList(dongPaths, { label: "dong" }).revalidated;
 
   const regionIds = catalogIdsForTxRegionNames(cells.map((c) => c.regionName));
   summary.changedRegions = regionIds.length;

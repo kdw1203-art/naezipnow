@@ -36,3 +36,11 @@
 - 관리자 → SEO: "이번 달 검색어 TOP"(KV 있을 때) — 없으면 "KV 미설정" 한 줄.
 - `/sitemap.xml` 인덱스: complexes 통짜 대신 complexes-1 … complexes-6.
 - 월요일 00:40 UTC 크론 1개 추가(총 22개) — Vercel Hobby 는 크론 상한이 있으니 플랜 확인(Pro 는 넉넉).
+
+## E. [1083] 동별 실거래 페이지 — 소유자 선택 사항
+
+| # | 할 일 | 어디서 | 왜 |
+|---|---|---|---|
+| 1083-1 | (선택) 동 목록 전용 뷰 `public.dong_landing_source` — `market_agg.search_area_mv` 의 kind='dong' 행을 그대로 내보내고 service_role 에 SELECT | Supabase SQL 편집기 | 지금은 지역 214곳 × RPC 1회(상한 20)로 모은다(10분 메모 · 운영에선 1~2초). 뷰가 생기면 한 번에 읽고 지역당 20곳 상한도 사라진다. 없어도 동작한다 |
+| 1083-2 | 배포 뒤 서치콘솔·네이버에 `/sitemap.xml` 재제출(인덱스에 `sitemap-dongs.xml` 1,15x URL 이 새로 실린다) | Search Console → 사이트맵 · searchadvisor.naver.com | 새 면이 빨리 발견되게 |
+| 1083-3 | 4주 뒤 GSC 페이지군(`/dong/`) 노출·CTR 확인 — 문턱(30·50건) 조정 판단 | Search Console → 실적 → 페이지 필터 `/dong/` | 얇다고 판정되면 문턱을 올리고, 잘 받으면 내린다(lib/dong/format 상수 둘) |

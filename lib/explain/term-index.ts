@@ -1,7 +1,7 @@
 /**
  * [1009] 용어 설명(ⓘ) 버튼이 **처음 그릴 때** 필요한 것 — 슬러그 → 용어 이름.
  *
- * 왜 따로 두나: 설명 본문(lib/seo/glossary-terms.ts, 56개 · 약 40KB)은 버튼을 누를 때 늦게 불러온다
+ * 왜 따로 두나: 설명 본문(lib/seo/glossary-terms.ts, 108개 · 약 80KB)은 버튼을 누를 때 늦게 불러온다
  * (단지 허브 /complex/[id] 는 번들 예산 480KB 중 472KB 를 쓰고 있다). 그런데 버튼의 이름
  * ("전세가율 설명 보기")은 누르기 전에 있어야 스크린리더가 읽는다. 이름만 여기 둔다.
  * 두 목록이 어긋나지 않게 tests/unit/explain-1009.test.ts 가 원본과 한 글자씩 대조한다 —
@@ -64,6 +64,59 @@ export const EXPLAIN_TERM_NAMES = {
   daehangryeok: "대항력",
   "usun-byeonjegwon": "우선변제권",
   "sijang-ondo": "시장 온도",
+  /* [1083] 52개 추가 — 용어사전과 같은 순서 */
+  "jeonip-singo": "전입신고",
+  "imdaecha-singo": "임대차 신고제",
+  "muksijeok-gaengsin": "묵시적 갱신",
+  "jeonwolse-sanghan": "전월세 상한제",
+  "kkangtong-jeonse": "깡통전세",
+  "yeokjeonse": "역전세",
+  "jeonse-bojeung-boheom": "전세보증금 반환보증",
+  "imchagwon-deunggi": "임차권등기명령",
+  "choeusun-byeonje": "최우선변제권",
+  "jangi-suseon-chungdanggeum": "장기수선충당금",
+  "seonsu-gwanlibi": "선수관리비",
+  "pyojebu": "표제부",
+  "gapgu": "갑구",
+  "eulgu": "을구",
+  "chaegwon-choegoaek": "채권최고액",
+  "gaapryu": "가압류",
+  "gacheobun": "가처분",
+  "gadeunggi": "가등기",
+  "sintak-deunggi": "신탁등기",
+  "jisanggwon": "지상권",
+  "gagyeyakgeum": "가계약금",
+  "haeyakgeum": "해약금",
+  "jungdogeum": "중도금",
+  "jangeum": "잔금",
+  "hwagin-seolmyeongseo": "중개대상물 확인·설명서",
+  "junggae-bosu": "중개보수",
+  "daeji-jibun": "대지지분",
+  "yongjeongnyul": "용적률",
+  "geonpyeyul": "건폐율",
+  "bay": "베이(bay)",
+  "balkoni-hwakjang": "발코니 확장",
+  "pilloti": "필로티",
+  "bokdosik-gyedansik": "복도식·계단식",
+  "johap-seollip-inga": "조합설립인가",
+  "saeop-sihaeng-inga": "사업시행인가",
+  "gwalli-cheobun-inga": "관리처분인가",
+  "gwolli-sanjeong-gijunil": "권리산정기준일",
+  "jeonmae-jehan": "전매제한",
+  "silgeoju-uimu": "실거주 의무",
+  "cheongyak-tongjang": "청약통장(주택청약종합저축)",
+  "ipju-jijeong-gigan": "입주지정기간",
+  "jipdan-daechul": "집단대출",
+  "janggeum-daechul": "잔금대출",
+  "gijun-siga": "기준시가",
+  "boyuse": "보유세",
+  "ipchal-bojeunggeum": "입찰보증금",
+  "nakchalga-yul": "낙찰가율",
+  "yuchal": "유찰",
+  "myeongdo": "명도",
+  "malso-gijun-gwolli": "말소기준권리",
+  "baedang-yogu-jonggi": "배당요구종기",
+  "onbid": "온비드",
 } as const;
 
 export type ExplainTerm = keyof typeof EXPLAIN_TERM_NAMES;

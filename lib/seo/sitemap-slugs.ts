@@ -51,6 +51,9 @@ export const SITEMAP_SECTION_SLUGS = [
   /* [1027] 정비사업 구역 상세 /redevelopment/[id] — 구역 표(redevelopment_projects)의 행마다 한 쪽.
      표가 비면 0개가 사실이라 optional(허브 /redevelopment 한 줄이 대신 실린다). */
   "redevelopment",
+  /* [1083] 법정동 실거래 /dong/<지역>/<동> — 단지 3곳 · 최근 6개월 50건 이상인 동만(운영 실측 2026-10-21: 1,154곳).
+     동 집계(search_area_mv)는 실거래 적재와 함께 산다 — 0개가 되는 현실적 경로는 조회 실패뿐이라 required. */
+  "dongs",
 ] as const;
 
 export type SitemapSectionSlug = (typeof SITEMAP_SECTION_SLUGS)[number];

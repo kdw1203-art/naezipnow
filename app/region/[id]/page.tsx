@@ -37,6 +37,8 @@ import { RegionTrendCard } from "./RegionTrendCard";
 import { buildRegionTrendDatasets } from "./region-trends";
 import { RegionComplexList } from "./RegionComplexList";
 import { buildRegionOverview, countsToTrend, narrativeComplement, shiftYm, splitByReporting, toYm, ymMonth } from "./region-overview";
+import { loadDongSiblings } from "@/lib/dong/landing";
+import { dongIndexable, dongPath } from "@/lib/dong/format";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
 import { Explain } from "@/app/components/explain/Explain";
 import { formatEokMan } from "@/lib/format/eok-man";
@@ -446,6 +448,11 @@ export default async function RegionHubPage({
           })
         : Promise.resolve<UpisGuSummary | null>(null),
     ]);
+  /* [1083] 동별 실거래 — 이 지역의 동(최근 6개월 거래 많은 순 · 상한 20) 중 색인 문턱(단지 3곳 · 30건)을 넘는 것만 링크.
+     보조 내비게이션이라 실패는 빈 배열(페이지를 막지 않는다). 지역 872쪽 → 동 1,100여 쪽으로 가는 크롤 경로. */
+  const dongLinks = txBandRegion
+    ? (await loadDongSiblings(txBandRegion.name)).filter((d) => dongIndexable(d.complexCount, d.recentTradeCount)).slice(0, 20)
+    : [];
   budget.done();
 
   /* 껍데기를 1시간 얼리지 않는다 (위 SIDE_FAILURE_ABORT_THRESHOLD 설명 참고).
@@ -1400,6 +1407,25 @@ export default async function RegionHubPage({
               </div>
             );
           })}
+          {/* [1083] 동별 실거래 — 지역 → 동(법정동) 페이지. 색인 문턱을 넘는 동만(죽은 링크·얇은 쪽 링크 금지) */}
+          {dongLinks.length > 0 && (
+            <div className="mt-3">
+              <div className="mb-1.5 t-sub text-text-3">동별</div>
+              <div className="flex flex-wrap gap-2">
+                {dongLinks.map((d) => (
+                  <Link
+                    key={d.dong}
+                    prefetch={false}
+                    href={dongPath(txBandRegion.name, d.dong)}
+                    className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
+                  >
+                    {d.dong}
+                    <span className="ml-1 font-medium text-text-3">{d.recentTradeCount.toLocaleString("ko-KR")}건</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          )}
           {/* [1069 · 끊긴 묶음] 임장 가이드(/imjang/<지역>)로 가는 길이 사이트 어디에도 없었다(운영 실측 2026-10-15).
               /tx 와 **같은 지역 원천·같은 slug** 라(lib/imjang/guide 주석) 여기 실리는 주소는 전부 실데이터가 있는 쪽이다. */}
           <p className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 t-sub text-text-3">

@@ -111,6 +111,12 @@ async function collectUrls(): Promise<Collected> {
     missing.push(snapshotsRun.state === "timeout" ? "regionReports(시간 초과)" : "regionReports(조회 실패)");
   }
 
+  /* [1083] 최근 14일 안에 쓰거나 고친 가이드(catalog updatedAt)는 매일 — 새 주소·새 내용은 "바뀐 것"이다. 날짜 없는 글은 월요일 묶음으로만 */
+  const freshCutoff = Date.now() - 14 * 24 * 3600_000;
+  const freshGuides = GUIDES.filter((g) => g.updatedAt && Date.parse(g.updatedAt) >= freshCutoff);
+  for (const g of freshGuides) urls.push(`${BASE}/guides/${g.slug}`);
+  detail.freshGuides = freshGuides.length;
+
   /* [1081 · #6] 주 1회 묶음(한국 월요일) — 가이드·용어·시장 온도 지역(주간 스냅샷은 매주 바뀐다). 상한 1,000 안에서 노트·단지보다 앞. */
   if (isKstMonday()) {
     const weekly = [
@@ -152,7 +158,8 @@ async function collectUrls(): Promise<Collected> {
     missing.push(complexRun.state === "timeout" ? "complexes(시간 초과)" : "complexes(조회 실패)");
   }
 
-  return { urls, detail, missing };
+  /* 월요일엔 fresh 와 주간 묶음이 겹친다 — 같은 URL 은 한 번만 */
+  return { urls: [...new Set(urls)], detail, missing };
 }
 
 async function handle(req: Request) {

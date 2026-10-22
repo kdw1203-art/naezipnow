@@ -131,6 +131,8 @@ import { UpcomingSupply } from "./UpcomingSupply";
 import { ComplexRentSection } from "./ComplexRentSection";
 import { ComplexNearbyPoi } from "./ComplexNearbyPoi";
 import { KakaoShareButton } from "@/app/components/KakaoShareButton";
+import { dongPath } from "@/lib/dong/format";
+import { ComplexReadMore } from "./ComplexReadMore";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
 import { ComplexNotesNewsAi } from "./ComplexNotesNewsAi";
 /* [1008 · Q] 브리핑 본체는 누를 때 받는다(번들 상쇄) · 호가 점검 펼침 버튼 */
@@ -1334,6 +1336,12 @@ export default async function ComplexHubPage({
      거주민 후기·단지 토론 섹션이 그 단지들에서 영영 안 그려졌다. 목업(mock-1)·해독 안 되는 id 는 그대로 숨긴다. */
   const socialId = rowForFacts?.canonical_id ?? complexId;
   const socialOk = complexId !== "mock-1" && decodeComplexId(socialId) !== null;
+  /* [1083] 읍면동 칩 → 법정동 실거래 페이지(/dong/<지역>/<동>). 지역은 정규 id 에 든 market_transactions.region_name 그대로 —
+     이 단지가 그 동 집계(search_complex_mv · 같은 parseDong 규칙)에 들어 있으니 주소가 산다. 해독 안 되면 예전 앵커. */
+  const dongHref = (() => {
+    const dec = decodeComplexId(socialId);
+    return dec && v.emd ? dongPath(dec.region, v.emd) : null;
+  })();
   /* [1057 · B8] 단지 토론 범위 — 토론 지역·해독 가능한 id 일 때만(아니면 null) */
   const talkScope = socialOk ? talkScopeForComplex(socialId, regionId) : null;
 
@@ -1594,7 +1602,16 @@ export default async function ComplexHubPage({
             </Link>
           )}
           {v.emd &&
-            (v.nearby.length > 0 ? (
+            (dongHref ? (
+              <Link
+                href={dongHref}
+                prefetch={false}
+                title={`${v.emd} 아파트 실거래`}
+                className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2 no-underline hover:border-primary hover:text-primary"
+              >
+                {v.emd} 실거래 ›
+              </Link>
+            ) : v.nearby.length > 0 ? (
               <a
                 href="#nearby-complexes"
                 className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2 no-underline"
@@ -1811,6 +1828,9 @@ export default async function ComplexHubPage({
               </div>
             </section>
           )}
+
+          {/* [1083] 읽을거리 · 용어 — 가이드 4·용어 4(서버 조각) */}
+          <ComplexReadMore />
 
           {/* 거주민 후기 — 실단지(정규 name-id 로 해독되는 단지)에만. [1058 · C2] 키는 socialId(canonical_id) */}
           {socialOk && (

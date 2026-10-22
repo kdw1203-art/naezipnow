@@ -7,9 +7,10 @@ import { GLOSSARY_TERMS, glossaryTermsByCategory } from "@/lib/seo/glossary-term
 import { GlossarySearch } from "./GlossarySearch";
 
 export const metadata = buildPageMetadata({
-  title: "부동산 용어사전 — 실거래·대출·경매 용어 풀이",
+  /* [1083] 56 → 108개 — 임대차·권리·등기·계약 단계·면적·구조·정비사업·경매 용어가 더해졌다 */
+  title: "부동산 용어사전 — 실거래·임대차·등기·대출·정비사업·경매 용어 풀이",
   description:
-    "실거래가, 전세가율, 평당가, 전용면적, LTV, DSR, 대항력, 우선변제권 등 부동산 거래에 필요한 용어를 한 문단씩 풀이합니다. 용어마다 개별 페이지가 있습니다.",
+    "실거래가, 전세가율, 평당가, 전용면적, 용적률, 대지지분, LTV, DSR, 대항력, 우선변제권, 전입신고, 계약갱신요구권, 깡통전세, 가계약금, 해약금, 갑구·을구, 신탁등기, 관리처분인가, 말소기준권리 등 부동산 거래 용어를 한 문단씩 풀이합니다. 용어마다 개별 페이지가 있습니다.",
   path: "/glossary",
 });
 

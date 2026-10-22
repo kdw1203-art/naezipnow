@@ -16,6 +16,9 @@ const GLOSSARY_BY_CATEGORY: Record<Guide["category"], string[]> = {
   전세: ["jeonse", "jeonse-garyul", "jeonwolse-jeonhwanyul", "hwakjeong-ilja", "jeonsegwon", "daehangryeok"],
   "청약·분양": ["cheongyak", "cheongyak-gajeom", "teukbyeol-gonggeup", "bunyanggwon", "mibunyang", "ipju-mulryang"],
   "경매·공매": ["gyeongmae", "gongmae", "gwolli-bunseok", "deunggibu-deungbon", "geunjeodang", "usun-byeonjegwon"],
+  /* [1083] 새 분류 둘 — 용어도 1083 에서 함께 들어왔다(전입신고·해약금·표제부·갑구·을구·신탁등기 / 조합설립·사업시행·관리처분·장기수선충당금) */
+  "계약·권리": ["jeonip-singo", "hwakjeong-ilja", "daehangryeok", "haeyakgeum", "hwagin-seolmyeongseo", "sintak-deunggi"],
+  "정비사업·관리": ["jeongbisaeop", "johap-seollip-inga", "saeop-sihaeng-inga", "gwalli-cheobun-inga", "jangi-suseon-chungdanggeum", "seonsu-gwanlibi"],
 };
 
 const TOOLS_BY_CATEGORY: Record<Guide["category"], RelatedLink[]> = {
@@ -43,6 +46,16 @@ const TOOLS_BY_CATEGORY: Record<Guide["category"], RelatedLink[]> = {
     { label: "공매 물건", href: "/auctions" },
     { label: "대출 계산기", href: "/calculator" },
     { label: "계약 전 체크리스트", href: "/guides/contract" },
+  ],
+  "계약·권리": [
+    { label: "중개보수 계산기", href: "/calculator/brokerage" },
+    { label: "전월세 전환 계산기", href: "/calculator/jeonse-monthly" },
+    { label: "계약 전 체크리스트", href: "/guides/contract" },
+  ],
+  "정비사업·관리": [
+    { label: "서울 재개발·재건축 지도", href: "/redevelopment" },
+    { label: "입주 예정 물량", href: "/supply" },
+    { label: "임장노트 쓰기", href: "/notes/new" },
   ],
 };
 

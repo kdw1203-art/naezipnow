@@ -11,13 +11,14 @@ import { seoAlternates } from "@/lib/seo/alternates";
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
-  title: "부동산 실전 가이드 — 임장·실거래·전세·청약 | 내집나우",
+  /* [1083] 27편 · 7분야 — 계약·권리(전입신고·확정일자 / 계약갱신청구권 / 가계약금~잔금 / 확인·설명서 / 전세사기 / 중개보수) · 정비사업·관리가 더해졌다 */
+  title: "부동산 실전 가이드 — 임장·실거래·전세·계약·청약·정비사업 | 내집나우",
   description:
-    "임장 체크리스트, 전세가율 보는 법, 실거래가 해석, 전세 안전 점검, 청약 일정까지 순서대로 따라 하는 실전 가이드 모음.",
+    "임장 체크리스트, 실거래가·공시가격 읽기, 전세가율과 전세 안전 점검, 전입신고·확정일자, 계약갱신청구권, 가계약금부터 잔금까지, 중개보수, 재개발·재건축 절차, 관리비, 청약 가점과 일정, 경매·공매 기본까지 순서대로 따라 하는 실전 가이드.",
   alternates: seoAlternates("/guides"),
 };
 
-const CATEGORY_ORDER = ["임장", "실거래 읽기", "전세", "청약·분양", "경매·공매"] as const;
+const CATEGORY_ORDER = ["임장", "실거래 읽기", "전세", "계약·권리", "청약·분양", "정비사업·관리", "경매·공매"] as const; // [1083] 분류 둘 추가
 
 function GuideRows({ items }: { items: { slug: string; title: string; description: string }[] }) {
   return (
