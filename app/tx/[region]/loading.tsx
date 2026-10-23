@@ -1,10 +1,10 @@
-import { PageShell } from "../../components/PageShell";
 import { Skeleton } from "@/components/Skeleton";
 
 /* 고도화 1 — 실거래 구간 지역 랜딩 스켈레톤. [1015] 면적대·가격대 표(행 5줄) + 데스크톱 레일 자리 */
 export default function TxRegionLoading() {
   return (
-    <PageShell>
+    /* [1087] 셸은 layout.tsx 의 것 — 안쪽만 */
+    <>
       <div className="flex flex-col gap-4">
         <div>
           <Skeleton className="h-3.5 w-44 rounded" />
@@ -33,6 +33,6 @@ export default function TxRegionLoading() {
           </div>
         </div>
       </div>
-    </PageShell>
+    </>
   );
 }

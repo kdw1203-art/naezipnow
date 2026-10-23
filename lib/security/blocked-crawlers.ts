@@ -23,6 +23,11 @@ export const BLOCKED_CRAWLERS = [
   "PetalBot",
   "Bytespider",
   "ImagesiftBot",
+  /* [1087 · 비용] Meta AI 검색 색인 봇 — 공유 미리보기(facebookexternalhit)·학습(meta-externalagent, robots 전면 차단)과
+     다른 토큰이다. 운영 실측(2026-10-22~23 단지 화면 UA 1% 표본 100건): 59건이 이 봇 — 단지 2.4만 곳을 1~2초 간격으로 훑어
+     ISR 렌더(쓰기)·오리진 전송 비용의 가장 큰 몫이었고, 그날 요금 한도로 프로젝트가 일시 정지됐다. 국내 검색 유입은 없다.
+     AI 검색 인용 봇(GPTBot·OAI-SearchBot·ClaudeBot·PerplexityBot 등 — lib/seo/ai-crawlers.ts)은 그대로 연다. */
+  "meta-webindexer",
 ] as const;
 
 const BLOCKED_RE = new RegExp(BLOCKED_CRAWLERS.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|"), "i");

@@ -177,7 +177,7 @@ function loadMiddlewareMatchers(): MatcherEntry[] {
   return cfg.matcher;
 }
 
-test("매처 — 차단 크롤러 UA 매처는 BLOCKED_CRAWLERS 12개 이름과 정확히 같다(정적 문자열이라 손으로 적는다)", () => {
+test("매처 — 차단 크롤러 UA 매처는 BLOCKED_CRAWLERS 이름과 정확히 같다(정적 문자열이라 손으로 적는다)", () => {
   const matchers = loadMiddlewareMatchers();
   const ua = matchers.find(
     (m): m is Exclude<MatcherEntry, string> =>

@@ -1,4 +1,3 @@
-import { PageShell } from "../../components/PageShell";
 import { Skeleton } from "@/components/Skeleton";
 
 /* 고도화 1 — 단지 상세 스켈레톤. 곁다리 조회가 도는 동안 흰 화면 대신 실제 레이아웃을
@@ -8,11 +7,12 @@ import { Skeleton } from "@/components/Skeleton";
    [1024 · 단지 상세 v2] 시안(mock1024/complex-d)대로 바뀐 순서 — 브레드크럼 → 흰 머리(PageHead: 40px 아이콘 칩 + 제목 +
    한 줄 | 관심·공유) → 개요 스트립 8칸(폰 4×2) → 타입 탭 → 추이 카드(토글·기간 칩·머리·220px 그래프) → 최근 실거래 표.
    네이비 히어로·지표 6칸·단지 정보 격자 스켈레톤은 걷었다(그 블록이 없어졌다).
-   이 파일은 클라이언트 전환(RSC 왕복) 때 보인다 — ISR 미스 첫 요청은 정적 생성이라 스트리밍되지 않는다(page.tsx [968 · 1]). */
+   이 파일은 클라이언트 전환(RSC 왕복) 때 보인다. [1087] ISR 미스 첫 요청도 스트리밍되어 이 스켈레톤이 저장 HTML 에 함께 들어간다(운영 실측) — 그래서 셸 없이 안쪽만 그린다. */
 
 export default function ComplexDetailLoading() {
   return (
-    <PageShell>
+    /* [1087] 셸(헤더·푸터)은 layout.tsx 의 것 — 여기서 또 그리면 ISR HTML 에 셸이 한 벌 더 저장된다 */
+    <>
       {/* 브레드크럼 칩 2개(시군구 · 읍면동) */}
       <div className="flex flex-wrap gap-1.5">
         <Skeleton className="h-[26px] w-20 rounded-full" />
@@ -101,6 +101,6 @@ export default function ComplexDetailLoading() {
           </div>
         </div>
       </div>
-    </PageShell>
+    </>
   );
 }

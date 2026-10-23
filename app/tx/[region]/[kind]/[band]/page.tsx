@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { HScroll } from "@/app/components/HScroll";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PageShell } from "../../../../components/PageShell";
+import { ShellBreadcrumb, ShellTitle } from "../../../../components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
 import {
   findTxRegionBySlug,
@@ -181,10 +181,10 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
   ]);
 
   return (
-    <PageShell
-      breadcrumb={`홈 › 지역별 실거래 구간 › ${region.name} › ${BAND_KIND_LABEL[kind]} ${cell.bandLabel}`}
-      title={pageTitle(region, kind, cell)}
-    >
+    /* [1087] 셸은 layout.tsx — 경로 줄·제목만 같은 마크업으로 */
+    <>
+      <ShellBreadcrumb>{`홈 › 지역별 실거래 구간 › ${region.name} › ${BAND_KIND_LABEL[kind]} ${cell.bandLabel}`}</ShellBreadcrumb>
+      <ShellTitle>{pageTitle(region, kind, cell)}</ShellTitle>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
@@ -336,6 +336,6 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
         <AdZone placement="sidebar" seed={2} plan={null} className="hidden lg:block" />
       </aside>
       </div>
-    </PageShell>
+    </>
   );
 }

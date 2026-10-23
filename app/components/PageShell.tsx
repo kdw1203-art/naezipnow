@@ -51,16 +51,8 @@ export function PageShell({
         <div data-autotrim="" className="min-w-0">
           {/* [970 · A-40] 브레드크럼은 랜드마크로 — 문자열 prop 렌더링은 그대로(API 변경 없음).
               @media print 의 `nav{display:none}` 에 같이 걸려 인쇄에서는 빠진다(크롬이니 맞다). */}
-          {breadcrumb && (
-            <nav aria-label="브레드크럼" className="mb-2 t-sub text-text-3">
-              {breadcrumb}
-            </nav>
-          )}
-          {title && (
-            <TitleTag className="rise-in mb-3.5 t-title text-ink md:mb-4">
-              {title}
-            </TitleTag>
-          )}
+          {breadcrumb && <ShellBreadcrumb>{breadcrumb}</ShellBreadcrumb>}
+          {title && <ShellTitle as={TitleTag}>{title}</ShellTitle>}
           {children}
         </div>
       </main>
@@ -68,4 +60,20 @@ export function PageShell({
       <TabBar />
     </>
   );
+}
+
+/**
+ * [1087 · 비용] 셸의 경로 줄 · 제목 — 셸을 레이아웃(layout.tsx)으로 올린 라우트(로딩 스켈레톤과 셸을 한 벌만 저장하려고)의
+ * 페이지가 본문 첫 줄에 그대로 그린다. PageShell 의 breadcrumb·title prop 과 같은 마크업이다(DOM 동일).
+ */
+export function ShellBreadcrumb({ children }: { children: React.ReactNode }) {
+  return (
+    <nav aria-label="브레드크럼" className="mb-2 t-sub text-text-3">
+      {children}
+    </nav>
+  );
+}
+
+export function ShellTitle({ children, as: TitleTag = "h1" }: { children: React.ReactNode; as?: "h1" | "h2" }) {
+  return <TitleTag className="rise-in mb-3.5 t-title text-ink md:mb-4">{children}</TitleTag>;
 }

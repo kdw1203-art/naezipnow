@@ -581,7 +581,7 @@ export const config = {
      *   ② Origin 헤더가 있는 /api/* — 앱인토스 미니앱 CORS(applyMiniAppCors·preflight). CORS 헤더는
      *      Origin 이 실린 요청에만 의미가 있고 preflight(OPTIONS)는 항상 Origin 을 싣는다 → 손실 0.
      *      (사이트 자체의 same-origin POST 도 Origin 을 실으므로 여기 걸린다 — 봇의 GET 이 빠지는 게 핵심.)
-     *   ③ 차단 크롤러 UA(lib/security/blocked-crawlers.ts BLOCKED_CRAWLERS 와 같은 12개 이름 — 매처는
+     *   ③ 차단 크롤러 UA(lib/security/blocked-crawlers.ts BLOCKED_CRAWLERS 와 같은 13개 이름([1087] meta-webindexer 추가) — 매처는
      *      정적 문자열이어야 해서 여기 한 번 더 적는다; tests/unit/probes-1007.test.ts 가 동기화를 검사)
      *      의 /api/* — 엣지 403 유지.
      * 빠진 것과 그 근거: 보안 헤더(nosniff 등)는 next.config.ts headers() 의 `/api/:path*` 묶음(V2b)이
@@ -608,7 +608,7 @@ export const config = {
           type: "header",
           key: "user-agent",
           value:
-            ".*(?:AhrefsBot|SemrushBot|MJ12bot|DotBot|BLEXBot|DataForSeoBot|serpstatbot|Barkrowler|ZoominfoBot|PetalBot|Bytespider|ImagesiftBot).*",
+            ".*(?:AhrefsBot|SemrushBot|MJ12bot|DotBot|BLEXBot|DataForSeoBot|serpstatbot|Barkrowler|ZoominfoBot|PetalBot|Bytespider|ImagesiftBot|meta-webindexer).*",
         },
       ],
     },

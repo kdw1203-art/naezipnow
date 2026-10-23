@@ -12,7 +12,6 @@ import {
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PageShell } from "../../components/PageShell";
 import {
   getComplexBaseById,
   enrichComplexRow,
@@ -1578,8 +1577,9 @@ export default async function ComplexHubPage({
     </div>
   );
 
+  /* [1087] 셸은 layout.tsx 가 그린다(로딩 스켈레톤과 한 벌만) — 여기는 셸 안쪽만 */
   return (
-    <PageShell>
+    <>
       {/* JSON-LD(ApartmentComplex + Breadcrumb) — 단지 하나를 한 노드로 기술 */}
       <script
         type="application/ld+json"
@@ -1963,6 +1963,6 @@ export default async function ComplexHubPage({
         askingHref={showAsking ? "#asking-check" : undefined}
         sentinelIds={["complex-actions-bottom"]}
       />
-    </PageShell>
+    </>
   );
 }

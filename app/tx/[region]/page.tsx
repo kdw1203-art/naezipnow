@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { AdZone } from "@/app/components/ads/AdZone";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb, ShellTitle } from "../../components/PageShell";
 import {
   findTxRegionBySlug,
   listTxRegions,
@@ -232,10 +232,10 @@ export default async function TxRegionPage({
   ]);
 
   return (
-    <PageShell
-      breadcrumb={`홈 › 지역별 실거래 구간 › ${region.name}`}
-      title={`${region.name} 면적대·가격대별 실거래`}
-    >
+    /* [1087] 셸은 layout.tsx — 경로 줄·제목만 같은 마크업으로 */
+    <>
+      <ShellBreadcrumb>{`홈 › 지역별 실거래 구간 › ${region.name}`}</ShellBreadcrumb>
+      <ShellTitle>{`${region.name} 면적대·가격대별 실거래`}</ShellTitle>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, datasetJsonLd]) }}
@@ -331,6 +331,6 @@ export default async function TxRegionPage({
         <AdZone placement="sidebar" seed={2} plan={null} className="hidden lg:block" />
       </aside>
       </div>
-    </PageShell>
+    </>
   );
 }
