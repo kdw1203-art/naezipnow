@@ -25,6 +25,9 @@ export function buildContentSecurityPolicy(
   const naverMapConnect =
     "https://oapi.map.naver.com https://openapi.map.naver.com https://*.map.naver.net wss://*.map.naver.net https://*.map.naver.com https://map.pstatic.net https://*.pstatic.net https://kr-col-ext.ncloudstorage.com https://ncp-maps.map.naver.com https://kr-col-ext.nelo.navercorp.com https://*.nelo.navercorp.com https://*.navercorp.com";
   const vercelLive = "https://vercel.live https://*.vercel.live wss://*.vercel.live";
+  /* [1086 · 서울 3D] OpenFreeMap — 3D 동네 지도(/map/3d)의 스타일·벡터 타일·글꼴·아이콘(키 없음 · OpenStreetMap 데이터).
+     지도 엔진(MapLibre)이 fetch 로 받는다(connect-src) · 아이콘 그림은 img-src https: 로 이미 열려 있다 · 작업자는 blob:(worker-src) */
+  const openFreeMap = "https://tiles.openfreemap.org";
   /* googleadservices.com — 구글 광고(AW 태그) 전환 핑 도메인. 광고 전환
      추적(ga4-gtag-loader)이 켜졌을 때 여기가 막혀 있으면 전환만 조용히
      유실된다(화면 오류 없음 — 그래서 미리 열어 둔다). */
@@ -61,7 +64,7 @@ export function buildContentSecurityPolicy(
     "style-src 'self' 'unsafe-inline'",
     `font-src 'self' ${vercelLive}`,
     "img-src 'self' data: blob: https: http:",
-    `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com ${naverMapConnect} https://maps.apigw.ntruss.com https://naveropenapi.apigw.ntruss.com https://sens.apigw.ntruss.com https://nid.naver.com http://openapi.seoul.go.kr:8088 https://openapi.seoul.go.kr ${tossConnect} https://*.vercel-insights.com https://vitals.vercel-insights.com ${vercelLive} https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://accounts.google.com ${googleAdsConnect}${kakaoConnect}`,
+    `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com ${naverMapConnect} https://maps.apigw.ntruss.com https://naveropenapi.apigw.ntruss.com https://sens.apigw.ntruss.com https://nid.naver.com http://openapi.seoul.go.kr:8088 https://openapi.seoul.go.kr ${openFreeMap} ${tossConnect} https://*.vercel-insights.com https://vitals.vercel-insights.com ${vercelLive} https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://accounts.google.com ${googleAdsConnect}${kakaoConnect}`,
     "worker-src 'self' blob:",
     "child-src 'self' blob:",
     `frame-src 'self' https://www.openstreetmap.org https://*.openstreetmap.org ${tossFrame} ${turnstile} ${vercelLive} ${googleAdsFrame}`,

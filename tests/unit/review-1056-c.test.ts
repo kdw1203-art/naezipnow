@@ -89,7 +89,7 @@ test("C3 다이제스트 — 18:00·저녁·\"매주 받아보기\" 없음 · �
   assert.doesNotMatch(src, /매주 받아보기/);
   assert.match(src, /받는 설정 · 마이 › 설정/);
   assert.match(src, /알림 설정 보기 ›/);
-  assert.match(src, /기본 켜짐 · 매주 월요일 오후\(15시쯤\) 1회/);
+  assert.match(src, /기본 켜짐 · <span className="whitespace-nowrap">매주 월요일 15시경 · 1회<\/span>/); // [1084] 시각 꼴 정리
   assert.match(src, /href="\/my\/settings"/, "설정 화면으로 가는 링크는 유지");
   /* 사실 확인: 크론은 06:00 UTC 하나 · 다이제스트 스위치 기본값은 켜짐 */
   assert.match(read(".github/workflows/etl.yml"), /- cron: "0 6 \* \* \*"/);

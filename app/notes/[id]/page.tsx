@@ -27,7 +27,7 @@ import {
   type InspectionNote,
 } from "@/lib/inspection/store-db";
 import { NotePhotoCarousel } from "./NotePhotoCarousel";
-import { NoteAudioToolsLazy as NoteAudioTools, NoteCommentsLazy as NoteComments, NoteSoftWallLazy as NoteSoftWall } from "./NoteLazyParts";
+import { NoteAudioToolsLazy as NoteAudioTools, NoteCommentsLazy as NoteComments, NoteKakaoShareLazy as NoteKakaoShare, NoteSoftWallLazy as NoteSoftWall } from "./NoteLazyParts";
 import { safeAuth } from "@/lib/safe-auth";
 import { findPaidReportIdByNote } from "@/lib/reports/store-db";
 import { hasPurchased } from "@/lib/report-purchases/store-db";
@@ -985,6 +985,15 @@ export default async function NoteDetailPage({
           initialIsPublic={realNote.isPublic}
           noteTitle={realNote.title}
         />
+        {/* [1086 · A7] 공개 노트만 카카오톡 공유(키가 없으면 그리지 않는다) — 노트는 가입 전 사람이 가장 많이 받는 링크다 */}
+        {realNote.isPublic && (
+          <NoteKakaoShare
+            url={`/notes/${encodeURIComponent(realNote.id)}?utm_source=kakao&utm_medium=note`}
+            title={noteMetaTitle(noteDisplayTitle(realNote, unitFromMetadata(realNote.metadata)), realNote.region)}
+            description={(realNote.summary?.trim() || `${realNote.region} 임장노트 · 채광·소음·주차·교통 평가`).slice(0, 100)}
+            buttonTitle="노트 보기"
+          />
+        )}
         {/* [993] "카드 덱"(/notes/[id]/deck) 버튼 제거 — 노트 출력 3종 중 card 만 남기고 보관(992) */}
         {isOwner && !hasLlmAi && (
           <Link

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { safeInternalPath } from "@/lib/safe-path";
 import { afterConfirmDestination } from "@/lib/auth/confirm-login";
+import { markFreshSignup } from "@/lib/analytics/fresh-signup";
 
 /* 최적화 19 — supabase-js 는 실제로 쓰는 분기에서만 불러온다.
    정적 import 이던 시절 이 페이지의 First Load JS 는 169kB 였고 그중 약 66kB가
@@ -36,6 +37,8 @@ async function finishWithSupabaseSession(
     const { signIn } = await import("next-auth/react");
     const res = await signIn("email-confirm", { accessToken: token, redirect: false });
     if (!res || res.error || res.ok === false) return null;
+    /* [1086 · A8] 가입 확인 링크로 방금 로그인 — /welcome 의 가입 전환 집계(GA sign_up)가 이 표식을 본다(다른 기기에서 눌러도 센다) */
+    markFreshSignup("password");
     /* 사이트 로그인은 Auth.js 세션이 맡는다 — Supabase 쪽 세션은 이 탭에서 지운다 */
     try {
       await supabase.auth.signOut({ scope: "local" });

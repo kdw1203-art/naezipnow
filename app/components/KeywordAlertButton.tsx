@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import type { SavedSearchScope } from "@/lib/saved-search/types";
+import { useReturnHref } from "@/lib/client/use-return-href";
 
 /* [1009 · T] 결과 반응 — 누르는 동안 버튼 안에 도는 링(busy), 설정되면 체크가 한 번 튄다(njn-pop-once).
    실패 문구는 원인+해결을 한 줄로(토스트는 390px 에서 23자 안쪽). 해제는 여전히 관리 화면에서 한다(토글이 아니다).
@@ -37,6 +38,8 @@ export function KeywordAlertButton({
 }) {
   const [phase, setPhase] = useState<Phase>("idle");
   const { showToast } = useToast();
+  /* [1086 · A4] 로그인 뒤 이 화면으로 돌아와 알림을 마저 켠다(예전 맨 /login 은 홈으로 떨어졌다) */
+  const loginHref = useReturnHref("login");
 
   const q = query.trim();
   if (!q) return null;
@@ -106,7 +109,7 @@ export function KeywordAlertButton({
   if (phase === "need-login") {
     return (
       <Link
-        href="/login"
+        href={loginHref}
         className={`press inline-flex min-h-[40px] items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1.5 t-sub font-semibold text-ink tap-ripple ${className}`}
       >
         <Icon name="bell" size={14} />

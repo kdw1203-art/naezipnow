@@ -95,7 +95,7 @@ test("로그인 화면 — 한도 대기 · Caps Lock · 최근 사용 · 로그
   assert.equal((src.match(/href=\{forgotHref\}/g) ?? []).length, 2);
   assert.doesNotMatch(src, /forgot-password\$\{email\.includes/);
   assert.match(src, /`다시 보내기 · \$\{resendLeft\}초`/);
-  assert.match(src, /에 동의하게 됩니다 · 만 14세 이상/);
+  assert.match(src, /에 동의하게 됩니다 · <span className="whitespace-nowrap">만 14세 이상<\/span>/); // [1084] '이상' 한 글자 줄바꿈 방지
 });
 
 test("비밀번호 찾기 · 재설정 — 가려던 곳과 이메일을 끝까지", () => {

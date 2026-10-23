@@ -13,7 +13,14 @@ export function ComplexOverviewStrip({ row, nowYear }: { row: OverviewStripSourc
             {c.label}
             {c.note ? <span className="tabular-nums"> · {c.note}</span> : null}
           </dt>
-          <dd className={`m-0 truncate t-section text-ink ${c.num ? "tabular-nums" : ""}`}>{c.value}</dd>
+          {/* [1084] 글자 값(건설사 "현대건설,삼성물…" · 난방)은 두 줄까지 — 한 줄 말줄임이라 두 번째 회사를 읽을 수 없었다(운영 실측).
+              숫자 칸은 한 줄 그대로. 잘리면 title 로 전체 */}
+          <dd
+            className={`m-0 t-section text-ink ${c.num ? "truncate tabular-nums" : "line-clamp-2 break-words"}`}
+            title={typeof c.value === "string" ? c.value : undefined}
+          >
+            {typeof c.value === "string" ? c.value.replace(/,(?=\S)/g, ", ") : c.value}
+          </dd>
         </div>
       ))}
     </dl>

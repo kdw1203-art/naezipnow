@@ -80,7 +80,8 @@ export default async function ApplyWeekPage({
   return (
     <PageShell breadcrumb="동네이야기 › 청약 센터 › 청약 캘린더" title={`${label} 청약 일정`}>
       {/* [1015] 데스크톱 2단(이번 주 캘린더와 같은 레일 — 관련 링크 · 출처 · 광고 1, 브리프 규칙 F·G) */}
-      <div className="mx-auto grid w-full max-w-[1080px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+      {/* [1084 · D-053] 가운데 정렬(mx-auto) → 왼쪽 정렬 — 크럼·제목(PageShell 왼쪽)과 본문의 왼쪽 선을 맞춘다 */}
+      <div className="grid w-full max-w-[1080px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0">
         <div className="rise-in mb-4 flex flex-wrap items-center gap-2 max-md:mb-3">
           <p className="min-w-0 flex-1 t-body text-text-2">
@@ -194,7 +195,7 @@ export default async function ApplyWeekPage({
       </aside>
       </div>
       {/* [1015] 광고 — 페이지 끝 1곳(브리프 규칙 G: 첫 화면 밖) */}
-      <AdZone placement="page_bottom" seed={1} plan={null} className="mx-auto mt-6 w-full max-w-[1080px] max-md:mt-4" />
+      <AdZone placement="page_bottom" seed={1} plan={null} className="mt-6 w-full max-w-[1080px] max-md:mt-4" />
     </PageShell>
   );
 }
@@ -255,11 +256,11 @@ function WeekRow({
       href={it.portalUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 rounded-xl bg-bg px-3 py-2 no-underline"
+      className="flex min-h-10 items-center gap-2 rounded-xl bg-bg px-3 py-2 no-underline"
     >
       {body}
     </a>
   ) : (
-    <div className="flex items-center gap-2 rounded-xl bg-bg px-3 py-2">{body}</div>
+    <div className="flex min-h-10 items-center gap-2 rounded-xl bg-bg px-3 py-2">{body}</div>
   );
 }

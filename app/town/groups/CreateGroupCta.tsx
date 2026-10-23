@@ -4,8 +4,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal, ModalHeader } from "@/app/components/ui/Modal";
-import { useMoment } from "@/app/components/motion/MomentProvider";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useMoment } from "@/app/components/motion/moment-context";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { hasSession } from "@/lib/client/has-session";
 
 /* "모임 만들기" — POST /api/groups(createMeeting) 실배선.

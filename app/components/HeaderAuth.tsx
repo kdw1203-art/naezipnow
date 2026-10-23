@@ -7,7 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
-import { loginReturnHref } from "@/lib/client/shell-gates";
+import { loginReturnHref, signupReturnHref } from "@/lib/client/shell-gates";
 
 /* S13-13a 헤더 세션 영역 — /api/auth/session 지연 조회 (정적 셸 ISR 유지)
    로그인: 이니셜 원형 아바타 + 플랜 배지 + 드롭다운
@@ -66,6 +66,8 @@ export function HeaderAuth() {
     setSearch(window.location.search);
   }, [pathname]);
   const loginHref = loginReturnHref(pathname, search);
+  /* [1086 · A4] 회원가입도 지금 화면으로 돌아오게(가입 → 관심 지역 → 하던 화면) */
+  const signupHref = signupReturnHref(pathname, search);
 
   useEffect(() => {
     let cancelled = false;
@@ -178,7 +180,7 @@ export function HeaderAuth() {
             폰에도 보인다(폰은 "노트 쓰기"가 숨어 있어 헤더의 채움 단추는 이것 하나). 손끝 칸 40px.
             [1077] 채움 파랑 → 브랜드 네이비(.btn-navy) — 파랑이면 화면마다의 주 행동 단추와 채움 파랑이 둘이 된다(운영 50쪽 실측). */}
         <Link
-          href="/signup"
+          href={signupHref}
           prefetch={false}
           className="btn-navy press inline-flex min-h-10 shrink-0 items-center whitespace-nowrap rounded-full px-3 t-body font-bold no-underline md:min-h-9 md:px-3.5"
         >

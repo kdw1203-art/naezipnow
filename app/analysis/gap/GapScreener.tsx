@@ -37,6 +37,9 @@ import {
   type SortKey,
 } from "./screener-model";
 
+/** [1084 · D-042] 데스크톱 표 한 번에 그리는 행 수 */
+const GAP_TABLE_PAGE = 40;
+
 const SORTS: readonly { key: SortKey; label: string }[] = [
   { key: "ratio", label: "전세가율" },
   { key: "gap", label: "갭 작은 순" },
@@ -123,8 +126,11 @@ export function GapScreener({
 
   /* [1026] 폰 카드 목록 — 20장씩. 조건·정렬이 바뀌면 처음 20장으로 */
   const [shown, setShown] = useState(GAP_CARD_PAGE);
+  /* [1084 · D-042] 데스크톱 표도 40행씩 — 107행을 한 번에 그려 7,315px 이었고, 조건을 바꾸려면 맨 위로 올라가야 했다 */
+  const [tableShown, setTableShown] = useState(GAP_TABLE_PAGE);
   useEffect(() => {
     setShown(GAP_CARD_PAGE);
+    setTableShown(GAP_TABLE_PAGE);
   }, [filter, sort]);
 
   /* [1026] 절차 · 결론 · 다음 행동 — 화면이 가진 값(걸러진 곳 수 · 서버 중앙값 · 결과 첫 행)만 */
@@ -227,7 +233,7 @@ export function GapScreener({
             초기화
           </button>
         </div>
-        <p className="mt-2 t-sub text-text-3">조건은 주소에 남는다</p>
+        <p className="mt-2 t-sub text-text-3">조건 = 주소(URL)에 저장</p>
       </section>
 
       <section className="card rounded-2xl p-4 max-md:p-3.5">
@@ -377,7 +383,16 @@ export function GapScreener({
               ) : (
                 <>
                   <div className="max-md:hidden">
-                    <RankTable rows={filtered} maxRatio={maxRatio} yieldFailed={yieldFailed} showYield={showYield} />
+                    <RankTable rows={filtered.slice(0, tableShown)} maxRatio={maxRatio} yieldFailed={yieldFailed} showYield={showYield} />
+                    {tableShown < filtered.length && (
+                      <button
+                        type="button"
+                        onClick={() => setTableShown((n) => n + GAP_TABLE_PAGE)}
+                        className="btn-soft btn-md mt-2 w-full"
+                      >
+                        더 보기 · {filtered.length - tableShown}곳 남음
+                      </button>
+                    )}
                   </div>
                   <div className="md:hidden">
                     <RankCards rows={filtered.slice(0, shown)} maxRatio={maxRatio} />

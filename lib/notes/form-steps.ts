@@ -17,8 +17,8 @@ export const NOTE_STEPS: ReadonlyArray<{
   title: string;
   hint: string;
 }> = [
-  { n: 1, short: "어디", title: "위치와 방문 정보", hint: "단지 · 방문 정보 · 사진" },
-  { n: 2, short: "무엇", title: "현장 체크", hint: "점수 · 체크 · 눈에 띈 점" },
+  { n: 1, short: "위치", title: "위치와 방문 정보", hint: "단지 · 방문 정보 · 사진" },
+  { n: 2, short: "체크", title: "현장 체크", hint: "점수 · 체크 · 눈에 띈 점" },
   { n: 3, short: "기록", title: "메모와 판단", hint: "판단 · 메모 · 사진 · 공개 여부" },
 ];
 

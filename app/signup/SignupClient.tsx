@@ -11,7 +11,9 @@ import { signIn } from "next-auth/react";
 import { trackPlatformEvent } from "@/lib/platform-events-client";
 import { Icon } from "@/app/components/Icon";
 import { stashSignupHandoff } from "@/lib/onboarding/signup-handoff";
-import { useMoment } from "@/app/components/motion/MomentProvider";
+import { markFreshSignup } from "@/lib/analytics/fresh-signup";
+import { hasSession } from "@/lib/client/has-session";
+import { useMoment } from "@/app/components/motion/moment-context";
 import { safeInternalPath } from "@/lib/safe-path";
 import type { SocialProvider } from "@/lib/auth/configured-social";
 import { InAppBrowserNotice, useInAppBrowser } from "@/app/components/auth/InAppBrowserNotice";
@@ -196,6 +198,29 @@ export function SignupClient({
   useEffect(() => {
     if (done) doneTitleRef.current?.focus();
   }, [done]);
+  /* [1086 · A9] 인증 메일 링크는 새 탭에서 열리고 그 탭이 자동 로그인한다(1053) — 이 탭은 "메일을 보냈어요"에 멈춰 있었다.
+     이 화면으로 돌아오면(탭 전환 · 창 초점) 세션을 한 번 보고, 로그인돼 있으면 같은 다음 단계(/welcome[?next])로 잇는다.
+     비밀번호를 다시 쓰지 않는다(입력값 재사용 없음) — 세션 쿠키는 같은 브라우저의 탭이 함께 쓴다 */
+  useEffect(() => {
+    if (!done) return;
+    let gone = false;
+    const check = () => {
+      if (gone || document.visibilityState !== "visible") return;
+      void hasSession().then((ok) => {
+        if (!ok || gone) return;
+        gone = true;
+        trackStep("signup_confirm_return", {});
+        router.replace(welcomeHref);
+      });
+    };
+    document.addEventListener("visibilitychange", check);
+    window.addEventListener("focus", check);
+    return () => {
+      gone = true;
+      document.removeEventListener("visibilitychange", check);
+      window.removeEventListener("focus", check);
+    };
+  }, [done, welcomeHref, router, trackStep]);
   /* 재발송 대기 — 1초씩 줄인다 */
   useEffect(() => {
     if (resendWait <= 0) return;
@@ -209,6 +234,8 @@ export function SignupClient({
     setSocialBusy(provider);
     stashSignupHandoff({ regions: [], profile: {}, purpose: null });
     trackStep("signup_step_4", { method: provider });
+    /* [1086 · A8] 가입 화면에서 소셜을 고른 순간 — /welcome 의 가입 전환 집계가 이 표식이 있을 때만 센다 */
+    markFreshSignup(provider);
     // 토스는 자체 리다이렉트 시작점 — 인가 후 /auth/toss/callback 이 세션을 만든다.
     // [970 · A-14] 목적지는 welcomeHref(/welcome 또는 /welcome?next=…)
     if (provider === "toss") {
@@ -328,6 +355,8 @@ export function SignupClient({
       } catch {
         signedIn = false;
       }
+      /* [1086 · A8] 가입 완료(메일 인증이 필요 없는 설정) — 자동 로그인 성공 여부와 무관하게 이 브라우저가 방금 가입했다 */
+      markFreshSignup("password");
       if (!signedIn) {
         /* [970 · A-14] 로그인 화면을 거쳐도 목적지(welcomeHref)는 유지 */
         stashAuthEmail(normalizedEmail);
@@ -395,6 +424,8 @@ export function SignupClient({
           <p className="break-all t-body font-bold text-ink">{sentTo}</p>
           {/* [1040] 번호 동그라미 3개 → 한 줄. 위의 가입 3단계 띠와 "1·2·3"이 두 벌이 되지 않게 */}
           <p className="t-caption text-text-3">메일함 열기 › 인증 링크 누르기 › 로그인</p>
+          {/* [1086 · A9] 같은 브라우저에서 인증하면 이 화면도 이어서 간다(위 effect) */}
+          <p className="t-caption text-text-3">이 브라우저에서 인증하면 이 화면도 다음 단계로 이동</p>
           <p aria-live="polite" className="min-h-[18px] t-sub font-bold text-primary">
             {confirmHint}
           </p>
@@ -499,7 +530,7 @@ export function SignupClient({
           ))}
           {/* [1039] 소셜 가입에도 동의 대상을 밝힌다 — 로그인 화면과 같은 한 줄(예전: 체크 없이 통과 · 문구 없음) */}
           <p className="text-center t-sub leading-[1.6] text-text-3">
-            소셜 가입 ={" "}
+            소셜 가입 시{" "}
             <Link href="/legal/terms" target="_blank" rel="noreferrer" className="tap-line underline underline-offset-2">
               이용약관
             </Link>
@@ -507,7 +538,7 @@ export function SignupClient({
             <Link href="/legal/privacy" target="_blank" rel="noreferrer" className="tap-line underline underline-offset-2">
               개인정보처리방침
             </Link>{" "}
-            동의 · 만 14세 이상
+            동의 · <span className="whitespace-nowrap">만 14세 이상</span>
           </p>
           <div className="flex items-center gap-3 t-sub text-text-3">
             <span className="h-px flex-1 bg-bg" />
@@ -700,7 +731,7 @@ export function SignupClient({
               <Link href="/legal/privacy" target="_blank" rel="noreferrer" className="tap-line underline underline-offset-2">
                 개인정보처리방침
               </Link>{" "}
-              동의 · 만 14세 이상
+              동의 · <span className="whitespace-nowrap">만 14세 이상</span>
             </span>
           </label>
           <label className={consentRow}>

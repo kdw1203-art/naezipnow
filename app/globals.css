@@ -8445,3 +8445,67 @@ html[data-mscale] li .fineprint-body :is(p, div):is(.t-sub, .t-caption) {
   justify-content: center;
   opacity: 0.72;
 }
+
+/* [1084] 차트 최고·최저 표식 — 바닥 근처 최저점·완만한 선에서 선이 글자를 가로질러 취소선처럼 읽혔다(운영 실측: 시장 온도 · 지역 거래량 · 단지 가격).
+   글자 뒤에 카드 바탕을 깔아 그 몇 px 의 선만 가린다. 값은 그대로. */
+.scrub-mark {
+  background: var(--surface);
+  padding: 0 3px;
+  border-radius: var(--radius-pill);
+}
+
+/* [1084 · 폰 실측] iOS 포커스 확대 방지 보강 — 위 [968 · 28] 규칙의 `textarea`·`select` 는 특이성 (0,0,1) 이라
+   같은 층의 .t-body(0,1,0)에 졌다(운영 /support 문의 내용 textarea 14px → iOS 가 포커스 때 화면 확대).
+   :not(.nz-zoom-ok) 로 (0,1,1) 까지만 올린다 — 값은 1rem 이상(타입 램프에 16 이 없어 의도적으로 rem). */
+@media (max-width: 767px) {
+  textarea:not(.nz-zoom-ok),
+  select:not(.nz-zoom-ok) {
+    /* 16px 이상 = 1rem 과 본문 토큰 중 큰 값(뒤쪽 블록 규칙 — 글자 크기는 숫자를 바로 쓰지 않는다) */
+    font-size: max(1rem, var(--fs-body));
+  }
+}
+
+/* [1084 · 폰 실측] 소식 목록 제목 링크 24px → 탭 면 40px — 줄 안쪽 여백(12~14px) 안에서만 넓힌다(.tap-line 과 같은 패딩·음수 마진 방식 · 레이아웃 그대로) */
+@media (max-width: 767px) {
+  .news-row__title {
+    /* border-box — 최소 높이도 패딩만큼(24 + 16) 올려야 차지하는 높이가 그대로 24px */
+    min-height: 40px;
+    padding-block: 8px;
+    margin-block: -8px;
+  }
+}
+
+/* [1085 · 속도] 끝없이 도는 장식 움직임 줄이기 — 운영 폰 실측(홈 · 5초 가만히 둔 동안 스타일 재계산 307회 · 주 스레드 0.7초):
+   화면 아래쪽 지연 조각의 자리 표시(.skeleton) 두 장이 조각이 올 때까지(스크롤 전에는 안 온다) 시머를 계속 돌렸고,
+   하단 탭바 기록 단추 고리(njnFabRing)가 모든 화면에서 2.6초마다 돌았다. 배경 블롭 두 장(blur 80px)도 26·32초 주기로
+   움직였다 — GPU 가 약한 폰·소프트웨어 합성(측정 도구)에서는 블러 층을 프레임마다 다시 그린다.
+   규칙: 시머는 4번(약 5초) 돌고 멈춘다(자리 표시는 그대로 보인다) · 고리는 3번 · 블롭은 제자리(모양·색 그대로).
+   감속 모션 설정이면 위 [기존] 규칙대로 처음부터 멈춘다. */
+.skeleton {
+  animation-iteration-count: 4;
+}
+.njn-fab::after {
+  animation-iteration-count: 3;
+}
+body::before,
+body::after {
+  animation: none;
+}
+
+/* [1085 · 속도] 푸터 — 화면에 가까워질 때 레이아웃·글꼴(슬로건 세리프 51KB)을 받는다. 자리 높이 추정은 폰 760 · 넓은 화면 420(한 번 그린 뒤엔 실제 높이를 기억 — auto) */
+footer.footer-cv {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 760px;
+}
+@media (min-width: 768px) {
+  footer.footer-cv {
+    contain-intrinsic-size: auto 420px;
+  }
+}
+
+/* [1086 · 서울 3D] 폰에서는 위쪽 판(동 이름·목록 단추)이 지도 확대·방향 단추를 덮는다 — 단추 묶음을 판 아래로 */
+@media (max-width: 767px) {
+  .map3d .maplibregl-ctrl-top-right {
+    top: 88px;
+  }
+}

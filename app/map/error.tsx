@@ -14,7 +14,7 @@ export default function Error({
   return (
     <AreaError
       area="map"
-      title="지도를 그리는 중 문제가 생겼어요"
+      title="지도 화면 불러오기 실패"
       desc="지도 데이터나 위치 정보 불러오기 실패 · 잠시 후 다시"
       error={error}
       reset={reset}

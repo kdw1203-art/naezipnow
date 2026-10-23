@@ -69,7 +69,8 @@ test("T5 임장노트 AI 분석 — 표와 같은 머리줄 · 할 일 하나 ·
   /* 머리줄: 칩 · 이름 | 오른쪽 할 일 하나(로그인이면 분석 실행, 아니면 로그인) */
   assert.match(card, /<div className="flex min-h-11 items-center gap-2\.5">/);
   assert.match(card, /className="btn-primary btn-md shrink-0 disabled:opacity-60"/);
-  assert.match(card, /<Link href="\/login" className="btn-outline btn-md shrink-0 no-underline">/);
+  /* [1086 · A4] 로그인 링크는 지금 화면으로 돌아오게(useReturnHref) — 모양은 그대로 */
+  assert.match(card, /<Link href=\{loginHref\} className="btn-outline btn-md shrink-0 no-underline">/);
   /* 로그아웃이면 머리줄이 말한다 — 아래 띠는 세션 만료(로그인으로 알았는데 서버가 거절)일 때만 */
   assert.match(card, /state\.kind === "login" && loggedIn \? \(/);
   /* 화면 폭만 한 단추(btn-cta)는 없다 */

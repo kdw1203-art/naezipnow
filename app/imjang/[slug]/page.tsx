@@ -1,3 +1,4 @@
+import { withJosa } from "@/lib/format/josa";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -116,7 +117,7 @@ export default async function ImjangRegionPage({
     const top = topComplexes[0];
     faq.push({
       q: `${region.name}에서 임장을 어느 단지부터 시작하면 좋나요?`,
-      a: `실거래가 가장 활발한 단지를 기준점으로 삼는 것을 권합니다. ${region.name}에서는 ${top.name}이(가) ${
+      a: `실거래가 가장 활발한 단지를 기준점으로 삼는 것을 권합니다. ${region.name}에서는 ${withJosa(top.name, "이/가")} ${
         top.txCount.toLocaleString("ko-KR")
       }건으로 거래가 가장 많았고${top.latestYm ? ` (마지막 신고 ${formatYm(top.latestYm)})` : ""}, 거래가 많은 단지는 가격 비교의 근거가 풍부해 다른 단지를 판단하는 자(尺)가 됩니다.`,
     });
@@ -156,7 +157,7 @@ export default async function ImjangRegionPage({
       <p className="rise-in mb-4 t-sub leading-[1.65] text-text-2 max-md:mb-3">
         실거래 <strong className="text-ink">{region.txCount.toLocaleString("ko-KR")}건</strong>
         {range && ` · 국토교통부 신고 ${range}`} · 단지{" "}
-        <strong className="text-ink">{region.complexCount.toLocaleString("ko-KR")}곳</strong>
+        <strong className="text-ink">{region.complexCount.toLocaleString("ko-KR")}곳 이상</strong>
         {busiestArea && ` · 최다 거래 면적대 ${busiestArea.bandLabel}(평균 ${formatKrwShort(busiestArea.avgKrw)})`}
       </p>
 

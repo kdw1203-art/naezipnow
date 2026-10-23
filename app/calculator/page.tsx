@@ -24,5 +24,6 @@ export const revalidate = 86_400;
 export default async function CalculatorPage() {
   const mortgage = await getMortgageRates();
   /* [1081 · #13] 계산 방법·예시·확인 사항·관련 — 검색엔진이 읽는 본문(클라이언트 셸의 끝에 꽂는다) */
-  return <CalculatorClient mortgage={mortgage} after={<div className="mx-auto w-full max-w-[720px]"><CalculatorExplainer id="loan" /></div>} />;
+  /* [1084 · D-056] 설명 블록 왼쪽 정렬 — 전체 폭 계산기와 왼쪽 선을 맞춘다(가운데 720px 이면 선이 어긋났다) */
+  return <CalculatorClient mortgage={mortgage} after={<div className="w-full max-w-[720px]"><CalculatorExplainer id="loan" /></div>} />;
 }

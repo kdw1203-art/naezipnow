@@ -13,7 +13,7 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { useToast } from "@/app/components/toast/ToastProvider";
 
 export function ListingSaveButton({

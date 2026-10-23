@@ -37,10 +37,13 @@ export function MiniBar({
             </span>
           </div>
           <span className="block h-1.5 w-full overflow-hidden rounded-full bg-line" aria-hidden="true">
-            <span
-              className="block h-full rounded-full bg-primary"
-              style={{ width: `${Math.max(2, Math.round((r.value / top) * 100))}%` }}
-            />
+            {/* [1084 · D-071] 0 이면 막대를 그리지 않는다 — 최소 폭 2% 가 "0곳"인데도 파란 조각을 그렸다(작은 양수만 2% 로 보인다) */}
+            {r.value > 0 && (
+              <span
+                className="block h-full rounded-full bg-primary"
+                style={{ width: `${Math.max(2, Math.round((r.value / top) * 100))}%` }}
+              />
+            )}
           </span>
         </li>
       ))}

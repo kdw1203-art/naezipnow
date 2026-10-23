@@ -4546,9 +4546,11 @@ export function MapClient({
      좁아질 뿐 사라지지는 않는다 — 겹침을 없애되 존재를 지우지 않는다. */
   /* [1023 · 지도] 뷰포트 한 줄 — 목록 헤더와 같은 수(filteredDanji) · 거래 수는 서버가 뷰포트 기준으로 센 값이 있을 때만.
      filterBar 는 priceMeta 선언보다 앞에서 만들어지므로 여기서 따로 만들어 칩 줄 끝에 붙인다. */
+  /* [1084] 헤더 줄에는 단지 수만 — 지도 범위가 상태에 들어오면(1084 지도 수정) "단지 10 · 거래 340,753건"이 되어
+     같은 줄의 검색 칸을 20px 까지 밀었다(운영 재현). 거래 수는 범례 "화면 내 N건"에 있고, 전체 문장은 풍선 도움말로 */
   const viewportCountChip = (
-    <span className="map-count t-caption" title="화면 안 단지 수 · 실거래 건수">
-      {viewportCountLabel(filteredDanji.length, priceMeta.txCount, danjiLoadFailed)}
+    <span className="map-count t-caption" title={viewportCountLabel(filteredDanji.length, priceMeta.txCount, danjiLoadFailed)}>
+      {viewportCountLabel(filteredDanji.length, 0, danjiLoadFailed)}
     </span>
   );
 
@@ -5882,7 +5884,9 @@ export function MapClient({
            보인다. lg 에서는 패널이 200~500 이라 겹치지 않는다. */
         /* [968 · 24] 모바일 끌기 중엔 비킨다 — md 이상에서는 chromeCompact 가 늘 false */
         inert={chromeCompact}
-        className={`btn-primary btn-cta absolute right-5 z-30 items-center gap-1.5 rounded-full px-4 py-3 t-body font-bold text-white shadow-[0_10px_28px_rgba(29,79,216,.42)] ${
+        /* [1084] 채운 파랑 → 흰 알약 — 한 화면에 채운 파랑이 셋(노트 쓰기 · 매물 등록 · 적용)이었다(운영 실측). 지도의 주 행동은
+           "이 지역 노트 쓰기" 하나로 두고 매물 등록은 보조 단추로 */
+        className={`press absolute right-5 z-30 items-center gap-1.5 rounded-full border border-line bg-surface px-4 py-3 t-body font-bold text-ink no-underline shadow-[0_6px_18px_rgba(16,28,54,.18)] ${
           filtersExpanded ? "hidden lg:flex" : "flex"
         } ${chromeFoldDownClass}`}
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 232px)" }}

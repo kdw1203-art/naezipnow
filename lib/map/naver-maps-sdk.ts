@@ -98,6 +98,14 @@ export function naverMapsScriptUrl(
   return url.toString();
 }
 
+/**
+ * [1085 · 지도 속도] 서버가 <link rel="preload" as="script"> 로 미리 받게 할 주소 — 클라이언트 주입(loadNaverMaps)과
+ * **같은 문자열**이어야 브라우저가 미리 받은 것을 쓴다(콜백 이름·서브모듈 규칙 공유).
+ */
+export function naverMapsPreloadUrl(clientId: string): string {
+  return naverMapsScriptUrl(clientId, NAVER_MAPS_CALLBACK);
+}
+
 type NaverMapsWindow = Window & {
   navermap_authFailure?: () => void;
   __woodongNaverMapsReady?: () => void;

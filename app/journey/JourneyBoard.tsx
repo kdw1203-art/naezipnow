@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Icon } from "@/app/components/Icon";
-import { useMoment } from "@/app/components/motion/MomentProvider";
+import { useMoment } from "@/app/components/motion/moment-context";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { budgetMapHref, JOURNEY_STAGES, type JourneyStage } from "@/lib/journey/stages";
 import {

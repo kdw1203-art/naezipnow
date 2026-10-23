@@ -71,8 +71,11 @@ const LINK_GROUPS = [
 export function Footer() {
   const biz = getBusinessInfo();
 
+  /* [1085 · 속도] footer-cv(content-visibility: auto · globals.css) — 푸터는 모든 화면 맨 아래인데 첫 로드에 레이아웃까지 했고,
+     슬로건 한 줄이 세리프 글꼴(51KB)을 모든 화면 첫 방문에 받게 했다(운영 Lighthouse: 쪽마다 무거운 자원 3위).
+     화면에 가까워질 때 그린다 — DOM·크롤러·찾기(Ctrl+F)에는 그대로 있다. */
   return (
-    <footer className="mt-auto border-t border-line bg-surface px-5 pb-[76px] pt-6 md:pb-10 md:pt-10">
+    <footer className="footer-cv mt-auto border-t border-line bg-surface px-5 pb-[76px] pt-6 md:pb-10 md:pt-10">
       <div className="mx-auto flex max-w-[1240px] flex-col gap-2 t-sub text-text-3">
         {/* [962] 0행: 브랜드 잠금 + 슬로건 — 모든 페이지의 마지막 줄이 브랜드로 끝난다 */}
         <div className="mb-2 flex flex-wrap items-center justify-between gap-3 border-b border-divider pb-4">

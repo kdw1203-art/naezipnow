@@ -342,10 +342,12 @@ export async function listTxRegions(minTx = MIN_BAND_TX): Promise<TxRegionSummar
       };
       map.set(c.regionName, r);
     }
+    /* [1084] 단지 수 = 구간 중 가장 큰 단지 수(면적대·가격대 모두). 뷰에 지역 단위 고유 단지 수가 없어 하한이다 — 예전엔 면적대만 봐서
+       가격대 한 줄(324곳)이 머리 숫자(232곳)보다 컸다(운영 실측 /tx/평택시). 화면은 "N곳 이상"으로 적는다. */
+    r.complexCount = Math.max(r.complexCount, c.complexCount);
     if (c.kind === "area") {
       r.areaCells.push(c);
       r.txCount += c.txCount;
-      r.complexCount = Math.max(r.complexCount, c.complexCount);
     } else {
       r.priceCells.push(c);
     }

@@ -4,7 +4,7 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import { ActionButton } from "@/app/components/ui/ActionButton";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import {
   BUSINESS_FORMS,
   DOC_KINDS,

@@ -5,7 +5,7 @@ import { scrollIntoViewSafely } from "@/lib/ui/scroll";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { CharCount } from "@/app/components/ui/CharCount";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 
 const INPUT =
   "w-full rounded-lg border border-line bg-surface px-3.5 py-2.5 t-body text-ink placeholder:text-text-3";

@@ -5,6 +5,7 @@ import type { ComponentProps } from "react";
 import type { NoteComments as Comments } from "./NoteComments";
 import type { NoteAudioTools as AudioTools } from "./NoteAudioTools";
 import type { NoteSoftWall as SoftWall } from "./NoteSoftWall";
+import type { KakaoShareButton as KakaoShare } from "@/app/components/KakaoShareButton";
 
 /* [1051 · 배포 막힘] 노트 상세(/notes/[id])가 Vercel 빌드에서 496KB 로 미등재 상한(495KB)을 넘어 1047·1048 배포가 실패했다
    (로컬 495.2KB — Vercel 은 로컬에 없는 공개 설정값이 번들에 들어가 조금 더 크다). 독자 평가(NoteRatingLazy, 1043)와 같은 방식으로
@@ -15,6 +16,8 @@ const LazyComments = nextDynamic(() => import("./NoteComments").then((m) => m.No
 });
 const LazyAudioTools = nextDynamic(() => import("./NoteAudioTools").then((m) => m.NoteAudioTools));
 const LazySoftWall = nextDynamic(() => import("./NoteSoftWall").then((m) => m.NoteSoftWall));
+/* [1086 · A7] 공개 노트 카카오톡 공유 — 단지·리포트와 같은 칩(KakaoShareButton). 노트 상세는 번들 상한(495KB)에 붙어 있어 따로 받는다 */
+const LazyKakaoShare = nextDynamic(() => import("@/app/components/KakaoShareButton").then((m) => m.KakaoShareButton));
 
 export function NoteCommentsLazy(props: ComponentProps<typeof Comments>) {
   return <LazyComments {...props} />;
@@ -26,4 +29,8 @@ export function NoteAudioToolsLazy(props: ComponentProps<typeof AudioTools>) {
 
 export function NoteSoftWallLazy(props: ComponentProps<typeof SoftWall>) {
   return <LazySoftWall {...props} />;
+}
+
+export function NoteKakaoShareLazy(props: ComponentProps<typeof KakaoShare>) {
+  return <LazyKakaoShare {...props} />;
 }

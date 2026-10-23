@@ -296,7 +296,7 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
                 <Link
                   key={s.bandSlug}
                   href={`${regionHref}/${kind}/${s.bandSlug}`}
-                  className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
+                  className="tile inline-flex min-h-10 items-center rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink md:min-h-8"
                 >
                   {s.bandLabel}
                   <span className="ml-1 font-medium text-text-3">{s.txCount.toLocaleString("ko-KR")}건</span>
@@ -313,7 +313,7 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
                 <Link
                   key={s.bandSlug}
                   href={`${regionHref}/${kind === "area" ? "price" : "area"}/${s.bandSlug}`}
-                  className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
+                  className="tile inline-flex min-h-10 items-center rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink md:min-h-8"
                 >
                   {s.bandLabel}
                   <span className="ml-1 font-medium text-text-3">{s.txCount.toLocaleString("ko-KR")}건</span>

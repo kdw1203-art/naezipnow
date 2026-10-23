@@ -17,7 +17,8 @@ export function HScroll({
 }: {
   children: ReactNode;
   className?: string;
-  hint?: string;
+  /** [1084] null 이면 아래 안내 줄 없이 오른쪽 흐림만(칩 줄 · 단계 줄) */
+  hint?: string | null;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [overflowing, setOverflowing] = useState(false);
@@ -52,7 +53,7 @@ export function HScroll({
       >
         {children}
       </div>
-      {overflowing && (
+      {overflowing && hint !== null && (
         <p className="m-0 mt-1 t-caption text-text-3 md:hidden" aria-live="polite">
           {atEnd ? "표 끝" : `${hint} →`}
         </p>

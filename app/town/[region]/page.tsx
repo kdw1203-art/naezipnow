@@ -278,7 +278,13 @@ export default async function TownRegionHomePage({
           )}
           {typeof snapshot.tradeCount === "number" && snapshot.tradeCount > 0 && (
             <div className="min-w-[100px] flex-1 rounded-lg bg-bg px-3 py-2.5">
-              <div className="t-caption text-text-3">거래</div>
+              {/* [1084] 출처·기준월 — 같은 달을 지역 상세는 국토부 신고(집계 중 80건), 여기는 부동산원 거래 현황(180건)으로 적어
+                  숫자가 서로 틀린 것처럼 보였다(운영 실측). 원천이 다르다는 사실을 칸에 적는다 */}
+              <div className="t-caption text-text-3">
+                거래{/^\d{6}$/.test(snapshot.period) ? ` · ${Number(snapshot.period.slice(4, 6))}월` : ""}
+                {" · "}
+                {snapshot.source === "reb" ? "부동산원" : snapshot.source === "kb" ? "KB" : snapshot.source === "kosis" ? "통계청" : "수집 자료"}
+              </div>
               <div className="t-section t-num text-ink">{snapshot.tradeCount.toLocaleString("ko-KR")}건</div>
             </div>
           )}

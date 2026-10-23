@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { Modal, ModalHeader } from "@/app/components/ui/Modal";
 import { Icon } from "@/app/components/Icon";
 

@@ -417,7 +417,8 @@ test("[1030 · 3차] 키보드 — 가로 스크롤 영역 tabIndex · 본문 �
   /* [1054] 표 틀은 HScroll — 넘칠 때만 tabIndex=0(넘치지 않는 틀은 탭 정거장이 아니다) */
   assert.ok(src1030("app/region/[id]/page.tsx").includes('<HScroll className="mt-3">'));
   assert.ok(src1030("app/components/HScroll.tsx").includes("tabIndex={overflowing ? 0 : undefined}"));
-  assert.ok(src1030("app/redevelopment/(index)/page.tsx").includes('<div className="mt-3 -mx-1 overflow-x-auto px-1 pb-1" tabIndex={0}>'));
+  /* [1084] 단계 칩 줄도 HScroll(넘칠 때만 tabIndex=0 · 오른쪽 흐림) — 예전 고정 tabIndex 틀 */
+  assert.ok(src1030("app/redevelopment/(index)/page.tsx").includes('<HScroll hint={null} className="mt-3 -mx-1 px-1 pb-1">'));
   assert.equal((src1030("app/developers/page.tsx").match(/<pre tabIndex=\{0\}/g) ?? []).length, 2);
   assert.ok(src1030("app/not-found.tsx").includes('<main id="main-content"'));
   assert.ok(src1030("app/login/LoginClient.tsx").includes('id="main-content"'));

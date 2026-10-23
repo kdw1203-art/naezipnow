@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HScroll } from "@/app/components/HScroll";
 
 /* [개선 #6, 2026-08-22] 계산기 상호 링크 줄.
    방문 실측에서 /calculator 는 상위 진입 경로(홈·동네이야기 다음)인데 검색에는
@@ -17,10 +18,13 @@ export const CALCULATORS = [
 ] as const;
 
 export function CalculatorNav({ current }: { current: string }) {
+  /* [1084] 640px 틀에서 여섯 번째 칩이 잘리고 스크롤 막대가 숨어 "더 있다"를 알 수 없었다(운영 실측 · 계산기 3쪽).
+     넓은 화면은 줄바꿈, 폰은 옆으로 밀기 + 오른쪽 흐림(HScroll · 안내 줄 없음). */
   return (
+    <HScroll hint={null} className="mb-4">
     <nav
       aria-label="계산기 목록"
-      className="mb-4 flex gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="flex w-max gap-1.5 pb-1 md:w-auto md:flex-wrap"
     >
       {CALCULATORS.map((c) =>
         c.href === current ? (
@@ -42,5 +46,6 @@ export function CalculatorNav({ current }: { current: string }) {
         ),
       )}
     </nav>
+    </HScroll>
   );
 }

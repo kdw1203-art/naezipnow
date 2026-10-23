@@ -5,7 +5,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Icon } from "@/app/components/Icon";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
+import { useReturnHref } from "@/lib/client/use-return-href";
 import { fetchMyNotesShared } from "./hub-viewer";
 
 /* ============================================================
@@ -65,6 +66,8 @@ export function AiNoteAnalysisCard({
 }) {
   const { handleUpgradeResponse } = useUpgradePaywall();
   const { promptSignup } = useSoftSignup();
+  /* [1086 · A4] 로그인 뒤 이 분석 화면으로(예전 맨 /login 은 홈으로 떨어졌다) */
+  const loginHref = useReturnHref("login");
   const [state, setState] = useState<CardState>({ kind: "idle" });
   const [notes, setNotes] = useState<NoteOption[]>([]);
   const [notesLoaded, setNotesLoaded] = useState(false);
@@ -252,7 +255,7 @@ export function AiNoteAnalysisCard({
             {state.kind === "running" ? "분석 중…" : state.kind === "done" ? "다시 분석하기" : "분석 실행"}
           </button>
         ) : (
-          <Link href="/login" className="btn-outline btn-md shrink-0 no-underline">
+          <Link href={loginHref} className="btn-outline btn-md shrink-0 no-underline">
             로그인
           </Link>
         )}
@@ -385,7 +388,7 @@ export function AiNoteAnalysisCard({
            서버가 세션 만료를 돌려준 경우에만 남긴다(같은 말을 두 번 하지 않는다). */
         <div className="flex items-center justify-between rounded-lg bg-primary-soft px-3 py-2.5">
           <span className="t-sub font-bold text-primary">AI 분석 · 로그인 필요</span>
-          <Link href="/login" className="inline-flex min-h-[24px] shrink-0 items-center t-sub font-bold text-primary">
+          <Link href={loginHref} className="inline-flex min-h-[24px] shrink-0 items-center t-sub font-bold text-primary">
             로그인 ›
           </Link>
         </div>

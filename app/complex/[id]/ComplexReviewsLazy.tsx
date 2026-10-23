@@ -19,8 +19,8 @@ function ReviewsPlaceholder() {
     <div className="card rounded-2xl px-[18px] py-4">
       <h2 className="t-section text-ink">거주민 후기</h2>
       <p className="mt-1 t-sub text-text-3">
-        직접 살아봤거나 임장에서 확인한 내용만 남겨주세요 · 같은 단지 재작성 시 기존 후기가
-        갱신돼요 · 실거주·방문 후기가 먼저 보여요
+        {/* [1084] 해요체 안내 → 사실 낱말(1029 규칙) */}
+        직접 거주·임장 확인 내용만 · 같은 단지 재작성 시 기존 후기 갱신 · 실거주·방문 후기 우선 표시
       </p>
       <div className="mt-3 py-6 text-center t-sub text-text-3" role="status">
         후기를 불러오는 중…

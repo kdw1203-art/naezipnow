@@ -1,5 +1,6 @@
 import { formatKstDate } from "@/lib/format/kst";
 import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
+import { HScroll } from "@/app/components/HScroll";
 import { seoAlternates } from "@/lib/seo/alternates";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
@@ -250,8 +251,9 @@ export default async function RedevelopmentPage() {
               [1038 · 16] 단계 칩 아래 "지도에 실린 구역 수"를 막대로 — 어느 단계에 구역이 몰려 있는지 한 줄로
               [1063] 칩마다 박혀 있던 1px 막대는 머리 판의 비율 막대(MiniBar · 같은 stageCounts)로 모았다.
               이 줄은 절차의 **순서**만 말한다 — 수는 한 곳에서만 센다. */}
-          <div className="mt-3 -mx-1 overflow-x-auto px-1 pb-1" tabIndex={0}>
-            <ol className="flex min-w-max items-center gap-1">
+          {/* [1084] 여섯 번째 칩이 카드 끝에서 "이주·철"로 잘리고 일곱 번째는 보이지 않았다(운영 실측) — 넓은 화면은 줄바꿈, 폰은 밀기 + 흐림 */}
+          <HScroll hint={null} className="mt-3 -mx-1 px-1 pb-1">
+            <ol className="flex w-max items-center gap-1 md:w-auto md:flex-wrap">
               {STAGE_GUIDES.map((s, i) => (
                 <li key={s.key} className="flex items-center gap-1">
                   <span className="chip chip-soft flex items-center gap-1 px-2.5 py-1 t-sub" style={{ whiteSpace: "normal" }}>
@@ -269,7 +271,7 @@ export default async function RedevelopmentPage() {
                 </li>
               ))}
             </ol>
-          </div>
+          </HScroll>
           {/* [1015] "…아래에서 단계별로 정리했어요. …반드시 확인하세요" 안내 문단은 걷었다(브리프 규칙 B) —
               단계별 상세와 면책 한 줄이 바로 아래에 있다. */}
         </section>

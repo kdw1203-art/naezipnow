@@ -61,15 +61,19 @@ export default async function ListingsPage() {
         <div>
           <h1 className="rise-in t-title font-bold text-ink">실매물</h1>
           {/* [1015 · 규칙 B] 괄호 부연("전국 등록은 가능, 목록 필터는 서울 중심") → 사실 한 줄(건수는 실데이터) */}
+          {/* [1084 · D-065] "서울 구 단위 필터"는 구 칩이 보일 때(매물 1건 이상)만 — 0건이면 칩 줄을 숨기는데 부제만 남았다 */}
           <p className="mt-1 t-body text-text-3">
-            {items === null ? "검수 통과 매물만 노출" : `검수 통과 매물 ${items.length.toLocaleString("ko-KR")}건`} · 서울 구
-            단위 필터
+            {items === null ? "검수 통과 매물만 노출" : `검수 통과 매물 ${items.length.toLocaleString("ko-KR")}건`}
+            {items !== null && items.length > 0 ? " · 서울 구 단위 필터" : ""}
           </p>
         </div>
-        {/* [1015 · 규칙 J] 채움 파랑은 목록 빈 화면·필터 초기화(ListingsListClient)에 — 상단 등록은 outline */}
-        <Link href="/listings/new" className="btn-outline btn-md">
-          매물 등록하기
-        </Link>
+        {/* [1015 · 규칙 J] 채움 파랑은 목록 빈 화면·필터 초기화(ListingsListClient)에 — 상단 등록은 outline.
+            [1084 · D-065] 0건이면 빈 화면에 "매물 등록하기"(채움)가 있어 위쪽 것은 뺀다(한 화면 같은 행동 두 번). 오류 화면도 자체 단추가 있다 */}
+        {items !== null && items.length > 0 && (
+          <Link href="/listings/new" className="btn-outline btn-md">
+            매물 등록하기
+          </Link>
+        )}
       </div>
 
       {items === null ? (

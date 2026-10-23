@@ -455,7 +455,7 @@ export function NaverMap({
           "네이버 지도 로딩이 지연됩니다. 네트워크 상태와 NCP 'Web 서비스 URL'(현재 접속 도메인) 등록 여부를 확인해 주세요.",
         );
       }
-    }, 16_000);
+    }, 10_000); /* [1084] 16초 → 10초 — 지도 SDK 가 막힌 캡처에서 "지도 불러오는 중"이 오래 남았다(운영 실측). 정상 로드는 1~3초 */
     return () => window.clearTimeout(timer);
   }, [loaded, error]);
 
@@ -581,6 +581,32 @@ export function NaverMap({
     if (!maps) return;
     const map = mapRef.current;
 
+    /* [1084] 겹침 정리용 화면 상태 — idle 과 떼어 낸다. 운영 실측(2026-10-22 · /map): 첫 idle 이 오지 않아(헤드리스·실기기 모두
+       idle 0회) mapView 가 {bounds:null} 에 머물렀고, 겹침 정리가 한 번도 돌지 않았다 — 말풍선 76개 중 28쌍이 포개진 채였다(상한 60도
+       무시). idle 을 강제로 한 번 보내자 곧바로 라벨 60 · 점 77 로 정리됐다. 그래서 지도 생성 직후·끌기/확대 끝·틀 크기 변화에도 직접
+       잰다(값이 같으면 setState 하지 않는다). onIdle 콜백(데이터 조회)은 idle 에서만 — 조회가 늘지 않는다. */
+    const updateView = () => {
+      if (!declutterRef.current) return;
+      const b = map.getBounds?.();
+      const sw = b?.getSW?.();
+      const ne = b?.getNE?.();
+      const el = containerRef.current;
+      const width = el?.clientWidth ?? 0;
+      const height = el?.clientHeight ?? 0;
+      const bounds =
+        sw && ne ? { swLat: sw.lat(), swLng: sw.lng(), neLat: ne.lat(), neLng: ne.lng() } : null;
+      setMapView((prev) => {
+        const same =
+          prev.width === width &&
+          prev.height === height &&
+          prev.bounds?.swLat === bounds?.swLat &&
+          prev.bounds?.swLng === bounds?.swLng &&
+          prev.bounds?.neLat === bounds?.neLat &&
+          prev.bounds?.neLng === bounds?.neLng;
+        return same ? prev : { bounds, width, height };
+      });
+    };
+
     const emit = () => {
       const cb = onIdleRef.current;
       const zoom = map.getZoom?.() ?? 0;
@@ -597,25 +623,7 @@ export function NaverMap({
 
       /* 겹침 정리용 화면 상태. 값이 실제로 달라졌을 때만 setState 한다 —
          idle 이 같은 값으로 여러 번 와도 리렌더가 늘지 않게. */
-      if (declutterRef.current) {
-        const el = containerRef.current;
-        const width = el?.clientWidth ?? 0;
-        const height = el?.clientHeight ?? 0;
-        const bounds =
-          sw && ne
-            ? { swLat: sw.lat(), swLng: sw.lng(), neLat: ne.lat(), neLng: ne.lng() }
-            : null;
-        setMapView((prev) => {
-          const same =
-            prev.width === width &&
-            prev.height === height &&
-            prev.bounds?.swLat === bounds?.swLat &&
-            prev.bounds?.swLng === bounds?.swLng &&
-            prev.bounds?.neLat === bounds?.neLat &&
-            prev.bounds?.neLng === bounds?.neLng;
-          return same ? prev : { bounds, width, height };
-        });
-      }
+      updateView();
 
       if (!cb) return;
       cb({
@@ -630,12 +638,30 @@ export function NaverMap({
 
     maps.Event.addListener(map, "idle", emit);
 
+    /* [1084] idle 이 오지 않아도 겹침 정리가 돌게 — 생성 직후 두 번(타일 전·후), 끌기·확대가 끝날 때, 틀 크기가 바뀔 때 */
+    const viewTimers = [window.setTimeout(updateView, 0), window.setTimeout(updateView, 800)];
+    let settleTimer: number | undefined;
+    const settle = () => {
+      window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(updateView, 150);
+    };
+    maps.Event.addListener(map, "dragend", settle);
+    maps.Event.addListener(map, "zoom_changed", settle);
+    const ro =
+      typeof ResizeObserver === "function" && containerRef.current ? new ResizeObserver(settle) : null;
+    if (ro && containerRef.current) ro.observe(containerRef.current);
+
     /* [968 · 24] 사람이 지도를 움직이기 시작하는 순간 — 끌기(dragstart)와 두 손가락
        확대(pinchstart)만. zoomstart 는 ＋/－ 버튼·setZoom 에도 오므로 제외한다.
        리스너는 idle 과 같은 이유로 한 번만 붙이고, 쓸지 말지는 ref 가 정한다. */
     const emitInteractionStart = () => onInteractionStartRef.current?.();
     maps.Event.addListener(map, "dragstart", emitInteractionStart);
     maps.Event.addListener(map, "pinchstart", emitInteractionStart);
+    return () => {
+      for (const t of viewTimers) window.clearTimeout(t);
+      window.clearTimeout(settleTimer);
+      ro?.disconnect();
+    };
   }, [loaded]);
 
   // 반경 원 오버레이(C3) — circle prop 있을 때만 생성/갱신, 없으면 제거. 기존 지도엔 영향 없음.
@@ -1087,7 +1113,7 @@ export function NaverMap({
         />
         <div className="absolute inset-x-0 bottom-0 z-10 bg-amber-50/95 px-3 py-2 text-[12px] leading-snug text-amber-900 backdrop-blur">
           <span className="font-bold">대체 지도(OSM)</span> ·{" "}
-          지도를 불러오지 못했어요. 잠시 후 새로고침해 주세요.
+          지도 불러오기 실패 · 잠시 후 다시 시도해 주세요.
         </div>
       </div>
     );

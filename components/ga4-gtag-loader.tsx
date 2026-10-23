@@ -16,6 +16,7 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useCookieConsent } from "./consent/use-cookie-consent";
 import { safePageLocation } from "@/lib/analytics/safe-page-location";
+import { claimSignupConversion } from "@/lib/analytics/fresh-signup";
 import {
   googleAdsId,
   purchaseConversionLabel,
@@ -134,10 +135,11 @@ export function Ga4GtagLoader() {
           transactionId: orderId,
         });
       } else if (pathname === "/welcome") {
-        const onceKey = "nz_conv_signup";
-        if (sessionStorage.getItem(onceKey)) return;
-        sessionStorage.setItem(onceKey, "1");
-        window.gtag("event", "sign_up", { method: "site" });
+        /* [1086 · A8] 방금 가입한 브라우저에서만(가입 화면·메일 인증 화면이 남긴 표식 · lib/analytics/fresh-signup) — 예전엔
+           /welcome 을 열 때마다(탭당 1회) 나가, 홈의 "관심 지역 수정"으로 온 기존 회원까지 가입으로 셌다. 표식당 한 번 */
+        const method = claimSignupConversion();
+        if (!method) return;
+        window.gtag("event", "sign_up", { method });
         sendAdsConversion(window.gtag, signupConversionLabel(), {});
       }
     } catch {

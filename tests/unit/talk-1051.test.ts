@@ -168,6 +168,6 @@ test("단지·지역 화면 시간 초과 — 서버 렌더 오류면 한 번만
 
 test("폰 광고 — load 뒤 첫 입력 또는 6초 뒤(데스크톱은 그대로 즉시)", () => {
   const b = read("lib/ads/adsense-boot.ts");
-  assert.match(b, /export const ADSENSE_MOBILE_DELAY_MS = 6000;/);
+  assert.match(b, /export const ADSENSE_MOBILE_DELAY_MS = 20_000;/); // [1085] 6초 → 20초(첫 입력 규칙은 그대로)
   assert.match(b, /\["scroll", "pointerdown", "keydown", "touchstart"\]/);
 });

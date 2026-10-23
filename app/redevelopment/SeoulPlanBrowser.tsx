@@ -154,8 +154,9 @@ export function SeoulPlanBrowser({ initialItems, summary }: Props) {
       </div>
       {/* 구 칩 — 가로 스크롤 */}
       {guChips.length > 0 && (
-        <div className="-mx-1 overflow-x-auto px-1 pb-1">
-          <div className="flex min-w-max gap-1.5">
+        <div className="-mx-1 overflow-x-auto px-1 pb-1 md:overflow-visible">
+          {/* [1084] 넓은 화면은 줄바꿈(오른쪽에서 '관악구'가 잘리던 줄 · 운영 실측) */}
+          <div className="flex min-w-max gap-1.5 md:min-w-0 md:flex-wrap">
             <button type="button" onClick={() => pick({ gu: null })} className={chip(!gu)} aria-pressed={!gu}>
               서울 전체
             </button>

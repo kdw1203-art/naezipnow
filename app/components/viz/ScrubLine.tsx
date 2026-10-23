@@ -441,7 +441,7 @@ export function ScrubLine({
           <span
             className="scrub-mark"
             style={
-              minP.y + 22 <= layout.plotBottom
+              minP.y + 18 <= layout.plotBottom
                 ? { left: minP.x, top: minP.y + 6, transform: `translateX(${edge(minP.x)})` }
                 : minP.x > plotW - 96
                   ? { left: minP.x - 8, top: minP.y - 7, transform: "translateX(-100%)" }

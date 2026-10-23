@@ -1,3 +1,4 @@
+import { withJosa } from "@/lib/format/josa";
 import "server-only";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
@@ -249,7 +250,7 @@ export async function loadReengagementCandidates(
         title: "관심 단지 소식",
         body:
           myWatch.length === 1
-            ? `${named}을(를) 관심 단지로 담아 두셨어요.`
+            ? `${withJosa(named, "을/를")} 관심 단지로 담아 두셨어요.`
             : `${named} 외 ${myWatch.length - 1}곳을 관심 단지로 담아 두셨어요.`,
         actionUrl: `/complex/${encodeURIComponent(head.complexId)}`,
         lastSeenAt,

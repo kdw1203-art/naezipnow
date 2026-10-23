@@ -8,7 +8,7 @@
  * 규칙(인라인 부트 스크립트와 클라이언트 주입기가 **같은 상수**를 쓴다):
  *  - 제외 경로(adsense-policy 의 prefix 목록)면 태그 자체를 넣지 않는다.
  *  - 뷰포트 ≥ 1024px: 지금처럼 즉시 — 단 fetchpriority="low" 로 LCP 자원에 밀린다.
- *  - 뷰포트 < 1024px: `load` 뒤 첫 입력(스크롤·터치·키) 또는 6초([1051]) → requestIdleCallback(상한 4s)에 넣는다. AdZoneUnit 이
+ *  - 뷰포트 < 1024px: `load` 뒤 첫 입력(스크롤·터치·키) 또는 20초([1051] 6초 → [1085] 20초) → requestIdleCallback(상한 4s)에 넣는다. AdZoneUnit 이
  *    그 전에 `adsbygoogle.push({})` 를 해도 배열 큐에 쌓였다가 스크립트가 붙으면
  *    처리되므로 피드·본문 광고는 그대로 나온다(시점만 늦다).
  *  - 클라이언트 내비게이션으로 제외 경로 → 일반 경로로 들어오면 AdSenseLoader 가
@@ -29,7 +29,11 @@ export const ADSENSE_IDLE_TIMEOUT_MS = 4000;
  * (Google FundingChoices 724ms + DoubleClick 577ms 가 첫 화면 직후 주 스레드를 잡았다 · 전송 ≈300KB).
  * 폰 광고 칸은 첫 화면 아래(피드 사이)라 첫 입력 뒤에 붙어도 보이는 시점은 같다.
  */
-export const ADSENSE_MOBILE_DELAY_MS = 6000;
+export const ADSENSE_MOBILE_DELAY_MS = 20_000;
+/* [1085 · 속도] 6초 → 20초. 운영 Lighthouse 폰(2026-10-22 · 홈): 광고 스크립트가 붙으면 TBT 1,798ms · 막으면 794ms —
+   6초 타이머가 첫 화면이 아직 하이드레이션·지연 조각을 그리는 구간에 겹쳤다(FundingChoices 268ms · DoubleClick 250ms 긴 작업).
+   폰 광고 칸은 첫 화면 아래(피드 사이)라 첫 스크롤·터치(ADSENSE_WAKE_EVENTS)에 바로 붙는 규칙은 그대로 — 사람이 보는
+   광고 시점은 거의 같고, 20초 동안 손대지 않고 읽는 사람만 그 뒤에 붙는다. 데스크톱(≥1024px)은 종전대로 즉시. */
 /** 기다림을 끝내는 첫 입력 */
 export const ADSENSE_WAKE_EVENTS = ["scroll", "pointerdown", "keydown", "touchstart"] as const;
 

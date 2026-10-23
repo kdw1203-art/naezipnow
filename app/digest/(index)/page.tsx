@@ -1,4 +1,4 @@
-import { formatKstShortDate } from "@/lib/format/kst";
+import { formatKstDateTime, formatKstShortDate } from "@/lib/format/kst";
 import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { HouseMark } from "@/app/components/Logo";
@@ -35,17 +35,9 @@ function shortDate(iso: string): string {
   return formatKstShortDate(iso);
 }
 
+/* [1084 · D-061] "10. 21. 20:43"(로캘 꼴) → "2026.10.21 20:43" — 같은 레일의 "2026.10.21" 과 같은 점 꼴 */
 function asOfLabel(iso: string): string {
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return d.toLocaleString("ko-KR", {
-    timeZone: "Asia/Seoul",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  return formatKstDateTime(iso) || "—";
 }
 
 export default async function DigestPage() {
@@ -127,7 +119,7 @@ export default async function DigestPage() {
             <div className="t-body font-bold text-ink">받는 설정 · 마이 › 설정</div>
             {/* [1015] 안내문 → 사실 한 줄(브리프 규칙 D) */}
             <div className="mt-0.5 t-sub text-text-2">
-              푸시 알림 ‘주간 다이제스트’ · 기본 켜짐 · 매주 월요일 오후(15시쯤) 1회
+              푸시 알림 ‘주간 다이제스트’ · 기본 켜짐 · <span className="whitespace-nowrap">매주 월요일 15시경 · 1회</span>
             </div>
           </div>
           <span className="shrink-0 rounded-lg bg-primary-soft px-3.5 py-2 text-xs font-bold text-primary">

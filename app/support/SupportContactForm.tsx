@@ -229,7 +229,7 @@ export function SupportContactForm({ supportEmail }: { supportEmail: string }) {
         id="support-message"
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        placeholder={`문의 내용을 자세히 적어 주세요 (10~${TICKET_MESSAGE_MAX.toLocaleString("ko-KR")}자)`}
+        placeholder={`문의 내용 (10~${TICKET_MESSAGE_MAX.toLocaleString("ko-KR")}자)`}
         maxLength={TICKET_MESSAGE_MAX}
         rows={5}
         aria-label="문의 내용"

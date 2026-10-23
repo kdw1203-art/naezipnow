@@ -14,6 +14,21 @@
 /** [1081] 단지 사이트맵 조각 — 거래 많은 순으로 5,000개씩. 인덱스에는 조각만 싣고, 통짜 /sitemap-complexes.xml 은
  *  소유자가 콘솔에 직접 제출해 둔 주소라 살려 둔다(인덱스에서만 뺀다). 수용량 6 × 5,000 = 30,000(현재 23,809). */
 export const COMPLEX_SITEMAP_CHUNK_SIZE = 5000;
+
+/**
+ * [1085] 단지 사이트맵 조각 범위 — 순수. 전체 0개 = "empty"(조회 실패 → 503) · 조각이 목록 끝보다 뒤 = "hub"(원래 없음 → 허브 한 줄 200)
+ * · 그 밖 = 자를 범위. 운영 23,8xx곳 < 6조각(30,000)이라 6번째 조각이 늘 0개로 503 을 냈다(7일 48회).
+ */
+export function complexChunkRange(
+  total: number,
+  chunkIndex: number,
+  size: number = COMPLEX_SITEMAP_CHUNK_SIZE,
+): "empty" | "hub" | { start: number; end: number } {
+  if (!(total > 0)) return "empty";
+  const start = chunkIndex * size;
+  if (start >= total) return "hub";
+  return { start, end: Math.min(total, start + size) };
+}
 export const COMPLEX_SITEMAP_CHUNKS = 6;
 export const COMPLEX_CHUNK_SLUGS = ["complexes-1", "complexes-2", "complexes-3", "complexes-4", "complexes-5", "complexes-6"] as const;
 

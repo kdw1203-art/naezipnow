@@ -40,10 +40,12 @@ import {
   type CarryOverComplex,
   type NoteStep,
 } from "@/lib/notes/form-steps";
-import { useMoment } from "@/app/components/motion/MomentProvider";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useMoment } from "@/app/components/motion/moment-context";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 /* [1005 · A2] 비회원 판정 — 헤더가 이미 부른 /api/auth/session 공유 프라미스(요청 0 추가) */
 import { hasSession } from "@/lib/client/has-session";
+/* [1086 · A1] 가입 뒤 저장 재개 표식(?resume=note_save) — lib/onboarding/resume(순수·테스트) */
+import { readResume, withResume, withoutResume } from "@/lib/onboarding/resume";
 import {
   allKnownChecklistItems,
   CHECKLIST_GROUPS,
@@ -549,7 +551,7 @@ function visitFromRevisit(seed: RevisitPrefill): Record<string, string> {
 }
 
 /* [1015 · 규칙 D] 단계 이름은 명사로 — lib/notes/form-steps 의 title 은 물음형("어디를 봤나요")이라 화면에서는
-   이 표를 쓴다(lib 는 통합자 소유 · 보고서에 같은 값으로 바꿔 달라고 적었다). short(어디·무엇·기록)는 탭 그대로. */
+   이 표를 쓴다(lib 는 통합자 소유 · 보고서에 같은 값으로 바꿔 달라고 적었다). short(위치·체크·기록 · [1084] 예전 "어디·무엇" 구어 낱말)는 탭 그대로. */
 const STEP_TITLE: Record<NoteStep, string> = { 1: "위치와 방문 정보", 2: "현장 체크", 3: "메모와 판단" };
 
 /* [995 · 5a] 1단계 도우미 — 세 카드(AI 초안·음성 메모·현장 브리핑)를 한 줄 탭으로 */
@@ -1239,11 +1241,19 @@ export function NoteForm({
      작성: 있으면 그대로 배너(예전과 같다).
      수정: 노트 마지막 저장(updatedAt)보다 나중에 적혔고 지금 불러온 노트와 내용이
      다를 때만 배너. 같거나 낡은 초안은 지운다 — 다음에 또 묻지 않게. */
+  /* [1086 · A1] 가입·로그인 뒤 돌아온 작성 화면(?resume=note_save) — 초안을 배너 없이 바로 채우고 저장을 한 번 잇는다.
+     표식은 읽자마자 주소에서 지운다(새로고침에 또 저장하지 않게). 아래 resume effect 가 이 ref 를 본다. */
+  const resumeSaveRef = useRef<"note_save" | "note_continue" | null>(null);
   useEffect(() => {
     try {
+      const resume = readResume(window.location.search);
+      if (resume) {
+        window.history.replaceState(window.history.state, "", withoutResume(window.location.pathname + window.location.search + window.location.hash));
+      }
       const d = parseDraft(window.localStorage.getItem(draftKey));
       if (!d) return;
       if (!isEdit) {
+        if (resume) resumeSaveRef.current = resume;
         setPendingDraft(d);
         return;
       }
@@ -2169,13 +2179,17 @@ export function NoteForm({
       );
       if (res.status === 401) {
         setNeedLogin(true);
+        /* [1086 · A1] 초안을 지금 상태로 한 번 더 적고(1초 자동 저장을 기다리지 않는다), 돌아올 주소에 재개 표식을 싣는다 —
+           가입(→ 관심 지역)을 마치고 돌아오면 작성 화면이 초안을 채우고 저장을 잇는다 */
+        writeDraft();
         promptSignup({
           action: "note_save",
           title: "임장노트를 저장하려면 로그인",
           benefit: "가입하면 방금 작성한 기록을 저장하고 AI 정리·지도 비교로 이어갈 수 있어요.",
-          callbackUrl: typeof window !== "undefined"
-            ? window.location.pathname + window.location.search
-            : "/notes/new",
+          callbackUrl: withResume(
+            typeof window !== "undefined" ? window.location.pathname + window.location.search : "/notes/new",
+            "note_save",
+          ),
         });
         return;
       }
@@ -2300,6 +2314,49 @@ export function NoteForm({
     }
     void handleSaveRef.current();
   }, [saveAfterUpload, uploading, queueFlushing, uploads]);
+
+  /* [1086 · A1] 가입 뒤 저장 재개 — (1) 초안 배너가 서면 곧바로 채우고(restoreDraft) (2) 다음 렌더(채운 값이 든 handleSave)에서
+     로그인돼 있을 때만 저장을 한 번 부른다. 로그인 안 됐으면(가입 창을 닫고 주소로 돌아온 경우) 채우기만 — 다시 401 창을 띄우지 않는다. */
+  const [resumeSave, setResumeSave] = useState(false);
+  useEffect(() => {
+    if (!pendingDraft || !resumeSaveRef.current) return;
+    const action = resumeSaveRef.current;
+    resumeSaveRef.current = null;
+    restoreDraft();
+    /* 사진 올리기·AI 초안에서 막힌 경우(note_continue)는 채우기만 — 저장은 사용자가 */
+    if (action === "note_save") setResumeSave(true);
+    else showToast("작성하던 노트 복원");
+    // restoreDraft 는 pendingDraft 만 읽는 렌더 스코프 클로저 — 배너가 선 그 순간 한 번
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingDraft]);
+  const resumeFiredRef = useRef(false);
+  const aliveRef = useRef(true);
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+    };
+  }, []);
+  useEffect(() => {
+    /* 한 번만(ref) — 상태를 되돌리며 cleanup 으로 취소하면 세션 응답을 받기 전에 꺼진다 */
+    if (!resumeSave || resumeFiredRef.current) return;
+    resumeFiredRef.current = true;
+    void hasSession().then((authed) => {
+      if (!aliveRef.current) return;
+      /* 계측 모듈은 이때만 받는다(작성 화면 첫 로드 예산 470KB) */
+      void import("@/lib/platform-events-client")
+        .then(({ trackPlatformEvent }) =>
+          trackPlatformEvent({ eventName: "signup_resume", source: "note_form", campaign: "funnel", metadata: { action: "note_save", authed } }),
+        )
+        .catch(() => {});
+      if (!authed) {
+        showToast("작성하던 노트 복원 · 로그인 뒤 저장");
+        return;
+      }
+      showToast("로그인 완료 · 작성하던 노트 저장 중");
+      void handleSaveRef.current();
+    });
+  }, [resumeSave, showToast]);
 
   /* [970 · B-12] 업로드 진행·실패 블록 — 상단 "사진 먼저 담기" 아래와 하단 사진 섹션
      두 곳에 그린다. 라이브 영역(role=status)은 한 곳(하단)만. [1006] 본체는 NotePhotoBlocks
@@ -2622,7 +2679,7 @@ export function NoteForm({
                       action: "note_photo_login",
                       title: "사진을 올리려면 로그인",
                       benefit: "로그인하면 담아 둔 사진이 그대로 올라가고, 노트도 저장할 수 있어요.",
-                      callbackUrl: window.location.pathname + window.location.search,
+                      callbackUrl: withResume(window.location.pathname + window.location.search, "note_continue"),
                     })
                   }
                   className="chip shrink-0 border border-primary/30 bg-primary-soft px-3 t-sub font-bold text-primary"
@@ -3035,7 +3092,7 @@ export function NoteForm({
                           action: "note_ai_draft",
                           title: "로그인 필요 · AI 초안",
                           benefit: "로그인하면 실거래·시세 데이터로 초안이 채워져요. 적은 내용은 그대로 남아요.",
-                          callbackUrl: window.location.pathname + window.location.search,
+                          callbackUrl: withResume(window.location.pathname + window.location.search, "note_continue"),
                         })
                       }
                       onApply={applyAiDraft}

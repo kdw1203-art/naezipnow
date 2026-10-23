@@ -357,16 +357,18 @@ export default async function SupportPage() {
           <div className="rise-in-6 card flex flex-col justify-between gap-2 rounded-2xl px-6 py-[18px] md:flex-row md:items-center">
             {/* [989] 촘촘한 줄의 링크는 24px(py) 로 키우고 줄 사이는 띄운다(WCAG 2.5.8). */}
             <div className="flex flex-wrap gap-x-4 gap-y-3 t-sub text-text-2 md:gap-y-1">
-              <Link href="/legal/terms" className="inline-block py-[5px] font-bold text-text-1 hover:text-primary">
+              {/* [1084 · D-078] 네 링크 같은 색(text-text-1) — 뒤 두 개는 색이 없어 기본 링크 파랑으로 보였다.
+                  굵기는 개인정보처리방침만(다른 고지와 구분해 표시 · 전역 Footer 와 같은 규칙) */}
+              <Link href="/legal/terms" className="inline-block py-[5px] text-text-1 hover:text-primary">
                 이용약관
               </Link>
               <Link href="/legal/privacy" className="inline-block py-[5px] font-bold text-text-1 hover:text-primary">
                 개인정보처리방침
               </Link>
-              <Link href="/legal/location" className="inline-block py-[5px] hover:text-primary">
+              <Link href="/legal/location" className="inline-block py-[5px] text-text-1 hover:text-primary">
                 위치기반서비스 약관
               </Link>
-              <Link href="/legal/youth" className="inline-block py-[5px] hover:text-primary">
+              <Link href="/legal/youth" className="inline-block py-[5px] text-text-1 hover:text-primary">
                 청소년보호정책
               </Link>
             </div>

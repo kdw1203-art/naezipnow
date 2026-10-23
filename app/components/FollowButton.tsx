@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { useToast } from "@/app/components/toast/ToastProvider";
 
 export function FollowButton({ handle }: { handle: string }) {

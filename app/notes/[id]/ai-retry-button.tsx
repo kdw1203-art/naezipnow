@@ -5,7 +5,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "../../components/toast/ToastProvider";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 
 type Intent = "실거주" | "투자" | "전월세";
 type InvestorRole = "live" | "invest" | "rent" | "balanced";

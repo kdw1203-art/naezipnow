@@ -1,7 +1,8 @@
 /* [1025b] 소유자: "과정과 절차, 내용과 결과도 보여줘 … 안 되어 있다면 구현해줘".
    절차 한 줄 — 화면이 어떤 순서로 무엇을 만들어 내는지(1 담기 → 2 기준 → 3 결과 → 4 결정) 머리 아래 한 줄로 보인다.
    UI-10(절차는 화면당 한 번)을 지킨다: 이 줄 하나뿐이고, 현재 단계는 파란 칩, 지난 단계는 체크, 남은 단계는 회색.
-   서버·클라이언트 겸용(상태 없음). 24px 높이 · 폰에서는 가로 스크롤(줄바꿈 없음). */
+   서버·클라이언트 겸용(상태 없음). 24px 높이 · 폰에서는 가로 스크롤(줄바꿈 없음).
+   [1084 · 폰 실측] 390px 에서 4단계 줄이 6~10px 넘쳐 마지막 칩 끝이 잘렸다 — 폰에서만 칸 사이·칩 안쪽 여백을 2px 씩 줄인다. */
 import { Icon } from "@/app/components/Icon";
 
 export type StepLineItem = { label: string; note?: string };
@@ -23,16 +24,16 @@ export function StepLine({
       aria-label={label}
       /* [1030 · 3차] 가로 스크롤 영역에 키보드 초점 — 안에 누를 것이 없어 Tab 으로는 못 넘기던 단계 줄(axe scrollable-region-focusable) */
       tabIndex={0}
-      className={`scroll-x-hidden-bar m-0 flex list-none items-center gap-1.5 overflow-x-auto p-0 max-md:-mx-3.5 max-md:px-3.5 ${className}`}
+      className={`scroll-x-hidden-bar m-0 flex list-none items-center gap-1.5 overflow-x-auto p-0 max-md:-mx-3.5 max-md:gap-1 max-md:px-3.5 ${className}`}
     >
       {steps.map((s, i) => {
         const done = i < current;
         const now = i === current;
         return (
-          <li key={s.label} className="flex shrink-0 items-center gap-1.5">
+          <li key={s.label} className="flex shrink-0 items-center gap-1.5 max-md:gap-1">
             <span
               aria-current={now ? "step" : undefined}
-              className={`inline-flex min-h-[24px] items-center gap-1 rounded-full border px-2.5 t-caption font-bold ${
+              className={`inline-flex min-h-[24px] items-center gap-1 rounded-full border px-2.5 t-caption font-bold max-md:px-2 ${
                 now
                   ? "border-primary bg-primary-soft text-primary"
                   : done

@@ -1,4 +1,5 @@
 "use client";
+import { withJosa } from "@/lib/format/josa";
 /* [1026b · 시나리오·비교] 1025 표준 — 머리(PageHead) 아래 절차 한 줄(단지 담기 · N곳 → 비교 → 결론 → 다음 행동) · 결론 한 줄(t-title
    "3곳 중 평당가 최저 {단지} 3,383만" + 칩 "거래 최다 {단지}" · 근거 = 6개월 평균가 최저 · 12개월 거래 — 기존 비교표의 1위 칸 그대로) ·
    대표 그림(비교표 · 레이더 — 폰은 단지 카드) · 손잡이(담은 단지 칩 + 단지 검색)는 데스크톱 레일 / 폰 결론·그림 아래 접이식(자리 하나만 —
@@ -97,7 +98,7 @@ export default function ComparePage() {
       const r = addToCompareTray({ id: c.id, name: c.name, region: c.region || c.regionLabel || undefined });
       showToast(
         r.ok
-          ? `${c.name}을(를) 비교함에 담았어요`
+          ? `${withJosa(c.name, "을/를")} 비교함에 담았어요`
           : r.reason === "full"
             ? `비교함이 가득 찼어요 · 최대 ${COMPARE_TRAY_MAX}곳이에요`
             : "비교함을 쓸 수 없어요 · 저장 공간이 막혀 있어요",
@@ -290,8 +291,12 @@ export default function ComparePage() {
         {count === 0 ? (
           /* [1026b] 빈 상태 — 카드 하나 + 회색 표 윤곽 + 한 문장 + 단지 검색 */
           <section className="card mx-auto mt-3 flex w-full max-w-[640px] flex-col gap-3 rounded-2xl p-4 max-md:p-3.5" aria-label="비교할 단지 담기">
-            <div className="flex flex-col gap-1.5" aria-hidden="true">
-              {[0, 1, 2, 3].map((r) => (
+            {/* 비교함을 읽기 전(서버 렌더)에는 문장을 쓰지 않는다 — 담은 사람에게 "없어요"가 먼저 보이지 않게 */}
+            {tray !== null && <p className="m-0 t-body font-bold text-ink">담은 단지 없음 · 최대 {COMPARE_TRAY_MAX}곳</p>}
+            {picker}
+            {/* [1084] 표 윤곽은 문장·검색 **아래**로 — 맨 위의 점선 격자가 불러오는 중(스켈레톤)처럼 보였다(운영 실측). 두 줄로 줄였다 */}
+            <div className="flex flex-col gap-1.5 opacity-70" aria-hidden="true">
+              {[0, 1, 2].map((r) => (
                 <div key={r} className={OUTLINE_COLS}>
                   {[0, 1, 2, 3, 4].map((c) => (
                     <span key={c} className={`block rounded-sm border border-dashed border-line-strong ${r === 0 ? "h-3" : "h-7"}`} />
@@ -299,9 +304,6 @@ export default function ComparePage() {
                 </div>
               ))}
             </div>
-            {/* 비교함을 읽기 전(서버 렌더)에는 문장을 쓰지 않는다 — 담은 사람에게 "없어요"가 먼저 보이지 않게 */}
-            {tray !== null && <p className="m-0 t-body font-bold text-ink">담은 단지 없음 · 최대 {COMPARE_TRAY_MAX}곳</p>}
-            {picker}
           </section>
         ) : (
           <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">

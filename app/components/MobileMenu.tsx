@@ -20,7 +20,7 @@ import nextDynamic from "next/dynamic";
 const PushSubscribe = nextDynamic(() => import("@/components/PushSubscribe").then((m) => m.PushSubscribe), { ssr: false });
 import { Icon } from "./Icon";
 import { getSessionLite } from "@/lib/client/session-lite";
-import { loginReturnHref } from "@/lib/client/shell-gates";
+import { loginReturnHref, signupReturnHref } from "@/lib/client/shell-gates";
 import { useScrollLock } from "@/lib/client/use-scroll-lock";
 import { isInstalled, trackPwa } from "@/lib/client/pwa-install";
 import {
@@ -127,6 +127,8 @@ export function MobileMenu() {
     setSearch(window.location.search);
   }, [pathname]);
   const loginHref = loginReturnHref(pathname, search);
+  /* [1086 · A4] 회원가입도 지금 화면으로 돌아오게(가입 → 관심 지역 → 하던 화면) */
+  const signupHref = signupReturnHref(pathname, search);
 
   /* [968 · 35] 배경 스크롤 잠금 — 예전 body.style.overflow="hidden" 은 iOS 사파리가
      무시해 시트 뒤 페이지가 그대로 스크롤됐다. 공용 훅(body fixed + 위치 복원)으로. */
@@ -437,7 +439,7 @@ export function MobileMenu() {
                 )}
                 {/* [1076] 비회원에게 "마이페이지"는 로그인 벽으로 가는 길일 뿐 — 그 자리에 회원가입(소유자 "잘 보이도록") */}
                 {loggedIn === false ? (
-                  <Link prefetch={false} href="/signup" className="glass flex-1 rounded-xl py-2.5 text-center t-body font-bold text-primary">
+                  <Link prefetch={false} href={signupHref} className="glass flex-1 rounded-xl py-2.5 text-center t-body font-bold text-primary">
                     회원가입
                   </Link>
                 ) : (

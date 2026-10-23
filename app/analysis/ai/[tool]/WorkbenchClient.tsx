@@ -1,4 +1,5 @@
 "use client";
+import { withJosa } from "@/lib/format/josa";
 /* [1026b · AI 분석 8종] 나머지 8종(리스크 점검·비교·수익률 계산·갭·경제지표·자산 구성·체크리스트·계약 점검)도 4종과 같은 틀 하나 —
    예전 "① 단지 고르기 · ② 내 조건 · ③ 다시 계산(도구 색 채움 버튼)" 3칸 화면과 "이렇게 써요" 안내·맨 아래 보드를 걷었다.
    절차 한 줄(lib/ai/tool-steps — 비교 "단지 · N곳" · 경제지표 "지역" · 자산 구성 "관심 단지 · N곳") · 결론 히어로·대표 그림(ResultView) ·
@@ -521,7 +522,7 @@ export function WorkbenchClient({
     setResult(null);
     const cur = pickedRef.current;
     if (cur) void loadContext(cur.id, { compareCount: next.length, force: true });
-    showToast(`${c.name}을(를) 비교에서 뺐어요`, {
+    showToast(`${withJosa(c.name, "을/를")} 비교에서 뺐어요`, {
       label: "되돌리기",
       onClick: () => {
         /* [1009 · A · 리뷰] 되돌리지 못하는 경우를 조용히 넘기지 않는다(예전: 3곳이 차 있으면 무반응) */
@@ -531,7 +532,7 @@ export function WorkbenchClient({
         }
         const now = compareTrayRef.current;
         if (now.some((x) => x.id === c.id)) {
-          showToast(`${c.name}은(는) 이미 비교에 있어요`);
+          showToast(`${withJosa(c.name, "은/는")} 이미 비교에 있어요`);
           return;
         }
         if (now.length >= 3) {

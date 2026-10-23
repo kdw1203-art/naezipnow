@@ -356,12 +356,12 @@ export function ComplexAreaMap({
         {status.similar === "ok" && similar.basis === "nearest"
           ? "주변 단지 = 가까운 순 · 비교할 실거래 없음"
           : "유사 단지 = 국토부 실거래 평당가·준공 연도가 닮은 순"}
-        {status.similar === "failed" ? " (지금 못 읽음)" : ""} · 거리는 직선 거리
+        {status.similar === "failed" ? " · 유사 단지 불러오기 실패" : ""} · 거리는 직선 거리
         {stationsFromPublic ? " · 역 = 공공데이터 전국도시철도역사정보표준데이터" : ""}
         {showOsmCredit
           ? ` · ${view.stationSource === "osm" && status.stations === "ok" ? "역·관공서" : "관공서"} © OpenStreetMap 기여자`
           : ""}
-        {status.offices === "failed" ? " · 관공서 (지금 못 읽음)" : ""}
+        {status.offices === "failed" ? " · 관공서 불러오기 실패" : ""}
       </p>
     </section>
   );

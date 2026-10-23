@@ -54,7 +54,8 @@ export function ComplexSummaryTable({
       <table className="w-full min-w-[560px] text-left t-body">
         <thead>
           <tr className="border-b border-border t-sub text-text-3">
-            <th className="py-2 font-medium">단지</th>
+            {/* [1084 · D-049] 넓은 화면에서 단지 열이 700px 까지 늘어 숫자 세 열이 오른쪽에 몰렸다 — 단지 열 44% 로 묶는다 */}
+            <th className="py-2 font-medium md:w-[44%]">단지</th>
             <th className="py-2 text-right font-medium">최근 실거래가</th>
             <th className="py-2 text-right font-medium">평균 평단가</th>
             <th className="py-2 text-right font-medium">12개월 거래</th>

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { scrollIntoViewSafely } from "@/lib/ui/scroll";
 import Link from "next/link";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 
 /* 내집나우 AI 에이전트 채팅.
    차별점(사실 우선)을 UI로 드러낸다: 답변마다 에이전트가 실제로 조회한

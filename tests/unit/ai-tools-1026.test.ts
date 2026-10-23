@@ -268,6 +268,7 @@ test("[1026→1026b] 번들 — WorkbenchClient 정적 import: StepLine · [1026
     "@/lib/client/has-session",
     "@/lib/client/human-gate",
     "@/lib/client/is-bot-ua",
+    "@/lib/format/josa", // [1084] 조사 처리(순수 함수 · 1KB 미만)
     "@/lib/format/krw",
     "next/dynamic",
     "next/link",

@@ -1,3 +1,4 @@
+import { withJosa } from "@/lib/format/josa";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -69,6 +70,9 @@ function eokCell(krw: number | null): string {
 function deltaText(pct: number | null): string {
   return stdDeltaText(pct);
 }
+
+/** [1084] 월간 리포트 지역 표 — 펼쳐 두는 행 수(나머지는 접힘) */
+const REPORT_TABLE_HEAD = 30;
 
 export async function generateMetadata({
   params,
@@ -160,7 +164,7 @@ export default async function MonthlyReportPage({
   if (top) {
     faq.push({
       q: `${label} 거래가 가장 많았던 지역은 어디인가요?`,
-      a: `${top.regionName}이(가) ${top.txCount.toLocaleString("ko-KR")}건으로 가장 많았습니다${
+      a: `${withJosa(top.regionName, "이/가")} ${top.txCount.toLocaleString("ko-KR")}건으로 가장 많았습니다${
         top.avgKrw ? `. 이 지역의 ${label} 평균 매매가는 ${eok(top.avgKrw)}입니다` : ""
       } (국토교통부 실거래 신고 기준).`,
     });
@@ -226,6 +230,36 @@ export default async function MonthlyReportPage({
     { name: "월간 실거래 리포트", url: "/reports" },
     { name: label, url: `/reports/${report.ym}` },
   ]);
+
+  /* [1084] 표 한 줄 — 위 30행과 접힌 나머지가 같은 모양 */
+  const regionRow = (r: (typeof report.rows)[number]) => {
+    /* [1081 · #16] 지역 이름 → 그 지역의 같은 달 리포트(/region/<id>/report/<yyyy-mm>) — 전국 표에서 지역 리포트로 가는 길.
+       [1084] 도 이름 접두("경기 시흥시")도 떼고 찾는다 — 같은 열에 링크와 글자가 섞여 보였다(운영 실측). 카탈로그에 없는 지역은 글자 그대로. */
+    const hub =
+      findCatalogRegionStrict(r.regionName) ??
+      findCatalogRegionStrict(r.regionName.replace(/^(서울|인천|부산|대구|광주|대전|울산|세종|경기|강원|충북|충남|전북|전남|경북|경남|제주)\s+/, ""));
+    return (
+      <tr key={r.regionName} className="border-b border-border last:border-b-0">
+        <td className="py-2.5 pr-2 font-bold text-ink break-words">
+          {hub ? (
+            <Link href={`/region/${encodeURIComponent(hub.id)}/report/${ym.slice(0, 4)}-${ym.slice(4, 6)}`} className="tap-line text-primary no-underline">
+              {r.regionName}
+            </Link>
+          ) : (
+            r.regionName
+          )}
+        </td>
+        <td className="py-2.5 text-right tabular-nums text-text-2">{r.txCount.toLocaleString("ko-KR")}건</td>
+        <td className="py-2.5 pl-2 text-right font-bold tabular-nums text-ink">{eokCell(r.avgKrw)}</td>
+        <td className="hidden py-2.5 text-right tabular-nums text-text-2 sm:table-cell">{eokCell(r.perPyeongKrw)}</td>
+        {!open && (
+          <td className="py-2.5 pl-2 text-right">
+            <Delta pct={r.deltaPct} srContext="평당가 전월보다" />
+          </td>
+        )}
+      </tr>
+    );
+  };
 
   return (
     <PageShell breadcrumb={`월간 실거래 리포트 › ${label}`}>
@@ -374,37 +408,24 @@ export default async function MonthlyReportPage({
                 </tr>
               </thead>
               <tbody>
-                {report.rows.map((r) => {
-                  /* [1081 · #16] 지역 이름 → 그 지역의 같은 달 리포트(/region/<id>/report/<yyyy-mm>) — 전국 표(249행)에서 지역 리포트
-                     654쪽으로 가는 길. 카탈로그에 없는 지역은 글자 그대로. */
-                  const hub = findCatalogRegionStrict(r.regionName) ?? findCatalogRegionStrict(r.regionName.replace(/^(서울|인천|부산|대구|광주|대전|울산)\s+/, ""));
-                  return (
-                  <tr key={r.regionName} className="border-b border-border last:border-b-0">
-                    <td className="py-2.5 pr-2 font-bold text-ink break-words">
-                      {hub ? (
-                        <Link href={`/region/${encodeURIComponent(hub.id)}/report/${ym.slice(0, 4)}-${ym.slice(4, 6)}`} className="tap-line text-primary no-underline">
-                          {r.regionName}
-                        </Link>
-                      ) : (
-                        r.regionName
-                      )}
-                    </td>
-                    <td className="py-2.5 text-right tabular-nums text-text-2">
-                      {r.txCount.toLocaleString("ko-KR")}건
-                    </td>
-                    <td className="py-2.5 pl-2 text-right font-bold tabular-nums text-ink">{eokCell(r.avgKrw)}</td>
-                    <td className="hidden py-2.5 text-right tabular-nums text-text-2 sm:table-cell">{eokCell(r.perPyeongKrw)}</td>
-                    {!open && (
-                      <td className="py-2.5 pl-2 text-right">
-                        <Delta pct={r.deltaPct} srContext="평당가 전월보다" />
-                      </td>
-                    )}
-                  </tr>
-                  );
-                })}
+                {report.rows.slice(0, REPORT_TABLE_HEAD).map((r) => regionRow(r))}
               </tbody>
             </table>
           </div>
+          {/* [1084] 251행을 한 번에 그려 쪽이 13,266px 였다(운영 실측 · 표 중간에서는 길잡이가 없다). 거래량 상위 30행만 펼치고 나머지는
+              접는다 — 행은 HTML 에 그대로 있어(details) 검색엔진·찾기(Ctrl+F)가 읽는다. */}
+          {report.rows.length > REPORT_TABLE_HEAD && (
+            <details className="mt-2">
+              <summary className="cursor-pointer t-sub font-bold text-primary">
+                나머지 {(report.rows.length - REPORT_TABLE_HEAD).toLocaleString("ko-KR")}개 지역 보기
+              </summary>
+              <div data-tone="blue" className="lq-panel mt-2">
+                <table className="w-full text-left t-body">
+                  <tbody>{report.rows.slice(REPORT_TABLE_HEAD).map((r) => regionRow(r))}</tbody>
+                </table>
+              </div>
+            </details>
+          )}
           {/* [1063] 표 아래 기준 세 문장 → 접기 뒤(문장·링크 그대로) */}
           <Fineprint className="mt-3" label="기준 · 집계 방법">
             평균가·평당가는 면적·타입 구분 없는 단순 평균.{" "}

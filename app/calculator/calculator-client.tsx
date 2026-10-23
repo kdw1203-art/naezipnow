@@ -5,7 +5,6 @@ import Link from "next/link";
 import nextDynamic from "next/dynamic";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
-import { EmptyState } from "@/app/components/ui/EmptyState";
 import { LoadingHint } from "@/app/components/ui/LoadingHint";
 import { Segmented } from "@/app/components/ui/Segmented";
 import { Explain } from "@/app/components/explain/Explain";
@@ -958,15 +957,19 @@ export function CalculatorClient({ mortgage, after }: { mortgage: MortgageRatesP
                   </div>
                 </div>
               ) : (
-                <EmptyState
-                  icon="bar"
-                  title="은행별 공시 금리 미제공"
-                  desc="위 계산 = 직접 입력한 가정 금리 기준"
-                  action={{
-                    label: "금융감독원 ‘금융상품 한눈에’에서 비교 ↗",
-                    href: "https://finlife.fss.or.kr",
-                  }}
-                />
+                /* [1084] 큰 그림 + 채운 파랑 외부 단추의 빈 상태가 결과 열의 주인공이었다(운영 실측) — 사실 두 줄 + 글자 링크로 낮춘다 */
+                <div className="rounded-xl bg-bg px-4 py-3">
+                  <p className="m-0 t-body font-bold text-ink">은행별 공시 금리 없음</p>
+                  <p className="m-0 mt-1 t-sub text-text-3">위 계산 = 직접 입력한 가정 금리 기준</p>
+                  <a
+                    href="https://finlife.fss.or.kr"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="tap-line mt-1 inline-block t-sub font-bold text-primary no-underline"
+                  >
+                    금융감독원 ‘금융상품 한눈에’에서 비교 ↗
+                  </a>
+                </div>
               )}
             </div>
 

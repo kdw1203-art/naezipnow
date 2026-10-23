@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { HScroll } from "@/app/components/HScroll";
+import { formatKstDateTime } from "@/lib/format/kst";
 import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";
 import { APPLYHOME_REGIONS } from "@/lib/applyhome/regions";
 import { competitionLabel, houseTypeLabel } from "@/lib/applyhome/normalize";
@@ -90,10 +91,10 @@ const EMPTY_STATE: ViewState = {
 };
 
 /** "2026-07-27T09:12:33Z" → "07-27 09:12". 파싱 실패 시 앞부분만 그대로 보여준다. */
+/* [1084] ISO 문자열의 시각을 그대로 잘라 UTC 로 보였고("10-21 12:41" = 한국 21:41) 같은 화면의 다른 시각("2026.10.21 19:56")과
+   꼴도 달랐다(운영 실측) — 한국 시간 · 사이트 표준 꼴 */
 function fetchedLabel(iso: string): string {
-  const m = /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})/.exec(iso);
-  if (!m) return iso.slice(0, 16);
-  return `${m[2]}-${m[3]} ${m[4]}:${m[5]}`;
+  return formatKstDateTime(iso) || iso.slice(0, 16);
 }
 
 type SortKey = "default" | "rate" | "supply";
@@ -343,7 +344,7 @@ export function ApplySearchClient({ initial }: Props) {
       <div
         role="group"
         aria-label="지역 필터"
-        className="rise-in-1 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1"
+        className="rise-in-1 -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1 md:flex-wrap md:overflow-visible"
       >
         {APPLYHOME_REGIONS.map((r) => (
           <button

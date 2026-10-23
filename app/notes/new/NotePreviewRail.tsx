@@ -66,7 +66,7 @@ export type NotePreviewRailProps = {
   checklistDone: number;
   checklistTotal: number;
   step: NoteStep;
-  /** 다음 단계의 짧은 이름(어디·무엇·기록) — 마지막 단계면 null */
+  /** 다음 단계의 짧은 이름(위치·체크·기록 · [1084] 예전 "어디·무엇" 구어 낱말) — 마지막 단계면 null */
   nextStepShort: string | null;
   isEdit: boolean;
   saving: boolean;

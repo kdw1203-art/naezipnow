@@ -3,7 +3,8 @@ import Link from "next/link";
 import { PageShell } from "@/app/components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { ErrorState, EmptyState } from "@/app/components/ui/EmptyState";
-import { buildApplyCalendar, weekSlugFor } from "@/lib/applyhome/calendar";
+import { buildApplyCalendar, parseWeekSlug, weekSlugFor } from "@/lib/applyhome/calendar";
+import { formatKstDateTime } from "@/lib/format/kst";
 import { seoAlternates } from "@/lib/seo/alternates";
 
 /* [개선 #17] 이번 주 청약 캘린더 — 접수 시작·마감을 날짜별로.
@@ -37,6 +38,14 @@ function todayKst(): string {
   return new Date(Date.now() + 9 * 3600_000).toISOString().slice(0, 10);
 }
 
+/** [1084] "2026-w41" → "10.05~10.11 일정" */
+function weekChipLabel(slug: string): string {
+  const r = parseWeekSlug(slug);
+  if (!r) return `${slug} 일정`;
+  const md = (d: string) => `${d.slice(5, 7)}.${d.slice(8, 10)}`;
+  return `${md(r.start)}~${md(r.end)} 일정`;
+}
+
 export default async function ApplyCalendarPage() {
   const cal = await buildApplyCalendar();
   const today = todayKst();
@@ -45,7 +54,8 @@ export default async function ApplyCalendarPage() {
     <PageShell breadcrumb="동네이야기 › 청약 센터 › 청약 캘린더" title="청약 캘린더">
       {/* [1015] 데스크톱 2단 — 760px 한 열 옆이 비던 화면(브리프 규칙 F). 오른쪽 340px 레일 = 관련 링크 · 출처 · 광고 1.
           폰은 한 열, 레일은 본문 아래. */}
-      <div className="mx-auto grid w-full max-w-[1080px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
+      {/* [1084 · D-053] 가운데 정렬(mx-auto) → 왼쪽 정렬 — 크럼·제목(PageShell 왼쪽)과 본문의 왼쪽 선을 맞춘다 */}
+      <div className="grid w-full max-w-[1080px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div className="min-w-0">
         <div className="rise-in mb-4 flex flex-wrap items-center gap-2 max-md:mb-3">
           {/* [1015] 안내문 → 사실 한 줄(브리프 규칙 D) */}
@@ -114,9 +124,9 @@ export default async function ApplyCalendarPage() {
             <p className="text-center t-sub text-text-3">
               {/* [994] 저장소(매일 적재)면 기준 시각을, 라이브면 그 사실을 적는다 */}
               {cal.source === "store"
-                ? `${new Date(cal.fetchedAt).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })} 기준 · 매일 갱신`
+                ? `${formatKstDateTime(cal.fetchedAt)} 기준 · 매일 갱신` /* [1084] "10. 21. 오후 07:56" → "2026.10.21 19:56"(사이트 표준 · 운영 실측) */
                 : "청약홈 즉시 조회 기준"}
-              {" "}· 정확한 일정·자격은 청약홈 공고 원문을 확인하세요
+              {" "}· 정확한 일정·자격 기준 = 청약홈 공고 원문
             </p>
           </div>
         )}
@@ -128,7 +138,8 @@ export default async function ApplyCalendarPage() {
               href={`/apply/calendar/${s}`}
               className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline"
             >
-              {s === weekSlugFor(0) ? "이번 주 아카이브" : `${s} 일정`}
+              {/* [1084] 내부 주소 꼴("2026-w41 일정") → 날짜 범위(운영 실측) */}
+              {s === weekSlugFor(0) ? "이번 주 아카이브" : weekChipLabel(s)}
             </Link>
           ))}
         </div>
@@ -164,7 +175,7 @@ export default async function ApplyCalendarPage() {
       </aside>
       </div>
       {/* [1015] 광고 — 페이지 끝 1곳(브리프 규칙 G: 첫 화면 밖). 레일은 짧아 데스크톱 첫 화면 안에 들어오므로 본문 뒤에 둔다 */}
-      <AdZone placement="page_bottom" seed={0} plan={null} className="mx-auto mt-6 w-full max-w-[1080px] max-md:mt-4" />
+      <AdZone placement="page_bottom" seed={0} plan={null} className="mt-6 w-full max-w-[1080px] max-md:mt-4" />
     </PageShell>
   );
 }
@@ -207,11 +218,11 @@ function CalendarRow({
       href={it.portalUrl}
       target="_blank"
       rel="noopener noreferrer"
-      className="flex items-center gap-2 rounded-xl bg-bg px-3 py-2 no-underline"
+      className="flex min-h-10 items-center gap-2 rounded-xl bg-bg px-3 py-2 no-underline"
     >
       {body}
     </a>
   ) : (
-    <div className="flex items-center gap-2 rounded-xl bg-bg px-3 py-2">{body}</div>
+    <div className="flex min-h-10 items-center gap-2 rounded-xl bg-bg px-3 py-2">{body}</div>
   );
 }

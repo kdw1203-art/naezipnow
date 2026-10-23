@@ -13,8 +13,8 @@ export default function Error({
   return (
     <AreaError
       area="notes"
-      title="임장노트 화면에 문제가 생겼어요"
-      desc="작성 중이던 내용은 이 기기에 남아 있을 수 있어요. 노트 쓰기로 돌아가면 이어서 쓸 수 있어요."
+      title="임장노트 화면 불러오기 실패"
+      desc="작성 중이던 내용은 이 기기 임시저장에 남음 · 노트 쓰기에서 이어 쓰기"
       error={error}
       reset={reset}
       links={[{ href: "/notes/new", label: "노트 쓰기" }, { href: "/notes", label: "공개 노트" }, { href: "/", label: "홈" }]}

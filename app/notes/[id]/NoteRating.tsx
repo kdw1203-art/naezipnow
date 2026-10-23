@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import {
   applyMyRating,

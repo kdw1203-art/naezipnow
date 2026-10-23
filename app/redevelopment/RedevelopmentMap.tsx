@@ -16,6 +16,7 @@ import {
 } from "@/lib/redevelopment/types";
 import { buildRedevInfoHtml, redevDetailHref } from "@/lib/redevelopment/map-layer";
 import { Icon } from "@/app/components/Icon";
+import { HScroll } from "@/app/components/HScroll";
 import { TypeFilterPanel } from "./TypeFilterPanel";
 import { DataSourceCard } from "./DataSourceCard";
 import { NearbyPanel } from "./NearbyPanel";
@@ -302,7 +303,9 @@ export function RedevelopmentMap({
         </div>
         {topSigungu.length > 0 ? (
           <>
-            <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+            {/* [1084 · 폰 실측] 칩 줄(942px)이 틀(375px) 안에서 잘리는데 흐림이 없었다 → HScroll(오른쪽 흐림 · 끝이면 걷힘) · 넓은 화면은 줄바꿈 */}
+            <HScroll hint={null} className="-mx-1 px-1 pb-1">
+            <div className="flex w-max gap-1.5 md:w-auto md:flex-wrap">
               <button
                 type="button"
                 onClick={() => handleSigunguClick(null)}
@@ -331,6 +334,7 @@ export function RedevelopmentMap({
                 </button>
               ))}
             </div>
+            </HScroll>
             <p className="t-caption text-text-3">
               {/* [1028] 칩 숫자 설명 한 줄 — 예전에는 괄호와 "전체 데이터에는 …" 문장까지 세 토막이었다 */}
               칩 숫자 = 조건에 맞는 구역 수

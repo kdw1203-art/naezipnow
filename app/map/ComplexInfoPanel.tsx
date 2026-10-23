@@ -12,7 +12,8 @@ import { Icon } from "@/app/components/Icon";
 import { formatEokMan } from "@/lib/format/eok-man";
 import Link from "next/link";
 import { useToast } from "@/app/components/toast/ToastProvider";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
+import { clearPendingWatch, PENDING_WATCH_ACTION, savePendingWatch, takePendingWatch } from "@/lib/client/pending-watch";
 import { regionIdForName } from "@/lib/region/catalog";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
 import { formatKrwManwon, formatKrwWon } from "@/lib/format/krw";
@@ -335,15 +336,24 @@ function WatchlistToggle({
   /* [1009 · C] 켤 때 하트가 한 번 튄다(키를 바꿔 다시 재생 — njn-pop-once, 모션 최소화면 꺼짐) */
   const [pop, setPop] = useState(0);
   const busyRef = useRef(false);
+  /* 응답을 받은 뒤 부를 최신 apply(렌더마다 새 클로저) */
+  const applyRef = useRef<((target: boolean, opts?: { undo?: boolean; replay?: boolean }) => Promise<void>) | null>(null);
 
-  const askSignup = () =>
+  /* [1086 · A3] 가입 뒤 마저 담기 — 단지 화면(hub-client)과 같은 기록(lib/client/pending-watch)을 남기고, 돌아올 곳은 이 단지를 연 지도
+     (/map?complexId= — 패널이 다시 열린다). 예전엔 callbackUrl "/map" 이라 가입 뒤 빈 지도로 돌아와 어느 단지였는지도 사라졌다 */
+  const askSignup = () => {
+    savePendingWatch(complexId, complexName);
     promptSignup({
-      action: "watchlist_add",
+      action: PENDING_WATCH_ACTION,
       title: "관심 단지로 저장할까요?",
       benefit:
         "가입하면 이 단지의 국토부 실거래가가 새로 등록될 때 알림을 받고, 임장노트와 함께 모아볼 수 있어요.",
-      callbackUrl: "/map",
+      callbackUrl: `/map?complexId=${encodeURIComponent(complexId)}`,
+      /* [1052] 창을 닫으면(가입 거절) 마저 담기 기록도 버린다 */
+      onDismiss: () => clearPendingWatch(),
     });
+  };
+  const replayedRef = useRef(false);
 
   const disabled = !complexId || complexId.startsWith("mock-");
 
@@ -356,7 +366,13 @@ function WatchlistToggle({
     fetch(`/api/me/watchlist?complexId=${encodeURIComponent(complexId)}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
-        if (!cancelled && j) setWatching(Boolean(j.watching));
+        if (cancelled || !j) return;
+        setWatching(Boolean(j.watching));
+        /* [1086 · A3] 로그인 상태(응답 200)로 이 단지에 돌아왔고 가입 전에 담기를 눌렀으면 한 번만 담는다 */
+        if (!j.watching && !replayedRef.current && takePendingWatch(complexId)) {
+          replayedRef.current = true;
+          void applyRef.current?.(true, { replay: true });
+        }
       })
       .catch(() => {});
     return () => {
@@ -367,7 +383,7 @@ function WatchlistToggle({
   if (disabled) return null;
 
   /* [1009 · C] 뺄 때 확인 없이 바로 빼고 토스트에 "되돌리기"(실제 API 로 다시 담는다) — 허브 관심 버튼과 같은 흐름 */
-  async function apply(target: boolean, opts: { undo?: boolean } = {}) {
+  async function apply(target: boolean, opts: { undo?: boolean; replay?: boolean } = {}) {
     if (busyRef.current) return;
     busyRef.current = true;
     setBusy(true);
@@ -380,7 +396,8 @@ function WatchlistToggle({
           })
         : await fetch(`/api/me/watchlist?complexId=${encodeURIComponent(complexId)}`, { method: "DELETE" });
       if (res.status === 401) {
-        askSignup();
+        /* 마저 담기 중 세션이 끊겼으면 가입 창을 또 띄우지 않는다 */
+        if (!opts.replay) askSignup();
         return;
       }
       const j = (await res.json().catch(() => ({}))) as { error?: string; code?: string };
@@ -400,7 +417,13 @@ function WatchlistToggle({
       setWatching(target);
       if (target) {
         setPop((n) => n + 1);
-        showToast(opts.undo ? "다시 관심 단지에 담았어요" : "관심 단지에 담았어요. 실거래 신고 알림을 받아요.");
+        showToast(
+          opts.undo
+            ? "다시 관심 단지에 담았어요"
+            : opts.replay
+              ? "가입 전에 고른 단지 · 관심 단지에 담김"
+              : "관심 단지에 담았어요. 실거래 신고 알림을 받아요.",
+        );
       } else {
         showToast("관심 단지에서 뺐어요", {
           label: "되돌리기",
@@ -416,6 +439,8 @@ function WatchlistToggle({
       setBusy(false);
     }
   }
+
+  applyRef.current = apply;
 
   return (
     <button

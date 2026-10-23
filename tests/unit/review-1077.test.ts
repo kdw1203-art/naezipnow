@@ -16,7 +16,7 @@ const read = (p: string) => readFileSync(p, "utf8");
 
 test("R1 헤더 회원가입 — 네이비 채움 · 화면의 채움 파랑은 그 화면 것 하나", () => {
   const h = read("app/components/HeaderAuth.tsx");
-  assert.match(h, /href="\/signup"\s+prefetch=\{false\}\s+className="btn-navy press inline-flex min-h-10 shrink-0/);
+  assert.match(h, /href=(?:"\/signup"|\{signupHref\})\s+prefetch=\{false\}\s+className="btn-navy press inline-flex min-h-10 shrink-0/);
   assert.doesNotMatch(h, /btn-primary/);
   const css = read("app/globals.css");
   const at = css.indexOf("[1077 · 헤더 회원가입 네이비]");

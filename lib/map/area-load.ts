@@ -6,6 +6,19 @@ import { bboxForRadius } from "@/lib/map/geo-haversine";
 import { logger } from "@/lib/log";
 import { mergeStationRows } from "@/lib/poi/parse";
 import { stationSourceFor, type StationSource } from "@/lib/map/area-parts";
+import { kvAvailable, kvDel, kvGet, kvIncrWindow, kvSet } from "@/lib/kv/rest";
+import {
+  OSM_BREAKER_FAIL_KEY,
+  OSM_BREAKER_MESSAGE,
+  OSM_BREAKER_OPEN_KEY,
+  OSM_BREAKER_OPEN_SEC,
+  OSM_BREAKER_WINDOW_SEC,
+  memoryBreakerFail,
+  memoryBreakerOk,
+  memoryBreakerOpen,
+  newMemoryBreaker,
+  shouldOpenBreaker,
+} from "@/lib/map/osm-breaker";
 import {
   AREA_RADIUS_M,
   overpassFailure,
@@ -145,7 +158,43 @@ export const loadAreaOsmCached = unstable_cache(
   { revalidate: 2_592_000 },
 );
 
+/* [1085] 차단기 — 규칙은 lib/map/osm-breaker(순수). 메모리 하한 + 공유 KV(있으면) */
+const osmMemBreaker = newMemoryBreaker();
+
+async function osmBreakerOpen(): Promise<boolean> {
+  const now = Date.now();
+  if (memoryBreakerOpen(osmMemBreaker, now)) return true;
+  if (!kvAvailable()) return false;
+  const v = await kvGet(OSM_BREAKER_OPEN_KEY);
+  if (v) {
+    /* 다른 인스턴스가 연 차단 — 이 인스턴스도 1분 동안은 KV 를 다시 묻지 않는다 */
+    osmMemBreaker.openUntil = now + 60_000;
+    return true;
+  }
+  return false;
+}
+
+async function osmBreakerFail(): Promise<void> {
+  const openedHere = memoryBreakerFail(osmMemBreaker, Date.now());
+  if (!kvAvailable()) {
+    if (openedHere) logger.warn("[area-map] OpenStreetMap 차단기 열림(인스턴스) — 15분 동안 묻지 않음");
+    return;
+  }
+  const n = await kvIncrWindow(OSM_BREAKER_FAIL_KEY, OSM_BREAKER_WINDOW_SEC);
+  if (shouldOpenBreaker(n)) {
+    await kvSet(OSM_BREAKER_OPEN_KEY, "1", OSM_BREAKER_OPEN_SEC);
+    logger.warnSampled("osm-breaker-open", `[area-map] OpenStreetMap 차단기 열림 — 10분 창 실패 ${n}회 · 15분 동안 묻지 않음`);
+  }
+}
+
+async function osmBreakerOk(): Promise<void> {
+  memoryBreakerOk(osmMemBreaker);
+  if (kvAvailable()) await kvDel([OSM_BREAKER_FAIL_KEY]);
+}
+
 export async function loadAreaOsm(center: { lat: number; lng: number }): Promise<{ stations: AreaStation[]; offices: AreaOffice[] }> {
+  /* [1085] 연속 실패 중이면 9초를 기다리지 않고 바로 실패(호출부가 missing "offices" — "없음"과 구분) */
+  if (await osmBreakerOpen()) throw new Error(OSM_BREAKER_MESSAGE);
   const body = new URLSearchParams({ data: overpassQuery(center.lat, center.lng) }).toString();
   const startedAt = Date.now();
   const budget = AbortSignal.timeout(OVERPASS_BUDGET_MS);
@@ -169,11 +218,14 @@ export async function loadAreaOsm(center: { lat: number; lng: number }): Promise
       /* [1052] 200 이어도 서버가 도중에 멈췄으면(remark) 실패 — 던지므로 위 30일 캐시에 남지 않는다 */
       const failure = overpassFailure(json);
       if (failure) throw new Error(failure);
-      return parseOverpass((json as { elements: OsmElement[] }).elements, center);
+      const parsed = parseOverpass((json as { elements: OsmElement[] }).elements, center);
+      await osmBreakerOk();
+      return parsed;
     } catch (e) {
       lastErr = e;
     }
   }
+  await osmBreakerFail();
   throw new Error(
     `OpenStreetMap 조회 실패(${Date.now() - startedAt}ms): ${lastErr instanceof Error ? lastErr.message : String(lastErr ?? "시간 한도")}`,
   );

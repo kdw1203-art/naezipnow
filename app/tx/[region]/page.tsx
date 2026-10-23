@@ -143,7 +143,7 @@ function buildRegionFaq(region: TxRegionSummary, range: string | null): FaqItem[
   if (region.txCount > 0) {
     items.push({
       q: `${region.name} 아파트 실거래는 몇 건인가요?`,
-      a: `국토교통부 신고 기준${range ? ` ${range}` : ""} ${region.name} 아파트 매매 실거래는 ${region.txCount.toLocaleString("ko-KR")}건, 거래 단지는 ${region.complexCount.toLocaleString("ko-KR")}곳입니다. 매물 호가가 아닌 신고된 실거래만 집계한 값입니다.`,
+      a: `국토교통부 신고 기준${range ? ` ${range}` : ""} ${region.name} 아파트 매매 실거래는 ${region.txCount.toLocaleString("ko-KR")}건, 거래 단지는 ${region.complexCount.toLocaleString("ko-KR")}곳 이상입니다. 매물 호가가 아닌 신고된 실거래만 집계한 값입니다.`,
     });
   }
   const topArea = [...region.areaCells].sort((a, b) => b.txCount - a.txCount)[0];
@@ -245,7 +245,7 @@ export default async function TxRegionPage({
       <p className="rise-in mb-4 t-sub text-text-2 max-md:mb-3">
         <strong className="text-ink">{region.txCount.toLocaleString("ko-KR")}건</strong>
         {range && ` · ${range} 신고 기준`} · 단지{" "}
-        <strong className="text-ink">{region.complexCount.toLocaleString("ko-KR")}곳</strong> · 국토교통부 실거래 · 매물 호가 아님
+        <strong className="text-ink">{region.complexCount.toLocaleString("ko-KR")}곳 이상</strong> · 국토교통부 실거래 · 매물 호가 아님
       </p>
 
       {/* [1015 · 규칙 F·G] 데스크톱 2단 — 본문 + 340px 레일(같은 시/도 다른 지역 · 관련 화면 · 데이터 출처 · 광고 1). 폰은 한 열, 광고는 끝 1. */}
@@ -265,7 +265,7 @@ export default async function TxRegionPage({
                 key={d.dong}
                 prefetch={false}
                 href={dongPath(region.name, d.dong)}
-                className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
+                className="tile inline-flex min-h-10 items-center rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink md:min-h-8"
               >
                 {d.dong}
                 <span className="ml-1 font-medium text-text-3">{d.recentTradeCount.toLocaleString("ko-KR")}건</span>

@@ -285,7 +285,8 @@ test("trackNoteSaved / trackNewsletterOptIn — gtag 가 없으면 요청 0, 있
   assert.equal(trackNoteSaved({ mode: "create" }, { gtag: () => { throw new Error("x"); } }), false);
   assert.equal(calls.length, 3);
   /* 설정 화면은 켤 때만 보낸다 */
-  assert.match(read("app/my/settings/SettingsClient.tsx"), /if \(next\) trackNewsletterOptIn\("settings"\)/);
+  /* [1086] 켜는 순간에만 모듈을 받는다(번들 상한) — 부르는 값은 그대로 "settings" */
+  assert.match(read("app/my/settings/SettingsClient.tsx"), /if \(next\) void import\("@\/lib\/analytics\/events"\)\.then\(\(\{ trackNewsletterOptIn \}\) => trackNewsletterOptIn\("settings"\)\)/);
 });
 
 /* ---------- 8. 404 — 검색창·인기 경로·정적 ---------- */

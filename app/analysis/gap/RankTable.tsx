@@ -48,11 +48,11 @@ function fmtPeriod(period: string): string {
 }
 
 /** 공표 지연을 사람 말로 — "적재가 멈춘 것"과 "원래 늦게 나오는 것"을 가른다. */
+/* [1084 · D-040] 늦지 않은 줄(최신 · 공표 주기상 최신)은 적지 않는다 — 모든 줄에 "최신"이 붙어 '기준' 칸이 매 줄 두 줄로 꺾였다.
+   지연(3개월 이상)만 적어 눈에 띄게 한다. */
 function periodNote(period: string): string | null {
   const n = monthsBehind(period);
-  if (n === null) return null;
-  if (n <= 1) return "최신";
-  if (n === 2) return "공표 주기상 최신";
+  if (n === null || n <= 2) return null;
   return `${n}개월 지연`;
 }
 
@@ -163,7 +163,7 @@ export function RankTable({
                   </td>
                   <td className="whitespace-nowrap py-2 pr-3 text-right text-text-3">
                     {fmtPeriod(r.period)} · {r.source.toUpperCase()}
-                    {periodNote(r.period) && <span className="t-caption block text-text-3">{periodNote(r.period)}</span>}
+                    {periodNote(r.period) && <span className="t-caption block font-bold text-warning">{periodNote(r.period)}</span>}
                   </td>
                   <td className="py-1.5 text-right">
                     <Link

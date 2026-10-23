@@ -1,7 +1,8 @@
 "use client";
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Icon } from "./Icon";
 import { useTabBarCompact } from "@/lib/client/use-scroll-state";
@@ -17,7 +18,8 @@ import { tabBarActive, TOWN_TAB_EXCEPT_PREFIXES, TOWN_TAB_EXTRA_PREFIXES } from 
  *  4종)·좌측 내비·모바일 전체 메뉴·홈 AI 패널에 그대로 있다. 거꾸로 동네이야기는
  *  모바일에서 ☰ 를 열어야만 닿는 유일한 대분류였다.
  *  [970 · A-19] 셸에서 기본 프리페치를 남긴 곳은 이 5탭뿐 — 모바일에서 다음 이동 확률이
- *  가장 높은 링크다. 헤더·푸터·메뉴·알림 링크는 전부 prefetch={false}. */
+ *  가장 높은 링크다. 헤더·푸터·메뉴·알림 링크는 전부 prefetch={false}.
+ *  [1085] 5탭도 기본 프리페치를 끄고 손이 닿을 때 · 첫 입력 뒤 쉬는 시간에 받는다(아래 TAB_IDLE_PREFETCH). */
 const TABS: Array<{
   label: string;
   icon: string;
@@ -45,8 +47,47 @@ const TABS: Array<{
  * 모바일 실측 4(2026-08-02): 중앙 기록(+) 원이 스크롤 중에도 본문 위에 떠
  * 콘텐츠를 가렸다. 아래로 읽어 내려가는 동안(=콘텐츠 소비 중)은 바를 살짝
  * 내리고 반투명하게 접고, 위로 스크롤(=이동 의도)하면 즉시 복원한다. */
+/* [1085 · 속도·비용] 탭 다섯의 기본 프리페치(화면에 보이면 곧바로)를 끄고 "뜻이 보일 때"로 바꾼다.
+   운영 실측(2026-10-22 · 폰 Lighthouse · 단지 화면): 탭바가 늘 화면 안이라 모든 화면이 첫 로드 직후 홈·기록·동네·마이의
+   RSC 를 받았다 — 압축 전 123 + 39 + 91KB(정적 셋) + /my(개인화 · 캐시 없음 → 화면마다 함수 1회). 이 프리페치를 막으면
+   TBT 1,860 → 1,550ms · 전송 −66KB. 규칙: ① 손가락·마우스가 탭에 닿는 순간(touchstart·pointerenter·focus) 그 탭을 받는다
+   (마이 포함 — 누르기 직전 1회) ② 정적 탭(홈·지도·기록·동네)은 첫 스크롤·터치 뒤 또는 15초 뒤 쉬는 시간에 미리 받는다
+   (이동 속도는 예전과 같다) — 마이는 ①만. */
+const TAB_IDLE_PREFETCH = ["/", "/map", "/notes/new", "/town"] as const;
+const TAB_PREFETCH_WAKE = ["scroll", "pointerdown", "touchstart", "keydown"] as const;
+const TAB_PREFETCH_FALLBACK_MS = 15_000;
+
 export function TabBar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    /* 탭바는 폰(md 미만)에서만 보인다 — 넓은 화면에서는 예전처럼 아무것도 미리 받지 않는다(숨은 링크는 프리페치되지 않았다) */
+    if (typeof window.matchMedia === "function" && !window.matchMedia("(max-width: 767px)").matches) return;
+    let done = false;
+    let timer = 0;
+    const run = () => {
+      if (done) return;
+      done = true;
+      for (const ev of TAB_PREFETCH_WAKE) window.removeEventListener(ev, run);
+      window.clearTimeout(timer);
+      const go = () => {
+        for (const href of TAB_IDLE_PREFETCH) if (href !== pathname) router.prefetch(href);
+      };
+      const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+      if (w.requestIdleCallback) w.requestIdleCallback(go, { timeout: 4000 });
+      else window.setTimeout(go, 1500);
+    };
+    for (const ev of TAB_PREFETCH_WAKE) window.addEventListener(ev, run, { passive: true, once: true });
+    timer = window.setTimeout(run, TAB_PREFETCH_FALLBACK_MS);
+    return () => {
+      done = true;
+      for (const ev of TAB_PREFETCH_WAKE) window.removeEventListener(ev, run);
+      window.clearTimeout(timer);
+    };
+  }, [router, pathname]);
+
+  const intent = (href: string) => () => router.prefetch(href);
   const isActive = (tab: (typeof TABS)[number]) => tabBarActive(tab.href, pathname, tab.extra, tab.except);
 
   /* [968 · 12] 접기 판정은 공용 스크롤 상태(리스너 하나·rAF)에서 받는다 — 규칙(아래로
@@ -75,6 +116,10 @@ export function TabBar() {
             <Link
               key={tab.label}
               href={tab.href}
+              prefetch={false}
+              onTouchStart={intent(tab.href)}
+              onPointerEnter={intent(tab.href)}
+              onFocus={intent(tab.href)}
               aria-label={tab.label}
               className="flex flex-col items-center"
             >
@@ -110,6 +155,10 @@ export function TabBar() {
             <Link
               key={tab.label}
               href={tab.href}
+              prefetch={false}
+              onTouchStart={intent(tab.href)}
+              onPointerEnter={intent(tab.href)}
+              onFocus={intent(tab.href)}
               aria-current={isActive(tab) ? "page" : undefined}
               /* [968 · 34] 탭 한 칸 = py 6 + 아이콘 20 + 간격 2 + 글자 12 + py 6 = 46px
                  (예전 py-1 은 42px 로 44px 터치 하한 미달). 바는 4px 자라 56px —

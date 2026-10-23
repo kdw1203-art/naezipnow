@@ -37,7 +37,10 @@ export async function GET(req: Request) {
       osm = await loadAreaOsmCached(center.lat, center.lng);
     } catch (e) {
       missing.push(...(withStations ? (["stations", "offices"] as const) : (["offices"] as const)));
-      logger.warn("[area-map] OSM 실패", { message: String(e) });
+      /* [1085] 차단기가 열린 동안의 즉시 실패는 1분 1건만(같은 문장이 요청마다 쌓이지 않게) */
+      const msg = String(e);
+      if (msg.includes("일시 중단")) logger.warnSampled("area-osm-paused", "[area-map] OSM 일시 중단", { message: msg });
+      else logger.warn("[area-map] OSM 실패", { message: msg });
     }
     data = {
       part,

@@ -38,7 +38,6 @@ const PushSubscribe = nextDynamic(() => import("@/components/PushSubscribe").the
   loading: () => <div aria-busy="true" className="h-10" />,
 });
 import { AccountFactsCards } from "./AccountFacts";
-import { trackNewsletterOptIn } from "@/lib/analytics/events";
 
 /* 설정 — 진짜 설정만 유지, 네비게이션성 항목 제거.
    섹션: 계정(프로필·비밀번호·테마·구독·연결된 로그인·가입일·데이터 내보내기·로그아웃·탈퇴) ·
@@ -143,13 +142,13 @@ const PREF_GROUPS: {
         key: "pushAttendance",
         label: "출석 리마인드",
         /* [1056 · A6] "저녁" → 실제 실행 시각(etl.yml alerts 잡 06:00 UTC = 15:00 KST) */
-        desc: "오늘 출석을 아직 안 했으면 매일 오후(15시쯤) 1회 (기본 켜짐)",
+        desc: "오늘 출석을 아직 안 했으면 매일 15시경 · 1회 (기본 켜짐)",
       },
       {
         key: "pushWeeklyDigest",
         label: "주간 다이제스트",
         /* [1056 · A6] "저녁 · 기본 꺼짐" → 월요일 오후(15시쯤) · 기본 켜짐(DEFAULT_PREFS.pushWeeklyDigest=true) */
-        desc: "매주 월요일 오후(15시쯤), 최근 7일 뉴스·시세 요약 1회 (기본 켜짐)",
+        desc: "매주 월요일 15시경 · 최근 7일 뉴스·시세 요약 1회 (기본 켜짐)",
       },
     ],
   },
@@ -576,7 +575,8 @@ function PrivacyTab() {
                 void setPref("emailMarketing", next);
                 void consents.patch({ marketing: next });
                 /* [1007 · P2] GA4 newsletter_opt_in — 켤 때만(동의 게이트 뒤에서만 전송, 실패 무시) */
-                if (next) trackNewsletterOptIn("settings");
+                /* [1086] 계측 모듈은 켜는 순간에만 받는다(노트 쓰기와 같은 방식) — 이 화면은 미등재 상한 495KB 에 0.4KB 남아 있었다 */
+                if (next) void import("@/lib/analytics/events").then(({ trackNewsletterOptIn }) => trackNewsletterOptIn("settings")).catch(() => {});
               }}
               className="flex w-full items-center justify-between border-b border-divider py-[13px] text-left"
             >

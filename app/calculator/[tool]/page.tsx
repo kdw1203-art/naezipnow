@@ -36,7 +36,8 @@ export default async function CalculatorToolPage({ params }: { params: Promise<{
   if (!t) redirect("/calculator");
   return (
     <PageShell breadcrumb={`투자 도구 › ${t.label}`} title={t.label}>
-      <div className="mx-auto w-full max-w-[640px]">
+      {/* [1084 · D-057] 가운데 정렬(mx-auto) → 왼쪽 정렬 — 제목·크럼(PageShell 왼쪽)과 본문의 왼쪽 선이 어긋났다 */}
+      <div className="w-full max-w-[640px]">
         <CalculatorNav current={`/calculator/${t.id}`} />
         {/* [1015 · 규칙 B] 소개 한 줄 + "이용 방법" 3단계는 ⓘ 하나로 접는다(데스크톱 hover 미리보기 · 폰 탭 시트).
             HowTo JSON-LD 는 같은 배열(t.howTo.steps)에서 만든다 — 화면(시트)과 스키마가 같은 글이다. */}

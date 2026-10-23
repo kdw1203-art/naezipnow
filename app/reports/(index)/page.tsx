@@ -250,7 +250,10 @@ export default async function ReportsIndexPage() {
         </div>
 
         {/* [961 → 1015 · 규칙 G] 페이지 끝 광고 1 — 예전 AdSenseUnit(목록 하단·데스크톱 전용) 자리 */}
-        <AdZone placement="page_bottom" seed={2} plan={null} className="mt-6 max-md:mt-4" />
+        {/* [1084 · D-075] 데스크톱에서 두 열을 다 덮던 카드 → 본문 열 폭 안(위 격자와 같은 열 · 오른쪽 340px 은 비운다) */}
+        <div className="mt-6 max-md:mt-4 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+          <AdZone placement="page_bottom" seed={2} plan={null} />
+        </div>
       </div>
     </PageShell>
   );

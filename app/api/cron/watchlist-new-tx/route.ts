@@ -10,6 +10,7 @@ import { decodeComplexId } from "@/lib/complex/complex-store";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { formatKrwShort } from "@/lib/market/format";
 import { logger } from "@/lib/log";
+import { batchAdvance, groupWatchRows, idleSeenAt, tsAfter, type WatchRow } from "@/lib/notifications/watchlist-tx-plan";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +33,13 @@ export const maxDuration = 120;
  *  prefs.emailWatchlistTx 기본 켜짐 — 끄면 메일만 생략).
  */
 
-const BATCH = 500;
+/* [1086 · A5] 예전엔 user_watchlist 를 순서 없이 500행만 읽어, 501번째 행부터는 영영 알림이 가지 않았다 · 같은 단지를 여러 명이
+   담으면 같은 조회를 사람 수만큼 했다. 이제 id 순으로 쪽(PAGE)을 넘겨 끝까지(상한 MAX_ROWS) 읽고, 단지별로 한 번만 조회한다
+   (그 단지 담은 사람들 중 가장 이른 고수위선 이후 신고 → 행마다 자기 고수위선으로 거른다). 실행 시간 상한(TIME_BUDGET_MS) 안에서
+   고수위선이 가장 오래된 단지부터 — 못 본 단지는 다음 실행이 먼저 본다(새 신고가 없던 단지도 확인 시각을 올려 차례가 돈다). */
+const PAGE = 1000;
+const MAX_ROWS = 20_000;
+const TIME_BUDGET_MS = 90_000;
 /** 사용자당 묶음에 담는 단지 수 상한(본문 길이 통제 — 초과분은 "외 N개 단지") */
 const MAX_COMPLEXES_PER_USER = 8;
 
@@ -69,25 +76,52 @@ async function run() {
   if (!read || !write) {
     return { ok: true, checked: 0, users: 0, emails: 0, reason: "no-store" };
   }
+  const startedAt = Date.now();
 
-  const { data, error } = await read
-    .from("user_watchlist")
-    .select("id, user_email, complex_id, complex_name, last_tx_seen_at")
-    .not("complex_id", "like", "alert:%")
-    .limit(BATCH);
-  if (error) {
-    logger.warn("[cron/watchlist-new-tx] user_watchlist 조회 실패", error.message);
-    return { ok: true, checked: 0, users: 0, emails: 0, reason: "query-failed" };
+  const raw: Array<Record<string, unknown>> = [];
+  for (let from = 0; from < MAX_ROWS; from += PAGE) {
+    const { data, error } = await read
+      .from("user_watchlist")
+      .select("id, user_email, complex_id, complex_name, last_tx_seen_at")
+      .not("complex_id", "like", "alert:%")
+      .order("id", { ascending: true })
+      .range(from, from + PAGE - 1);
+    if (error) {
+      logger.warn("[cron/watchlist-new-tx] user_watchlist 조회 실패", error.message);
+      if (raw.length === 0) return { ok: true, checked: 0, users: 0, emails: 0, reason: "query-failed" };
+      break;
+    }
+    const page = (data ?? []) as Array<Record<string, unknown>>;
+    raw.push(...page);
+    if (page.length < PAGE) break;
   }
 
-  const rows = (data ?? []) as Array<Record<string, unknown>>;
   const nowIso = new Date().toISOString();
   let checked = 0;
   let baselineSet = 0;
+  let deferred = 0;
   const skipReasons: Record<string, number> = {};
-  const skip = (r: string) => {
-    skipReasons[r] = (skipReasons[r] ?? 0) + 1;
+  const skip = (r: string, n = 1) => {
+    skipReasons[r] = (skipReasons[r] ?? 0) + n;
   };
+
+  const rows: WatchRow[] = [];
+  for (const row of raw) {
+    const complexId = String(row.complex_id ?? "");
+    const userEmail = String(row.user_email ?? "").trim().toLowerCase();
+    if (!complexId || !userEmail || !decodeComplexId(complexId)) {
+      checked++;
+      skip("unresolvable");
+      continue;
+    }
+    rows.push({
+      id: row.id,
+      userEmail,
+      complexId,
+      complexName: String(row.complex_name ?? ""),
+      since: row.last_tx_seen_at ? String(row.last_tx_seen_at) : null,
+    });
+  }
 
   /* 사용자별 묶음: email → { complexName, count, latestLine, href }[] */
   const perUser = new Map<
@@ -97,22 +131,24 @@ async function run() {
   /* 알림 성사 여부와 무관하게 고수위선을 올릴 행들 */
   const advance: Array<{ id: unknown; seenAt: string }> = [];
 
-  for (const row of rows) {
-    checked++;
-    const complexId = String(row.complex_id ?? "");
-    const userEmail = String(row.user_email ?? "").trim().toLowerCase();
-    const decoded = complexId ? decodeComplexId(complexId) : null;
-    if (!decoded || !userEmail) {
-      skip("unresolvable");
+  for (const group of groupWatchRows(rows)) {
+    if (Date.now() - startedAt > TIME_BUDGET_MS) {
+      deferred += group.rows.length;
       continue;
     }
-    const since = row.last_tx_seen_at ? String(row.last_tx_seen_at) : null;
-    if (!since) {
-      /* 최초 관측 — 기준만 세운다 */
-      advance.push({ id: row.id, seenAt: nowIso });
-      baselineSet++;
-      continue;
+    const decoded = decodeComplexId(group.complexId);
+    if (!decoded) continue;
+    checked += group.rows.length;
+    /* 최초 관측 — 기준만 세운다(과거 이력을 첫날 새 소식으로 쏟지 않는다) */
+    for (const r of group.rows) {
+      if (!r.since) {
+        advance.push({ id: r.id, seenAt: nowIso });
+        baselineSet++;
+      }
     }
+    const watchers = group.rows.filter((r) => r.since);
+    if (watchers.length === 0 || !group.minSince) continue;
+    const queryStart = Date.now();
     try {
       const { data: txs, error: txErr } = await read
         .from("market_transactions")
@@ -122,31 +158,38 @@ async function run() {
         .eq("transaction_type", "trade")
         .eq("property_type", "apartment")
         .eq("is_cancelled", false)
-        .gt("created_at", since)
+        .gt("created_at", group.minSince)
         .order("created_at", { ascending: false })
-        .limit(50);
+        .limit(200);
       if (txErr) {
-        skip("tx-query-failed");
+        skip("tx-query-failed", watchers.length);
         continue;
       }
-      const list = (txs ?? []) as TxRow[];
-      if (list.length === 0) {
-        skip("no-new-tx");
-        continue;
+      const all = (txs ?? []) as TxRow[];
+      for (const r of watchers) {
+        const since = r.since as string;
+        const list = all.filter((t) => tsAfter(String(t.created_at), since)).slice(0, 50);
+        if (list.length === 0) {
+          skip("no-new-tx");
+          /* 확인했다는 표시(차례가 돈다) — 새 신고가 없었으니 놓치는 소식이 없다 */
+          const next = idleSeenAt(since, queryStart);
+          if (next !== since) advance.push({ id: r.id, seenAt: next });
+          continue;
+        }
+        const name = r.complexName || decoded.name;
+        const bucket = perUser.get(r.userEmail) ?? [];
+        bucket.push({
+          complexName: name,
+          count: list.length,
+          latestLine: latestLine(list[0]),
+          href: `https://naezipnow.com${complexHrefFromId(group.complexId)}`,
+        });
+        perUser.set(r.userEmail, bucket);
+        advance.push({ id: r.id, seenAt: list[0].created_at });
       }
-      const name = String(row.complex_name ?? decoded.name);
-      const bucket = perUser.get(userEmail) ?? [];
-      bucket.push({
-        complexName: name,
-        count: list.length,
-        latestLine: latestLine(list[0]),
-        href: `https://naezipnow.com${complexHrefFromId(complexId)}`,
-      });
-      perUser.set(userEmail, bucket);
-      advance.push({ id: row.id, seenAt: list[0].created_at });
     } catch (e) {
-      skip("exception");
-      logger.warn("[cron/watchlist-new-tx] 행 처리 실패", { complexId, err: e });
+      skip("exception", watchers.length);
+      logger.warn("[cron/watchlist-new-tx] 단지 처리 실패", { complexId: group.complexId, err: e });
     }
   }
 
@@ -186,14 +229,17 @@ async function run() {
 
   /* 고수위선 갱신은 알림 적재 **뒤에** — 먼저 올렸다가 적재가 죽으면 그 소식은
      영원히 사라진다. 뒤에 올리면 최악이 중복 알림 1회(다음 실행)로 그친다. */
-  for (const a of advance) {
-    await write
+  /* [1086 · A5] 같은 값끼리 묶어 한 번에(행마다 한 번이던 쓰기 → 값마다 한 번) */
+  for (const b of batchAdvance(advance)) {
+    const { error: upErr } = await write
       .from("user_watchlist")
-      .update({ last_tx_seen_at: a.seenAt })
-      .eq("id", a.id);
+      .update({ last_tx_seen_at: b.seenAt })
+      .in("id", b.ids as Array<string | number>);
+    if (upErr) logger.warnSampled("watchlist-new-tx-advance", "[cron/watchlist-new-tx] 고수위선 갱신 실패", { message: upErr.message, n: b.ids.length });
   }
 
-  return { ok: true, checked, baselineSet, users, emails, skipReasons };
+  if (deferred > 0) logger.warnSampled("watchlist-new-tx-deferred", "[cron/watchlist-new-tx] 시간 상한 — 다음 실행으로 넘김", { deferred });
+  return { ok: true, checked, baselineSet, users, emails, deferred, rows: raw.length, skipReasons };
 }
 
 export async function GET(req: Request) {

@@ -11,6 +11,8 @@ import { takeSignupHandoff } from "@/lib/onboarding/signup-handoff";
 import { HOME_CTA_NOTE } from "@/lib/brand/home-copy";
 import { safeInternalPath } from "@/lib/safe-path";
 import { trackPlatformEvent } from "@/lib/platform-events-client";
+import { resumeLabelFor } from "@/lib/onboarding/resume";
+import { clearFreshSignup, peekFreshSignup } from "@/lib/analytics/fresh-signup";
 
 /* ============================================================
    [991] 온보딩 — 한 화면(관심 지역)만 묻는다.
@@ -93,8 +95,13 @@ export function WelcomeClient() {
         /* 저장된 지역이 있으면 그것으로 채운다 — 가입 화면에서 넘어온 값(아래 handoff)이 있으면 그쪽이 덮는다 */
         if (saved.length > 0) setRegions((cur) => (cur.length > 0 ? cur : saved));
         setReady(true);
-        /* [1039] 온보딩 관측 — 화면이 열린 수(로그인 확인 뒤 1회). 완료·건너뛰기와 견줘 이탈을 본다 */
-        trackPlatformEvent({ eventName: "welcome_view", source: "welcome", campaign: "funnel", metadata: { funnel: "signup", reentry: saved.length > 0 } });
+        /* [1039] 온보딩 관측 — 화면이 열린 수(로그인 확인 뒤 1회). 완료·건너뛰기와 견줘 이탈을 본다
+           [1086 · A8] 방금 가입한 브라우저면 방법(password·google·kakao·toss)을 싣는다 — 소셜 가입은 가입 화면이 완료를 셀 수 없었다 */
+        const fresh = peekFreshSignup();
+        trackPlatformEvent({ eventName: "welcome_view", source: "welcome", campaign: "funnel", metadata: { funnel: "signup", reentry: saved.length > 0, fresh: fresh?.method ?? null } });
+        if (fresh && fresh.method !== "password") {
+          trackPlatformEvent({ eventName: "signup_social_return", source: "welcome", campaign: "funnel", metadata: { method: fresh.method, reentry: saved.length > 0 } });
+        }
       }
     })();
     return () => {
@@ -111,14 +118,27 @@ export function WelcomeClient() {
   /* 가입 흐름의 다음 화면 — next 가 홈이면 없는 것으로 친다(첫 노트로). 재진입은 next(기본 /my)로 */
   const signupNext = next && next !== "/" ? next : null;
   const returnTo = next ?? "/my";
+  /* [1086 · A2] 가입 창(노트 저장·관심 단지 등)에서 넘어온 사람 — 지역을 안 골라도 하던 화면으로 간다(예전엔 지역 1곳이 필수였고,
+     단추 이름이 "첫 노트 쓰러 가기"라 하던 일로 돌아가는 단추인지 알 수 없었다). 이어서 할 일을 사실 낱말로 보여 준다 */
+  const resuming = !reentry && signupNext != null;
+  const resumeLabel = resuming ? resumeLabelFor(signupNext) : null;
 
   /* 완료: 관심지역 알림 구독 + 개인화(지역만) 저장 → 첫 행동(임장노트 쓰기). 가입 흐름의 실패는 무시 —
      저장이 안 됐다고 첫 노트를 막을 이유가 없다. [1058] 재진입은 저장 결과를 본다 — 실패면 머문다. */
   const finish = useCallback(async () => {
-    if (busy || regions.length === 0) return;
+    if (busy) return;
+    /* [1086 · A2] 지역 없이 끝내기는 하던 화면으로 돌아가는 사람만 — 지역은 나중에 마이 › 설정에서 */
+    if (regions.length === 0) {
+      if (!resuming || !signupNext) return;
+      trackPlatformEvent({ eventName: "welcome_finish", source: "welcome", campaign: "funnel", metadata: { funnel: "signup", regions: 0, reentry: false, resume: true } });
+      clearFreshSignup();
+      router.push(signupNext);
+      return;
+    }
     setBusy(true);
     setSaveError(null);
-    trackPlatformEvent({ eventName: "welcome_finish", source: "welcome", campaign: "funnel", metadata: { funnel: "signup", regions: regions.length, reentry: reentry === true } });
+    trackPlatformEvent({ eventName: "welcome_finish", source: "welcome", campaign: "funnel", metadata: { funnel: "signup", regions: regions.length, reentry: reentry === true, resume: resuming } });
+    clearFreshSignup();
     /* 퍼널 관측(fire-and-forget) — wizardSteps 로만 쌓인다 */
     fetch("/api/me/onboarding", {
       method: "PATCH",
@@ -169,7 +189,7 @@ export function WelcomeClient() {
       /* ignore */
     }
     router.push(`/notes/new?${qs.toString()}`);
-  }, [busy, regions, router, reentry, returnTo, signupNext]);
+  }, [busy, regions, router, reentry, returnTo, signupNext, resuming]);
 
   if (!ready) {
     return (
@@ -191,7 +211,8 @@ export function WelcomeClient() {
       {/* 헤더 — 건너뛰기(항상 노출). [1040] 가입 3단계의 마지막 칸(관심 지역) — 가입 폼·인증 메일 안내와 같은 띠.
           [1058] 지역이 이미 있는 사람(재진입)에게 "가입 3단계 중 3단계"는 사실이 아니다 — 숨긴다 */}
       {!reentry && <SignupSteps current={2} className="rise-in" />}
-      <div className="flex items-center justify-end">
+      {/* [1086 · A2] 하던 화면으로 돌아가는 사람은 아래 주 단추가 그 길이다(지역 없이도 열린다) — 건너뛰기 링크를 두 벌 두지 않는다 */}
+      <div className={`flex items-center justify-end ${resuming ? "hidden" : ""}`}>
         {/* [970 · A-14] 건너뛰기도 next 가 있으면 그리로 */}
         <Link
           href={skipHref}
@@ -204,11 +225,19 @@ export function WelcomeClient() {
 
       {/* [962] 첫 화면의 첫 줄은 브랜드 — 한지 띠 위 세리프 슬로건 */}
       <BrandSloganBand className="rise-in" />
+      {resumeLabel && (
+        <div className="rise-in card flex flex-col gap-0.5 rounded-2xl px-4 py-3">
+          <span className="t-caption font-bold text-primary">가입 완료 · 이어서 할 일</span>
+          <span className="t-body font-bold text-ink">{resumeLabel}</span>
+        </div>
+      )}
       <h1 className="rise-in t-title font-bold leading-[1.35] text-ink">
         {reentry ? "관심 지역 수정" : "관심 지역 선택"}
       </h1>
       <p className="rise-in-1 -mt-2 t-body text-text-2">
-        전국 시·군·구에서 1~{MAX_REGIONS}곳. 고른 동네의 실거래·소식이 먼저 보입니다.
+        {resuming
+          ? `선택 사항 · 전국 시·군·구에서 1~${MAX_REGIONS}곳. 나중에 마이 › 설정에서도 고를 수 있습니다.`
+          : `전국 시·군·구에서 1~${MAX_REGIONS}곳. 고른 동네의 실거래·소식이 먼저 보입니다.`}
       </p>
       <div className="rise-in-2">
         <RegionPicker
@@ -227,16 +256,20 @@ export function WelcomeClient() {
       <button
         type="button"
         onClick={() => void finish()}
-        disabled={regions.length === 0 || busy}
+        disabled={(regions.length === 0 && !resuming) || busy}
         className="btn-primary btn-cta rise-in-3 rounded-2xl p-[15px] text-center text-[15px] disabled:opacity-60"
       >
         {busy
           ? "저장 중…"
-          : regions.length > 0
-            ? reentry
-              ? `${regions.length}곳 저장`
-              : `${regions.length}곳 선택 · 첫 노트 쓰러 가기`
-            : "지역을 선택해 주세요"}
+          : resuming
+            ? regions.length > 0
+              ? `${regions.length}곳 저장 · 하던 화면으로`
+              : "하던 화면으로"
+            : regions.length > 0
+              ? reentry
+                ? `${regions.length}곳 저장`
+                : `${regions.length}곳 선택 · 첫 노트 쓰러 가기`
+              : "지역을 선택해 주세요"}
       </button>
     </main>
   );

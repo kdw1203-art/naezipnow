@@ -12,7 +12,7 @@ import { ActionButton } from "@/app/components/ui/ActionButton";
  */
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { Modal, ModalHeader } from "@/app/components/ui/Modal";
 import { CharCount } from "@/app/components/ui/CharCount";
 import { QUOTE_CATEGORIES, findSpecialty } from "@/lib/experts/taxonomy";

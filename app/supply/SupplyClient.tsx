@@ -26,7 +26,8 @@ import { Explain } from "@/app/components/explain/Explain";
  * 펼친다 — 상한을 가리지 않는다.
  */
 
-const TABLE_INITIAL_ROWS = 200;
+/* [1084] 200 → 40 — 200행을 한 번에 그려 쪽이 11,239px 였다(운영 실측). 나머지는 "더 보기"(행 수를 숨기지 않는다) */
+const TABLE_INITIAL_ROWS = 40;
 
 type MonthBucket = { ym: string; count: number; households: number };
 
@@ -236,8 +237,16 @@ export function SupplyClient({
   const noMonthHouseholds = noMonth.reduce((a, s) => a + (Number(s.households ?? 0) || 0), 0);
   const monthlyMax = monthlyShown.reduce((m, b) => Math.max(m, b.households), 0);
 
-  const tableRows = tableExpanded ? list : list.slice(0, TABLE_INITIAL_ROWS);
-  const tableHiddenCount = list.length - tableRows.length;
+  /* [1084] 표 순서 — 이번 달 이후 입주(가까운 순)가 먼저, 지난 입주(최근 순)는 뒤. 예전엔 입주월 오름차순 그대로라 "입주 예정" 표의
+     첫 행이 이미 입주한 2026.01 단지였다(운영 실측). 입주월 없는 단지는 맨 뒤 */
+  const nowYmKey = kstYm(nowMs);
+  const tableOrdered = [
+    ...list.filter((s) => validYm(s.moveInYm) && String(s.moveInYm) >= nowYmKey),
+    ...list.filter((s) => validYm(s.moveInYm) && String(s.moveInYm) < nowYmKey).reverse(),
+    ...list.filter((s) => !validYm(s.moveInYm)),
+  ];
+  const tableRows = tableExpanded ? tableOrdered : tableOrdered.slice(0, TABLE_INITIAL_ROWS);
+  const tableHiddenCount = tableOrdered.length - tableRows.length;
 
   return (
     <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -480,9 +489,10 @@ export function SupplyClient({
             표는 200행에서 시작하고 "더 보기"로 펼친다 (상한을 가리지 않는다). */}
         <h2 className="rise-in-4 px-1 pt-1.5 t-section font-bold text-text-2">
           {list.length > 0
-            ? `지난·전체 입주 예정 단지 · ${list.length.toLocaleString()}곳`
-            : "지난·전체 입주 예정 단지"}
+            ? `전체 입주 단지 · ${list.length.toLocaleString()}곳`
+            : "전체 입주 단지"}
         </h2>
+        {list.length > 0 && <p className="-mt-1 px-1 t-caption text-text-3">이번 달 이후 입주(가까운 순) · 지난 입주(최근 순) · 입주월 미상</p>}
         {list.length === 0 ? (
           <div className="rise-in-4 card rounded-2xl px-4 py-8 text-center t-body text-text-3">
 해당 지역 입주 예정 물량 데이터 없음

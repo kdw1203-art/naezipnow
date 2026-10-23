@@ -90,6 +90,15 @@ export async function generateMetadata({
   };
 }
 
+/* [1084 · D-074] KPI 칸 수 → 데스크톱 열 수(Tailwind 는 정적 클래스만 만든다) */
+const FACT_COLS: Record<number, string> = {
+  1: "md:grid-cols-2",
+  2: "md:grid-cols-2",
+  3: "md:grid-cols-3",
+  4: "md:grid-cols-4",
+  5: "md:grid-cols-5",
+};
+
 export default async function RegionMonthlyReportPage({
   params,
 }: {
@@ -221,7 +230,8 @@ export default async function RegionMonthlyReportPage({
       </p>
 
       {facts.length > 0 && (
-        <div className="rise-in-1 mt-4 grid grid-cols-2 gap-1.5 md:grid-cols-5">
+        /* [1084 · D-074] 칸 수(3~5)에 맞춘 열 — md:grid-cols-5 고정이면 4칸일 때 오른쪽 한 칸이 비어 아래 요약 상자보다 짧았다 */
+        <div className={`rise-in-1 mt-4 grid grid-cols-2 gap-1.5 ${FACT_COLS[Math.min(facts.length, 5)] ?? "md:grid-cols-5"}`}>
           {facts.map((f) => (
             <div key={f.label} className="card rounded-xl px-3 py-3 text-center">
               <div className="t-caption text-text-3">{f.label}</div>

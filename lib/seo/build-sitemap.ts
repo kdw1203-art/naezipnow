@@ -18,7 +18,7 @@ import { AI_TOOL_IDS } from "@/lib/ai/ai-tools";
 import { complexIndexTier, kstYm, tierInSitemap } from "@/lib/seo/complex-index-policy";
 import { NEWS_TAGS } from "@/lib/news/tags";
 import { GUIDES } from "@/lib/guides/catalog";
-import { COMPLEX_SITEMAP_CHUNK_SIZE } from "@/lib/seo/sitemap-slugs";
+import { complexChunkRange } from "@/lib/seo/sitemap-slugs";
 
 /**
  * 단지 사이트맵에 실을 최소 매매 실거래 건수.
@@ -370,8 +370,14 @@ function loadComplexEntriesMemo(): Promise<MetadataRoute.Sitemap> {
 
 export async function loadComplexChunkEntries(chunkIndex: number): Promise<MetadataRoute.Sitemap> {
   const all = await loadComplexEntriesMemo();
-  const start = chunkIndex * COMPLEX_SITEMAP_CHUNK_SIZE;
-  return all.slice(start, start + COMPLEX_SITEMAP_CHUNK_SIZE).map((e, i) => {
+  /* [1085] 목록이 조각 수보다 짧으면(운영 23,8xx곳 < 6조각 30,000) 마지막 조각은 늘 비어 503 을 냈다
+     (운영 7일 48회 · 크롤러가 같은 주소를 계속 다시 읽는다). 전체 목록이 있는데 이 조각만 범위 밖이면 "원래 없음" —
+     다른 optional 유형과 같은 규칙으로 허브(/map) 한 줄. 전체가 0개면 [] 그대로(조회 실패 → 503). 규칙은 complexChunkRange(순수). */
+  const range = complexChunkRange(all.length, chunkIndex);
+  if (range === "empty") return [];
+  if (range === "hub") return [{ url: `${BASE_URL}/map`, priority: 0.5 }];
+  const start = range.start;
+  return all.slice(range.start, range.end).map((e, i) => {
     const rank = start + i;
     return { ...e, priority: rank < 5000 ? 0.9 : rank < 10_000 ? 0.8 : 0.7 };
   });

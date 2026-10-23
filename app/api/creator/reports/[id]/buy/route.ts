@@ -9,6 +9,7 @@
  *     · 크리에이터에게 포인트를 적립하지 않는다(그건 정산이며, report_purchases 기록으로 대체).
  *  5) 접근 권한 부여 = 구매 기록 존재 (hasPurchased)
  */
+import { josa } from "@/lib/format/josa";
 import { NextRequest, NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { getReport } from "@/lib/reports/store-db";
@@ -150,7 +151,7 @@ export async function POST(
         userEmail: report.authorId,
         /* [1058 · C6] 이모지 제거(UI 문자열 금지) — 알림 제목은 사실만 */
         title: "리포트 판매됨",
-        body: `‘${report.title}’ 이(가) ${report.price.toLocaleString("ko-KR")}P 에 판매됐어요. 판매 실적은 크리에이터 대시보드에서 확인할 수 있어요.`,
+        body: `‘${report.title}’${josa(report.title, "이/가")} ${report.price.toLocaleString("ko-KR")}P 에 판매됐어요. 판매 실적은 크리에이터 대시보드에서 확인할 수 있어요.`,
         actionUrl: "/my/creator",
       }).catch(() => {});
     }

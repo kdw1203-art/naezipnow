@@ -258,6 +258,13 @@ const REDIRECT_GROUPS: readonly RedirectGroup[] = [
       ["/my/referral", "/my/points?tab=referral"],
     ],
   },
+  {
+    /* [1084] /analysis/ai 는 상위 경로인데 라우트가 없다(하위 도구 /analysis/ai/<도구>만) — 직접 치거나 주소를 지워 올라오면 404 였다
+       (운영 실측 2026-10-21). 도구 목록이 있는 분석 허브로 보낸다. */
+    reason: "[1084] AI 도구 상위 경로 — 분석 허브로",
+    since: "2026-10-22",
+    rules: [["/analysis/ai", "/analysis"]],
+  },
 ];
 
 /* 규칙을 평탄화하면서 from 중복을 즉시 터뜨린다.

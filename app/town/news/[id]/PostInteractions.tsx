@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { hasSession } from "@/lib/client/has-session";
 import { Icon } from "@/app/components/Icon";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
 
 /* ============================================================

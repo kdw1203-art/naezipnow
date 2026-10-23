@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/app/components/toast/ToastProvider";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
 
 export function BoostButton({ listingId, active }: { listingId: string; active: boolean }) {

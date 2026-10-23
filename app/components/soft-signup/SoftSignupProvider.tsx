@@ -3,14 +3,7 @@
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 /* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useExperiment } from "@/lib/experiments/client";
@@ -30,43 +23,9 @@ import { useScrollLockLazy } from "@/lib/client/use-scroll-lock-lazy";
  * 최소한 로그인 페이지로는 보낸다(기능이 조용히 죽는 것보다 낫다).
  */
 
-export type SoftSignupIntent = {
-  /** 퍼널 집계용 키. 예: "watchlist_add" */
-  action: string;
-  /** 모달 제목 — 사용자가 방금 누른 것 기준으로 쓴다. */
-  title: string;
-  /** 왜 로그인이 필요한지 한 줄. 과장 금지 — 실제로 제공하는 것만. */
-  benefit: string;
-  /** 로그인 후 돌아올 경로. 생략 시 현재 경로. */
-  callbackUrl?: string;
-  /** [1052] 창을 닫았을 때(가입 거절) 부르는 쪽이 치울 일 — 관심 등록은 "가입 뒤 마저 담기" 기록을 지운다.
-   *  이 Provider 는 모든 화면 레이아웃에 있어 기능별 모듈(pending-watch 등)을 직접 import 하면 모든 화면 번들이 는다 */
-  onDismiss?: () => void;
-};
-
-type SoftSignupContextValue = {
-  promptSignup: (intent: SoftSignupIntent) => void;
-};
-
-const SoftSignupContext = createContext<SoftSignupContextValue | null>(null);
-
-function loginHref(callbackUrl: string): string {
-  return `/login?callbackUrl=${encodeURIComponent(callbackUrl)}`;
-}
-
-export function useSoftSignup(): SoftSignupContextValue {
-  const ctx = useContext(SoftSignupContext);
-  return (
-    ctx ?? {
-      promptSignup: (intent) => {
-        if (typeof window === "undefined") return;
-        window.location.href = loginHref(
-          intent.callbackUrl ?? window.location.pathname + window.location.search,
-        );
-      },
-    }
-  );
-}
+/* [1086] 문맥·훅·의도 타입은 soft-signup-context(부르는 화면은 그쪽을 import — 창 그리기·실험 등록부를 받지 않게). 여기서도 그대로 내보낸다 */
+import { SoftSignupContext, softLoginHref as loginHref, type SoftSignupIntent } from "./soft-signup-context";
+export { useSoftSignup, type SoftSignupIntent } from "./soft-signup-context";
 
 /* A7 — 이 배너의 CTA 문구가 첫 실험 대상이다(lib/experiments/registry.ts).
    문구만 나뉘고 조건·혜택은 두 변형이 완전히 같다. "가입은 무료" 는 실제 사실이라

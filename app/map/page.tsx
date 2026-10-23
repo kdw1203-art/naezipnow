@@ -13,7 +13,7 @@ import { withBudget } from "@/lib/async/with-budget";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { saveLastGood, loadLastGood } from "@/lib/cache/last-good";
 import { formatKrwManwon } from "@/lib/format/krw";
-import { resolveNaverMapClientId } from "@/lib/map/naver-maps-sdk";
+import { naverMapsPreloadUrl, resolveNaverMapClientId } from "@/lib/map/naver-maps-sdk";
 
 /* [1007] ISR 10분 — 예전엔 `auth()`(내 노트 수·예산 프리필·내 노트 레이어 기본값)와
    `searchParams`(region·complexId·noteId·apt·lat·lng·z·type·price…) 때문에 force-dynamic 이었고,
@@ -480,6 +480,10 @@ export default async function MapPage() {
           anonymous 로 미리 연 소켓은 재사용되지 않는다. */}
       <link rel="preconnect" href="https://oapi.map.naver.com" />
       <link rel="preconnect" href="https://nrbe.pstatic.net" />
+      {/* [1085 · 지도 속도] maps.js 를 HTML 단계에서 미리 받는다 — 예전엔 "HTML → 지도 청크 → 하이드레이션 → maps.js 주입 →
+          SDK 묶음 → 타일" 순서라 운영 Lighthouse 폰 LCP(타일) 10.8초였다. 주소는 클라이언트 주입과 같은 함수(naverMapsPreloadUrl).
+          키가 없으면(로컬) 넣지 않는다. */}
+      {ncpKeyId ? <link rel="preload" as="script" href={naverMapsPreloadUrl(ncpKeyId)} /> : null}
       {/* [C003 2026-08-31] 이 페이지에 h1 이 없었다(12페이지 실측 중 유일).
           지도는 시각 UI 라 보이는 제목이 어색하므로 sr-only 로 문서 제목만 준다 —
           검색엔진·스크린리더에게 "이 문서의 주제"를 말하는 최소한의 기본기. */}

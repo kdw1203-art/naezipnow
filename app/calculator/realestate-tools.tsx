@@ -211,7 +211,7 @@ export function JeonseWolse() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <ToolCard title="1. 전월세 전환" subtitle="전세 ↔ 월세 환산">
+      <ToolCard title="전월세 전환" subtitle="전세 ↔ 월세 환산">
         <Segmented
           options={DIRECTIONS}
           value={dir}
@@ -238,21 +238,24 @@ export function JeonseWolse() {
         <ResultPanel
           conclusion={toWolseSentence}
           primaryLabel="예상 월세"
-          primaryValue={<TweenMoney value={Math.max(monthlyRent, 0) * 10_000} unit="원" />}
+          primaryValue={
+            /* [1084 · D-059] 입력 전엔 "—" — "0원"이 계산된 값처럼 읽혔다 */
+            toWolseSentence === null ? "—" : <TweenMoney value={Math.max(monthlyRent, 0) * 10_000} unit="원" />
+          }
           note="월세 = (전세보증금 − 월세보증금) × 전환율 ÷ 12"
         >
-          <ResultRow label="전환 대상 금액" value={manwonText(gapToConvert)} />
-          <ResultRow label="연 환산 (월세 × 12)" value={wonText(Math.max(monthlyRent, 0) * 12 * 10_000)} />
+          <ResultRow label="전환 대상 금액" value={toWolseSentence === null ? "—" : manwonText(gapToConvert)} />
+          <ResultRow label="연 환산 (월세 × 12)" value={toWolseSentence === null ? "—" : wonText(Math.max(monthlyRent, 0) * 12 * 10_000)} />
         </ResultPanel>
       ) : (
         <ResultPanel
           conclusion={toJeonseSentence}
           primaryLabel="환산 전세보증금"
-          primaryValue={<TweenMoney value={convertedJeonse} />}
+          primaryValue={toJeonseSentence === null ? "—" : <TweenMoney value={convertedJeonse} />}
           note="전세보증금 = 월세보증금 + (월세 × 12 ÷ 전환율)"
         >
-          <ResultRow label="월세보증금" value={manwonText(num(deposit))} />
-          <ResultRow label="월세 자본환산분" value={manwonText(convertedJeonse - num(deposit))} />
+          <ResultRow label="월세보증금" value={toJeonseSentence === null ? "—" : manwonText(num(deposit))} />
+          <ResultRow label="월세 자본환산분" value={toJeonseSentence === null ? "—" : manwonText(convertedJeonse - num(deposit))} />
         </ResultPanel>
       )}
     </div>
@@ -279,7 +282,7 @@ export function GapRatio() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <ToolCard title="2. 갭 · 전세가율" subtitle="갭투자 실투자금 · 전세가율">
+      <ToolCard title="갭 · 전세가율" subtitle="갭투자 실투자금 · 전세가율">
         <Field label="매매가" value={price} onChange={setPrice} unit="만원" hint={manHint(price)} />
         <Field label="전세가" value={jeonse} onChange={setJeonse} unit="만원" hint={manHint(jeonse)} />
       </ToolCard>
@@ -292,7 +295,10 @@ export function GapRatio() {
             <Explain term="gap-tuja" how="갭 = 매매가 − 전세가. 전세를 끼고 살 때 내 돈으로 채울 금액." size={12} />
           </>
         }
-        primaryValue={<TweenMoney value={gap} />}
+        primaryValue={
+          /* [1084 · D-058] 입력 전엔 "—" */
+          conclusion === null ? "—" : <TweenMoney value={gap} />
+        }
         note="갭 = 매매가 − 전세가(갭투자 실투자금). 전세가율(전세 ÷ 매매)이 높을수록 갭이 작음. 취득세·중개보수 제외."
       >
         <div className="flex items-baseline justify-between gap-2 t-sub">
@@ -302,8 +308,9 @@ export function GapRatio() {
           </span>
           <TweenPercent value={ratio} digits={1} className="text-[15px] text-ai-accent" />
         </div>
-        <ResultRow label="매매가" value={manwonText(priceN)} />
-        <ResultRow label="전세가" value={manwonText(jeonseN)} />
+        {/* [1084 · D-058] 넣기 전 칸은 "—"(0원이 계산값처럼 읽혔다) */}
+        <ResultRow label="매매가" value={priceN > 0 ? manwonText(priceN) : "—"} />
+        <ResultRow label="전세가" value={jeonseN > 0 ? manwonText(jeonseN) : "—"} />
       </ResultPanel>
     </div>
   );
@@ -348,7 +355,7 @@ export function RentalYield() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      <ToolCard title="3. 임대수익률" subtitle="연 수익률 · 자기자본수익률">
+      <ToolCard title="임대수익률" subtitle="연 수익률 · 자기자본수익률">
         <Field label="매매가" value={price} onChange={setPrice} unit="만원" hint={manHint(price)} />
         <Field label="보증금" value={deposit} onChange={setDeposit} unit="만원" hint={manHint(deposit)} />
         <Field label="월세" value={monthly} onChange={setMonthly} unit="만원" hint={manHint(monthly)} />

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
+import { HScroll } from "@/app/components/HScroll";
 import { QaBlock } from "@/app/components/QaBlock";
 import { CitationBlock } from "@/app/components/CitationBlock";
 import {
@@ -333,12 +334,13 @@ export default async function TemperatureRegionPage({
 
       {/* 주간 추이 */}
       <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-        <h2 className="flex items-baseline justify-between gap-3 t-section text-ink">
-          주간 추이
+        {/* [1084] h2 가 flex(justify-between)라 제목 앞 온점(::before)이 첫 칸이 되어 제목이 가운데로 밀렸다(운영 실측) — 제목과 수치를 형제로 */}
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+          <h2 className="t-section text-ink">주간 추이</h2>
           <span className="shrink-0 t-sub font-medium text-text-3">
             최고 {maxScore} · 평균 {avgScore} · 최저 {minScore}
           </span>
-        </h2>
+        </div>
         {/* [1009 · A] 막대마다 title= 말풍선(마우스를 올려야만 보임)이던 주간 추이 → 누르고 끌면 그 주 점수가 나오는
             추세선(ScrubLine). 휴대폰에서는 막대 값을 읽을 길이 없었다. 선 색 = 기간 등락(상승 빨강·하락 파랑). */}
         <div className="mt-3">
@@ -369,7 +371,8 @@ export default async function TemperatureRegionPage({
           주별 기록{" "}
           <span className="t-sub font-medium text-text-3">최근 {recent.length}주</span>
         </h2>
-        <div className="relative mt-3 overflow-x-auto">
+        {/* [1084 · 폰 실측] 표(460px)가 틀(349px)보다 넓은데 흐림·안내가 없어 오른쪽 열이 잘린 표처럼 보였다 → HScroll */}
+        <HScroll className="relative mt-3">
           <table className="w-full min-w-[460px] text-left t-body">
             <thead>
               <tr className="border-b border-border t-sub text-text-3">
@@ -408,7 +411,7 @@ export default async function TemperatureRegionPage({
               })}
             </tbody>
           </table>
-        </div>
+        </HScroll>
         <p className="mt-2 t-caption text-text-3">
           &ldquo;미반영&rdquo; = 완결월 거래량이 4개월치에 못 미쳐 지수 모멘텀만으로 계산 · 없는 값을 0으로 채우지 않음
         </p>

@@ -17,7 +17,7 @@ import { usePathname } from "next/navigation";
 import { ReportButton } from "../components/ReportButton";
 import { Icon } from "@/app/components/Icon";
 import { CharCount } from "@/app/components/ui/CharCount";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { kstParts } from "@/lib/format/kst";
 import { reviewEditedAt } from "@/lib/complex-reviews/rules";
 import { useNearViewport } from "./[id]/use-near-viewport";

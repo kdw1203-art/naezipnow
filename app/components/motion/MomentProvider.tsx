@@ -1,13 +1,6 @@
 "use client";
 
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 
 /**
@@ -38,17 +31,9 @@ import type { ReactNode } from "react";
  * 모션 자체는 globals.css 의 `.moment-*` 에 있고 reduced-motion 에서는 결과만 즉시 보인다.
  */
 
-export type MomentKind = "success" | "celebrate" | "welcome";
-
-export type MomentInput = {
-  title: string;
-  subtitle?: string;
-  kind?: MomentKind;
-  /** celebrate 에서 도장 아래 한지 알약 한 줄(예: "멤버십 시작하기") — 장식용 텍스트, 버튼 아님 */
-  pill?: string;
-};
-
-type MomentContextValue = { showMoment: (input: MomentInput) => void };
+/* [1086] 문맥·훅·타입은 moment-context(부르는 화면은 그쪽을 import — 그리기 코드를 받지 않게). 여기서도 그대로 내보낸다 */
+import { MomentContext, type MomentInput } from "./moment-context";
+export { useMoment, type MomentInput, type MomentKind } from "./moment-context";
 
 type MomentState = MomentInput & { id: number; leaving: boolean };
 
@@ -58,13 +43,6 @@ const HOLD_CELEBRATE_MS = 2300;
 /** 사라지는 시간 */
 const LEAVE_MS = 300;
 
-const MomentContext = createContext<MomentContextValue | null>(null);
-
-/** Provider 밖에서 불려도 안전하게 아무 일도 하지 않는다. */
-export function useMoment(): MomentContextValue {
-  const ctx = useContext(MomentContext);
-  return ctx ?? { showMoment: () => {} };
-}
 
 /* 조각 22개 — 위치는 결정적(난수 없음: SSR/CSR 불일치·재렌더 흔들림 방지).
    각도는 황금각으로 돌리고 거리는 60~170px 사이를 오간다. 색은 한지·주홍·회청·주홍. */

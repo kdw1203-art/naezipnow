@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { useToast } from "@/app/components/toast/ToastProvider";
+import { currentLoginReturnHref } from "@/lib/client/use-return-href";
 
 /* [1058 · C3] 신고 대상 종류 — 거주민 후기는 content_reports 에 들어갈 수 없다(CHECK target_type ∈ post·comment·note ·
    complex_reviews 에 신고 열도 없다). 틀린 사실: 후기의 "신고"가 글 신고 API 로 가서 400("이 항목은 신고 대상이 아님")을 받았다.
@@ -75,7 +76,8 @@ export function ReportButton({
         }),
       });
       if (res.status === 401 || res.status === 403) {
-        router.push("/login");
+        /* [1086 · A4] 로그인 뒤 이 글로 돌아온다 */
+        router.push(currentLoginReturnHref());
         return;
       }
       if (!res.ok) {

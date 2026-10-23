@@ -5,7 +5,7 @@ import { Fineprint } from "@/app/components/Fineprint";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import nextDynamic from "next/dynamic";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { Icon } from "@/app/components/Icon";

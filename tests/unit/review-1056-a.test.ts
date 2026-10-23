@@ -202,8 +202,8 @@ test("A6 attendance-reminders — today 는 kstDateString · 알려진 한계 �
   assert.ok(read("lib/notification-prefs/store-db.ts").includes("기본 **true**(옵트아웃)"), "다이제스트 기본값 사실");
   assert.ok(!read("lib/notification-prefs/store-db.ts").includes("기본 **false**"));
   const settings = read("app/my/settings/SettingsClient.tsx");
-  assert.ok(settings.includes("매일 오후(15시쯤) 1회 (기본 켜짐)"));
-  assert.ok(settings.includes("매주 월요일 오후(15시쯤)") && settings.includes("요약 1회 (기본 켜짐)"));
+  assert.ok(settings.includes("매일 15시경 · 1회 (기본 켜짐)")); // [1084]
+  assert.ok(settings.includes("매주 월요일 15시경") && settings.includes("요약 1회 (기본 켜짐)")); // [1084]
   assert.ok(!settings.includes("(기본 꺼짐)"));
   /* 푸시 본문도 권유문 없이 사실만 */
   assert.ok(src.includes("출석 10P · 연속 3일 20P · 7일 50P"));

@@ -132,6 +132,8 @@ import { ComplexRentSection } from "./ComplexRentSection";
 import { ComplexNearbyPoi } from "./ComplexNearbyPoi";
 import { KakaoShareButton } from "@/app/components/KakaoShareButton";
 import { dongPath } from "@/lib/dong/format";
+import { complexHrefFromNames } from "@/lib/seo/complex-slug";
+import { map3dPath, map3dSupported } from "@/lib/map3d/geo";
 import { ComplexReadMore } from "./ComplexReadMore";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
 import { ComplexNotesNewsAi } from "./ComplexNotesNewsAi";
@@ -1342,6 +1344,11 @@ export default async function ComplexHubPage({
     const dec = decodeComplexId(socialId);
     return dec && v.emd ? dongPath(dec.region, v.emd) : null;
   })();
+  /* [1086 · 서울 3D] 서울 단지는 3D 동네 지도로(이 단지를 고른 채로 연다 · focus = 지도 API 와 같은 단지 주소 규칙) */
+  const map3dHref = (() => {
+    const dec = decodeComplexId(socialId);
+    return dec && v.emd && map3dSupported(dec.region) ? map3dPath(dec.region, v.emd, complexHrefFromNames(dec.region, dec.name)) : null;
+  })();
   /* [1057 · B8] 단지 토론 범위 — 토론 지역·해독 가능한 id 일 때만(아니면 null) */
   const talkScope = socialOk ? talkScopeForComplex(socialId, regionId) : null;
 
@@ -1623,6 +1630,16 @@ export default async function ComplexHubPage({
                 {v.emd}
               </span>
             ))}
+          {map3dHref && (
+            <Link
+              href={map3dHref}
+              prefetch={false}
+              title={`${v.emd} 3D 동네 지도`}
+              className="chip border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2 no-underline hover:border-primary hover:text-primary"
+            >
+              3D 동네 ›
+            </Link>
+          )}
         </div>
 
         {/* [1024] 머리 — 흰 면 PageHead(소유자가 시안을 봤으므로 네이비 머리를 이 모양으로). 아이콘 칩 + 단지명 + 주소 한 줄 |

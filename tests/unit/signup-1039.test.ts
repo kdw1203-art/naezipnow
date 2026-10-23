@@ -63,7 +63,7 @@ test("[1039] 가입 화면 — 화면 검증(noValidate) · 칸별 오류 · 보
   assert.match(src, /setResendWait\(RESEND_COOLDOWN_SEC\)/);
   assert.match(src, /name="website" tabIndex=\{-1\}/);
   assert.match(src, /disabled=\{busy \|\| socialBusy !== null\}/);
-  assert.match(src, /소셜 가입 =/);
+  assert.match(src, /소셜 가입 시/); // [1084] 문장 안 "=" 기호 → "시"
   /* 서버 원문(영문)은 붙이지 않는다 · 주소에 이메일을 싣지 않는다 */
   assert.match(src, /\/\[가-힣\]\/\.test\(data\.detail\)/);
   assert.doesNotMatch(src, /&email=\$\{encodeURIComponent/);

@@ -98,6 +98,16 @@ export function loginReturnHref(pathname: string, search = ""): string {
 }
 
 /**
+ * [1086 · A4] 헤더·전체 메뉴의 "회원가입" 링크 — 로그인 링크와 같은 규칙으로 돌아올 곳을 싣는다(예전엔 늘 `/signup` 이라
+ * 단지·노트를 보다 가입하면 가입 뒤 관심 지역 화면 → 첫 노트 쓰기로 갔다 — 보던 화면이 사라졌다).
+ * 가입 화면은 callbackUrl 을 /welcome?next= 로 잇는다(SignupClient · WelcomeClient 의 "하던 화면으로").
+ */
+export function signupReturnHref(pathname: string, search = ""): string {
+  const login = loginReturnHref(pathname, search);
+  return login === "/login" ? "/signup" : login.replace(/^\/login\?/, "/signup?");
+}
+
+/**
  * [1003] 탭바 "동네" 탭을 함께 켜는, `/town` **밖**의 경로 — 세그먼트 prefix.
  *
  * 동네이야기 카테고리 다섯 칸 중 넷(`/apply`·`/auctions`·`/supply`·`/redevelopment`)은

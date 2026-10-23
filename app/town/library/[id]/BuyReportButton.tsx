@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 
 /* 리포트 구매 — POST /api/creator/reports/[id]/buy (포인트 차감·구매 기록).
    성공하면 서버 컴포넌트를 새로고침해 '노트 열람' CTA 로 바뀐다. */

@@ -187,7 +187,8 @@ export default async function GuidePage({
                 {section.keys && section.keys.length > 0 ? (
                   <>
                     <KeywordChips className="mt-2" items={section.keys} />
-                    <Fineprint className="mt-1.5" label="자세히">
+                    {/* [1084 · D-063] 첫 절은 펼친 채로 — 세 절이 다 접혀 가이드가 칩 몇 개뿐인 빈 화면으로 읽혔다. 라벨 "자세히" → "본문"(접힌 것이 본문이다) */}
+                    <Fineprint className="mt-1.5" label="본문" open={i === 0}>
                       {body}
                     </Fineprint>
                   </>

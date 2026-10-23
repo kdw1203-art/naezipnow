@@ -57,7 +57,8 @@ export default function GlossaryPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(definedTermSetJsonLd()) }}
       />
-      <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+      {/* [1084 · D-062] 가운데 정렬(mx-auto) → 왼쪽 정렬 — 크럼·제목(PageShell 왼쪽)과 본문의 왼쪽 선을 맞춘다 */}
+      <div className="grid max-w-[1100px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
         <div className="min-w-0">
           <h1 className="rise-in t-title text-ink">부동산 용어사전</h1>
           {/* [1015 · 규칙 B] 소개 문단 → 사실 한 줄(용어 수·분류 수는 카탈로그 길이) */}

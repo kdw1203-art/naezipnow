@@ -1,3 +1,4 @@
+import { withJosa } from "@/lib/format/josa";
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { authorizeCron } from "@/lib/cron/authorize";
@@ -72,7 +73,7 @@ function priceText(krw: number): string {
 function alertBody(name: string, price: ComplexPriceOk, dir: string): string {
   const period = formatYmRange(price.firstYm, price.latestYm);
   return (
-    `${name} ${price.bandLabel} 실거래 평균이 ${priceText(price.priceKrw)}(으)로 ${dir}했어요.` +
+    `${name} ${price.bandLabel} 실거래 평균이 ${withJosa(priceText(price.priceKrw), "으로/로")} ${dir}했어요.` +
     ` (최근 ${price.sampleSize}건${period ? ` · ${period} 신고 기준` : ""})`
   );
 }

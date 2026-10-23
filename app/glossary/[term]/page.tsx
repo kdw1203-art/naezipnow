@@ -108,7 +108,8 @@ export default async function GlossaryTermPage({
   ).slice(0, 6);
 
   return (
-    <PageShell breadcrumb={`부동산 용어사전 · ${t.category}`}>
+    /* [1084] 본문 머리에 링크 달린 경로(용어사전 › 분류)가 있어 PageShell 경로 줄을 뺐다 — 같은 경로가 두 번 보였다(운영 실측) */
+    <PageShell>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(definedTermJsonLd(t)) }}
@@ -127,7 +128,7 @@ export default async function GlossaryTermPage({
       />
 
       {/* [1015 · 규칙 F·G] 데스크톱 2단 — 본문 + 340px 레일(관련 화면 · 광고 1). 폰은 한 열, 광고는 글 끝 1. */}
-      <div className="mx-auto grid max-w-[1100px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
+      <div className="grid max-w-[1100px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
       <div className="min-w-0 lg:max-w-[720px]">
         <nav className="rise-in t-sub text-text-3">
           <Link href="/glossary" className="font-bold text-primary">
@@ -187,7 +188,7 @@ export default async function GlossaryTermPage({
                 <Link
                   key={s.slug}
                   href={`/glossary/${s.slug}`}
-                  className="rounded-full border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1"
+                  className="inline-flex min-h-10 items-center rounded-full border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1 md:min-h-8"
                 >
                   {s.term}
                 </Link>

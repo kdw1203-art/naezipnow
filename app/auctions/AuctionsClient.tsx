@@ -287,6 +287,12 @@ type Fetched =
   | { state: "ok"; items: AuctionApiItem[]; activeTotal: number; matchTotal: number }
   | { state: "error" };
 
+/** [1084 · D-054] 물건명(온비드 "물건명" = 대개 소재지 전체)에 지역의 첫 토막(시·도)이 이미 들어 있는가 */
+export function nameHasRegion(name: string, region: string): boolean {
+  const head = region.trim().split(/\s+/)[0];
+  return head.length > 0 && name.includes(head);
+}
+
 export function AuctionsClient({
   initialItems,
   initialActiveTotal,
@@ -392,7 +398,8 @@ export function AuctionsClient({
        마감 범위는 가진 입찰마감일의 처음·끝이다(없는 날짜를 만들지 않는다). */
     const urgentCount = withDday.filter((c) => c.dday?.urgent).length;
     const endDigits = cards
-      .map((c) => (c.targetDate ?? "").replace(/\D/g, ""))
+      /* [1084] 날짜 8자리만 — 시각까지 붙은 채 비교해 같은 날이 "2026.10.21~21"로 나왔다(운영 실측) */
+      .map((c) => (c.targetDate ?? "").replace(/\D/g, "").slice(0, 8))
       .filter((d) => d.length >= 8)
       .sort();
     /* [1075] "2026.10.19~2026.10.21" 은 PC 넉 칸에서도 두 줄로 접혔다(실측) — 같은 해·달은 한 번만 적는다(fmtDtRange) */
@@ -648,7 +655,8 @@ export function AuctionsClient({
                     >
                       <span className="truncate-1 font-bold text-ink">
                         {c.name}
-                        {c.region ? (
+                        {/* [1084 · D-054] 물건명이 이미 소재지(시·도부터)로 시작하면 회색 지역을 다시 붙이지 않는다 — 같은 주소가 두 번 나와 말줄임됐다 */}
+                        {c.region && !nameHasRegion(c.name, c.region) ? (
                           <span className="ml-1 t-caption font-medium text-text-3">{c.region}</span>
                         ) : null}
                       </span>
@@ -693,7 +701,12 @@ export function AuctionsClient({
                 이 달에 마감이 걸린 날을 한 장으로 보는 자리이고, 날짜 자체는 위 표의 "입찰마감" 칸이 먼저 말한다. */}
             <details className="rise-in-4 card rounded-2xl px-[18px] py-3">
               <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-x-2 t-sub font-bold text-text-2">
-                <span>{monthLabel} 입찰 캘린더</span>
+                {/* [1084] summary 가 flex 라 기본 펼침 표식이 사라져 빈 카드처럼 보였다(운영 실측) — 표식을 글자로 */}
+                <span>
+                  {monthLabel} 입찰 캘린더{" "}
+                  {/* dead-control-ok: <summary>(펼침 컨트롤) 안의 표식 — 검사기는 summary 를 컨트롤로 보지 않는다 */}
+                  <span aria-hidden="true" className="font-medium text-text-3">펼치기 ▾</span>
+                </span>
                 <span className="flex items-center gap-1 t-caption font-medium text-text-3">
                   <span className="h-2 w-2 rounded-sm bg-primary" />
                   입찰마감일
@@ -749,7 +762,7 @@ export function AuctionsClient({
                       >
                         <span className="truncate-1 font-bold text-ink">
                           {c.name}
-                          {c.region ? (
+                          {c.region && !nameHasRegion(c.name, c.region) ? (
                             <span className="ml-1 t-caption font-medium text-text-3">
                               {c.region}
                             </span>

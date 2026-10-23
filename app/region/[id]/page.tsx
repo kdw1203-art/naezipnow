@@ -1395,7 +1395,7 @@ export default async function RegionHubPage({
                     <Link
                       key={c.bandSlug}
                       href={`/tx/${encodeURIComponent(txBandRegion.slug)}/${kind}/${c.bandSlug}`}
-                      className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
+                      className="tile inline-flex min-h-10 items-center rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink md:min-h-8"
                     >
                       {c.bandLabel}
                       <span className="ml-1 font-medium text-text-3">
@@ -1417,7 +1417,7 @@ export default async function RegionHubPage({
                     key={d.dong}
                     prefetch={false}
                     href={dongPath(txBandRegion.name, d.dong)}
-                    className="tile rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink"
+                    className="tile inline-flex min-h-10 items-center rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink md:min-h-8"
                   >
                     {d.dong}
                     <span className="ml-1 font-medium text-text-3">{d.recentTradeCount.toLocaleString("ko-KR")}건</span>

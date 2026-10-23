@@ -83,11 +83,11 @@ test("K4 로그인 화면 — 자동 로그인 체크(기본 켬·20px·기억) 
 
 test("K5 헤더 · 모바일 메뉴 — 회원가입이 보인다", () => {
   const h = read("app/components/HeaderAuth.tsx");
-  assert.match(h, /href="\/signup"\s+prefetch=\{false\}\s+className="btn-navy press inline-flex min-h-10 shrink-0 items-center whitespace-nowrap rounded-full px-3 t-body font-bold no-underline md:min-h-9 md:px-3\.5"/);
+  assert.match(h, /href=(?:"\/signup"|\{signupHref\})\s+prefetch=\{false\}\s+className="btn-navy press inline-flex min-h-10 shrink-0 items-center whitespace-nowrap rounded-full px-3 t-body font-bold no-underline md:min-h-9 md:px-3\.5"/);
   assert.doesNotMatch(h, /className="hidden whitespace-nowrap py-3 t-body font-bold text-text-2 transition-colors hover:text-primary md:inline"/);
   /* 폰 헤더는 회원가입 단추 하나(로그인 글자는 md+) — 검색 칸 폭을 지킨다 */
   assert.match(h, /className="-mx-2 hidden whitespace-nowrap px-2 py-3 t-body font-bold text-text-1 transition-colors hover:text-primary md:inline"\s*>\s*로그인/);
   const m = read("app/components/MobileMenu.tsx");
-  assert.match(m, /\{loggedIn === false \? \(\s*<Link prefetch=\{false\} href="\/signup" className="glass flex-1 rounded-xl py-2\.5 text-center t-body font-bold text-primary">\s*회원가입/);
+  assert.match(m, /\{loggedIn === false \? \(\s*<Link prefetch=\{false\} href=(?:"\/signup"|\{signupHref\}) className="glass flex-1 rounded-xl py-2\.5 text-center t-body font-bold text-primary">\s*회원가입/);
   assert.match(m, /<Link prefetch=\{false\} href="\/my" className="glass flex-1 rounded-xl py-2\.5 text-center t-body font-bold text-text-1">\s*마이페이지/);
 });

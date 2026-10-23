@@ -67,7 +67,7 @@ export async function ComplexNotesNewsAi({
 
   return (
     /* [968 · 7] cv-auto — 뷰포트 밖이면 레이아웃·페인트를 미룬다(page.tsx 주석 참고) */
-    <section className="cv-auto mt-6 grid gap-4 max-md:mt-3 max-md:gap-3 lg:grid-cols-3">
+    <section className="cv-auto mt-6 grid gap-4 max-md:mt-3 max-md:gap-3 lg:grid-cols-2">
       {/* ── 이 단지 임장노트 ─────────────────────────────────────────────── */}
       <div className="card rounded-2xl p-5 max-md:p-3.5">
         <div className="flex items-baseline justify-between">
@@ -106,7 +106,8 @@ export async function ComplexNotesNewsAi({
                     )}
                   </span>
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate t-body font-bold text-ink">{n.title}</span>
+                    {/* [1084] 3단 중 한 칸(250px)에 한 줄 말줄임이라 "[내집나우 Lab] AI …"만 보였다(운영 실측) — 두 줄까지 */}
+                    <span className="line-clamp-2 break-words t-body font-bold text-ink">{n.title}</span>
                     <span className="mt-0.5 block truncate t-sub text-text-3">
                       {[n.visitDate, n.region].filter(Boolean).join(" · ") || "방문일 미기재"}
                     </span>
@@ -126,22 +127,18 @@ export async function ComplexNotesNewsAi({
         >
           이 단지 임장노트 쓰기
         </Link>
-      </div>
 
-      {/* ── AI 분석 ──────────────────────────────────────────────────────── */}
-      <div className="card rounded-2xl p-5 max-md:p-3.5">
-        <h2 className="t-section text-ink">AI 분석</h2>
-        {/* [1011] "AI 가 읽는 재료는 아래와 같습니다" 문단과 그 아래 소스 목록(실거래 N건 ·
-            추이 · 이웃 노트 N건 · 지역 뉴스 N건)을 걷었다(소유자 지시 — 같은 종류를 AI 도구
-            화면에서도 걷었다). 무엇을 재료로 삼는지는 만드는 쪽의 사정이고, 쓰는 사람에게는
-            "이 단지를 분석해 준다"는 사실과 버튼 하나면 충분하다. 결과 화면에는 출처 표기가
-            그대로 붙는다(check:ai-compliance 가 강제한다). */}
-        <Link
-          href={analysisHref}
-          className="btn-outline mt-3 block rounded-xl p-2.5 text-center t-sub font-bold"
-        >
-          이 단지 AI 분석 받기
-        </Link>
+        {/* ── AI 분석 ── [1084 · D-047] 단추 하나뿐인 칸이 3단 높이를 관련 기사에 맞춰 늘려 아래 200px 이 비었다 →
+            임장노트 칸 아래로 합쳐 2단. [1011] 재료 목록은 걷은 그대로 — 결과 화면에 출처 표기(check:ai-compliance) */}
+        <div className="mt-4 border-t border-divider pt-3">
+          <h2 className="t-section text-ink">AI 분석</h2>
+          <Link
+            href={analysisHref}
+            className="btn-outline mt-2 block rounded-xl p-2.5 text-center t-sub font-bold"
+          >
+            이 단지 AI 분석 받기
+          </Link>
+        </div>
       </div>
 
       {/* ── 관련 기사 ────────────────────────────────────────────────────── */}
@@ -149,7 +146,7 @@ export async function ComplexNotesNewsAi({
         <h2 className="t-section text-ink">관련 기사</h2>
         {news.length === 0 ? (
           <p className="mt-3 t-sub text-text-3">
-            이 단지·지역을 다룬 기사가 아직 모이지 않았어요.
+            이 단지·지역 관련 기사 없음
           </p>
         ) : (
           <ul className="lq-panel mt-3 flex list-none flex-col divide-y p-0" data-tone="blue">

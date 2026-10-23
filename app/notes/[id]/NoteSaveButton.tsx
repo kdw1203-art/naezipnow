@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
-import { useSoftSignup } from "@/app/components/soft-signup/SoftSignupProvider";
+import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 
 /* [1059] 임장노트 저장 — 공개 노트(남의 것)에서 "저장" / "저장됨". 저장소는 프로필 설정 jsonb(lib/bookmarks/settings-store).
  * 로그인 힌트 쿠키가 없으면 서버에 묻지 않고(1007 규칙) 누르면 가입·로그인 창. 상태는 마운트 뒤 GET ?type=note&id= 로. */

@@ -21,7 +21,7 @@ import { safeInternalPath } from "@/lib/safe-path";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Logo } from "@/app/components/Logo";
-import { useMoment } from "@/app/components/motion/MomentProvider";
+import { useMoment } from "@/app/components/motion/moment-context";
 
 import type { SocialProvider } from "@/lib/auth/configured-social";
 import { InAppBrowserNotice, useInAppBrowser } from "@/app/components/auth/InAppBrowserNotice";
@@ -727,7 +727,7 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
           <Link href="/legal/privacy" className="tap-line underline underline-offset-2">
             개인정보처리방침
           </Link>
-          에 동의하게 됩니다 · 만 14세 이상
+          에 동의하게 됩니다 · <span className="whitespace-nowrap">만 14세 이상</span>
         </p>
       </div>
     </main>

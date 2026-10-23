@@ -35,6 +35,7 @@ import { seoAlternates } from "@/lib/seo/alternates";
 import { breadcrumbJsonLd, datasetJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 import { logger } from "@/lib/log";
+import { map3dPath, map3dSupported } from "@/lib/map3d/geo";
 
 /* 7일 ISR — 원천(국토부 실거래)은 하루 1회 적재. /tx·/region 과 같은 눈금. 빈 배열 = 요청이 오면 그때 만들어 캐시(ISR 분류) */
 export const revalidate = 604_800;
@@ -142,6 +143,15 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
         단지 <strong className="text-ink">{n(complexes.length)}곳</strong> · 최근 6개월 매매 신고{" "}
         <strong className="text-ink">{n(recent)}건</strong> · 국토교통부 실거래 · 매물 호가 아님
       </p>
+      {/* [1086 · 서울 3D] 서울 동은 3D 동네 지도로 — 건물 높이(OpenStreetMap) 위에 이 동 단지(평당 평균 단계)·역·학교 */}
+      {map3dSupported(region) && (
+        <p className="rise-in -mt-2 mb-4 t-sub max-md:-mt-1 max-md:mb-3">
+          <Link href={map3dPath(region, dong)} prefetch={false} className="tap-line font-bold text-primary">
+            {dong} 3D로 보기 ›
+          </Link>
+          <span className="ml-1.5 t-caption text-text-3">단지 · 역 · 학교 · 건물 높이</span>
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
         <div className="min-w-0">

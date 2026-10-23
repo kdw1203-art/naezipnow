@@ -282,6 +282,9 @@ function maybeStripLegacyWdParam(request: NextRequest): NextResponse | null {
   return applySecurityHeaders(NextResponse.redirect(url, 308), request);
 }
 
+/** [1085] 서버 액션("use server")을 쓰는 화면 경로 — 이 밖의 Next-Action POST 는 엣지에서 400 */
+const SERVER_ACTION_PATHS: readonly string[] = ["/safety"];
+
 export async function middleware(request: NextRequest) {
   const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
   const isApi = request.nextUrl.pathname.startsWith("/api");
@@ -297,6 +300,21 @@ export async function middleware(request: NextRequest) {
   ) {
     return new NextResponse("crawler not permitted — see /robots.txt", {
       status: 403,
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
+    });
+  }
+
+  /* [1085] 서버 액션이 없는 경로로 온 Next-Action POST — 이 사이트의 서버 액션은 /safety(app/safety/actions.ts) 한 곳뿐인데
+     "/" 로 Next-Action 헤더 POST 가 와서 "Failed to find Server Action"(오래된·남의 배포 id) 오류가 7일 21회 쌓였다(운영 오류 묶음 2위 ·
+     한 클라이언트의 자동 반복). 함수(ISR 렌더)까지 보내지 않고 엣지에서 400. 새 서버 액션을 만들면 SERVER_ACTION_PATHS 에 경로를 더한다
+     (tests/unit/review-1085 가 "use server" 파일과 이 목록을 맞춰 본다). */
+  if (
+    request.method === "POST" &&
+    request.headers.has("next-action") &&
+    !SERVER_ACTION_PATHS.some((p) => request.nextUrl.pathname === p || request.nextUrl.pathname.startsWith(`${p}/`))
+  ) {
+    return new NextResponse("no server action on this path", {
+      status: 400,
       headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" },
     });
   }

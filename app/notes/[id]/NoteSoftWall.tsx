@@ -4,6 +4,8 @@ import { hasSession } from "@/lib/client/has-session";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { loginHrefWithNext } from "@/lib/auth/auth-ux";
+import { trackPlatformEvent } from "@/lib/platform-events-client";
+import { decideNoteWall, NOTE_WALL_FREE_PER_DAY, NOTE_WALL_KEY, parseNoteWallState } from "@/lib/notes/soft-wall";
 
 /* [개선 #5, 2026-08-22] 공개 노트 소프트월 — 비회원 하루 3편까지.
  *
@@ -18,13 +20,20 @@ import { loginHrefWithNext } from "@/lib/auth/auth-ux";
  *  - 하루 단위로 초기화 — "오늘은 여기까지"이지 영구 차단이 아니다.
  *  - localStorage 를 못 읽는 환경(프라이빗 모드)은 벽을 세우지 않는다 —
  *    가드가 실패하면 열리는 쪽이 안전하다(콘텐츠는 어차피 공개물).
+ *
+ * [1086 · A6] (1) 하루 한 번 "이 노트만 마저 보기"(닫기) — 예전엔 벽을 닫을 길이 없어 공유받은 노트 한 편을 보러 온 사람이
+ *   가입 아니면 이탈이었다. 닫은 노트는 그날 다시 벽을 세우지 않는다. (2) 노출·가입·로그인·닫기를 퍼널 이벤트로 남긴다(전엔 0).
+ *   (3) 가입 귀속(nz_signup_via = soft:note_wall) — 가입 완료가 이 벽에서 왔는지 센다. (4) 흰색 그라디언트(다크 모드에서 흰 띠)
+ *   → 바탕 토큰 반투명 판.
  */
 
-const KEY = "nz_note_reads";
-const FREE_PER_DAY = 3;
+function track(eventName: string, metadata: Record<string, unknown> = {}) {
+  trackPlatformEvent({ eventName, source: "note_wall", campaign: "funnel", metadata: { action: "note_wall", ...metadata } });
+}
 
 export function NoteSoftWall({ noteId }: { noteId: string }) {
   const [walled, setWalled] = useState(false);
+  const [canPass, setCanPass] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -40,22 +49,13 @@ export function NoteSoftWall({ noteId }: { noteId: string }) {
     function applyWall() {
       try {
         const today = new Date().toISOString().slice(0, 10);
-        const raw = localStorage.getItem(KEY);
-        let state: { date: string; ids: string[] } = { date: today, ids: [] };
-        if (raw) {
-          const parsed = JSON.parse(raw) as { date?: string; ids?: string[] };
-          if (parsed.date === today && Array.isArray(parsed.ids)) {
-            state = { date: today, ids: parsed.ids.map(String) };
-          }
-        }
-        const already = state.ids.includes(noteId);
-        if (!already && state.ids.length >= FREE_PER_DAY) {
-          setWalled(true); // 무료 쿼터 소진 — 이 글은 세지 않고 벽만 세운다
-          return;
-        }
-        if (!already) {
-          state.ids.push(noteId);
-          localStorage.setItem(KEY, JSON.stringify(state));
+        const state = parseNoteWallState(localStorage.getItem(NOTE_WALL_KEY), today);
+        const d = decideNoteWall(state, noteId);
+        if (d.write) localStorage.setItem(NOTE_WALL_KEY, JSON.stringify(d.state));
+        if (d.walled) {
+          setWalled(true);
+          setCanPass(d.canPass);
+          track("note_wall_view", { canPass: d.canPass });
         }
       } catch {
         /* 저장소 접근 불가 — 벽 없이 통과 */
@@ -65,39 +65,61 @@ export function NoteSoftWall({ noteId }: { noteId: string }) {
 
   if (!walled) return null;
 
+  const back = `/notes/${encodeURIComponent(noteId)}`;
+  const pass = () => {
+    try {
+      const today = new Date().toISOString().slice(0, 10);
+      const state = parseNoteWallState(localStorage.getItem(NOTE_WALL_KEY), today);
+      localStorage.setItem(NOTE_WALL_KEY, JSON.stringify({ ...state, passed: noteId }));
+    } catch {
+      /* 저장 불가 — 이 화면에서만 닫힌다 */
+    }
+    track("note_wall_pass");
+    setWalled(false);
+  };
+
   return (
     <div className="fixed inset-x-0 bottom-0 z-[70]">
-      {/* 본문 하단을 덮는 그라디언트 — 위쪽 내용은 그대로 보인다(소프트) */}
-      <div
-        aria-hidden
-        className="pointer-events-none h-[38vh] w-full"
-        style={{
-          background:
-            "linear-gradient(to bottom, rgba(255,255,255,0) 0%, rgba(255,255,255,.9) 45%, #ffffff 80%)",
-        }}
-      />
-      <div className="bg-surface px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-1">
-        <div className="mx-auto flex w-full max-w-[440px] flex-col gap-2.5 rounded-3xl border border-line bg-surface p-5 text-center shadow-[0_18px_44px_rgba(15,23,42,.16)]">
+      {/* 본문 하단을 덮는 반투명 판 — 위쪽 내용은 그대로 보인다(소프트) · 바탕 토큰이라 다크 모드에서도 같은 판 */}
+      <div aria-hidden className="pointer-events-none h-[32vh] w-full bg-bg/85" />
+      <div className="bg-bg px-5 pb-[max(20px,env(safe-area-inset-bottom))] pt-1">
+        <div className="mx-auto flex w-full max-w-[440px] flex-col gap-2.5 rounded-3xl border border-line bg-surface p-5 text-center [box-shadow:var(--shadow-md)]">
           {/* [1015 · 규칙 D] 권유문 두 문장 → 사실 한 줄(가입 뒤 달라지는 것) */}
           <div className="t-section text-ink">
-            오늘 무료 열람 {FREE_PER_DAY}편 소진
+            오늘 무료 열람 {NOTE_WALL_FREE_PER_DAY}편 소진
           </div>
           <p className="t-body text-text-2">
             가입 후 임장노트 열람 제한 없음 · 내 노트 기록 · 출석 포인트
           </p>
           <Link
-            href={`/signup?callbackUrl=${encodeURIComponent(`/notes/${encodeURIComponent(noteId)}`)}`}
+            href={`/signup?callbackUrl=${encodeURIComponent(back)}`}
+            onClick={() => {
+              track("note_wall_signup");
+              try {
+                window.sessionStorage.setItem("nz_signup_via", "soft:note_wall");
+              } catch {
+                /* 계측 실패가 흐름을 막지 않는다 */
+              }
+            }}
             className="btn-primary btn-cta rounded-2xl p-3.5 t-body no-underline"
           >
             무료 가입하고 계속 읽기
           </Link>
-          {/* [1054] 로그인 뒤 이 노트로 돌아온다 */}
-          <Link
-            href={loginHrefWithNext(`/notes/${encodeURIComponent(noteId)}`)}
-            className="t-sub font-bold text-text-3 no-underline"
-          >
-            로그인
-          </Link>
+          <div className="flex items-center justify-center gap-4">
+            {/* [1054] 로그인 뒤 이 노트로 돌아온다 */}
+            <Link
+              href={loginHrefWithNext(`/notes/${encodeURIComponent(noteId)}`)}
+              onClick={() => track("note_wall_login")}
+              className="tap-line t-sub font-bold text-text-2 no-underline"
+            >
+              로그인
+            </Link>
+            {canPass && (
+              <button type="button" onClick={pass} className="tap-line t-sub font-bold text-text-3">
+                이 노트만 마저 보기 · 하루 1회
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>

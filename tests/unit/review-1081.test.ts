@@ -57,7 +57,9 @@ test("사이트맵 — 단지 6조각 · 인덱스는 조각만 · 조각 라우
   assert.match(sections, /loadComplexChunkEntries\(/);
   const build = strip(read("lib/seo/build-sitemap.ts"));
   assert.match(build, /export async function loadComplexChunkEntries\(chunkIndex: number\)/);
-  assert.match(build, /chunkIndex \* COMPLEX_SITEMAP_CHUNK_SIZE/);
+  /* [1085] 범위 계산은 순수 함수 complexChunkRange(sitemap-slugs)로 — 같은 chunkIndex × 5,000 규칙 */
+  assert.match(build, /complexChunkRange\(all\.length, chunkIndex\)/);
+  assert.match(read("lib/seo/sitemap-slugs.ts"), /const start = chunkIndex \* size;/);
   assert.match(build, /export function reportClosedAt\(slug: string\)/);
   assert.match(build, /Date\.UTC\(Number\(m\[1\]\), Number\(m\[2\]\) - 1 \+ 2, 1\)/, "두 달 뒤 1일");
   assert.match(build, /g\.updatedAt/, "가이드 lastmod 는 updatedAt 이 있을 때만");
