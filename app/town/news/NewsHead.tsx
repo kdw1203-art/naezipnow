@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageHead } from "@/app/components/PageHead";
 
 /* [1044] 뉴스룸 머리 — 뉴스가 동네에서 떨어져 나온 뒤의 제 머리.

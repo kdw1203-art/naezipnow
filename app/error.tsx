@@ -1,7 +1,7 @@
 "use client";
 
 import { startTransition, useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { reportClientError } from "@/lib/client/error-report";

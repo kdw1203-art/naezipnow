@@ -129,9 +129,10 @@ test("[1028 · 18] 입주 물량 — 창은 달력 기준 '이번 달부터 24�
 
 test("[1028 · 19] 단지 결과 요약 — 실거래 조회 키는 canonical_id(kapt 형태 id 아님)", () => {
   const page = code("app/complex/[id]/page.tsx");
-  assert.ok(page.includes("prefetchAxisSummary({ rowId: r.canonical_id, city: r.city, district: r.district })"));
-  assert.ok(page.includes("<ComplexAxisSummary complexId={rowForFacts?.canonical_id ?? v.id}"));
-  assert.ok(!page.includes("prefetchAxisSummary({ rowId: r.id,"));
+  /* [1089] 결과 요약은 사람이 볼 때 따로 받는다(ComplexInsightPanels → /api/complex/insight) — 키는 그대로 canonical_id */
+  assert.ok(page.includes("<ComplexInsightPanels\n            complexId={rowForFacts?.canonical_id ?? v.id}"));
+  assert.ok(!page.includes("prefetchAxisSummary("), "렌더 중 축 조회를 먼저 띄우지 않는다");
+  assert.ok(!/complexId=\{r\.id\b/.test(page));
 });
 
 /* ── 13. 직거래·등기 표식 ──────────────────────────────────────────────── */

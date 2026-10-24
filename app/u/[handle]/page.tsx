@@ -1,6 +1,6 @@
 /* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 6곳을 font-bold(700)로 바꿨다. */
 import { resolveNoteCover } from "@/lib/notes/cover/resolve";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { cache } from "react";

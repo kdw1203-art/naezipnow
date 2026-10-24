@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { ReactNode } from "react";
 import { Icon } from "@/app/components/Icon";
 

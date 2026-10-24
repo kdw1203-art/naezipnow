@@ -17,7 +17,7 @@
      · 손잡이: 폼의 "표 강조 타입" 칩 → 문서의 미니 카드·표 행이 강조(첫 타입 기본 · BriefHighlightBridge).
      · 인쇄: 띠는 선 하나 · 미니 차트는 낮게 — A4 한 장 그대로(globals.css [1025c · 브리핑]). */
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";

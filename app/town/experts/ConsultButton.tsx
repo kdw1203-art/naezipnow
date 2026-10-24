@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { Modal, ModalHeader } from "@/app/components/ui/Modal";
 import { Icon } from "@/app/components/Icon";

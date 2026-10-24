@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "../../components/PageShell";
 import { QaBlock } from "../../components/QaBlock";
 /* [1015 · 규칙 B] "조합을 고른 기준" 문단은 제목 옆 ⓘ 하나로(단지 상세와 같은 지연 청크) */

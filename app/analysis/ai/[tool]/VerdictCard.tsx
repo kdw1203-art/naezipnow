@@ -1,7 +1,7 @@
 /* [1026b · AI 분석 8종] 값 하나 그리기(ShownValue)를 내보낸다 — 8종 결론 히어로(tool-signature.tsx)의 대표 수치가 같은 표기를 쓴다. 그 밖은 그대로. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import { Fineprint } from "@/app/components/Fineprint";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { ReactNode } from "react";
 import type { Verdict, VerdictDisplay, VerdictTile } from "@/lib/ai/verdict";
 import { Won } from "@/app/components/num/Won";

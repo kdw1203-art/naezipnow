@@ -3,7 +3,7 @@
    시안: scratchpad mock1024/rent-{d,m}.html. */
 import type { Metadata } from "next";
 import { HScroll } from "@/app/components/HScroll";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";

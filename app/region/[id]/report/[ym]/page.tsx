@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { cache } from "react";
 import { regionReportDescription, regionReportTitle } from "@/lib/region/report-meta";
 import { HScroll } from "@/app/components/HScroll";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { findCatalogRegionById } from "@/lib/region/catalog";

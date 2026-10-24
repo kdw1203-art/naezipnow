@@ -257,6 +257,7 @@ test("[1026→1026b] 번들 — WorkbenchClient 정적 import: StepLine · [1026
     "./workbench-types",
     "@/app/analysis/ComplexPicker",
     "@/app/analysis/use-map-pick",
+    "@/app/components/IntentLink", // [1088] next/link → 손이 닿을 때만 미리 받는 같은 링크
     "@/app/components/StepLine",
     "@/app/components/toast/ToastProvider",
     "@/app/components/ui/Skeleton",
@@ -271,7 +272,6 @@ test("[1026→1026b] 번들 — WorkbenchClient 정적 import: StepLine · [1026
     "@/lib/format/josa", // [1084] 조사 처리(순수 함수 · 1KB 미만)
     "@/lib/format/krw",
     "next/dynamic",
-    "next/link",
     "react",
   ]);
   assert.doesNotMatch(workbench, /MobilePrimaryBar|conclusion-next|from "\.\/ResultRail"|from "\.\/ResultView"|from "\.\/VerdictBoard"|EconomyWatch|ActionButton/);

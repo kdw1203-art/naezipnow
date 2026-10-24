@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
 import { ActionButton } from "@/app/components/ui/ActionButton";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";

@@ -106,7 +106,7 @@ test("C4 MobileMenu — 관심 단지(/my/watchlist) · 포인트·미션(/my/po
     assert.match(icons, new RegExp(`^\\s*"?${name}"?:`, "m"), `ICON_PATHS 에 ${name}`);
   }
   /* 데스크톱 내비와 같은 목적지 */
-  const side = code("app/components/DesktopSideNav.tsx");
+  const side = code("app/components/DesktopSideNavGroups.tsx"); /* [1088] 패널 안쪽(묶음 표)은 지연 조각으로 옮겼다 */
   assert.match(side, /href: "\/my\/watchlist"/);
   assert.match(side, /href: "\/my\/points"/);
 });

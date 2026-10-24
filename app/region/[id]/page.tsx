@@ -4,7 +4,7 @@ import { HScroll } from "@/app/components/HScroll";
 import { AdZone } from "@/app/components/ads/AdZone";
 /* [1015 · 규칙 H] 노트 행 40px 정사각 썸네일 — 커버가 없으면 단색 칸(값은 단색 토큰) */
 import { seedGradient } from "@/lib/town/shared";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
 import { QaBlock } from "../../components/QaBlock";

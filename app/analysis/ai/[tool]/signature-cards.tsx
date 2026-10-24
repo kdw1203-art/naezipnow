@@ -18,7 +18,7 @@
    규칙: 숫자는 있는 것만(verdict·insight·scenario·series) · 새 계산 없음(지금 대비 % 만 scenario 두 값의 비율) ·
    설명문 없음 · 색은 토큰만 · 굵기 700 까지. ResultView(next/dynamic 청크)가 가져간다 — 본체 번들에 싣지 않는다. */
 
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { ReactNode } from "react";
 import type { Verdict } from "@/lib/ai/verdict";
 import type { ComplexTradeSeries } from "@/lib/ai/result-series";

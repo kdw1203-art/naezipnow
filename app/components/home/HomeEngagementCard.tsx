@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { attendanceLine, pointsLink } from "@/lib/home/engagement-line";
 
 /* [1056] 홈 "오늘의 활동" 카드 — 로그인 사용자에게만, HomeMyRail 이 세션을 확인한 뒤

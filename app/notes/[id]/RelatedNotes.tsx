@@ -1,6 +1,6 @@
 /* [1023 · 임장노트] docs/review-1022.md 1장 ① — 같은 단지(aptName 일치)를 앞줄("같은 단지" 캡션), 나머지 지역 일치를 뒤("같은 지역").
    풀·매칭(rankRelatedNotes)·상한은 그대로, 정렬만(lib/notes/related-order). aptName 은 선택 prop — 없으면 풀에서 현재 노트를 찾아 쓴다. */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
 import { CoverImage } from "@/app/components/CoverImage";
 import { inspectionAverageScore, type PublicNoteCard } from "@/lib/inspection/store-db";

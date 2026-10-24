@@ -6,7 +6,7 @@
    지역 이름으로 저장한 매수 타이밍은 도구 화면만(딥링크는 단지+지역이 함께 있어야 열린다). 기록이 없으면 카드도 없다. */
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { daysSinceRun, listRecentHistory, type HistoryEntry } from "@/lib/ai/history-store";
 
 /** 지역 이름을 키로 저장하는 도구 — ResultView historyKey 규칙과 같다 */

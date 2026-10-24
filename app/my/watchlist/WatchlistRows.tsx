@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
 import { Delta } from "@/app/components/num/Delta";
 import { Explain } from "@/app/components/explain/Explain";

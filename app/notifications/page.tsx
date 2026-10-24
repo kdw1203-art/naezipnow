@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { PageShell } from "../components/PageShell";
 import { useToast } from "@/app/components/toast/ToastProvider";

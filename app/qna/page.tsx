@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { Metadata } from "next";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";

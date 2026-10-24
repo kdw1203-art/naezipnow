@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 /* types.ts 는 설계상 server-only 체인이 없는 순수 타입·상수 모듈이라 값 import 가 안전하다
    (파일 머리말에 그렇게 못박혀 있다). store.ts 쪽은 서버 전용이므로 타입만 온다. */
 import { PARTNER_TYPES, type DevPartner } from "@/lib/dev-deals/types";

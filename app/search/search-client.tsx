@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { CoverageRequestCard } from "./CoverageRequestCard";

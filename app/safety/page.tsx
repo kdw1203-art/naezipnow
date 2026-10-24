@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { scrollBehavior } from "@/lib/ui/scroll";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { AIPanel } from "@/app/components/AIPanel";
 import { FaqCompact } from "@/app/components/compact/FaqCompact";

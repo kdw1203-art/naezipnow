@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { safeAuth } from "@/lib/safe-auth";
 import { getExpertByOwnerEmail } from "@/lib/experts/store-db";

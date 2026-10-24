@@ -1,6 +1,6 @@
 import { withJosa } from "@/lib/format/josa";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
 import { getImjangGuide, type ImjangGuide } from "@/lib/imjang/guide";

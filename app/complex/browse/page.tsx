@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "../../components/PageShell";
 import {
   SEOUL_BROWSE_REGIONS,

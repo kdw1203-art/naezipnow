@@ -2,7 +2,7 @@ import { formatKstDate } from "@/lib/format/kst";
 import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
 import { HScroll } from "@/app/components/HScroll";
 import { seoAlternates } from "@/lib/seo/alternates";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { ErrorState } from "@/app/components/ui";
 import { Icon } from "@/app/components/Icon";

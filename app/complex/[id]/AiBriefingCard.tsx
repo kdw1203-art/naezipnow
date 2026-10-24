@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { NoteDraft } from "@/lib/ai/note-draft-core";
 
 /* [944 · AI 대개편] 단지 상세 "AI 예습 브리핑" — 방문 전에 데이터 예습을 한 장으로.

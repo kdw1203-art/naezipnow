@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { ReactNode } from "react";
 
 /* [1015 · 규칙 J] 단지 상세의 사실 목록 한 행 — 왼쪽 이름(굵게) + 보조 한 줄 / 오른쪽 값(숫자) 또는 `›`.

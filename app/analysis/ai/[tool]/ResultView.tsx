@@ -19,7 +19,7 @@
    노트·관심·비교 버튼은 오른쪽 레일(ResultRail.tsx)로 옮겼다. 나머지 8종은 예전 순서 그대로. */
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { cleanAiLine } from "@/lib/ai/ai-tail";
 import type { AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import type { Verdict } from "@/lib/ai/verdict";

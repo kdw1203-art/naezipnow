@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/app/components/Logo";
 import { Icon } from "@/app/components/Icon";

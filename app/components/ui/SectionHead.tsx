@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 
 /**
  * [1000] 섹션 머리 — 제목(h2 기본) + 선택 부제 + 오른쪽 "전체 보기" 링크.

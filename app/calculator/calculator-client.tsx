@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import nextDynamic from "next/dynamic";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";

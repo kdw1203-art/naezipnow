@@ -2,7 +2,7 @@
 /* [1023 · AI 분석] 결과 판 — 네이비 AI 패널(.ai-panel + on-dark 토큰) → 흰 카드(bg-bg · 잉크 토큰). 임의 px → 램프. 구조·데이터·문구 불변. */
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";

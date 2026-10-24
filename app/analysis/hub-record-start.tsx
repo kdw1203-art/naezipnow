@@ -2,7 +2,7 @@
 /* [1023 · AI 분석] 로그인 카드에 .hub-start(게스트 카드와 같은 최소 높이) — 세션 판정 뒤 바꿔 끼울 때 레이아웃 점프를 줄인다. */
 
 import type { ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useHubViewer } from "./hub-viewer";
 
 /* [1007] "내가 쓴 기록" 계열의 시작 카드 — 로그인 여부로 갈리는 두 조각을 클라이언트에서 고른다.

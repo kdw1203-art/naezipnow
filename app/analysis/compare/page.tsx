@@ -11,7 +11,7 @@ import { withJosa } from "@/lib/format/josa";
    [1023 · AI 분석] 비교표 머리의 "실데이터 기준" 부연 라벨 제거 · AI 코멘트 판 네이비 → 흰 카드·잉크 토큰. */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "../../components/PageShell";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
 import type { PickedComplex } from "../ComplexPicker";

@@ -3,7 +3,7 @@
    동작·데이터·저장 규칙은 그대로. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
 import { ComplexPicker, type PickedComplex } from "@/app/analysis/ComplexPicker";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";

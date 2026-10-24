@@ -9,7 +9,7 @@
 /* [1027] 채움 파랑이 알림함(/notifications)을 열기만 하던 링크 → 누르면 그 지역이 구독되는 버튼(app/components/RegionAlertButton).
    그 위 한 줄 "실거래 등록·지수 변동 알림"은 내렸다 — 그런 알림은 없다. 지역 구독이 실제로 보내는 것(청약 공고 · 새 등록 매물)을 적는다.
    지역이 바뀌면(전세가율의 조건·정렬, 시세·타이밍의 지역 선택) 버튼 상태도 처음으로 — key 에 지역을 건다. */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { ReactNode } from "react";
 import { MobilePrimaryBar } from "@/app/components/MobilePrimaryBar";
 import { RegionAlertButton } from "@/app/components/RegionAlertButton";

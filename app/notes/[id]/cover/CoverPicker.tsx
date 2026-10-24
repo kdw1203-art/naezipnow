@@ -7,7 +7,7 @@
    글자 링크 1개("나중에 고르기"). 선택 = 한지 면 + 남색 2px 테두리(필터 칩과 같은 선택 표기). */
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 
 export type CoverCandidate = {

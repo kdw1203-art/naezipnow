@@ -7,7 +7,7 @@
 import { Fragment, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { ExpertBadge } from "@/app/components/ExpertBadge";
 import { seedGradient as seedFace } from "@/lib/town/shared";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { matchesInterest } from "@/lib/notes/region-match";

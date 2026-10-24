@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
 /* [968 · 46] 구독 절차는 lib/push/subscribe-client.ts 로 옮겼다 — 관심 등록 토스트의

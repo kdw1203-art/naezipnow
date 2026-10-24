@@ -19,7 +19,7 @@
  * 마운트 후 location.search + popstate, 칩은 얕은 pushState.
  */
 
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { HScroll } from "@/app/components/HScroll";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Explain } from "@/app/components/explain/Explain";

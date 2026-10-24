@@ -9,7 +9,7 @@
        글자 링크 둘 — "결정 카드에 담기"(이 기기 비교함 = /decide 후보, lib/newui/compare-tray) · "같은 단지 다른 노트".
    번들: 상세(/notes/[id])에 이미 있는 모듈(ShareLinkButton · compare-tray · toast)만 쓴다 — 이 파일 자체만 더해진다. */
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
 import { useToast } from "@/app/components/toast/ToastProvider";

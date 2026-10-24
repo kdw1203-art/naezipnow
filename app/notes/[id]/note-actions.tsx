@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { loginHrefWithNext } from "@/lib/auth/auth-ux";
 import { useToast } from "../../components/toast/ToastProvider";

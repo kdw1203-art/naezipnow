@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
 import type { HomeNewsItem, HomeStoryItem } from "@/lib/newui/home-data";
 import { storyHref, newsHref } from "@/lib/town/post-href";

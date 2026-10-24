@@ -5,7 +5,7 @@
    빈 상태는 카드 하나 + 회색 선반 견본 + 한 문장. 데이터 로딩·revalidate·noIndex 는 그대로. 문장은 lib/market/region-conclusion.
    [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(아이콘 칩 40 · h1.t-title · 사실 한 줄 | 오른쪽 칩·지역 검색). 본문은 그대로. */
 import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import { PageShell } from "../../components/PageShell";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";

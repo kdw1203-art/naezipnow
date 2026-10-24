@@ -3,7 +3,7 @@
 
 import { Fineprint } from "@/app/components/Fineprint";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import nextDynamic from "next/dynamic";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";

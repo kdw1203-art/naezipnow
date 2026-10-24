@@ -13,7 +13,7 @@
 
 import { useEffect, useState } from "react";
 import { StepLine } from "@/app/components/StepLine";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
 import { LoadingHint } from "@/app/components/ui/LoadingHint";
 import { ComplexPicker, type PickedComplex } from "@/app/analysis/ComplexPicker";

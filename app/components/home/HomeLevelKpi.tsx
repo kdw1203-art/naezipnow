@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { getHomePersonal } from "@/lib/client/home-personal";
 import { useShellActive, type Shell } from "@/lib/client/viewport-shell";

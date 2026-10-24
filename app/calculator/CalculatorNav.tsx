@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { HScroll } from "@/app/components/HScroll";
 
 /* [개선 #6, 2026-08-22] 계산기 상호 링크 줄.

@@ -4,7 +4,7 @@
    (CommentsRetry — 서버 조회를 router.refresh 로 다시 돌린다) · ③ 지역·단지 칩 마지막 칩의 네이비 채움 → 테두리 칩 + 굵기(화면당 채움 1개 규칙).
    [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { CommentsRetry } from "./comments-retry";
 import { displayAuthorLabel, isLabAuthor } from "@/lib/notes/author-label";
 import { noteDisplayTitle, noteMetaTitle } from "@/lib/notes/title-rule";

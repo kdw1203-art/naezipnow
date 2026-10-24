@@ -4,7 +4,7 @@
 /* 매물 등록 폼 — 지도에서 핀 찍어 등록 → POST /api/listings (authed · 3회/시간) */
 
 import { useCallback, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { NaverMap } from "@/components/map/NaverMapLazy";
 import type { MapIdleInfo } from "@/components/map/NaverMap";
 import { Icon } from "@/app/components/Icon";

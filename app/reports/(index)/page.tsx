@@ -1,6 +1,6 @@
 import { cache } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "../../components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { formatYmKo, listReportMonths, type ReportMonthSummary } from "@/lib/reports/monthly";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { formatCount, type HomeCoverage } from "@/lib/newui/home-coverage";
 
 /* [950 · 홈 대개편] 커버리지 한 줄 — "얼마나 넓게 볼 수 있는가"를 실수치로.

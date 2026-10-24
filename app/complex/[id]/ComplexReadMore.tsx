@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { GUIDE_BY_SLUG } from "@/lib/guides/catalog";
 import { findGlossaryTerm } from "@/lib/seo/glossary-terms";
 

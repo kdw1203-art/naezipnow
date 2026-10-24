@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { Fineprint } from "@/app/components/Fineprint";
 import { FactTable } from "@/app/components/compact/FactTable";

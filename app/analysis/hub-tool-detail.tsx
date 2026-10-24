@@ -5,7 +5,7 @@
    fromTable: 표 줄은 데스크톱에서 "하는 일"(md)·"결과"(lg)를 이미 보여 주므로 그 폭에서는 다시 적지 않는다.
    [1052] 시장 신호 요인 줄 옆 "계산 방법 ›" — 다요인 분석(규칙 계산)의 공식 칸(/methodology#signals)으로.
    보이는 줄 높이는 그대로(음수 마진) · 눌리는 범위만 폰 40px · 데스크톱 24px. */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { WorkbenchCardDto } from "./workbench-cards";
 
 export function ToolDetailBody({

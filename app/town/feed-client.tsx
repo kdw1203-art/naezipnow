@@ -8,7 +8,7 @@ import { regionIdForName } from "@/lib/region/catalog";
 import { Explain } from "@/app/components/explain/Explain";
 import { usePathname, useRouter } from "next/navigation";
 import { getHomePersonal } from "@/lib/client/home-personal";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { seedGradient, seedCoverHeight } from "./shared";
 import { ExampleBadge } from "../components/ExampleBadge";
 import { Icon } from "@/app/components/Icon";

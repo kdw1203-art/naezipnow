@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
 import { useSettledSearchQuery } from "@/lib/search/settle";
 import { formatKrwManwon } from "@/lib/format/krw";

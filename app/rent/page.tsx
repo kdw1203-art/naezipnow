@@ -1,7 +1,7 @@
 /* [1024 · 원룸·오피스텔] /rent — 수도권 시군구 목록(서울·경기·인천 = 비아파트 수집 범위). 지역마다 최근 12개월 건수가 있으면 적는다.
    searchParams 를 읽지 않는 ISR(6시간). 건수 조회는 lib/rent/region-counts.ts(한 행 탐침 → 0 이면 지역별 조회 없음). */
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
 import { REGION_CATALOG } from "@/lib/region/catalog";

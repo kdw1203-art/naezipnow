@@ -4,7 +4,7 @@ import { Switch } from "@/app/components/ui/Switch";
 import { useTheme } from "next-themes";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { signOut } from "next-auth/react";
 import { PageShell } from "@/app/components/PageShell";
 import { useToast } from "@/app/components/toast/ToastProvider";

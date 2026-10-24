@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { formatKrwShort } from "@/lib/market/format";
 import { monthsBehind } from "@/lib/newui/as-of-label";
 import { Explain } from "@/app/components/explain/Explain";

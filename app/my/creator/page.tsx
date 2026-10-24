@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "../../components/PageShell";
 import { CreatorClient } from "./creator-client";
 import { safeAuth } from "@/lib/safe-auth";

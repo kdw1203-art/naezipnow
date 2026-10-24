@@ -9,7 +9,7 @@
    [1023 · AI 분석] "실데이터 기준" 부연 라벨 2곳 제거 · AI 코멘트 판 네이비 → 흰 카드·잉크 토큰. */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
 import { StepLine } from "@/app/components/StepLine";
 import { PageHead } from "@/app/components/PageHead";

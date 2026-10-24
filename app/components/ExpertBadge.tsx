@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
 
 /* [1047] 인증 전문가 마크 — 이름(아이디) 옆 · 글 머리 · 댓글 · 노트 작성자 줄에 같은 모양으로 붙는다.

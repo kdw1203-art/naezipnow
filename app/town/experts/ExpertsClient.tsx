@@ -3,7 +3,7 @@
    뒤로가기가 필터를 되감았다 — 이제 주소만 바뀌고(공유·새로고침 유지) 뒤로가기는 이전 페이지로 간다. 첫 값은 마운트 뒤 location.search. */
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { ExpertCard, type ExpertCardData } from "./ExpertCard";
 import { EXPERT_SUBCATEGORIES, findSub, matchSubcategory } from "@/lib/subcategories";
 import { EXPERT_TYPES, findExpertType } from "@/lib/experts/taxonomy";

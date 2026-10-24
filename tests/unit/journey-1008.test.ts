@@ -493,7 +493,7 @@ test("내비 — '내 집 마련' 세 줄이 임장노트 하위에, 주소는 �
   assert.match(footer, /href: "\/journey"/);
   assert.match(footer, /href: "\/journey\/contract"/);
   /* 아이콘 표는 대분류 라벨로 키를 잡는다 — 대분류가 아니게 됐으니 항목도 사라져야 한다 */
-  for (const f of ["app/components/DesktopSideNav.tsx", "app/components/MobileMenu.tsx"]) {
+  for (const f of ["app/components/DesktopSideNavGroups.tsx", "app/components/MobileMenu.tsx"]) {
     assert.doesNotMatch(read(f), /"내 집 마련": "key"/, f);
   }
 });

@@ -3,7 +3,7 @@
 import { cache } from "react";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { regionIdForName } from "@/lib/region/catalog";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { Metadata } from "next";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";

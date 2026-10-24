@@ -3,7 +3,7 @@
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { readAuthedHint } from "@/lib/auth/authed-hint";

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "../components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { jsonLdScript } from "@/lib/seo/jsonld";

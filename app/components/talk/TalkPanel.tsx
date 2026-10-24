@@ -14,7 +14,7 @@
    자르기) · 단지 찾기 칸 자동 초점·Esc · 화면 읽기 알림은 새 글 수만(목록 전체를 다시 읽지 않게) · 실패 칸에 다시 불러오기. */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { Icon } from "@/app/components/Icon";

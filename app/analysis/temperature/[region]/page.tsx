@@ -1,6 +1,6 @@
 /* [1023 · AI 분석] 임의 px(text-[13/12/15px]) 17곳 → 램프 유틸(t-body/t-sub/t-section). 구조·데이터 불변. */
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";

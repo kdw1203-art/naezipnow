@@ -15,7 +15,8 @@
  * MOLIT 인증키 미설정 시 적재 0건으로 정상 반환(가짜 데이터 생성 없음).
  */
 import { NextResponse } from "next/server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { complexRegionTagsFor } from "@/lib/complex/region-tag";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { ingestMolitTransactions, type MolitIngestResult } from "@/lib/market/molit-transactions";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
@@ -170,6 +171,9 @@ function invalidateTouchedComplexes(result: MolitIngestResult): { revalidated: n
        2,000 = 단지 500곳 × 4경로 — 슬라이스 하나(시군구 16곳)의 상당 부분을 덮으면서
        revalidatePath 호출 수가 네 자리 초반에 머문다. 남는 몫은 7일 TTL 이 받는다. */
     const stats = invalidateComplexIds(ids, { budget: 2_000 });
+    /* [1089] 위 상한(단지 500곳)을 넘는 날에도 빠뜨리지 않게 — 이번 적재가 건드린 **지역**의 단지 화면을 태그로 비운다
+       (단지 화면이 렌더 때 붙이는 실거래 지역 태그 · lib/complex/region-tag). 하루 수십 지역 = revalidateTag 수십 번. */
+    for (const tag of complexRegionTagsFor(result.touchedComplexes)) revalidateTag(tag);
     invalidatePathList(txPaths, { budget: 1_000, label: "complex-tx" });
     /* [1010 · 동네축] 지역 임장 가이드(/imjang/{slug})와 그 인덱스(/imjang)도 이 실거래만으로
        그려진다(lib/imjang/guide.ts) — SOURCE_MAP.molit 에는 없던 자리다. 이 두 화면의 TTL 을

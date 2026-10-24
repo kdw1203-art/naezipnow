@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { ExpertBadge } from "@/app/components/ExpertBadge";
 import { listVerifiedExpertsCached } from "@/lib/experts/nearby";
 import { pickNearbyExperts } from "@/lib/experts/nearby-pick";

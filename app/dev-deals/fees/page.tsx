@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
 import { PageShell } from "../../components/PageShell";
 import {

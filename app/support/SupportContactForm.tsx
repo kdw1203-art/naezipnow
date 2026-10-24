@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useEffect, useState, type FormEvent } from "react";
 import { CharCount } from "@/app/components/ui/CharCount";
 import {

@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { TemperatureSnapshot } from "@/lib/market/temperature-archive";
 import { DiffBadge } from "./score-diff";
 

@@ -235,9 +235,12 @@ test("시도 — R-ONE 시도 행 · 정확 표기만", () => {
 
 test("배선 — 단지 화면 · 임장노트 · AI 분석(프롬프트 + 결과 판) · 브리핑 · 적재", () => {
   const page = code("app/complex/[id]/page.tsx");
-  assert.ok(page.indexOf("<ComplexSignals") > page.indexOf("<ComplexAxisSummary"), "결과 요약 바로 아래");
-  assert.match(code("app/complex/[id]/ComplexSignals.tsx"), /withSectionBudget\(/);
-  assert.match(code("app/complex/[id]/section-loaders.ts"), /prefetchSignalParts\(axisRegionName/);
+  /* [1089] 결과 요약 · 다요인 분석은 한 자리(ComplexInsightPanels)에서 사람이 볼 때 받는다 — 순서는 그대로(요약 → 다요인) */
+  assert.match(page, /<ComplexInsightPanels[\s\S]{0,200}series=\{trend \? \{ yms: trend\.yms, counts: trend\.all\.counts, mainValues: trend\.types\[0\]\?\.values \} : null\}/);
+  const view = code("app/complex/[id]/ComplexInsightView.tsx");
+  assert.ok(view.indexOf("<SignalBoard") > view.indexOf('aria-label="이 단지 결과 요약"'), "결과 요약 바로 아래");
+  /* 예산은 API 쪽(라이브 컨텍스트 2.5초 · 전체 3.5초) */
+  assert.match(code("lib/complex/insight.ts"), /const TOTAL_BUDGET_MS = 3_500;/);
   const note = code("app/notes/[id]/page.tsx");
   assert.match(note, /<Suspense fallback=\{null\}>\s*<NoteSignals/);
   assert.match(code("app/api/inspection/ai/route.ts"), /marketSignals: signals \? signalPromptLines\(signals\) : undefined/);

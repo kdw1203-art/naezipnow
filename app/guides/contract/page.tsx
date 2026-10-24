@@ -3,7 +3,7 @@
    옮겨 갔으므로, 같은 예외가 globals.css 의 `.faq-compact` 쪽에 있어야 한다(globals.css 는 이번 묶음 다른 축 소유 —
    여기서 고치지 않고 보고한다). 칸 min-w-0 은 표·접기가 대신 받는다. */
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
 import { breadcrumbJsonLd, howToJsonLd, jsonLdScript } from "@/lib/seo/jsonld";

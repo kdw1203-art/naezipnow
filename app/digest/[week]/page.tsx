@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { HScroll } from "@/app/components/HScroll";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { newsHref, storyHref } from "@/lib/town/post-href";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";

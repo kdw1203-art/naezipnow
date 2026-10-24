@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 
 /* 전문가 등록 진입 버튼.
    [1047] 예전에는 이 버튼이 모달 양식(증빙은 https 주소만)을 열었다. 소유자 지시(2026-10-09)로 등록은 서류 첨부가 있는

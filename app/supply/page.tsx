@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { getSupplyAll, getSupplyDataAsOf } from "@/lib/market/supply";

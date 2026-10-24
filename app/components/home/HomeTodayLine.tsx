@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { getHomePersonal } from "@/lib/client/home-personal";
 import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
 import type { KpiRegion, KpiTemp } from "./HomeKpiRow";

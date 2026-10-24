@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { signOut } from "next-auth/react";
 import { Logo } from "@/app/components/Logo";
 

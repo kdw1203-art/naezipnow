@@ -1,6 +1,6 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { ACTIVE_REGION_CATALOG, findCatalogRegionById } from "@/lib/region/catalog";

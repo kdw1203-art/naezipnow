@@ -1,5 +1,5 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 
 /* 분석 도구 간 이어가기(#411) — 각 도구 상세 하단에서 "지금 보던 컨텍스트
  * 그대로" 다음 도구로 넘어가는 스트립.

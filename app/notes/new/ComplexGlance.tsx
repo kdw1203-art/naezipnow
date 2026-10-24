@@ -6,7 +6,7 @@
 
    번들: NoteForm 이 next/dynamic(ssr:false)으로 받고 단지 id 가 있을 때만 마운트한다 — 조회·판정·UI 가 전부 이 조각 안에 있다.
    값은 응답에 있는 것만(lib/notes/complex-glance). 실패하면 카드도 띠도 없다. 상태(태그·체크리스트 등)는 NoteForm 이 든다. */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/app/components/Icon";
 import { useToast } from "@/app/components/toast/ToastProvider";

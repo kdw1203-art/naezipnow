@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";
 import { logger } from "@/lib/log";
 import { listBookmarks } from "@/lib/bookmarks/store";

@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { ToolGlyph } from "./ToolGlyph";
 import type { WorkbenchCardDto } from "./workbench-cards";

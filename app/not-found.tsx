@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Icon } from "./components/Icon";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 

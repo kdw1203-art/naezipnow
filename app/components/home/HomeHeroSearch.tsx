@@ -4,7 +4,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { pushRecentSearch, readRecentSearches } from "@/lib/search/recent-searches";

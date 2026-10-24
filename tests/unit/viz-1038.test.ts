@@ -35,11 +35,14 @@ test("[1038 · 1·4·5·8·9·10] 노트 상세 — 링+레이더 · 점 3개 ·
 });
 
 test("[1038 · 21] 단지 허브 결과 요약 — 투자 점수 링 + 5축 레이더 · 같은 숫자는 한 번(hideMetric)", () => {
-  const src = read("app/complex/[id]/ComplexAxisSummary.tsx");
-  assert.match(src, /const radar = diagnosisRadar\(ctx\)/);
-  assert.match(src, /verdict\.metric\.label === "투자 점수"/);
-  assert.match(src, /<ScoreRing score=\{score\} size=\{96\} label="투자 점수" \/>/);
-  assert.match(src, /hideMetric=\{showViz\}/);
+  /* [1089] 계산은 lib/complex/insight(서버 · /api/complex/insight) · 그리기는 ComplexInsightView(같은 마크업) */
+  const calc = read("lib/complex/insight.ts");
+  assert.match(calc, /const radar = diagnosisRadar\(ctx\)/);
+  assert.match(calc, /verdict\.metric && verdict\.metric\.label === "투자 점수"/);
+  assert.match(calc, /score: showViz \? score : null/);
+  const src = read("app/complex/[id]/ComplexInsightView.tsx");
+  assert.match(src, /<ScoreRing score=\{summary\.score\} size=\{96\} label="투자 점수" \/>/);
+  assert.match(src, /hideMetric=\{summary\.score != null\}/);
   const card = read("app/analysis/ai/[tool]/VerdictCard.tsx");
   assert.match(card, /\{m && !hideMetric && \(/);
   assert.match(card, /공공데이터 자동 계산/);

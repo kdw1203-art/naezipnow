@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PASSWORD_MIN, passwordProblem, scorePassword } from "@/lib/auth/signup-form";
 import { capsLockOn, passwordChangedLine } from "@/lib/auth/auth-ux";
 import { CapsLockNote } from "@/app/components/auth/CapsLockNote";

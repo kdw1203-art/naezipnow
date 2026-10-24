@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { CountUp } from "@/app/components/motion/CountUp";
 import { BrandSignature } from "@/app/components/BrandSignature";
 import { PageShell } from "../components/PageShell";

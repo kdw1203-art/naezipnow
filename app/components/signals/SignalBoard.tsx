@@ -14,7 +14,7 @@
      "반영 n/8"은 점수가 있는 요인만 세고, 빠진 까닭을 개수로 붙인다.
    · 요인 이름은 계산 방법의 그 요인 칸(/methodology#signal-<key>)으로 간다. 줄마다 출처 · 기준 시점.
    · 최신 자료 시점은 꼴이 섞인 asOf("2026.09" · "2026-08" · "202608" · "2026-10-05")를 숫자 키로 맞춰 고른다. */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { coverageBreakdown, factorStateWord, latestAsOf, scoreLean, unscoredReason, ymLabel } from "@/lib/signals/display";
 import type { SignalReport, SignalFactor } from "@/lib/signals/engine";
 

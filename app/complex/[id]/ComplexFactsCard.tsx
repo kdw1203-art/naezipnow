@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { ComplexFacts } from "@/lib/complex/complex-facts";
 import type { ComplexInfoFacts } from "@/lib/complex/info-cells";
 import { faqJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";

@@ -2,7 +2,7 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 /* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 4곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { listPublicNotes, type InspectionNote } from "@/lib/inspection/store-db";
 import { maskNoteAuthor } from "@/app/town/shared";
 import { noteCoverUrl } from "@/lib/notes/cover/resolve";

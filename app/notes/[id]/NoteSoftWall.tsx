@@ -2,7 +2,7 @@
 
 import { hasSession } from "@/lib/client/has-session";
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { loginHrefWithNext } from "@/lib/auth/auth-ux";
 import { trackPlatformEvent } from "@/lib/platform-events-client";
 import { decideNoteWall, NOTE_WALL_FREE_PER_DAY, NOTE_WALL_KEY, parseNoteWallState } from "@/lib/notes/soft-wall";

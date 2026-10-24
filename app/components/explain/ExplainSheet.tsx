@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Modal, ModalHeader } from "@/app/components/ui/Modal";
 import { findGlossaryTerm } from "@/lib/seo/glossary-terms";
 import { SITE_NOTES } from "@/lib/explain/site-notes";

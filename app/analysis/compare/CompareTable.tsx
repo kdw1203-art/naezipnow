@@ -6,7 +6,7 @@
    배지(최저·최다)는 결론과 같은 함수(lib/market/compare-conclusion compareWinners → bestOf)로 고른다. 흰 카드 한 모양 · 섹션 제목 h2. */
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { Radar } from "@/app/components/viz/Radar";
 import { SkTable } from "@/app/components/ui/Skeleton";

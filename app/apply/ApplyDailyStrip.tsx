@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { buildApplyCalendar } from "@/lib/applyhome/calendar";
 import { listRecentCompetition } from "@/lib/applyhome/store";
 import { houseTypeLabel } from "@/lib/applyhome/normalize";

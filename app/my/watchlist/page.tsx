@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { redirect } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
 import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";

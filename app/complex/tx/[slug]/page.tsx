@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { HScroll } from "@/app/components/HScroll";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { PageShell } from "../../../components/PageShell";
 import { ComplexReviews } from "../../ComplexReviews";

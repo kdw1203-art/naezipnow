@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { NoteDraft } from "@/lib/ai/note-draft-core";
 
 /* [944 · AI 대개편] 작성 화면의 "AI 초안 받기" 패널.

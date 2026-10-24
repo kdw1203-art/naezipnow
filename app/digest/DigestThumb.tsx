@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { CoverImage } from "@/app/components/CoverImage";
 
 /* [1061] 다이제스트 뉴스 썸네일 — 56px. 핫링크 차단·삭제로 못 받으면 상자째 사라진다

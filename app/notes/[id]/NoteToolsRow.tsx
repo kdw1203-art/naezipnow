@@ -14,7 +14,7 @@
  * 딥링크 모양은 워크벤치가 이미 읽는 것을 그대로 쓴다(`?apt=&region=`,
  * WorkbenchClient `[OPT-48]`). 새 규약을 만들지 않는다.
  */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { workbenchCardData } from "@/app/analysis/workbench-cards";
 
 export function NoteToolsRow({

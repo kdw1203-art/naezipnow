@@ -1,7 +1,7 @@
 /* [1083] 동별 실거래 허브 — /dong. 사이트맵 문턱(단지 3곳 · 최근 6개월 50건)을 넘는 동 전부를 지역별로 — 사이트맵 dongs 섹션의 허브이자
    크롤 경로. 지역 머리는 /tx/<지역>(면적대·가격대)으로, 칩은 /dong/<지역>/<동>으로. 조회 실패는 던진다(빈 허브를 사실처럼 내지 않는다). */
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
 import { PageShell } from "@/app/components/PageShell";

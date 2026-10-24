@@ -4,7 +4,7 @@ import { SignupSteps } from "@/app/components/auth/SignupSteps";
 import { BrandSloganBand } from "@/app/components/BrandSloganBand";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { RegionPicker } from "@/app/components/RegionPicker";
 import { takeSignupHandoff } from "@/lib/onboarding/signup-handoff";

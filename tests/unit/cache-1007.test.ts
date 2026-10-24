@@ -161,7 +161,8 @@ test("데이터 캐시 TTL — home-data 600초(태그 home-data), 단지 축은
      있었기 때문에 라우트 표와 같은 자리에서 봐야 한다. */
   const home = read("lib/landing/data.ts");
   assert.match(home, /\["home-data-v1"\], \{\s*revalidate: 600,\s*tags: \["home-data"\]/);
-  const loaders = read("app/complex/[id]/section-loaders.ts");
+  /* [1089] 단지 화면의 라이브 컨텍스트는 렌더 밖(/api/complex/insight · lib/complex/insight)으로 옮겼다 — 같은 판단(비영속) */
+  const loaders = read("lib/complex/insight.ts");
   assert.match(loaders, /complexDurable: false/);
   const live = read("lib/ai/live-context.ts");
   assert.match(live, /const loadComplexAxesPerRequest = cache\(loadComplexAxes\)/);

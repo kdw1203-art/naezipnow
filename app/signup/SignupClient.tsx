@@ -5,7 +5,7 @@ import { capsLockOn } from "@/lib/auth/auth-ux";
 import { CapsLockNote } from "@/app/components/auth/CapsLockNote";
 import { SignupSteps } from "@/app/components/auth/SignupSteps";
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { trackPlatformEvent } from "@/lib/platform-events-client";

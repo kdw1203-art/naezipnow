@@ -1,6 +1,6 @@
 /* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 17곳을 font-bold(700)로 바꿨다. */
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { redirect } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
 import { Icon } from "@/app/components/Icon";

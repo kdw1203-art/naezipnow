@@ -5,7 +5,7 @@ import { loginHrefWithNext, safeNextPath } from "@/lib/auth/auth-ux";
 import { ActionButton } from "@/app/components/ui/ActionButton";
 
 import { useEffect, useState, type FormEvent } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Logo } from "@/app/components/Logo";
 
 /** 비밀번호 찾기 — 구 app/auth/forgot-password 포트 (기존 /api/auth/forgot-password 연결 유지)

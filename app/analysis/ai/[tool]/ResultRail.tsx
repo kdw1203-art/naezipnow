@@ -23,7 +23,7 @@
      기준금리를 못 읽어 패널이 없을 때만 알림함을 연다(글자도 "알림함 열기"). */
 /* [1021 · 단지 분석 /analysis/ai] 오른쪽 레일(단지 분석 4종) — ① 내 조건(TuningForm · 다시 계산, 기존 로직) ② 이 결과로 ③ 이어서 보기. */
 
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { ReactNode } from "react";
 import type { AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import type { Verdict } from "@/lib/ai/verdict";

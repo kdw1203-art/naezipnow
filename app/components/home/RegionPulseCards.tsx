@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { HomeRegionCard } from "@/lib/newui/home-data";
 import { COUNTUP_MS } from "@/app/components/motion/CountUp";
 import { Delta } from "@/app/components/num/Delta";

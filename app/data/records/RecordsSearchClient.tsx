@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 // public-records.ts 는 server-only 체인 — 타입만 가져오고(소거), 라벨은 순수
 // 카탈로그(lib/codef/endpoints — server-only 아님)에서 같은 규칙으로 만든다.
 import type { PublicRecord } from "@/lib/market/public-records";

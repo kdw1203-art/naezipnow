@@ -157,7 +157,8 @@ test("데이터 캐시 TTL — 라우트 TTL 을 끌어내리던 자리를 같�
   assert.match(board, /\["related-town-posts-v1"\],\s*\{ revalidate: 604_800, tags: \["news", TOWN_POSTS_TAG\] \}/);
 
   const link = read("lib/newui/complex-link.ts");
-  assert.match(link, /\["complex-href-v2"\],\s*\{ revalidate: 604_800, tags: \["market"\] \}/);
+  /* [1089] "market" 태그는 뗐다 — 뉴스 상세가 적재마다 통째로 비워지지 않게(7일 TTL 만) */
+  assert.match(link, /\["complex-href-v2"\],\s*\{ revalidate: 604_800 \}/);
 
   const notes = read("app/notes/(index)/page.tsx");
   assert.match(notes, /\["notes-public-feed-v2"\],\s*\{ revalidate: 86_400, tags: \[PUBLIC_NOTES_LIST_TAG\] \}/);

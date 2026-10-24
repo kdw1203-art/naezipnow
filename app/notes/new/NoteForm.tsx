@@ -21,7 +21,7 @@ import { Switch } from "@/app/components/ui/Switch";
 import { useToast } from "@/app/components/toast/ToastProvider";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { NoteLocationSearch, type NoteLocation } from "./NoteLocationSearch";

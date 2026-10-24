@@ -89,7 +89,7 @@ test("GNB · 모바일 전체 메뉴가 같은 판정(navGroupOf)을 쓴다", ()
     assert.match(code(p), /navGroupOf\(pathname\)/, p);
   }
   /* 대분류 아이콘 표 — 뉴스 칸이 빠지면 좌측 내비는 동그라미, 전체 메뉴는 돋보기로 떨어진다 */
-  for (const p of ["app/components/DesktopSideNav.tsx", "app/components/MobileMenu.tsx"]) {
+  for (const p of ["app/components/DesktopSideNavGroups.tsx", "app/components/MobileMenu.tsx"]) {
     assert.match(read(p), /뉴스: "newspaper"/, p);
   }
 });

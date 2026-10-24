@@ -2,7 +2,7 @@
 /* [1012] 규칙 8 — 굵기 800 이상 금지: 이 파일의 font-bold/black 3곳을 font-bold(700)로 바꿨다. */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Switch } from "@/app/components/ui/Switch";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { DEFAULT_UI_PREFS, type UiPrefs } from "@/lib/prefs/ui-prefs";

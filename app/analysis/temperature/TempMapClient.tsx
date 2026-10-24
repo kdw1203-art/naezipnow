@@ -16,7 +16,7 @@
    온도 타일 지도(69곳 색 타일 = 그 지역 기록 링크 · 범례 · 목록 보기 토글) → 12주 온도 선(주간 기록이 있을 때만) |
    레일: 온도 높은 순 8곳 + 전체 · 이어서 칩. 폰은 한 열(레일은 본문 아래).
    숫자는 서버가 이미 낸 값만(주마다 weekStats — 예전 히어로 KPI 와 같은 식). 주 전환·권역·타일/목록은 클라이언트 상태. */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { PageHead } from "@/app/components/PageHead";
 import { StepLine } from "@/app/components/StepLine";

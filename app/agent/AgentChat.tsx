@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { scrollIntoViewSafely } from "@/lib/ui/scroll";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 

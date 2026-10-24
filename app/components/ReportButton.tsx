@@ -10,7 +10,7 @@
  * (실측 390px: 칩 높이 20px) → 12px 글자 · 높이 32px, "신고"·"취소"는 글 속 단추 기준 24px.
  */
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { useToast } from "@/app/components/toast/ToastProvider";

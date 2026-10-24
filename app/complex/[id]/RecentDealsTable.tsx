@@ -7,7 +7,7 @@
    해제 신고 행은 취소선 + "해제" 배지 규칙만 둔다 — getComplexDeals 는 해제분(is_cancelled)을 읽지 않아 지금은 오지 않는다.
    면적은 ㎡ 로 그리고 붙은 뒤 설정(평)이면 바뀐다(AreaTextLazy). */
 import { Fineprint } from "@/app/components/Fineprint";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { formatEokMan } from "@/lib/format/eok-man";
 import { dealDateLabel, floorLabel } from "@/lib/complex/deal-format";
 import { AreaTextLazy as AreaText } from "./AreaTextLazy";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { NaverMap } from "@/components/map/NaverMapLazy";
 import type { MapMarkerData } from "@/components/map/NaverMap";
 import { Icon } from "@/app/components/Icon";

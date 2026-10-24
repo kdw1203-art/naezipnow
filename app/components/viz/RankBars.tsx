@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { normalize } from "@/lib/viz/geometry";
 
 export interface RankRow {

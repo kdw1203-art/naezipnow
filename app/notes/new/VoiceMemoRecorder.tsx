@@ -3,7 +3,7 @@
    업로드가 401 이면 "저장 실패" 가 아니라 같은 로그인 안내로 바꾼다(녹음 뒤 실패로 알리지 않는다). */
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
 
 /* [#133] 음성 메모 — 현장 30초 녹음. MediaRecorder → /api/upload(audio/webm).

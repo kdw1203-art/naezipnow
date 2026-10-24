@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { Guide } from "@/lib/guides/catalog";
 import { guideRelatedLinks } from "@/lib/guides/related-links";
 

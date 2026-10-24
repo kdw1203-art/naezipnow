@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { ExpertBadge } from "@/app/components/ExpertBadge";
 import { Icon } from "@/app/components/Icon";
 import { EmptyState } from "@/app/components/ui/EmptyState";

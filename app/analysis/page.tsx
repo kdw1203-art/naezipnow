@@ -3,7 +3,7 @@
    (loadHubTeasersByRegion → ToolCard teaserByRegion) · 계열 "N종" 배지 → 그 계열 앵커 · 기록 시작 카드 게스트/로그인 같은 최소 높이(.hub-start). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { AdZone } from "@/app/components/ads/AdZone";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "../components/PageShell";
 import { Icon } from "@/app/components/Icon";
 import type { InspectionNote } from "@/lib/inspection/store-db";

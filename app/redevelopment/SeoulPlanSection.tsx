@@ -1,7 +1,7 @@
 import { logger } from "@/lib/log";
 import { listUpisGuSummary, listUpisRecords, totalsOf } from "@/lib/seoul/upis-store";
 import { UPIS_SOURCE_URL } from "@/lib/seoul/upis";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { SEOUL_GU, SEOUL_GU_INDEX_HREF, seoulGuHref } from "@/lib/seoul/upis-gu";
 import { SeoulPlanBrowser } from "./SeoulPlanBrowser";
 

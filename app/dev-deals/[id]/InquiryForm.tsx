@@ -3,7 +3,7 @@
 /* 참여 문의 폼 — POST /api/dev-deals/inquiry (로그인 필수) */
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PARTNER_TYPES } from "@/lib/dev-deals/types";
 
 export function InquiryForm({

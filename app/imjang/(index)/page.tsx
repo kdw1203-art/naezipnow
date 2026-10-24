@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "../../components/PageShell";
 import { listImjangRegions } from "@/lib/imjang/guide";
 import { IMJANG_CHECKPOINTS } from "@/lib/imjang/checkpoints";

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { RankBars } from "@/app/components/viz/RankBars";
 import { Explain } from "@/app/components/explain/Explain";
 import { StepLine } from "@/app/components/StepLine";

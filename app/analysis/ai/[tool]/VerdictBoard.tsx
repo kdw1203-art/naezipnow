@@ -7,7 +7,7 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import type { Verdict } from "@/lib/ai/verdict";
 import {

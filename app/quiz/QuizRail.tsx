@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { quizDateLabel, type QuizDay, type QuizStore } from "@/lib/quiz/price-game";
 
 /* [1020 · 게임 /quiz] 오른쪽 레일(lg 만) — 소유자 지시("시안대로 좀더 고도화", quiz-d.png)대로 두 카드:

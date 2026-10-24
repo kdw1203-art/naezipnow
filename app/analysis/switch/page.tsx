@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "../../components/PageShell";
 import { NextActions } from "../../components/NextActions";
 import { EmptyState } from "@/app/components/ui/EmptyState";

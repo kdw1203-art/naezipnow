@@ -12,7 +12,7 @@ import {
   useState,
   type CSSProperties,
 } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { Logo } from "../components/Logo";
 import { WelcomeHandoff } from "./WelcomeHandoff";
 import { summarizeMapFilters } from "@/lib/map/filter-summary";

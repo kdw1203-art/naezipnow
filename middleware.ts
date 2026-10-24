@@ -37,6 +37,7 @@ import {
   shouldEndSession,
 } from "@/lib/auth/keep-login";
 import { isBotUserAgent } from "@/lib/client/is-bot-ua";
+import { isScriptPageFetch } from "@/lib/security/bot-prefetch";
 
 /* [1007 · V2a-1] 로그인 힌트 쿠키(nz_authed) — 세션 쿠키 **유무**가 힌트와 다를 때만 Set-Cookie.
    같으면 아무것도 하지 않는다: 미들웨어가 쿠키를 심으면 그 응답은 아래 applySecurityHeaders 에서
@@ -334,6 +335,25 @@ export async function middleware(request: NextRequest) {
     });
   }
 
+  /* [1088 · 비용] 크롤러의 링크 미리 받기(prefetch) · 화면 안 이동 RSC 는 엣지에서 끝낸다(204 · 본문 없음 · 캐시 안 함).
+     JS 를 실행하는 크롤러가 화면을 열면 next/link 가 보이는 링크를 전부 미리 받았다(로컬 측정 · PerplexityBot UA · 끝까지 스크롤:
+     단지 화면 1회 21건 · 동 화면 36건 · 홈 27건) — 받는 곳 대부분이 캐시에 없는 롱테일 ISR 이라 그 자리에서 렌더·저장됐다.
+     크롤러는 화면 안에서 이동하지 않으므로 쓸모가 없다(Next 도 자기 목록의 봇에게는 미리 받지 않는다 — 그 목록에 없는
+     PerplexityBot · OAI-SearchBot · Amazonbot 등이 여기 걸린다). 크롤러가 화면을 여는 요청(문서)은 그대로 지나간다.
+     판정은 lib/security/bot-prefetch(미들웨어에는 RSC 헤더가 지워져 온다 — Next-Url · Sec-Fetch-Dest 로 가른다).
+     링크 쪽 규칙(사람도 "손이 닿을 때"만)은 app/components/IntentLink — 이 줄은 예전 번들 · 직접 부른 router.prefetch 몫. */
+  if (
+    isScriptPageFetch({ method: request.method, pathname: request.nextUrl.pathname, get: (name) => request.headers.get(name) }) &&
+    isBotUserAgent(request.headers.get("user-agent"))
+  ) {
+    /* 1% 표본 — 막은 양과 누가 막혔는지(경로는 쿼리 없이 앞 60자) */
+    if (Math.random() < 0.01) {
+      const ua = (request.headers.get("user-agent") ?? "").slice(0, 120);
+      console.info(`[bot-prefetch] 204 path=${request.nextUrl.pathname.slice(0, 60)} ua="${ua}"`);
+    }
+    return new NextResponse(null, { status: 204, headers: { "Cache-Control": "private, no-store" } });
+  }
+
   /* [939 · I004] 관리자 API 속도 제한 — 25개 라우트의 유일한 관문(이 미들웨어)에서
      IP당 분 120회로 막는다. 관리자 화면의 정상 사용은 분당 수십 회를 넘지 않고,
      403 반복 탐침·스크레이핑이 이 문턱에 걸린다. 엣지 격리 인스턴스별 메모리라
@@ -440,7 +460,11 @@ export async function middleware(request: NextRequest) {
        meta-webindexer·KeenableBot·표식 없는 크롬). 하루 ~445 → ~90 이벤트로 줄이되 추세는 남긴다. */
     if (Math.random() < 0.01) {
       const ua = (request.headers.get("user-agent") ?? "").slice(0, 160);
-      console.info(`[ua-sample] complex ua="${ua}"`);
+      /* [1088] 화면 요청(문서)과 스크립트 fetch(미리 받기 · 화면 안 이동 RSC)를 나눠 센다 */
+      const kind = isScriptPageFetch({ method: request.method, pathname: request.nextUrl.pathname, get: (name) => request.headers.get(name) })
+        ? " fetch=1"
+        : "";
+      console.info(`[ua-sample] complex ua="${ua}"${kind}`);
     }
     try {
       const rest = request.nextUrl.pathname.slice("/complex/".length);

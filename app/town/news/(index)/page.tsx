@@ -1,7 +1,7 @@
 /* [1023 · 동네 ①] 주제(NEWS_TAGS) 칩 줄 — 오른쪽 레일 끝의 같은 칩은 걷었다(레일엔 정비사업·입주 물량 링크만). [1044] 머리는 NewsHead · 동네 카테고리 줄 없음 · 칩 줄은 머리 아래. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { PageShell } from "../../../components/PageShell";
 import { NewsHead } from "../NewsHead";

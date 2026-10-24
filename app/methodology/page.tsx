@@ -1,5 +1,5 @@
 /* [1026c · 폰 배율 1] 문장 속 링크 24px 하한(py-[5px]) — 전 경로 폰 조작 검사에서 지적된 자리. */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "../components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { jsonLdScript } from "@/lib/seo/jsonld";

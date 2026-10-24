@@ -3,7 +3,7 @@
 /* 개발물건 등록 폼 — POST /api/dev-deals/deal (로그인 필수) */
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { DEAL_TYPES, PARTNER_FIELDS } from "@/lib/dev-deals/types";
 
 export function DealForm() {

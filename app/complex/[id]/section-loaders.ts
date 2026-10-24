@@ -5,8 +5,6 @@ import { getComplexRentHistoryByNames } from "@/lib/market/complex-rent";
 import { listProjects } from "@/lib/redevelopment/store";
 import { getAreaBands, getRegionRelative } from "@/lib/complex/complex-store";
 import { getSupplyForAreaStrict } from "@/lib/market/supply";
-import { prefetchSignalParts } from "@/lib/signals/load";
-import { buildLiveToolContextCached } from "@/lib/ai/live-context";
 import { unstable_cache } from "next/cache";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { readRelatedTownPosts } from "@/lib/newui/board-posts";
@@ -79,16 +77,9 @@ export const loadUpcomingSupply = cache((area: string, city: string) =>
   loadSupplyDataCached(area, city),
 );
 
-/* [1007] 단지 축(live-complex-axes-v1)은 여기서 **데이터 캐시에 쓰지 않는다**(complexDurable:false).
-   이 페이지는 ISR 6시간이고 그 캐시도 6시간이라, 페이지가 다시 렌더되는 순간엔 축 캐시도
-   같이 만료돼 있다 — 즉 허브 렌더에서 그 항목은 늘 미스였고, 하루 8,907 렌더가 읽히지 않는
-   항목 8,907개를 쓰고 있었다(ISR Writes). 지역 축(218개 키)은 단지들이 공유하므로 유지.
-   [1010] 이 판단은 그대로 둔다 — 키가 단지별인 캐시는 TTL 을 올려도 재사용이 생기지 않는다.
-   지역 축(lib/ai/live-context.ts live-region-axes, 6시간·market/supply/news/economy 태그)은
-   지역 화면과 함께 쓰는 키라 이번 판에서 손대지 않았다(보고서에 남김 — 지역 축 담당과 겹친다). */
-export const loadAxisContext = cache((complexId: string, regionName: string) =>
-  buildLiveToolContextCached(complexId, regionName || null, { complexDurable: false }),
-);
+/* [1089] 결과 요약 · 다요인 분석의 라이브 컨텍스트(loadAxisContext · 예전 이 자리)는 단지 화면 렌더에서 뺐다 —
+   두 판은 사람이 볼 때 /api/complex/insight 가 읽는다(lib/complex/insight · 이유는 lib/complex/insight-query 머리 주석).
+   [1007] 의 판단(단지 축은 데이터 캐시에 쓰지 않는다 · complexDurable:false)은 그 API 가 그대로 따른다. */
 
 /* ── [968 · 1] 곁다리 섹션 공유 예산 3초 ─────────────────────────────────────
    왜: 본문의 곁다리 5종은 예산(settle)이 있었지만 섹션 컴포넌트 7종의 await 에는
@@ -321,14 +312,3 @@ export function prefetchComplexSections(args: {
   swallow(loadRelatedNews(args.name, dong));
 }
 
-/** 축 요약은 canonical_id(name-id)를 키로 쓴다 — [1028] kapt 형태 id 는 실거래 조회 키로 풀리지 않는다. */
-export function prefetchAxisSummary(args: {
-  rowId: string;
-  city: string | null;
-  district: string | null;
-}): void {
-  const dong = args.district || args.city || "지역";
-  swallow(loadAxisContext(args.rowId, axisRegionName(args.city, dong)));
-  /* [1048] 다요인 분석 판(ComplexSignals)의 지역 · 한국은행 · 관심 묶음 — 같은 base 시점에 띄운다 */
-  swallow(prefetchSignalParts(axisRegionName(args.city, dong), true));
-}

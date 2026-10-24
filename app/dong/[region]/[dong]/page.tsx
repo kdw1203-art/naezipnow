@@ -4,7 +4,7 @@
    지역 슬러그는 /tx 와 같은 규칙(공백 → 하이픈)이라 /tx/<지역> ↔ /dong/<지역>/<동> 이 1:1 로 이어진다. */
 import type { Metadata } from "next";
 import { cache } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { CitationBlock } from "@/app/components/CitationBlock";

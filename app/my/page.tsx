@@ -1,5 +1,5 @@
 /* [1025 · 결정·비서] 마이 화면에 /decide · /my/assistant 진입 링크(게스트 메뉴 1줄 + 로그인 허브 아래 카드 2줄). */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { isPaidPlan } from "@/lib/subscriptions/labels";
 import { PageShell } from "@/app/components/PageShell";
 import { safeAuth } from "@/lib/safe-auth";

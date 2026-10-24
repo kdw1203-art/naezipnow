@@ -1,7 +1,7 @@
 /* [1024 · 단지 상세] 데스크톱 오른쪽 레일(lg) — 요약 4칸 · 행동 3개(노트 쓰기·비교·호가 점검) · 인근 단지 · AI 브리핑 · 광고.
    시안 mock1024/complex-d 의 aside. 값은 전부 page.tsx 가 이미 가진 숫자(추가 조회 0). 채움 파랑은 이 파일에 하나
    (노트 쓰기) — 폰 하단 CTA 블록(page.tsx, lg:hidden)과는 다른 브레이크포인트라 한 화면엔 하나다. 서버 조각. */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { CompareTrayButton } from "@/app/components/CompareTrayButton";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";

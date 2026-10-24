@@ -9,7 +9,7 @@
    ISR 주기만큼 낡을 수 있음). AskForm·사이드바는 서버 조각(children)으로
    받아 레이아웃 안에 그대로 끼운다. */
 
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon } from "@/app/components/Icon";
 import { EmptyState } from "@/app/components/ui/EmptyState";

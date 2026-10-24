@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { usePathname } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import {

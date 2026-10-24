@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { calculatorExplainer } from "@/lib/calculator/explainers";
 

@@ -2,7 +2,7 @@
    화면 밖이었다). 한 장 = 지역(→ 기존 /region/[id] "단지 보기") · 전세가율 막대(최고 대비 · 표와 같은 식) · 평균 매매 · 갭(실측/추정 배지 그대로) ·
    지수 변화(Delta 표준). 값은 표와 같은 행 그대로 — 새 계산 없음. 몇 장을 그릴지는 GapScreener 가 정한다(20장 + 더 보기).
    데스크톱(md+)은 RankTable 그대로. */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { formatKrwShort } from "@/lib/market/format";
 import { Delta } from "@/app/components/num/Delta";
 import { effectiveGap } from "./screener-model";

@@ -11,7 +11,7 @@ import { ActionButton } from "@/app/components/ui/ActionButton";
  * - QuoteRequestBanner: 목록 상단 배너 + 자체 트리거
  */
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { Modal, ModalHeader } from "@/app/components/ui/Modal";
 import { CharCount } from "@/app/components/ui/CharCount";

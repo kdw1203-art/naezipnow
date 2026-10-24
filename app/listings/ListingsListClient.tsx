@@ -7,7 +7,7 @@
    useSearchParams 금지(프리렌더 HTML 에서 카드가 사라진다) — SSR 은 전체를
    그리고, 필터는 마운트 후 location.search + popstate 로 적용한다. */
 
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useEffect, useState } from "react";
 // store-db 는 server-only(supabase service) 를 끌고 와 클라이언트에서 import 불가.
 // 타입은 type-only import(컴파일 시 소거)로 가져오고, 라벨 상수 2개만 여기 복제한다.

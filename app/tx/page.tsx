@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { Explain } from "@/app/components/explain/Explain";
 import { PageShell } from "../components/PageShell";

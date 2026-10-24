@@ -142,7 +142,7 @@ async function resolveComplexHrefUncached(
    /notes·/qna·/notes/[id]·/map 은 동적 렌더라 요청마다 목록 전체(최대 50건)를
    다시 풀었고, 결과는 실거래 단지명에서만 나와 하루 안에 바뀌지 않는다.
    키는 (이름, 지역) 문자열 — 요청·사용자와 무관하게 같은 값이다.
-   market 태그: 실거래 적재(molit) 뒤 invalidateAfterIngest 가 비운다.
+   market 태그: 실거래 적재(molit) 뒤 invalidateAfterIngest 가 비운다. → [1089] 뗐다(아래).
 
    [1007] 데이터 캐시로 **남긴다**(단지 축·노트 id 캐시는 이번에 React cache 로 바꿨다).
    판단 근거: 이 키는 단지 id 가 아니라 (단지명, 지역) 이라 여러 화면·여러 요청이 같은 키를
@@ -162,10 +162,14 @@ async function resolveComplexHrefUncached(
    TTL 을 7일로 늘려도, 여기가 6시간이면 실제 TTL 은 6시간이 된다 — 늘린 값이 아무 일도
    하지 않는다. 같은 현상을 빌드 산출물로 확인했다(lib/town/cache-tags.ts 주석).
    원천(실거래 단지명)은 하루 1회 적재라 7일 TTL 이 값의 신선도를 떨어뜨리지 않는다. */
+/* [1089 · 비용] "market" 태그를 뗀다(7일 TTL 만). 이 캐시를 읽는 화면(뉴스 상세 /town/news/[id] 1,400여 쪽 · /qna/[id])은 태그를
+   그대로 물려받아, 실거래 · 부동산원 · KB 적재가 하루 세 번 revalidateTag("market") 할 때마다 통째로 비워졌다 — 기사 본문은
+   그대로인데 다음 방문마다 다시 렌더 · 저장됐다. 원천(실거래 단지명 → 단지 주소)은 새 단지가 대장에 들어올 때만 바뀐다 —
+   새 단지가 기사 속 링크로 잡히기까지 최대 7일 늦어지는 것이 대가다. */
 const resolveComplexHrefCached = unstable_cache(
   async (query: string, region: string) => resolveComplexHrefUncached(query, region),
   ["complex-href-v2"],
-  { revalidate: 604_800, tags: ["market"] },
+  { revalidate: 604_800 },
 );
 
 export const resolveComplexHref = cache(

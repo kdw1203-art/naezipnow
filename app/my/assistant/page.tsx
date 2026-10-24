@@ -12,7 +12,7 @@
    · 그림 ①: 이번 주 7일 스트립(월~일 KST · 알림 있는 날 파란 점 + 개수 · 오늘 표시 — weekStrip).
    · 그림 ②: 관심 단지(최대 6곳) 30일 줄 — 마지막 거래가 + 30일 새 거래 수 · 30일 안 거래 2건 이상일 때만 Spark(가짜 선 없음).
    · 손잡이: 관심 단지 담기(WatchAddForm · 기존 /api/me/watchlist) — 담으면 줄이 늘어난다. 빈 상태는 회색 견본 + 한 문장. */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { redirect } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";

@@ -10,7 +10,7 @@ import { Delta } from "@/app/components/num/Delta";
 import { Explain } from "@/app/components/explain/Explain";
 import { Icon } from "@/app/components/Icon";
 import { formatEokMan } from "@/lib/format/eok-man";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { clearPendingWatch, PENDING_WATCH_ACTION, savePendingWatch, takePendingWatch } from "@/lib/client/pending-watch";

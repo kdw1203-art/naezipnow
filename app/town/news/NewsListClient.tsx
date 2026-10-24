@@ -13,7 +13,7 @@
    40행을 HTML 에 싣고, 나머지는 "더 보기"가 /api/town/news 로 이어 붙인다.
    행 DTO 는 서버(lib/town/news-list)가 평탄화해 원본 메타를 싣지 않는다. */
 
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Icon } from "@/app/components/Icon";
 import { CoverImage } from "@/app/components/CoverImage";

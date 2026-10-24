@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { HomeRegionCard } from "@/lib/newui/home-data";
 import type { ActiveComplex } from "@/lib/ai/popular-complexes";
 import { complexCanonicalPathFromNames } from "@/lib/complex/complex-store";

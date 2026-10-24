@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 
 /* [1049 · 그래프] 양방향 막대 — 0 을 가운데 두고 오름(오른쪽 · 등락색 up) / 내림(왼쪽 · down).
    전월 대비처럼 부호가 뜻을 가진 값을 25줄씩 늘어놓을 때 표보다 순서·크기·방향이 먼저 읽힌다.

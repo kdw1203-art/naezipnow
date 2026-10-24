@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { cookies } from "next/headers";
 import { Icon } from "@/app/components/Icon";
 import { getReferralByCode } from "@/lib/referral/store";

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { HScroll } from "@/app/components/HScroll";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { ShellBreadcrumb, ShellTitle } from "../../../../components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";

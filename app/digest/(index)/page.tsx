@@ -1,5 +1,5 @@
 import { formatKstDateTime, formatKstShortDate } from "@/lib/format/kst";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { HouseMark } from "@/app/components/Logo";
 import { ErrorState } from "@/app/components/ui";

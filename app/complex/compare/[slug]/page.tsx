@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { HScroll } from "@/app/components/HScroll";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { cache } from "react";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";

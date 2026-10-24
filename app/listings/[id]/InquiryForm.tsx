@@ -6,7 +6,7 @@
  * POST /api/listings/[id]/inquire
  */
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { useToast } from "@/app/components/toast/ToastProvider";
 
 const MESSAGE_MAX = 1000;

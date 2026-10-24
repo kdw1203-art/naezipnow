@@ -3,7 +3,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { planBadgeLabel } from "@/lib/subscriptions/labels";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { usePathname } from "next/navigation";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { readAuthedHint } from "@/lib/auth/authed-hint";

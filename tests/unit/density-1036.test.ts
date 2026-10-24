@@ -42,8 +42,9 @@ test("[1036] 결과 요약 — VerdictCard fold(출처 줄 + 근거 + 반례 →
   assert.match(card, /fold\?: boolean/);
   assert.match(card, /\{fold && !compact && \(\s*<Fineprint label="출처 · 기준">/);
   assert.match(card, /공공데이터 자동 계산/);
-  assert.match(read("app/complex/[id]/ComplexAxisSummary.tsx"), /\n\s*fold\n/);
-  assert.match(read("app/complex/[id]/ComplexAxisSummary.tsx"), /참고용 요약 · 투자 권유 아님/);
+  /* [1089] 결과 요약의 그리기 몫은 ComplexInsightView 로 옮겼다(같은 마크업) */
+  assert.match(read("app/complex/[id]/ComplexInsightView.tsx"), /\n\s*fold\n/);
+  assert.match(read("app/complex/[id]/ComplexInsightView.tsx"), /참고용 요약 · 투자 권유 아님/);
   /* AI 도구 화면(ResultView)의 VerdictCard 는 fold 를 켜지 않는다 — 근거·반례가 펼쳐진 채 남는다 */
   assert.doesNotMatch(read("app/analysis/ai/[tool]/ResultView.tsx"), /<VerdictCard[^>]*\sfold[\s>]/s);
 });

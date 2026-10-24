@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { listFollowedAuthorsNotes } from "@/lib/follows/feed-db";
 import { formatKstShortDate } from "@/lib/format/kst";
 import { loaded, sectionState, type Loaded } from "@/lib/me/my-hub";

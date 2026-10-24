@@ -17,7 +17,7 @@
    · 결정 칩은 아이콘 칩(check · clock · x · repeat) · 지난 결정은 세로 타임라인(날짜 점 · 단지 · 결정 배지) · 빈 상태는 회색 견본. */
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageHead } from "@/app/components/PageHead";
 import { StepLine } from "@/app/components/StepLine";
 import { Icon } from "@/app/components/Icon";

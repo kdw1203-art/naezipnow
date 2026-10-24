@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { cache } from "react";
 import { PageShell } from "../../components/PageShell";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";

@@ -22,7 +22,7 @@ import { withJosa } from "@/lib/format/josa";
    데이터 로딩·재계산·저장·노트·비교·게이트는 전부 예전 로직 그대로다. 나머지 8종 도구는 예전 화면. */
 
 import { startTransition, useCallback, useEffect, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import dynamic from "next/dynamic";
 import { ComplexPicker, type PickedComplex } from "@/app/analysis/ComplexPicker";
 /* [975] 지도 서랍은 **열 때만** 내려받는다 — 이 라우트의 First Load 예산이

@@ -10,7 +10,7 @@ import {
   shouldSkipRetry,
 } from "@/lib/db/timeout-breaker";
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import {
   getComplexBaseById,
@@ -73,7 +73,6 @@ import { ALL_BANDS, formatManwon, toHubTrades, tradeDeltaBases } from "@/lib/com
 import { MobileActionBarLazy } from "./MobileActionBarLazy";
 import {
   prefetchComplexSections,
-  prefetchAxisSummary,
   sectionRegionLabel,
   axisRegionName,
   loadAreaBands,
@@ -103,10 +102,11 @@ import {
    [1009 · C] 서버 SVG → 평형별 ScrubLine(따로 받는 청크 PriceTrendLazy — 라우트 번들 밖) */
 import type { PricePoint } from "./PriceTrendChart";
 import { complexCanonicalPath, decodeComplexId } from "@/lib/complex/complex-store";
-import { ComplexAxisSummary } from "./ComplexAxisSummary";
-import { ComplexSignals } from "./ComplexSignals";
+/* [1089 · 비용] 결과 요약 · 다요인 분석은 사람이 볼 때 따로 받는다(ISR 실효 수명 1시간 → 7일 · 이유는 그 파일 머리 주석) */
+import { ComplexInsightPanels } from "./ComplexInsightPanels";
 import { Fineprint } from "@/app/components/Fineprint";
-import { pureIdFromParam, complexHrefFromId} from "@/lib/seo/complex-slug";
+import { pureIdFromParam, complexHrefFromId, decodeNameIdSafe } from "@/lib/seo/complex-slug";
+import { tagComplexPageRegion } from "@/lib/complex/region-tag-cache";
 import { getCachedCoord } from "@/lib/map/complex-geocode";
 import { settle, startDeadline, SIDE_SECTION_BUDGET_MS } from "@/lib/data/section-budget";
 import { getMarketFreshnessDateLabel } from "@/lib/newui/freshness";
@@ -890,12 +890,8 @@ async function loadView(id: string): Promise<HubView | null> {
      그래서 base 와 enriched 는 같은 참조이고, 아래에서 base.id 를 "enrich 전 값"으로
      쓰면 안 된다. 축 요약 키(kapt 형태일 수 있는 id)는 enrich 가 끝나는 순간 띄운다. */
   const rowP = loadComplexRow(id);
-  void rowP.then((r) => {
-    /* [1028] 축 요약의 키는 canonical_id(name-id). 예전에는 r.id 를 넘겼는데 K-apt 대장에 연결된 단지는 그 값이
-       `kapt.A…` 라 실거래 조회 키로 풀리지 않았다 — "이 단지 결과 요약"의 최근 실거래가·최근 6개월 거래 칸이
-       거래가 수백 건인 단지에서도 "자료 없음"으로 나갔다(운영 실측: 래미안안양메가트리아 704건). */
-    if (r) prefetchAxisSummary({ rowId: r.canonical_id, city: r.city, district: r.district });
-  }).catch(() => undefined);
+  /* [1089] 예전 이 자리의 축 요약 미리 띄우기(prefetchAxisSummary — 결과 요약 · 다요인 분석 조회)는 뺐다 — 두 판은 화면 렌더가 아니라
+     사람이 볼 때 /api/complex/insight 로 받는다(ComplexInsightPanels). [1028] 키는 그대로 canonical_id(아래 rowForFacts). */
   const row: ComplexRow = base; // name·district·canonical_id·address 는 enrich 가 바꾸지 않는다
   /* [995] 읍면동 — address 문자열에서만 얻을 수 있다(대표행에 컬럼이 없다). 메타데이터도
      같은 함수로 같은 값을 만든다(순수 함수라 캐시가 필요 없다). */
@@ -1267,6 +1263,9 @@ export default async function ComplexHubPage({
   ]);
   // 사실 우선: 존재하지 않는 단지는 목업 대신 404
   if (!v) notFound();
+  /* [1089] 실거래 지역 태그 — 실거래 적재가 이 지역을 건드리면 이 화면도 비워진다(lib/complex/region-tag 머리 주석).
+     지역은 이름 id(canonical_id) 안의 값 = 실거래 region_name. 데이터 캐시 읽기 한 번 · 화면 수명(7일)은 그대로. */
+  await tagComplexPageRegion(decodeNameIdSafe(rowForFacts?.canonical_id ?? complexId)?.region);
   /* [1007 · P2] 전세가율·자료 완성도 — 지도 패널과 같은 규칙(buildComplexFacts). 재료는 위에서
      이미 띄운 로더들(전월세 원표본·임장노트·매매 원표본 창)이라 여기서 기다리기만 한다. */
   const facts = await loadHubFacts({
@@ -1780,12 +1779,10 @@ export default async function ComplexHubPage({
           {/* 데이터 신선도 캡션(#21) — market_ingest_log 최근 성공 기준 */}
           <MarketFreshnessLine label={freshness} className="rise-in-1 mt-1.5" />
 
-          {/* [OPT-48] 허브 2.0 — AI 워크벤치와 같은 라이브 컨텍스트 요약(1.2초 예산·자체 생략) */}
-          <ComplexAxisSummary complexId={rowForFacts?.canonical_id ?? v.id} regionName={axisRegionName(v.city, v.dong)} />
-
-          {/* [1048] AI 다요인 분석 — 심리 · 뉴스 · 관심도 · 거래량 · 1년 추이 · 단기 추세 · 매물·공급 · 금리(같은 라이브 컨텍스트 + 지역 캐시).
+          {/* [OPT-48] 허브 2.0 결과 요약(라이브 컨텍스트) + [1048] AI 다요인 분석(심리 · 뉴스 · 관심도 · 거래량 · 추이 · 추세 · 매물·공급 · 금리).
+              [1089] 둘 다 사람이 볼 때 따로 받는다(ComplexInsightPanels → /api/complex/insight) — 같은 자리 · 같은 마크업.
               이 단지 월별 건수 · 주력 평형 월 중위는 위 거래 그래프 값을 그대로 넘긴다(새 조회 0). */}
-          <ComplexSignals
+          <ComplexInsightPanels
             complexId={rowForFacts?.canonical_id ?? v.id}
             regionName={axisRegionName(v.city, v.dong)}
             series={trend ? { yms: trend.yms, counts: trend.all.counts, mainValues: trend.types[0]?.values } : null}

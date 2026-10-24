@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { PageShell } from "../../components/PageShell";
 import { listPartnersAll } from "@/lib/dev-deals/store";
 import { seoAlternates } from "@/lib/seo/alternates";

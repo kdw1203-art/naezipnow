@@ -5,7 +5,7 @@
    홈 정적 캐시를 지키기 위한 클라이언트 섬: 없으면 아무것도 렌더하지 않는다
    (자리 확보용 스켈레톤도 없음 — 비로그인 다수에게 레이아웃 이동을 만들지 않기). */
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { getSessionLite } from "@/lib/client/session-lite";
 
 type Brief = {

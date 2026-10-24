@@ -5,7 +5,7 @@
  * 버튼을 누르기 전에 알린다. 몰래 보내지 않는 것이 원칙이다.
  * 사진은 업로드 시점에 EXIF(GPS·기기정보)가 제거된다(lib/storage/upload.ts).
  */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 
 export function FieldCaptureConsentNotice() {
   return (

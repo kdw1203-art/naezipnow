@@ -10,7 +10,7 @@
    사라진다(Suspense 폴백이 박힘). 그래서 SSR 은 항상 전체를 그리고, 필터는
    마운트 후 location.search 로 적용한다. 딥링크·뒤로가기는 popstate 로. */
 
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import type { CSSProperties } from "react";
 import { useEffect, useState } from "react";
 import {

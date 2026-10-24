@@ -9,7 +9,7 @@
 
    번들: NoteForm 이 next/dynamic(ssr:false)으로 받고 **lg 에서만 마운트**한다(matchMedia) — 폰은 이 조각을 내려받지 않는다.
    상태는 전부 NoteForm 이 들고, 여기는 그리기만 한다(새 조회·새 계산 없음). */
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { ActionButton } from "@/app/components/ui/ActionButton";
 import { Icon } from "@/app/components/Icon";
 import { ScoreRadar } from "@/app/components/viz/ScoreRadar";

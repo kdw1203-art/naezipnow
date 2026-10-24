@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { formatKrwWon } from "@/lib/format/krw";
 import { formatYm } from "@/lib/market/format";
 import { decisionBand, decisionLabel, type NoteDecision } from "@/lib/inspection/decision";

@@ -16,7 +16,7 @@ import { CapsLockNote } from "@/app/components/auth/CapsLockNote";
 import { ActionButton } from "@/app/components/ui/ActionButton";
 
 import { useEffect, useMemo, useState, type FormEvent } from "react";
-import Link from "next/link";
+import Link from "@/app/components/IntentLink";
 import { safeInternalPath } from "@/lib/safe-path";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
