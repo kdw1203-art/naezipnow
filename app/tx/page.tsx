@@ -10,7 +10,8 @@ import {
   type TxRegionSummary,
 } from "@/lib/market/tx-bands";
 import { formatYmRange } from "@/lib/market/format";
-import { groupBySido } from "@/lib/market/sido-group";
+import { groupBySido, sidoOfMarketRegionName } from "@/lib/market/sido-group";
+import { TxRegionGroups, type TxRegionWire, type TxSidoGroupWire } from "./TxRegionGroups";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
@@ -218,68 +219,14 @@ export default async function TxIndexPage() {
               <details> 로 접는다(첫 묶음만 펼침). 링크는 접혀 있어도 HTML 에 있어 크롤링·
               색인에는 영향이 없고, 서버 컴포넌트라 JS 없이 동작한다. 묶음 순서는 거래 많은
               시/도부터, 카탈로그로 시/도를 모르는 지역은 맨 끝 "그 밖의 지역". */}
-          {(() => {
-            const maxTx = regions.reduce((m, r) => Math.max(m, r.txCount), 0);
-            const groups = groupBySido(regions, (r) => r.name, (r) => r.txCount);
-            return (
-              <div className="mt-3 flex flex-col gap-2 max-md:mt-2">
-                {groups.map((g, gi) => {
-                  const groupTx = g.items.reduce((sum, r) => sum + r.txCount, 0);
-                  return (
-                    <details
-                      key={g.sido}
-                      open={gi === 0}
-                      className="group rounded-lg border border-border bg-surface"
-                    >
-                      <summary className="flex cursor-pointer list-none items-baseline justify-between gap-3 px-3 py-2.5 [&::-webkit-details-marker]:hidden">
-                        <span className="t-body font-bold text-ink">
-                          {g.sido}{" "}
-                          <span className="t-sub font-medium text-text-3">{g.items.length}개 지역</span>
-                        </span>
-                        <span className="shrink-0 t-sub text-text-3">
-                          {groupTx.toLocaleString("ko-KR")}건{" "}
-                          <span aria-hidden className="ml-1 inline-block transition-transform group-open:rotate-180">
-                            ▾
-                          </span>
-                        </span>
-                      </summary>
-                      <div className="grid grid-cols-1 gap-2 px-3 pb-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        {g.items.map((r) => (
-                          <Link
-                            key={r.slug}
-                            prefetch={false}
-                            href={`/tx/${encodeURIComponent(r.slug)}`}
-                            className="tile flex flex-col gap-1.5 rounded-lg border border-border px-3 py-2.5 t-body"
-                          >
-                            {/* [1074] 네 칸 줄에서 "용인 수지구"처럼 띄어 쓴 이름이 두 줄로 접혀(이름 | 건수 한 줄 꼴) 칸 높이가
-                                들쭉날쭉했다 — 여러 칸 줄(sm+)에서는 이름 한 줄 · 그 아래 건수 한 줄로 쌓아 모든 칸이 같은 높이. 폰(한 칸 줄)은 예전처럼 한 줄 */}
-                            <span className="flex min-w-0 items-baseline justify-between gap-3 sm:flex-col sm:items-start sm:justify-start sm:gap-0.5">
-                              <span className="font-bold text-ink">{r.name}</span>
-                              <span className="shrink-0 t-sub tabular-nums text-text-3">
-                                {r.txCount.toLocaleString("ko-KR")}건 · 구간{" "}
-                                {r.areaCells.length + r.priceCells.length}
-                              </span>
-                            </span>
-                            {maxTx > 0 && (
-                              <span
-                                aria-hidden
-                                className="block h-[3px] overflow-hidden rounded-full bg-bg"
-                              >
-                                <span
-                                  className="block h-full rounded-full bg-primary/45"
-                                  style={{ width: `${Math.max(3, Math.round((r.txCount / maxTx) * 100))}%` }}
-                                />
-                              </span>
-                            )}
-                          </Link>
-                        ))}
-                      </div>
-                    </details>
-                  );
-                })}
-              </div>
-            );
-          })()}
+          {/* [1092 · 비용] 칸은 클라이언트 조각이 압축 행으로 그린다(TxRegionGroups 머리 주석) — 허브 한 장 498KB 의 대부분이 이 칸이었다 */}
+          {/* [1096 · 고도화] 시/도는 실거래 표기 전수 해석(sidoOfMarketRegionName) — 카탈로그만으로는 214곳 중 142곳(239,772건)이 "그 밖의 지역"이었다 */}
+          <TxRegionGroups
+            maxTx={regions.reduce((m, r) => Math.max(m, r.txCount), 0)}
+            groups={groupBySido(regions, (r) => r.name, (r) => r.txCount, sidoOfMarketRegionName).map(
+              (g): TxSidoGroupWire => [g.sido, g.items.map((r): TxRegionWire => [r.slug, r.name, r.txCount, r.areaCells.length + r.priceCells.length])],
+            )}
+          />
         </section>
       )}
 

@@ -14,6 +14,28 @@ export const OPTIMIZABLE_IMAGE_RE =
 /** Next 기본 허용 폭(deviceSizes∪imageSizes)의 부분집합만 쓴다 — 목록에 없는 w 는 400 */
 export const IMAGE_SRCSET_WIDTHS = [384, 640, 828, 1080] as const;
 
+/** [1096] 변환기가 받는 폭 전부 — next.config images.imageSizes ∪ deviceSizes 와 같은 값(검사: tests/unit/review-1096) */
+export const IMAGE_ALL_WIDTHS = [16, 32, 48, 64, 96, 128, 256, 384, 640, 750, 828, 1080, 1200, 1920] as const;
+
+/**
+ * [1096 · 성능] sizes 가 고정 px("62px")면 그 칸에 맞는 폭만 — 1x · 2x · 3x 각각 "그 이상인 가장 작은 허용 폭".
+ * 왜: 폭 목록이 384 부터라 62px 썸네일(폰 2배 = 124px)도 384w 를 받았다 — 같은 커버가 384w 11.7KB · 128w 2.5KB(로컬 실측 AVIF).
+ * 노트 허브 한 장에 썸네일 82장이라 방문마다 약 750KB 가 넘치게 내려갔다. vw 가 섞인 sizes 는 종전 목록 그대로.
+ */
+export function srcSetWidthsFor(sizes: string | null | undefined): readonly number[] {
+  const m = /^\s*(\d+(?:\.\d+)?)px\s*$/.exec(sizes ?? "");
+  if (!m) return IMAGE_SRCSET_WIDTHS;
+  const px = Number(m[1]);
+  if (!(px > 0)) return IMAGE_SRCSET_WIDTHS;
+  const out: number[] = [];
+  for (const dpr of [1, 2, 3]) {
+    const need = px * dpr;
+    const w = IMAGE_ALL_WIDTHS.find((v) => v >= need) ?? IMAGE_ALL_WIDTHS[IMAGE_ALL_WIDTHS.length - 1];
+    if (!out.includes(w)) out.push(w);
+  }
+  return out;
+}
+
 /** 기본 화질 — Next 기본값과 같다 */
 export const IMAGE_SRCSET_QUALITY = 75;
 

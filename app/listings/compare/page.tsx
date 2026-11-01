@@ -1,6 +1,6 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import type { Metadata } from "next";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb } from "@/app/components/PageShell";
 import { ListingCompareView } from "@/components/ListingCompareView";
 import { getListingById } from "@/lib/listings/store-db";
 import { comparePriceToMarket } from "@/lib/listings/price-compare";
@@ -83,7 +83,8 @@ export default async function ListingComparePage({
   const serverItems = fetched.filter((x): x is MarketAwareCompareListing => x !== null);
 
   return (
-    <PageShell breadcrumb="홈 › 실매물 › 비교함">
+    <>
+      <ShellBreadcrumb>홈 › 실매물 › 비교함</ShellBreadcrumb>
       <div className="mb-4">
         <h1 className="rise-in t-title font-bold text-ink">매물 비교함</h1>
         <p className="mt-1 t-body text-text-3">
@@ -92,6 +93,6 @@ export default async function ListingComparePage({
       </div>
 
       <ListingCompareView ids={ids} serverItems={serverItems} />
-    </PageShell>
+    </>
   );
 }

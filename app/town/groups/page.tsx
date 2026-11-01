@@ -1,6 +1,6 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb } from "../../components/PageShell";
 import { listMeetings, type UserMeeting } from "@/lib/meetings/store-db";
 import { countRecentGroupMessages } from "@/lib/chat/store-db";
 import { CreateGroupCta } from "./CreateGroupCta";
@@ -120,7 +120,8 @@ export default async function TownGroupsPage() {
   }
 
   return (
-    <PageShell breadcrumb="동네이야기 › 임장 모임" wide>
+    <>
+      <ShellBreadcrumb>동네이야기 › 임장 모임</ShellBreadcrumb>
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
       {/* ---------- 페이지 헤더 ([978] 홈과 같은 네이비 히어로) ---------- */}
       <TownHero
@@ -153,6 +154,6 @@ export default async function TownGroupsPage() {
           truncated={views.length >= MEETINGS_FETCH_CAP}
         />
       )}
-    </PageShell>
+    </>
   );
 }

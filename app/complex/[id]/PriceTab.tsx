@@ -189,7 +189,7 @@ export function PriceTab({
             </div>
           ) : (
             <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
-              이 면적대의 실거래가 표에 없어요
+              이 면적대 실거래 없음
             </div>
           )}
         </>

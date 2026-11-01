@@ -23,7 +23,9 @@ const MANIFEST = path.join(ROOT, ".next", "app-build-manifest.json");
 const BUDGETS_KB = {
   "/page": 495, // 실측 457KB (2026-08-27)
   "/map/page": 375, // 실측 347KB — MapClientLazy 분리 후
-  "/analysis/page": 490, // 실측 453KB
+  /* [1090] 셸(PageShell)을 app/analysis/layout.tsx 로 올려 페이지 몫이 483 → 437KB 로 보인다(내려받는 양은 레이아웃 ∪ 페이지라 비슷하다 · 1087 단지와 같은 계산상 변화).
+     게이트가 느슨해지지 않게 490 → 450KB 로 낮춘다. */
+  "/analysis/page": 450, // [1090] 실측 437KB(셸이 레이아웃으로)
   "/analysis/ai/[tool]/page": 480, // 실측 441KB
   "/notes/new/page": 470, // 실측 434KB — VoiceMemoRecorder 분리 후
   /* [968 · 4] 단지 허브 — 홈(466KB)보다 큰 468KB(2026-09-06 제안서 실측)인데 목록에 없었다.

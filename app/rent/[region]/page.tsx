@@ -5,7 +5,6 @@ import type { Metadata } from "next";
 import { HScroll } from "@/app/components/HScroll";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
 import { Icon } from "@/app/components/Icon";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
@@ -169,7 +168,7 @@ export default async function RentRegionPage({
   const title = rentTitle(region.name, p.dong);
 
   return (
-    <PageShell wide>
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -346,6 +345,6 @@ export default async function RentRegionPage({
           </section>
         </aside>
       </div>
-    </PageShell>
+    </>
   );
 }

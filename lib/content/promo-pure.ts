@@ -329,7 +329,7 @@ export function renderComplexBlogPost(input: ComplexPostInput): ComplexBlogPost 
 
   parts.push(["■ 출처", "", SOURCE_LINE].join("\n"));
   parts.push(NOT_ADVICE_LINE);
-  parts.push(`${name} 실거래 이력·면적대 시세·임장노트 → ${url}`);
+  parts.push(`${name} 실거래 이력·면적대 실거래·임장노트 → ${url}`);
 
   const total = areas.reduce((s, l) => s + l.dealCount, 0);
   const titles = [

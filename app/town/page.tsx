@@ -1,7 +1,6 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "@/app/components/IntentLink";
 import { CountUp } from "@/app/components/motion/CountUp";
-import { PageShell } from "../components/PageShell";
 import { PageHead } from "../components/PageHead";
 /* [967 · 19] 카드 변환·병합은 lib/town/feed.ts 로 옮겼다 — "더 보기"(/api/town/feed)와
    첫 장이 같은 코드로 카드를 만들어야 하기 때문이다. */
@@ -146,7 +145,7 @@ export default async function TownPage() {
   /* [1043] 피드가 이웃 글만이라 "이웃 글 n · 임장노트 n · Lab 노트 n" 가름은 없어졌다 — 이 피드 n건이 곧 이웃 글 수다 */
 
   return (
-    <PageShell wide>
+    <>
       {/* [1017] 소유자(폰 캡처의 네이비 띠에 ×): "임장·지도를 제외하고 나머지 카테고리에서는 전부 삭제".
           네이비 히어로(슬로건 · 워터마크 · 통계 띠) → 흰 머리 한 줄. 버튼 둘은 그대로, 숫자는 캡션 한 줄. */}
       {/* [1022 · 정렬·글씨·테마] 공용 PageHead — 허브·임장노트와 같은 한 줄(아이콘 칩 40 · h1 · 사실 한 줄 | 버튼 둘). 숫자 줄은 그대로 캡션. */}
@@ -260,6 +259,6 @@ export default async function TownPage() {
       </div>
       </div>
 
-    </PageShell>
+    </>
   );
 }

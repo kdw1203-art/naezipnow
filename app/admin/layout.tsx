@@ -67,7 +67,7 @@ export default async function AdminLayout({
             href="/admin/ops"
             className="block rounded-xl border border-[#7a2a2a] bg-[#2a1616] px-4 py-3 text-[13px] leading-relaxed !text-[#ffb4a8] no-underline hover:bg-[#331a1a]"
           >
-            <b>🔴 심각 경보 {criticals.length}건 진행 중</b> —{" "}
+            <b>심각 경보 {criticals.length}건 진행 중</b> —{" "}
             {/* [1045] 경보는 검사·대상 단위로 접힌다 — 한 검사에 문제가 둘이면 이름이 두 번 나오므로 이름은 한 번만, 건수를 붙인다 */}
             {criticalNames.slice(0, 3).join(" · ")}
             {criticalNames.length > 3 ? " 외" : ""} · 운영 콘솔에서 확인 →

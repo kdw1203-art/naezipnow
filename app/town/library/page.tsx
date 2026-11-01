@@ -1,6 +1,6 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb } from "../../components/PageShell";
 import {
   listPublicNotes,
   inspectionAverageScore,
@@ -73,7 +73,8 @@ export default async function TownLibraryPage() {
   }
 
   return (
-    <PageShell breadcrumb="동네이야기 › 자료" wide>
+    <>
+      <ShellBreadcrumb>동네이야기 › 자료</ShellBreadcrumb>
       {/* ---------- 페이지 헤더 ---------- */}
       {/* [974] 머리 오른쪽에 있던 "뉴스 ›" 링크를 뺐다. 그 자리는 **이 카테고리에서
           할 일**을 놓는 자리인데(전문가=참여, 모임=만들기), 여기만 옆 카테고리로
@@ -242,6 +243,6 @@ export default async function TownLibraryPage() {
           />
         )}
       </section>
-    </PageShell>
+    </>
   );
 }

@@ -57,7 +57,7 @@ export function MyRecordsTab({
       }
       if (!res.ok) {
         const j = (await res.json().catch(() => ({}))) as { error?: string };
-        setState({ kind: "error", message: j.error ?? "지금은 내 기록을 불러올 수 없어요" });
+        setState({ kind: "error", message: j.error ?? "내 기록 불러오기 실패 · 잠시 후 다시" });
         return;
       }
       const data = (await res.json()) as ComplexRecordsResponse;

@@ -1,7 +1,6 @@
 import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "../../components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { formatYmKo, listReportMonths, type ReportMonthSummary } from "@/lib/reports/monthly";
 /* [1009 · 리뷰 H] 목록 로더(listReportMonths)가 1,000행에서 잘리던 것은 lib 에서 고쳤다 — 끝까지 나눠 읽는다 */
@@ -114,7 +113,7 @@ export default async function ReportsIndexPage() {
   const latest = months[0] ?? null;
 
   return (
-    <PageShell breadcrumb="월간 실거래 리포트">
+    <>
       {itemListJsonLd && (
         <script
           type="application/ld+json"
@@ -255,6 +254,6 @@ export default async function ReportsIndexPage() {
           <AdZone placement="page_bottom" seed={2} plan={null} />
         </div>
       </div>
-    </PageShell>
+    </>
   );
 }

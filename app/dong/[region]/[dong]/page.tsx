@@ -10,11 +10,12 @@ import { AdZone } from "@/app/components/ads/AdZone";
 import { CitationBlock } from "@/app/components/CitationBlock";
 import { Fineprint } from "@/app/components/Fineprint";
 import { HScroll } from "@/app/components/HScroll";
+import { DongComplexTable, type DongComplexWire } from "./DongComplexTable";
 import { MiniBar } from "@/app/components/compact/MiniBar";
 import { PageShell } from "@/app/components/PageShell";
 import { QaBlock } from "@/app/components/QaBlock";
 import { complexCanonicalPathFromNames } from "@/lib/complex/complex-store";
-import { loadDongComplexes, loadDongSiblings, loadDongStats, type DongWindowStats } from "@/lib/dong/landing";
+import { loadDongComplexes, loadDongPairs, loadDongSiblings, loadDongStats, type DongWindowStats } from "@/lib/dong/landing";
 import {
   buildDongFaq,
   dongCitation,
@@ -101,7 +102,12 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
     statsFailed = true;
     logger.error(`[dong] ${label} 거래 창 조회 실패`, e);
   }
-  const [siblings, txRegion] = await Promise.all([loadDongSiblings(region), findTxRegionBySlug(regionSlug).catch(() => null)]);
+  /* [1095 · 기능] 이 동의 단지 비교 조합(거래 많은 순 6쌍) — 실패는 빈 배열(곁다리) */
+  const [siblings, txRegion, pairs] = await Promise.all([
+    loadDongSiblings(region),
+    findTxRegionBySlug(regionSlug).catch(() => null),
+    loadDongPairs(region, dong),
+  ]);
   const others = siblings.filter((s) => s.dong !== dong).slice(0, 14);
   const regionHubId = catalogIdForTxRegionName(region);
 
@@ -225,44 +231,8 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
           <section className="rise-in-2 card mb-4 p-[var(--pad-card)] max-md:mb-3">
             <h2 className="t-section text-ink">단지별 거래</h2>
             <p className="mt-0.5 t-caption text-text-3">최근 6개월 거래 많은 순 · 거래 평균은 전 기간 매매 평균</p>
-            <div data-tone="blue">
-              <HScroll className="lq-panel mt-3 max-md:mt-2">
-                <table className="w-full whitespace-nowrap text-left t-body">
-                  <thead>
-                    <tr className="border-b border-border t-sub text-text-3">
-                      <th className="py-2 font-medium">단지</th>
-                      <th className="py-2 pl-3 text-right font-medium">준공</th>
-                      <th className="py-2 pl-3 text-right font-medium">세대</th>
-                      <th className="py-2 pl-3 text-right font-medium">6개월</th>
-                      <th className="py-2 pl-3 text-right font-medium">전 기간</th>
-                      <th className="py-2 pl-3 text-right font-medium">거래 평균</th>
-                      <th className="py-2 pl-3 text-right font-medium">평균 면적</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {shown.map((c) => (
-                      <ComplexRow key={c.id} c={c} />
-                    ))}
-                  </tbody>
-                </table>
-              </HScroll>
-            </div>
-            {rest.length > 0 && (
-              <details className="mt-2">
-                <summary className="cursor-pointer t-sub font-bold text-primary">나머지 {n(rest.length)}곳 보기</summary>
-                <div data-tone="blue">
-                  <HScroll className="lq-panel mt-2">
-                    <table className="w-full whitespace-nowrap text-left t-body">
-                      <tbody>
-                        {rest.map((c) => (
-                          <ComplexRow key={c.id} c={c} />
-                        ))}
-                      </tbody>
-                    </table>
-                  </HScroll>
-                </div>
-              </details>
-            )}
+            {/* [1092 · 비용] 표는 클라이언트 조각이 압축 행으로 그린다(DongComplexTable 머리 주석) — RSC 가 줄당 1.4KB → 100B 안팎 */}
+            <DongComplexTable region={region} rows={shown.map(toWire(region))} rest={rest.map(toWire(region))} />
           </section>
 
           {/* 최근 실거래 — 계약일 순 20건 */}
@@ -303,6 +273,30 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
                   </table>
                 </HScroll>
               </div>
+            </section>
+          )}
+
+          {/* [1095 · 기능] 단지 비교 — 같은 동 두 단지를 나란히(/complex/compare · 1,119쌍). 비교 화면은 단지 화면 "비교 담기"와 사이트맵에서만
+              닿았다. 칩은 "A · B" 한 쌍 = 링크 하나 · 폰 40px */}
+          {pairs.length > 0 && (
+            <section className="rise-in-2 card mb-4 p-[var(--pad-card)] max-md:mb-3">
+              <h2 className="t-section text-ink">단지 비교</h2>
+              <p className="mt-0.5 t-caption text-text-3">같은 동 두 단지 나란히 · 최근 12개월 매매 신고 합 순 · {n(pairs.length)}쌍</p>
+              <ul className="m-0 mt-2 flex list-none flex-wrap gap-2 p-0">
+                {pairs.map((p) => (
+                  <li key={p.href}>
+                    <Link
+                      href={p.href}
+                      className="tile inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink no-underline md:min-h-8"
+                    >
+                      <span>{p.a}</span>
+                      <span aria-hidden="true" className="text-text-3">·</span>
+                      <span>{p.b}</span>
+                      <span className="t-caption font-normal tabular-nums text-text-3">{n(p.pairTradeCount)}건</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
 
@@ -365,20 +359,11 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
   );
 }
 
-function ComplexRow({ c }: { c: { id: string; name: string; region: string; buildYear: number | null; households: number | null; recentTradeCount: number; tradeCount: number; avgPriceManwon: number | null; avgAreaM2: number | null } }) {
-  return (
-    <tr className="border-b border-border last:border-b-0">
-      <td className="py-2.5 font-bold text-ink">
-        <Link href={complexCanonicalPathFromNames(c.region, c.name)} className="tap-line text-primary no-underline">
-          {c.name}
-        </Link>
-      </td>
-      <td className="py-2.5 pl-3 text-right tabular-nums text-text-2">{c.buildYear ?? "—"}</td>
-      <td className="py-2.5 pl-3 text-right tabular-nums text-text-2">{c.households ? n(c.households) : "—"}</td>
-      <td className="py-2.5 pl-3 text-right t-num font-bold text-ink">{n(c.recentTradeCount)}건</td>
-      <td className="py-2.5 pl-3 text-right tabular-nums text-text-2">{n(c.tradeCount)}건</td>
-      <td className="py-2.5 pl-3 text-right tabular-nums text-text-2">{c.avgPriceManwon ? formatKrwShort(c.avgPriceManwon * 10_000) : "—"}</td>
-      <td className="py-2.5 pl-3 text-right tabular-nums text-text-2">{c.avgAreaM2 ? `${Math.round(c.avgAreaM2)}㎡` : "—"}</td>
-    </tr>
-  );
-}
+/** [1092] 단지 행 → 압축 행(DongComplexTable) — 지역은 화면 지역과 다를 때만 싣는다 */
+const toWire =
+  (pageRegion: string) =>
+  (c: { name: string; region: string; buildYear: number | null; households: number | null; recentTradeCount: number; tradeCount: number; avgPriceManwon: number | null; avgAreaM2: number | null }): DongComplexWire => {
+    const w: DongComplexWire = [c.name, c.buildYear, c.households, c.recentTradeCount, c.tradeCount, c.avgPriceManwon, c.avgAreaM2];
+    if (c.region !== pageRegion) w.push(c.region);
+    return w;
+  };

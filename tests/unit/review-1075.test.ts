@@ -104,7 +104,8 @@ test("Q5 뉴스룸 — 머리 아래 칩 줄 없음 · 톱기사 없음 · 제�
   assert.match(idx, /className="rise-in card flex items-center justify-between gap-3 rounded-2xl px-4 py-4 no-underline"/);
 
   const list = read("app/town/news/NewsListClient.tsx");
-  assert.match(list, /\{list\.map\(\(row\) => \(\s*<NewsRowView key=\{row\.id\} row=\{row\} \/>\s*\)\)\}/);
+  /* [1097] 행은 날짜 묶음(groupNewsRowsByDay) 안에서 같은 꼴 · 톱기사 없음 · 제목 한 줄 그대로 */
+  assert.match(list, /\{g\.rows\.map\(\(row\) => \(\s*<NewsRowView key=\{row\.id\} row=\{row\} \/>\s*\)\)\}/);
   assert.doesNotMatch(list, /lead=\{/);
   assert.match(list, /<span className=\{lead \? "line-clamp-3" : "line-clamp-1"\}>\{row\.title\}<\/span>/);
 });

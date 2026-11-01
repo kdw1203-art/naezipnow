@@ -137,8 +137,7 @@ export default async function BestNotesIndexPage() {
           </div>
         ) : (
           <div className="mt-6 card rounded-2xl px-5 py-8 text-center t-body text-text-3">
-            아직 기준을 채운 달이 없습니다. 한 달에 {MIN_SCORE}점 이상 노트가{" "}
-            {MIN_NOTES_PER_MONTH}편 모이면 만들어집니다.
+            기준을 채운 달 없음 · 한 달에 {MIN_SCORE}점 이상 노트 {MIN_NOTES_PER_MONTH}편부터
             <br />
             <Link href="/notes/new" className="mt-2 inline-flex min-h-[24px] items-center font-bold text-primary underline">
               임장노트 쓰기

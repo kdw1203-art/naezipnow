@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb, ShellNarrow } from "@/app/components/PageShell";
 import { ErrorState } from "@/app/components/ui/EmptyState";
 import { getReport } from "@/lib/reports/store-db";
 import { hasPurchased } from "@/lib/report-purchases/store-db";
@@ -62,7 +62,8 @@ export default async function ReportDetailPage({
   );
   if (!read.ok) {
     return (
-      <PageShell breadcrumb="동네이야기 › 자료실">
+      <ShellNarrow>
+        <ShellBreadcrumb>동네이야기 › 자료실</ShellBreadcrumb>
         <div className="mx-auto w-full max-w-[680px]">
           <ErrorState
             title="리포트 불러오기 실패"
@@ -70,7 +71,7 @@ export default async function ReportDetailPage({
             action={{ label: "자료실로 이동", href: "/town/library" }}
           />
         </div>
-      </PageShell>
+      </ShellNarrow>
     );
   }
   const r = read.r;
@@ -104,7 +105,8 @@ export default async function ReportDetailPage({
   const freeToRead = Boolean(noteHref) && !isPaid;
 
   return (
-    <PageShell breadcrumb={`동네이야기 › 자료실 › ${r.title}`}>
+    <ShellNarrow>
+      <ShellBreadcrumb>{`동네이야기 › 자료실 › ${r.title}`}</ShellBreadcrumb>
       <div className="mx-auto w-full max-w-[680px]">
         <div className="mb-3">
           <Link href="/town/library" className="t-sub font-bold text-text-3 no-underline">
@@ -210,6 +212,6 @@ export default async function ReportDetailPage({
           판매 대금은 포인트로 정산됩니다
         </p>
       </div>
-    </PageShell>
+    </ShellNarrow>
   );
 }

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { notFound } from "next/navigation";
 import { findCatalogRegionById } from "@/lib/region/catalog";
+import { PageShell } from "@/app/components/PageShell";
 
 /* [1066 · 진짜 404] 없는 지역이 HTTP 200 으로 나가던 자리. 이유·실측은
    app/complex/[id]/layout.tsx 주석 참고(레이아웃은 loading 경계 밖이라 404 가 산다).
@@ -14,5 +15,6 @@ export default async function RentRegionLayout({
 }) {
   const { region } = await params;
   if (!findCatalogRegionById(decodeURIComponent(region))) notFound();
-  return <>{children}</>;
+  /* [1092 · 비용] 셸(넓은 벌)은 여기 한 벌 — page · loading 은 안쪽만(1090 동네이야기 · 분석과 같은 구조). 오류 화면은 AreaError inShell. */
+  return <PageShell wide>{children}</PageShell>;
 }

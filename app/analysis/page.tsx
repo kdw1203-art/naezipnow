@@ -4,7 +4,6 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { AdZone } from "@/app/components/ads/AdZone";
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "../components/PageShell";
 import { Icon } from "@/app/components/Icon";
 import type { InspectionNote } from "@/lib/inspection/store-db";
 import { listPublicNotesWithFallback } from "@/lib/inspection/public-notes-cached";
@@ -170,7 +169,7 @@ export default async function AnalysisHubPage() {
   const publicPreview = pickPublicAiPreview(publicRows);
 
   return (
-    <PageShell>
+    <>
       <HubPickedProvider>
         <div className="flex flex-col gap-6 max-md:gap-3">
           {/* ── 히어로: 검색이 화면의 첫 요소 (UI-05·10) ── */}
@@ -362,6 +361,6 @@ export default async function AnalysisHubPage() {
       </HubPickedProvider>
       {/* [961] 광고 공간 — 허브 맨 아래(도구 입력·결과 사이에는 두지 않는다) */}
       <AdZone placement="page_bottom" seed={2} plan={null} className="mt-8 max-md:mt-4" />
-    </PageShell>
+    </>
   );
 }

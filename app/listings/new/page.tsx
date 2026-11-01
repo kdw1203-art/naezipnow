@@ -3,7 +3,7 @@ import Link from "@/app/components/IntentLink";
 import { redirect } from "next/navigation";
 import { safeAuth } from "@/lib/safe-auth";
 import { getExpertStatus } from "@/lib/experts/is-verified";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb, ShellTitle } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
 import { ListingForm } from "./ListingForm";
 
@@ -30,7 +30,8 @@ export default async function ListingNewPage() {
   const expert = await getExpertStatus(session.user.email);
   if (!expert.isBroker) {
     return (
-      <PageShell breadcrumb="실매물 › 매물 등록" title="매물 등록">
+      <>
+        <ShellBreadcrumb>실매물 › 매물 등록</ShellBreadcrumb><ShellTitle>매물 등록</ShellTitle>
         <div className="mx-auto max-w-[520px]">
           <div className="rise-in card flex flex-col items-center gap-3 px-5 py-12 text-center">
             <div className="text-[24px]"><Icon name="🏢" size={26} /></div>
@@ -55,12 +56,13 @@ export default async function ListingNewPage() {
             게재할 뿐 중개 당사자가 아닙니다.
           </div>
         </div>
-      </PageShell>
+      </>
     );
   }
 
   return (
-    <PageShell breadcrumb="실매물 › 매물 등록" title="매물 등록">
+    <>
+      <ShellBreadcrumb>실매물 › 매물 등록</ShellBreadcrumb><ShellTitle>매물 등록</ShellTitle>
       <div className="rise-in mb-4 rounded-xl bg-[rgba(29,79,216,.06)] px-4 py-3 t-body leading-[1.7] text-text-2">
         등록하신 매물은 <b>검수 후 노출됩니다 (1~2일)</b>. 형식 요건을 확인한 뒤
         목록에 공개돼요. 집주인 직접 매물은 추후 등기부등본 등으로{" "}
@@ -77,6 +79,6 @@ export default async function ListingNewPage() {
         행위는 해당 매물을 등록한 개업공인중개사가 수행하며, 내집나우는 광고 매체로서
         정보를 게재할 뿐 중개 당사자가 아닙니다.
       </div>
-    </PageShell>
+    </>
   );
 }

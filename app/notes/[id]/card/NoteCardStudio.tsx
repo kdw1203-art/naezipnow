@@ -339,7 +339,7 @@ export function NoteCardStudio({
                 className="btn-soft press flex min-h-10 min-w-[120px] flex-1 items-center justify-center gap-1.5 rounded-lg px-3 py-2 t-body font-bold"
               >
                 <Icon name="link" size={14} />
-                {copied ? "복사됨 ✓" : "링크 복사"}
+                {copied ? "복사했어요" : "링크 복사"}
               </button>
               {/* 카카오 브랜드 색·이름은 **정말 카카오로 보낼 때만** — 키 없는 배포엔 버튼이 없다 */}
               {KAKAO_JS_KEY && (

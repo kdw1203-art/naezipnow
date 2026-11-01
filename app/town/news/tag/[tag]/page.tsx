@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb, ShellNarrow } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
 import { readTownPosts } from "@/lib/newui/board-posts";
 import { NEWS_TAGS, findNewsTag, postMatchesTag } from "@/lib/news/tags";
@@ -77,7 +77,8 @@ export default async function NewsTagPage({
   ).slice(0, 40);
 
   return (
-    <PageShell breadcrumb={`뉴스룸 › ${tag.label}`}>
+    <ShellNarrow>
+      <ShellBreadcrumb>{`뉴스룸 › ${tag.label}`}</ShellBreadcrumb>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -165,6 +166,6 @@ export default async function NewsTagPage({
           })}
         </div>
       )}
-    </PageShell>
+    </ShellNarrow>
   );
 }

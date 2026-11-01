@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb, ShellNarrow } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
 import { Icon } from "@/app/components/Icon";
 import { ExpertBadge } from "@/app/components/ExpertBadge";
@@ -53,7 +53,8 @@ export default async function ExpertCategoryPage({ params }: { params: Promise<{
     .sort((a, b) => b.reviews - a.reviews || b.consultations - a.consultations || b.createdAt.localeCompare(a.createdAt));
 
   return (
-    <PageShell breadcrumb={`동네 › 전문가 › ${t.label}`}>
+    <ShellNarrow>
+      <ShellBreadcrumb>{`동네 › 전문가 › ${t.label}`}</ShellBreadcrumb>
       <PageHead
         icon="shield"
         title={t.id === "other" ? "기타 전문가" : t.label}
@@ -131,6 +132,6 @@ export default async function ExpertCategoryPage({ params }: { params: Promise<{
           전체 전문가
         </Link>
       </p>
-    </PageShell>
+    </ShellNarrow>
   );
 }

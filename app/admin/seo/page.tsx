@@ -431,7 +431,7 @@ export default async function AdminSeoPage() {
 
 async function NewsComplexLinkPanel() {
   const { getServiceSupabase } = await import("@/lib/supabase/service");
-  const { resolveComplexHref } = await import("@/lib/newui/complex-link");
+  const { resolveComplexHrefs, complexHrefKey } = await import("@/lib/newui/complex-link");
   const sb = getServiceSupabase();
   if (!sb) return <p className="text-[12px] text-[#9aa6b8]">DB 미구성</p>;
   const { data, error } = await sb
@@ -449,6 +449,7 @@ async function NewsComplexLinkPanel() {
   let withEntity = 0;
   let hit = 0;
   const misses: string[] = [];
+  const pending: { landmarks: string[]; region: string }[] = [];
   for (const r of rows) {
     /* 수집 세션이 뽑은 지명 엔티티(geo.landmarks) 중 단지명으로 해석되는 것이
        있는가 — 상세 페이지의 그 매칭 함수(resolveComplexHref)로 실측. */
@@ -461,16 +462,18 @@ async function NewsComplexLinkPanel() {
       continue;
     }
     withEntity += 1;
-    let matched = false;
-    for (const lm of landmarks.slice(0, 3)) {
-      const href = await resolveComplexHref(lm, r.region ?? "").catch(() => null);
-      if (href) {
-        matched = true;
-        break;
-      }
-    }
+    pending.push({ landmarks: landmarks.slice(0, 3), region: r.region ?? "" });
+  }
+  /* [1097 · 성능] 글마다 랜드마크 최대 3개를 **차례로** 조회해 콜드 캐시에서 최대 180회 왕복이었다 — 상세 화면과 같은 묶음 조회
+     (resolveComplexHrefs · 중복 접기 · 동시 4 · 마감 안에 못 푼 키는 "없음"으로 센다 — 운영 패널이라 마감을 넉넉히) */
+  const hrefMap = await resolveComplexHrefs(
+    pending.flatMap((p) => p.landmarks.map((name) => ({ name, region: p.region }))),
+    { deadlineMs: 10_000 },
+  );
+  for (const p of pending) {
+    const matched = p.landmarks.some((lm) => Boolean(hrefMap.get(complexHrefKey(lm, p.region))));
     if (matched) hit += 1;
-    else if (misses.length < 8) misses.push(landmarks[0].slice(0, 30));
+    else if (misses.length < 8) misses.push(p.landmarks[0].slice(0, 30));
   }
   void withEntity;
   const rate = rows.length > 0 ? Math.round((hit / rows.length) * 100) : 0;

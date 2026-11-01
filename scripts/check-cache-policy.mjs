@@ -122,9 +122,20 @@ const PERSONALIZATION_MARKERS = [
   "@/lib/supabase/server",
 ];
 
+/* [1092] 라우트 그룹 — app/apply/(index)/page.tsx 처럼 셸 레이아웃을 (index) 그룹에 두면 주소는 같고 파일만 한 칸 안이다.
+   page.tsx 가 그 폴더에 없으면 `(…)` 그룹 하나를 더 내려가 찾는다(둘 이상이면 처음 것 — 같은 주소에 두 쪽은 Next 가 빌드에서 막는다). */
+function resolveRouteDir(route) {
+  const dir = join(root, "app", route);
+  if (existsSync(join(dir, "page.tsx")) || !existsSync(dir)) return dir;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory() && entry.name.startsWith("(") && existsSync(join(dir, entry.name, "page.tsx"))) return join(dir, entry.name);
+  }
+  return dir;
+}
+
 const patternProblems = [];
 for (const route of patternRoutes) {
-  const dir = join(root, "app", route);
+  const dir = resolveRouteDir(route);
   const page = join(dir, "page.tsx");
   if (!existsSync(page)) {
     patternProblems.push(`${route} — app${route}/page.tsx 가 없습니다(라우트가 사라졌거나 오타).`);

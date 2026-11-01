@@ -228,15 +228,17 @@ test("[1027 · 21 보류] 뉴스 사진은 그대로 — 소유자가 정한 '�
 
 /* ── 22 · 빈 쪽 ─────────────────────────────────────────────────────────── */
 
-test("[1027 · 22] 자료 0건 쪽은 검색 제외·사이트맵 제외 — 한 건이라도 들어오면 다시 색인", () => {
-  const page = code("app/data/records/page.tsx");
-  /* 검색 제외는 읽어서 0건임을 확인했을 때만 — 조회 실패(ok=false)를 0건으로 치지 않는다 */
-  assert.match(page, /\.\.\.\(ok && totalRows === 0 \? \{ robots: \{ index: false, follow: true \} \} : \{\}\),/);
-  assert.match(page, /const loadStats = cache\(getPublicRecordDatasetStatsResult\);/);
+test("[1027 · 22] 자료 0건 쪽은 검색 제외·사이트맵 제외 — [1097] 그 쪽은 /data-sources 한 절로 접혔다(0건이면 절만 비고 화면은 색인)", () => {
+  const page = code("app/data-sources/page.tsx");
+  /* 못 읽은 것(ok=false)과 0건은 다르다 — 못 읽으면 절을 뺀다 · 0건이면 "준비 중" 배지 */
+  assert.match(page, /getPublicRecordDatasetStatsResult\(\)\.catch\(\(\) => \(\{ ok: false as const, stats: \[\] \}\)\),/);
+  assert.match(page, /\{records\.ok && \(\s*<section className="rise-in-3 card mt-6 p-5" aria-label="준비 중인 공공 자료">/);
+  assert.match(page, /<RecordsSearchClient \/>/);
+  assert.ok(!existsSync("app/data/records"), "[1097] 옛 화면 폴더 없음");
+  assert.match(code("lib/seo/redirect-map.ts"), /\["\/data\/records", "\/data-sources"\]/);
   const lib = code("lib/market/public-records.ts");
   assert.match(lib, /if \(!sb\) return \{ ok: false, stats: base \};/);
   assert.match(lib, /if \(error \|\| !Array\.isArray\(data\)\) return \{ ok: false, stats: base \};/);
-  assert.match(page, /export const revalidate = 86_400;/);
   const sitemap = code("lib/seo/build-sitemap.ts");
   assert.doesNotMatch(sitemap, /"\/data\/records"/);
   /* 정비사업 지도는 0건이 아니다(운영 40곳) — 사이트맵에 그대로 */

@@ -78,9 +78,7 @@ export function isValidYm(ym: string): boolean {
   return /^\d{6}$/.test(ym) && Number(ym.slice(4)) >= 1 && Number(ym.slice(4)) <= 12;
 }
 
-export function formatYmKo(ym: string): string {
-  return `${ym.slice(0, 4)}년 ${Number(ym.slice(4))}월`;
-}
+export { ymKoLabel as formatYmKo } from "@/lib/format/ym"; /* [1097 · 통폐합] 본체는 lib/format/ym */
 
 /** 리포트가 존재하는 월 목록 (최신순). */
 export async function listReportMonths(): Promise<ReportMonthSummary[]> {

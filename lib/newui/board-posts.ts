@@ -422,6 +422,20 @@ const readRelatedTownPostsCached = unstable_cache(
 
 export const readRelatedTownPosts = cache((): Promise<Post[]> => readRelatedTownPostsCached());
 
+/* [1090 · 비용] 같은 목록의 **태그 없는** 판 — 롱테일 ISR 화면(단지 2.4만 쪽 · 뉴스 상세 1,400여 쪽)이 읽는다.
+   위 캐시의 태그(news · town-posts)는 그 캐시를 읽은 화면에 그대로 붙어서, 뉴스 재검증 크론(하루 3슬롯)이
+   invalidateTownDataCaches() 로 town-posts 를 비울 때마다 단지 화면 전부가 통째로 비워졌다(1089 실측 · 태그 목록) —
+   1089 에서 단지 화면 수명을 7일로 돌려놓은 것이 하루 세 번 무효가 되는 셈이다. 이 화면들의 "관련 기사"는 제목 · 출처 ·
+   시각뿐이라 7일 지연(화면 자체의 수명과 같다)이 틀린 말을 만들지 않는다. 동네 홈 · 이야기 · 홈 · 피드는 위 태그 판 그대로
+   (뉴스 적재 때 경로로 비워지며 이 목록도 새로 읽어야 한다). 두 판은 같은 조회 · 같은 모양이고 캐시 항목만 둘이다. */
+const readRelatedTownPostsUntagged = unstable_cache(
+  (): Promise<Post[]> => mergeTownPosts(readLightBoardPosts()),
+  ["related-town-posts-stale-v1"],
+  { revalidate: 604_800 },
+);
+
+export const readRelatedTownPostsStale = cache((): Promise<Post[]> => readRelatedTownPostsUntagged());
+
 async function mergeTownPosts(boardPromise: Promise<Post[]>): Promise<Post[]> {
   const [storePosts, boardPosts] = await Promise.all([
     readPosts().catch((e): Post[] => {

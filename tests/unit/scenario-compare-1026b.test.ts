@@ -191,12 +191,14 @@ test("[1026b] 비교 절차 — 단지 담기(현재 · N곳) → 비교 → 결
 
 test("[1026b] 비교 다음 행동 — 채움 파랑은 /decide · AI 비교 해석(2곳 이상 · 앞 3곳, 예전 채움 버튼과 같은 주소) · 알림 · 지도", () => {
   assert.equal(COMPARE_DECIDE_HREF, "/decide");
+  /* [1097] 넷째부터 빠지면 라벨이 말한다("앞 3곳") */
   assert.deepEqual(compareActionLinks(["a", "b", "c", "d"]), [
-    { href: `/analysis/ai/ai-compare?ids=${encodeURIComponent("a,b,c")}`, label: "AI 비교 해석" },
+    { href: `/analysis/ai/ai-compare?ids=${encodeURIComponent("a,b,c")}`, label: "AI 비교 해석 · 앞 3곳" },
     { href: "/notifications", label: "알림 받기" },
     { href: "/map", label: "지도에서 보기" },
   ]);
   assert.deepEqual(compareActionLinks(["a"]).map((l) => l.href), ["/notifications", "/map"]);
+  assert.equal(compareActionLinks(["a", "b", "c"])[0]?.label, "AI 비교 해석");
 });
 
 /* ── ③ 소스 구조 ─────────────────────────────────────────────────────── */

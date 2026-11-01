@@ -306,19 +306,12 @@ export function BannersClient({ initial }: { initial: Row[] }) {
               />
             </div>
             <div className="flex flex-col gap-1">
-              <span className={label}>배경 시작색</span>
+              {/* [1097] 실제 슬롯은 단색(bgFrom)만 쓴다(1015 규칙 G) — "끝색" 입력은 아무 데도 쓰이지 않아 뺐다(값은 저장 행에 그대로) */}
+              <span className={label}>배경색</span>
               <input
                 className={input}
                 value={draft.bgFrom}
                 onChange={(e) => set("bgFrom", e.target.value)}
-              />
-            </div>
-            <div className="flex flex-col gap-1">
-              <span className={label}>배경 끝색</span>
-              <input
-                className={input}
-                value={draft.bgTo}
-                onChange={(e) => set("bgTo", e.target.value)}
               />
             </div>
             <div className="flex flex-col gap-1">
@@ -340,11 +333,12 @@ export function BannersClient({ initial }: { initial: Row[] }) {
             </div>
           </div>
 
-          {/* 미리보기 — 실제 슬롯과 같은 배경/글자색으로 그린다 */}
+          {/* 미리보기 — 실제 슬롯과 같은 배경/글자색으로 그린다. [1097] 실제 슬롯(AdSlot · 1015 규칙 G)은 bgFrom 단색 하나뿐인데
+              미리보기만 그라데이션이었다 — 운영자가 보는 것과 나가는 것이 달랐다 */}
           <div
             className="flex flex-col gap-1 rounded-2xl px-5 py-4"
             style={{
-              background: `linear-gradient(135deg, ${draft.bgFrom}, ${draft.bgTo})`,
+              background: draft.bgFrom || undefined,
               color: draft.textColor || "white",
             }}
           >

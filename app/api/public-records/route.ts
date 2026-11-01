@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * /data/records 의 단지 검색 API (사용량 절감 14차).
+ * 공공 자료 단지 검색 API (사용량 절감 14차 · [1097] 화면은 /data-sources 의 "준비 중인 공공 자료" 절 — 옛 /data/records).
  *
  * 페이지는 ISR(통계만)이고 ?complex= 검색은 자유 텍스트 DB 검색이라 클라이언트
  * 메모리 필터로 못 바꾼다 — 검색만 이 API 로 분리해 검색어별로 CDN 에 캐시한다

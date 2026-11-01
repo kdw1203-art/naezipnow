@@ -108,21 +108,21 @@ function revalidateOf(file: string): number {
 
 const INVALIDATE_SRC = "lib/cache/invalidate.ts";
 
-test("[1010] molit 적재가 비우는 경로의 TTL만 올렸다 — /map · /data/records", () => {
+test("[1010] molit 적재가 비우는 경로의 TTL만 올렸다 — /map ([1097] /data/records 는 /data-sources 한 절로 접혀 목록에서 뺐다)", () => {
   const inv = read(INVALIDATE_SRC);
   /* SOURCE_MAP.molit 에 이 경로들이 실제로 들어 있는지 */
-  for (const p of ["/map", "/data/records"]) {
+  for (const p of ["/map"]) {
     assert.ok(inv.includes(`"${p}"`), `SOURCE_MAP 에 ${p} 가 없다 — TTL 을 올리면 안 된다`);
   }
+  assert.ok(!inv.includes('"/data/records"'), "[1097] /data-sources 는 force-dynamic — 비울 캐시가 없다");
   assert.equal(revalidateOf("app/map/page.tsx"), 21_600);
-  assert.equal(revalidateOf("app/data/records/page.tsx"), 86_400);
 });
 
 test("[1010] supply 적재가 비우는 경로의 TTL만 올렸다 — /supply · /apply", () => {
   const inv = read(INVALIDATE_SRC);
   assert.match(inv, /supply:\s*\{[^}]*paths:\s*\[[^\]]*"\/apply"[^\]]*"\/supply"/s);
   assert.equal(revalidateOf("app/supply/page.tsx"), 86_400);
-  assert.equal(revalidateOf("app/apply/page.tsx"), 86_400);
+  assert.equal(revalidateOf("app/apply/(index)/page.tsx"), 86_400);
 });
 
 test("[1010] /apply/calendar — 분양공고 적재가 비우므로 TTL 을 올렸다", () => {
@@ -168,7 +168,7 @@ test("[1010] /dev-deals · /dev-deals/partners — 등록 API 가 비운다", ()
     read("app/api/dev-deals/partner/route.ts"),
     /invalidatePathList\(\["\/dev-deals\/partners"\]/,
   );
-  assert.equal(revalidateOf("app/dev-deals/page.tsx"), 21_600);
+  assert.equal(revalidateOf("app/dev-deals/(index)/page.tsx"), 21_600);
   assert.equal(revalidateOf("app/dev-deals/partners/page.tsx"), 21_600);
 });
 

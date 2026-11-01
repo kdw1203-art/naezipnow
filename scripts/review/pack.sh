@@ -16,7 +16,11 @@ EXECS=$(git ls-files --stage | awk '$1=="100755"{print $4}')
 if [ -n "$EXECS" ]; then echo "STOP: 실행 비트(100755) 파일 — chmod -x 뒤 다시 포장: $EXECS"; unset GIT_INDEX_FILE; rm -f "$OUTDIR/tmp.index"; exit 1; fi
 TREE=$(git write-tree)
 git diff --cached --no-renames --name-only --diff-filter=ACMT "$BASE" > "$OUTDIR/FILES.txt"
-git diff --cached --no-renames --name-only --diff-filter=D "$BASE" > "$OUTDIR/DELETED.txt"
+# [1093] 삭제 목록은 **모든 기준 트리**의 합집합 — 뒤 기준(예: 1092)에만 있던 파일(그 묶음이 새로 만든 loading.tsx)을 이 묶음이 지울 때,
+# 첫 기준(1089)만 보면 "원래 없던 파일"이라 목록에 빠져 그 기준 위에서는 tree mismatch 가 났다. FILES 는 첫 기준 그대로(가장 넓다).
+: > "$OUTDIR/DELETED.txt"
+for b in "${BASE_ARR[@]}"; do git diff --cached --no-renames --name-only --diff-filter=D "$b" >> "$OUTDIR/DELETED.txt"; done
+sort -u -o "$OUTDIR/DELETED.txt" "$OUTDIR/DELETED.txt"
 unset GIT_INDEX_FILE
 PKG=$OUTDIR/pkg; rm -rf "$PKG"; mkdir -p "$PKG"
 while IFS= read -r f; do mkdir -p "$PKG/$(dirname "$f")"; cp "$f" "$PKG/$f"; done < "$OUTDIR/FILES.txt"

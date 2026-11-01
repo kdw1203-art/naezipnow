@@ -24,7 +24,7 @@ import { regionActionLinks, temperatureConclusion, temperatureSteps } from "@/li
 import { RegionActionCard, RegionPrimaryBar, VerdictCard } from "../timing/region-verdict";
 import { Explain } from "@/app/components/explain/Explain";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
-import type { TemperatureLatest } from "@/lib/market/temperature-archive";
+import type { TemperatureLatestSlim } from "@/lib/market/temperature-archive";
 import { KOREA_TILE_COLS, cellMap, layoutByLatLng } from "@/lib/market/korea-tile-layout";
 import { formatWeekKorean, formatWeekLabel } from "@/lib/market/week-label";
 import { getSessionLite } from "@/lib/client/session-lite";
@@ -49,7 +49,7 @@ import {
 export type WeekView = {
   key: WeekKey;
   weekStart: string;
-  rows: TemperatureLatest[];
+  rows: TemperatureLatestSlim[];
 };
 
 export type HistoryView = {
@@ -100,7 +100,7 @@ const READ_HOW = [
   "실거래 신고는 계약일로부터 최대 30일까지 늦어질 수 있어, 거래량 항은 신고가 마감되지 않은 이번 달을 빼고 계산한다.",
 ];
 
-function ScoreDelta({ row }: { row: TemperatureLatest }) {
+function ScoreDelta({ row }: { row: TemperatureLatestSlim }) {
   if (!row.previous) return null;
   const d = row.current.score - row.previous.score;
   if (d === 0) return <span>보합</span>;

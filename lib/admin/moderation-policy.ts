@@ -44,7 +44,7 @@ export const MODERATION_PIPELINE: ModerationStage[] = [
   {
     id: "review_queue",
     label: "운영 검토 큐",
-    description: "/admin/reports · 신고량·카테고리 정렬",
+    description: "/admin/moderation · 신고량·카테고리 정렬",
   },
   {
     id: "approve",

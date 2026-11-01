@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
 import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "@/app/components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
-import { getSupplyAll, getSupplyDataAsOf } from "@/lib/market/supply";
+import { getSupplyAll, getSupplyDataAsOf, toSupplyWire } from "@/lib/market/supply";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
 import { TownHero } from "@/app/town/TownHero";
 import { seoAlternates } from "@/lib/seo/alternates";
@@ -96,7 +95,7 @@ export default async function SupplyPage() {
   ];
 
   return (
-    <PageShell breadcrumb="동네이야기 › 입주 물량" wide>
+    <>
       <HubBreadcrumbLd trail={[{ name: "동네이야기", path: "/town" }, { name: "입주 예정 물량", path: "/supply" }]} />
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
       {/* [978] 홈과 같은 네이비 히어로 — 카테고리별로 제목·설명·색만 바뀐다 */}
@@ -196,7 +195,7 @@ export default async function SupplyPage() {
 
         {all.ok ? (
           <SupplyClient
-            items={all.items}
+            itemsWire={toSupplyWire(all.items)}
             truncated={all.truncated}
             asOfLabel={asOfLabel}
             builtAtMs={Date.now()}
@@ -218,6 +217,6 @@ export default async function SupplyPage() {
           변경에 따라 실제와 다를 수 있습니다.
         </Fineprint>
       </div>
-    </PageShell>
+    </>
   );
 }

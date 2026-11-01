@@ -131,25 +131,21 @@ test("동네이야기 · 동네 홈 — 뉴스 조립기·스트립·기사 링�
 
 test("뉴스룸 — 제 머리(NewsHead = PageHead) · 동네 카테고리 줄 없음 · 빵부스러기에 동네이야기 없음", () => {
   const page = code("app/town/news/(index)/page.tsx");
-  /* 대분류 첫 화면 — 빵부스러기 없음(제목 위에 같은 낱말이 한 번 더 서지 않게) */
-  assert.match(page, /<PageShell wide>/);
+  /* 대분류 첫 화면 — 빵부스러기 없음(제목 위에 같은 낱말이 한 번 더 서지 않게). [1090] 셸은 app/town/layout.tsx(wide) */
+  assert.doesNotMatch(page, /PageShell|ShellBreadcrumb/);
   assert.match(page, /<NewsHead \/>/);
   for (const s of ["TownHero", "TownCategoryNav", "동네이야기"]) assert.ok(!page.includes(s), s);
   const head = code("app/town/news/NewsHead.tsx");
   assert.match(head, /<PageHead/);
   assert.match(head, /href="\/digest"/);
   assert.ok(!head.includes("btn-primary"), "머리 버튼은 테두리형 하나");
-  /* 로딩 중과 로딩 후가 같은 머리 */
-  const loading = code("app/town/news/(index)/loading.tsx");
-  /* [1066 · h1 하나] 스켈레톤은 같은 부품을 쓰되 머리 단계만 h2 — 스켈레톤 셸과 실제 머리가
-     한 문서에 함께 나가므로 둘 다 h1 이면 /town/news 의 h1 이 두 개가 된다(운영 실측). */
-  assert.match(loading, /<NewsHead as="h2" \/>/);
-  assert.ok(!loading.includes("newsroom-masthead"));
-  assert.match(loading, /<PageShell wide>/);
+  /* [1093] 뉴스룸의 loading.tsx 는 없다 — 공개 ISR 화면은 본문을 숨은 조각(Suspense 경계)으로 저장하지 않는다(review-1093) */
+  assert.equal(existsSync("app/town/news/(index)/loading.tsx"), false);
   /* 뉴스 하위 화면의 빵부스러기는 전부 "뉴스룸"으로 시작한다 */
-  assert.match(code("app/town/news/[id]/page.tsx"), /breadcrumb=\{`뉴스룸 › /);
-  assert.match(code("app/town/news/tag/[tag]/page.tsx"), /breadcrumb=\{`뉴스룸 › /);
-  assert.match(code("app/digest/(index)/page.tsx"), /breadcrumb="뉴스룸 › 주간 다이제스트"/);
+  assert.match(code("app/town/news/[id]/page.tsx"), /<ShellBreadcrumb>\{`뉴스룸 › /);
+  assert.match(code("app/town/news/tag/[tag]/page.tsx"), /<ShellBreadcrumb>\{`뉴스룸 › /);
+  /* [1092] 경로 줄은 (index) 레이아웃 한 벌(셸이 레이아웃으로) */
+  assert.match(code("app/digest/(index)/layout.tsx"), /breadcrumb="뉴스룸 › 주간 다이제스트"/);
 });
 
 test("남은 사실 문장 — 공개 노트는 임장노트에 실린다(동네이야기 피드가 아니다)", () => {

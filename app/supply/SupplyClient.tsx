@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { HScroll } from "@/app/components/HScroll";
 import { SUPPLY_WINDOW_MONTHS, inSupplyWindow, shownMonths, supplyWindow, validYm, type SupplyWindow } from "@/lib/supply/window";
 import { Bars } from "@/app/components/viz/Bars";
 // server-only 체인이 있는 모듈이라 값 import 는 불가 — 타입은 컴파일에서 소거되므로 안전.
 import type { SupplyItem } from "@/lib/market/supply";
+import { fromSupplyWire, type SupplyItemWire } from "@/lib/market/supply-wire";
 import { Explain } from "@/app/components/explain/Explain";
 
 /**
@@ -140,18 +141,20 @@ function readRegionFromLocation(): string | null {
 }
 
 export function SupplyClient({
-  items,
+  itemsWire,
   truncated,
   asOfLabel,
   builtAtMs,
   adSlot,
 }: {
-  items: SupplyItem[];
+  /** [1092] 압축 행(lib/market/supply toSupplyWire) — 여기서 SupplyItem[] 로 편다(RSC 184KB → 약 100KB) */
+  itemsWire: SupplyItemWire[];
   truncated: boolean;
   asOfLabel: string | null;
   builtAtMs: number;
   adSlot: ReactNode;
 }) {
+  const items = useMemo(() => fromSupplyWire(itemsWire), [itemsWire]);
   // SSR/첫 하이드레이션은 전국(null) — 프리렌더 HTML 과 정확히 일치.
   const [region, setRegion] = useState<string | null>(null);
   const [tableExpanded, setTableExpanded] = useState(false);

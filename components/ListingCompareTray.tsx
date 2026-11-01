@@ -42,13 +42,13 @@ export function ListingCompareTray() {
     const index = items.findIndex((x) => x.id === it.id);
     remove(it.id);
     /* 마지막 한 칸이면 트레이가 사라진다 — 그때만 토스트로 */
-    if (items.length <= 1) showToast("비교함에서 뺐어요", { label: "되돌리기", onClick: () => void restoreListingAt(it, 0) });
+    if (items.length <= 1) showToast("비교함에서 제외", { label: "되돌리기", onClick: () => void restoreListingAt(it, 0) });
     else setLastRemoved({ item: it, index });
   };
   const clearAll = () => {
     const before = [...items];
     clear();
-    showToast(`비교함을 비웠어요 (${before.length}개)`, {
+    showToast(`비교함 비움 · ${before.length}개`, {
       label: "되돌리기",
       onClick: () => before.forEach((it) => add(it)),
     });
@@ -63,17 +63,17 @@ export function ListingCompareTray() {
     <div className="fixed inset-x-0 bottom-[76px] z-40 px-4 md:bottom-6">
       <div className="glass mx-auto flex max-w-[840px] flex-col gap-2.5 rounded-2xl border border-line p-3 shadow-lg">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-1.5 text-[13px] font-bold text-ink">
+          <div className="flex items-center gap-1.5 t-sub font-bold text-ink">
             <Icon name="scale" size={16} strokeWidth={2} />
             비교함 <span className="t-num text-primary">({items.length})</span>
-            <span className="text-[12px] font-medium text-text-3">
+            <span className="t-caption font-medium text-text-3">
               / 최대 {MAX_COMPARE}
             </span>
           </div>
           <button
             type="button"
             onClick={clearAll}
-            className="inline-flex min-h-[24px] items-center text-[12px] font-bold text-text-3 hover:text-danger"
+            className="inline-flex min-h-[24px] items-center t-caption font-bold text-text-3 hover:text-danger"
           >
             전체 비우기
           </button>
@@ -83,7 +83,7 @@ export function ListingCompareTray() {
           {items.map((it) => (
             <span
               key={it.id}
-              className="inline-flex items-center gap-1.5 rounded-[10px] border border-line bg-surface py-1 pl-2.5 pr-1 text-[12px]"
+              className="inline-flex items-center gap-1.5 rounded-[10px] border border-line bg-surface py-1 pl-2.5 pr-1 t-caption"
             >
               <span className="font-bold text-ink">{it.complexName}</span>
               <span className="t-num font-medium text-text-2">{priceLine(it)}</span>
@@ -101,8 +101,8 @@ export function ListingCompareTray() {
 
         <div className="flex items-center justify-between gap-2">
           {lastRemoved ? (
-            <span className="flex min-w-0 items-center gap-1.5 text-[12px] text-text-2" role="status">
-              <span className="truncate">‘{lastRemoved.item.complexName}’ 뺐어요</span>
+            <span className="flex min-w-0 items-center gap-1.5 t-caption text-text-2" role="status">
+              <span className="truncate">‘{lastRemoved.item.complexName}’ 제외</span>
               <button
                 type="button"
                 onClick={() => {
@@ -115,10 +115,9 @@ export function ListingCompareTray() {
               </button>
             </span>
           ) : (
-            <span className="text-[12px] text-text-3">
-              {canCompare
-                ? "나란히 비교해 보세요"
-                : `${MIN_COMPARE}개 이상 담으면 비교할 수 있어요`}
+            /* [1091] 권유문("…해 보세요" · "…있어요") → 사실 낱말 · 임의 px → 램프 */
+            <span className="t-caption text-text-3">
+              {canCompare ? "비교 가능" : `${MIN_COMPARE}개부터 비교`}
             </span>
           )}
           {canCompare ? (

@@ -143,7 +143,7 @@ test("타입 카드 — 단지 id 없이도 · 실패와 없음을 가른다 · 
   assert.match(m, /fallbackCenter \?\? DEFAULT_CENTER/);
   assert.match(src("lib/notes/feed-note.ts"), /unitSummary\(unitFromMetadata\(n\.metadata\)\)/);
   assert.match(src("app/notes/[id]/NotePhotoCarousel.tsx"), /roles\?\.\[photos\[idx\]\] === "floorplan"/);
-  assert.match(src("app/notes/[id]/page.tsx"), /roles=\{photoRolesFromMetadata\(realNote\.metadata\)\}/);
+  assert.match(src("app/notes/[id]/(index)/page.tsx"), /roles=\{photoRolesFromMetadata\(realNote\.metadata\)\}/);
   const fd = src("app/notes/new/NoteFieldDetail.tsx");
   assert.match(fd, /가까운 역/);
   assert.match(fd, /formatKrwManwon\(value\.askingManwon/);

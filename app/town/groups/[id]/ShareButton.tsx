@@ -12,7 +12,7 @@ export function ShareButton({ title }: { title: string }) {
       title={title}
       text={`${title} · 임장 모임`}
       label="공유"
-      copiedLabel="링크 복사됨 ✓"
+      copiedLabel="링크 복사했어요"
       variant="text"
       className="btn-secondary flex-1 rounded-xl p-3 text-center t-body"
     />

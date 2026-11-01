@@ -229,13 +229,9 @@ export function addDaysIso(date: string, n: number): string {
 }
 
 /** YYYYMM ± n개월 */
-export function shiftYm(ym: string, months: number): string {
-  const y = Number(ym.slice(0, 4));
-  const m = Number(ym.slice(4, 6)) - 1 + months;
-  const yy = y + Math.floor(m / 12);
-  const mm = ((m % 12) + 12) % 12;
-  return `${yy}${String(mm + 1).padStart(2, "0")}`;
-}
+/* [1097 · 통폐합] 본체는 lib/format/ym — 같은 이름으로 다시 내보낸다 */
+import { shiftYm, ymDotLabel } from "@/lib/format/ym";
+export { shiftYm, ymDotLabel };
 
 /** 그 날의 계약 연월 창 — 이번 달 포함 12개월 */
 export function quizWindow(date: string, months = QUIZ_WINDOW_MONTHS): { fromYm: string; toYm: string } {
@@ -249,9 +245,7 @@ export function quizDateLabel(date: string): string {
 }
 
 /** "202608" → "2026.08" */
-export function ymDotLabel(ym: string): string {
-  return /^\d{6}$/.test(ym) ? `${ym.slice(0, 4)}.${ym.slice(4, 6)}` : ym;
-}
+/* ymDotLabel — 위 lib/format/ym 재수출 */
 
 /** 전용면적 표기 — 신고값을 소수 둘째 자리에서 자른다(84.9477 → "84.94").
  *  정수로 옮긴 뒤 자른다: `Math.floor(m2 * 100)` 는 부동소수 오차로 80.07 → 80.06, 81.6 → 81.59 처럼

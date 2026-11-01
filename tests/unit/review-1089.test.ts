@@ -125,7 +125,8 @@ test("빌드 게이트 — scripts/check-isr-ttl: next build 뒤 · 단지 · �
   const gate = read("scripts/check-isr-ttl.mjs");
   assert.match(gate, /"complex\/\[id\]",/);
   assert.match(gate, /const NO_GLOBAL_TAGS = new Set\(\["complex\/\[id\]", "town\/news\/\[id\]"\]\);/);
-  assert.match(gate, /const GLOBAL_TAGS = \["market", "economy"\];/);
+  /* [1090] 일정으로 비워지는 태그 전부(supply · town-posts · weekly-digest · map-* · home-data 까지) */
+  assert.match(gate, /const GLOBAL_TAGS = \["market", "economy", "supply", "town-posts", "weekly-digest", "map-region-markers", "map-danji", "home-data"\];/);
   /* 산출물 모양이 바뀌어 못 읽으면 경고만(빌드를 잘못 세우지 않는다) */
   assert.match(gate, /if \(analyzed === 0\) \{[\s\S]*?process\.exit\(0\);/);
   /* 화면 선언 TTL 그대로 */
@@ -147,13 +148,18 @@ test("실거래 지역 태그 — 단지 화면은 이름 id 의 지역으로 �
 
   /* 화면: 404 판정 뒤 · 이름 id(canonical_id) 의 지역 · revalidate 없음(화면 수명 그대로) */
   const page = strip(read("app/complex/[id]/page.tsx"));
-  assert.match(page, /if \(!v\) notFound\(\);\s*await tagComplexPageRegion\(decodeNameIdSafe\(rowForFacts\?\.canonical_id \?\? complexId\)\?\.region\);/);
+  /* [1091] 지역 + 묶음 태그(이름 해시) — 이름도 함께 넘긴다 */
+  assert.match(page, /if \(!v\) notFound\(\);\s*const nameId = decodeNameIdSafe\(rowForFacts\?\.canonical_id \?\? complexId\);\s*await tagComplexPageRegion\(nameId\?\.region, nameId\?\.name\);/);
   const cache = strip(read("lib/complex/region-tag-cache.ts"));
-  assert.match(cache, /unstable_cache\(async \(\) => 1, \["cx-region-tag-v1", tag\], \{ tags: \[tag\] \}\)\(\)/);
+  assert.match(cache, /unstable_cache\(async \(\) => 1, \["cx-region-tag-v2", \.\.\.tags\], \{ tags \}\)\(\)/);
   assert.doesNotMatch(cache, /revalidate:/, "화면 수명을 건드리지 않는다");
   /* 적재: 바뀐 단지 id 비움(상한) 다음에 지역 태그 — 예외는 감싼 try 안 */
   const ingest = strip(read("app/api/cron/molit-transactions-ingest/route.ts"));
-  assert.match(ingest, /const stats = invalidateComplexIds\(ids, \{ budget: 2_000 \}\);\s*for \(const tag of complexRegionTagsFor\(result\.touchedComplexes\)\) revalidateTag\(tag\);/);
+  /* [1091] id 비움이 상한에 걸린 날에만 · 묶음 태그(상한 안) 또는 지역 태그 — complexInvalidationTagsFor */
+  assert.match(
+    ingest,
+    /const stats = invalidateComplexIds\(ids, \{ budget: 2_000 \}\);\s*if \(stats\.truncated \|\| result\.touchedTruncated\) \{\s*const inv = complexInvalidationTagsFor\(result\.touchedComplexes\);\s*for \(const tag of inv\.tags\) revalidateTag\(tag\);/,
+  );
   /* 과거 이력 채우기(4시간마다)는 지역 태그를 비우지 않는다 — 새 실거래가 아니라 지난 달 보충이다 */
   assert.doesNotMatch(read("app/api/cron/molit-history-backfill/route.ts"), /complexRegionTag/);
 });

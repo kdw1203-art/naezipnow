@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb, ShellNarrow } from "@/app/components/PageShell";
 import { JsonLd } from "@/app/components/JsonLd";
 import { Icon } from "@/app/components/Icon";
 import { getExpert, listExpertsAll } from "@/lib/experts/store-db";
@@ -141,7 +141,8 @@ export default async function ExpertDetailPage({
   };
 
   return (
-    <PageShell breadcrumb={`동네이야기 › 전문가 › ${e.name}`}>
+    <ShellNarrow>
+      <ShellBreadcrumb>{`동네이야기 › 전문가 › ${e.name}`}</ShellBreadcrumb>
       {e.isVerified && <JsonLd data={jsonLd} />}
 
       {/* [1015] 데스크톱 2단 — 760px 한 열이라 옆이 비던 화면(브리프 규칙 F). 히어로는 전폭 그대로, 그 아래를
@@ -420,6 +421,6 @@ export default async function ExpertDetailPage({
           상담 답변은 전문가 개인의 의견이며 내집나우는 상담 당사자가 아닙니다. 전화번호·계좌는 남기지 마세요.
         </p>
       </div>
-    </PageShell>
+    </ShellNarrow>
   );
 }

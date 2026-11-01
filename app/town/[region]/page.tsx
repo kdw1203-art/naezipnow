@@ -4,7 +4,6 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
 import {
   REGION_CATALOG,
@@ -179,7 +178,7 @@ export default async function TownRegionHomePage({
   const ownCity = cityOfRegion(id);
 
   return (
-    <PageShell wide>
+    <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -513,6 +512,6 @@ export default async function TownRegionHomePage({
       {/* [1015] 광고 — 페이지 끝 1곳(브리프 규칙 G: 첫 화면 밖). 이 화면에 광고 자리가 없었다.
           ISR 7일 페이지라 plan={null} + AdFreeGate(클라이언트)가 유료 플랜을 가린다. */}
       <AdZone placement="page_bottom" seed={0} plan={null} className="mt-6 max-md:mt-4" />
-    </PageShell>
+    </>
   );
 }

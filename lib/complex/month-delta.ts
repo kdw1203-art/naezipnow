@@ -34,9 +34,8 @@ export function prevYm(ym: string): string {
 }
 
 /** "26.02" */
-export function ymShort(ym: string): string {
-  return `${ym.slice(2, 4)}.${ym.slice(4, 6)}`;
-}
+import { ymShortLabel as ymShort } from "@/lib/format/ym"; /* [1097 · 통폐합] 본체는 lib/format/ym */
+export { ymShort };
 
 /** 달력 범위 — "26.01~26.08" · 같은 달이면 "26.08" */
 export function ymRangeShort(firstYm: string, lastYm: string): string {

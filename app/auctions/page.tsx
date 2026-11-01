@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { PageShell } from "@/app/components/PageShell";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
 import { TownHero } from "@/app/town/TownHero";
@@ -60,7 +59,7 @@ export default async function AuctionsPage() {
 
   if (!loaded.ok) {
     return (
-      <PageShell breadcrumb="동네이야기 › 공매 물건" wide>
+      <>
         <TownHero href="/auctions" />
         <TownCategoryNav stick />
         <div className="theme-auction">
@@ -70,12 +69,12 @@ export default async function AuctionsPage() {
             action={{ href: "https://www.onbid.co.kr", label: "온비드 바로가기" }}
           />
         </div>
-      </PageShell>
+      </>
     );
   }
 
   return (
-    <PageShell breadcrumb="동네이야기 › 공매 물건" wide>
+    <>
       <TownHero href="/auctions" />
       <TownCategoryNav stick />
       <div className="theme-auction">
@@ -88,6 +87,6 @@ export default async function AuctionsPage() {
         {/* 수익 문구 미기재 방침(소유자 방침 2026-08-11) — 마켓(공매) 표면 고지 */}
         <ComplianceNotice variant="market" className="mt-6" />
       </div>
-    </PageShell>
+    </>
   );
 }

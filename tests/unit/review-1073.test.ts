@@ -53,7 +53,7 @@ test("C3 화면 제목 하나의 단계 — h1 은 t-title", () => {
     "app/legal/expert/page.tsx",
     "app/legal/privacy-request/page.tsx",
     "app/digest/(index)/page.tsx",
-    "app/not-found.tsx",
+    "app/components/NotFoundBody.tsx",
     "app/complex/compare/[slug]/not-found.tsx",
     "app/my/expert-profile/page.tsx",
     "app/notes/[id]/card/page.tsx",
@@ -61,7 +61,7 @@ test("C3 화면 제목 하나의 단계 — h1 은 t-title", () => {
     "app/widget/page.tsx",
     "app/data-sources/page.tsx",
     "app/developers/page.tsx",
-    "app/dev-deals/page.tsx",
+    "app/dev-deals/(index)/page.tsx",
   ];
   for (const f of files) {
     const s = read(f);
@@ -85,10 +85,10 @@ test("C5 푸터 — 묶음 4개 · 링크·목적지 그대로 · 사업자 고�
   for (const g of ['{ id: "service", title: "서비스" }', '{ id: "data", title: "데이터" }', '{ id: "help", title: "회사 · 고객" }', '{ id: "policy", title: "약관 · 정책" }']) {
     assert.ok(f.includes(g), g);
   }
-  /* 링크 23개 모두 묶음이 있다 */
+  /* 링크 24개(1094 동별 실거래 추가) 모두 묶음이 있다 */
   const links = f.match(/\{ label: "[^"]+", href: "[^"]+", bold: (true|false), group: "(service|data|help|policy)" \}/g) ?? [];
-  assert.equal(links.length, 23);
-  for (const href of ["/legal/terms", "/legal/privacy", "/subscription", "/subscription/payment-methods", "/support", "/imjang", "/tx", "/analysis/temperature", "/developers"]) {
+  assert.equal(links.length, 24);
+  for (const href of ["/legal/terms", "/legal/privacy", "/subscription", "/subscription/payment-methods", "/support", "/imjang", "/tx", "/dong", "/analysis/temperature", "/developers"]) {
     assert.ok(f.includes(`href: "${href}"`), href);
   }
   /* 개인정보처리방침은 여전히 굵게 */

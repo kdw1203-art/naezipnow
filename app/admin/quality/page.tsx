@@ -18,7 +18,7 @@ import { ErrorState } from "@/app/components/ui/EmptyState";
 import { logger } from "@/lib/log";
 
 /* 사용자 세그먼트 · AI 품질 · 인증 심사 — 사실 우선: 하드코딩 목업 제거, 실 테이블 집계만.
-   집계 소스가 없는 지표(휴면/이탈 코호트, 👍비율)는 허위 수치 대신 "준비 중"으로 표기.
+   집계 소스가 없는 지표(휴면/이탈 코호트)는 허위 수치 대신 "준비 중"으로 표기. [1097] 좋아요·싫어요 비율은 /admin/ai 가 센다.
 
    F4 — 데이터 품질 검사를 이 페이지 맨 위에 붙였다. 판정과 문구는 여기서 만들지 않는다.
    lib/admin/data-quality.ts 가 단일 판정층이고 이 파일은 그 결과를 그리기만 한다.
@@ -92,7 +92,7 @@ export default async function AdminQualityPage() {
     : 0;
 
   const segments = [
-    { dot: "#177a4a", label: "전체 가입", sub: "profiles", value: kpi ? fmt(kpi.totalUsers) : "—" },
+    { dot: "#177a4a", label: "전체 가입", sub: "app_users", value: kpi ? fmt(kpi.totalUsers) : "—" },
     {
       dot: "#3182f6",
       label: "최근 7일 활동 작성자",
@@ -262,8 +262,8 @@ export default async function AdminQualityPage() {
             </div>
           </div>
           <div className="rounded-lg bg-[rgba(255,255,255,.05)] px-[11px] py-2 text-[10px] text-[#c9d2e0]">
-            👍/👎 만족도 비율과 오답 리뷰 집계는 피드백 적재 파이프라인 연동 후 제공됩니다. 지금은
-            실행량만 실측으로 표시해요.
+            {/* [1097] 좋아요·싫어요(ai_feedback)는 AI 도구 화면이 이미 센다 — "연동 후 제공"은 거짓이었다 */}
+            좋아요·싫어요 비율은 <a href="/admin/ai" className="underline">AI 도구</a> 화면 · 여기는 실행량만
           </div>
         </div>
 

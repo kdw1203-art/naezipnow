@@ -49,7 +49,7 @@ test("W1b 단지가 없을 때는 없다고 말하고 다음 할 일을 준다",
   const src = read("app/analysis/MapPickDrawer.tsx");
   assert.match(src, /이 화면에는 실거래가 있는 단지 없음 · 지도를 옮기거나 위에서 검색/);
   /* 지도가 대체(OSM)로 내려가도 목록이 있으면 그 길을 말한다 — "검색뿐"은 더 이상 사실이 아니다 */
-  assert.match(src, /지도를 불러오지 못했어요 · 아래 목록이나 검색으로 고르세요/);
+  assert.match(src, /지도 불러오기 실패 · 아래 목록이나 검색으로 선택/); // [1094] 사실 낱말
   assert.match(src, /지도 불러오기 실패 · 위 검색창에 단지명을 넣어 주세요\./);
   /* 지도가 안 뜨면 목록이 자리를 더 쓴다 */
   assert.match(src, /mapDown \? "max-h-\[78%\]" : "max-h-\[46%\]"/);

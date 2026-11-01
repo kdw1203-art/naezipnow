@@ -11,6 +11,9 @@ import {
 import { FactTable } from "@/app/components/compact/FactTable";
 import { FaqCompact } from "@/app/components/compact/FaqCompact";
 import { Fineprint } from "@/app/components/Fineprint";
+import { getPublicRecordDatasetStatsResult } from "@/lib/market/public-records";
+import { CODEF_PRODUCTS } from "@/lib/codef/endpoints";
+import { RecordsSearchClient } from "./RecordsSearchClient";
 
 /* [945 · 실사용50 #33] 데이터 출처·갱신 주기·한계 — 한 장짜리 신뢰 문서.
    화면 곳곳의 각주("국토부 신고 기준" 등)를 한 페이지로 모은다.
@@ -156,11 +159,14 @@ const AI_POLICY: Array<{ label: string; rule: string; keys: string[] }> = [
 
 export default async function DataSourcesPage() {
   /* 실패하면 null 이고, 아래에서 그 줄을 통째로 뺀다 — 추정치로 채우지 않는다 */
-  const [coverage, freshness] = await Promise.all([
+  const [coverage, freshness, records] = await Promise.all([
     loadHomeCoverage(),
     loadDataFreshness(),
+    /* [1097 · 통폐합] 옛 /data/records(공공 자료 현황)의 자료별 상태 — 못 읽으면 절을 뺀다(0건으로 치지 않는다) */
+    getPublicRecordDatasetStatsResult().catch(() => ({ ok: false as const, stats: [] })),
   ]);
   const now = Date.now();
+  const recordRows = records.ok ? records.stats.reduce((sum, d) => sum + d.rows, 0) : 0;
 
   return (
     <PageShell breadcrumb="데이터 출처">
@@ -295,6 +301,39 @@ export default async function DataSourcesPage() {
             ))}
           </div>
         </section>
+
+        {/* [1097 · 통폐합] 옛 /data/records(공공 부동산 자료 현황 · 11개 자료 전부 "준비 중" 0행 · 내부 링크 0 · 사이트맵 밖)를
+            이 화면의 한 절로 — 자료별 상태 + 단지 자료 조회(/api/public-records). /data/records 는 여기로 리다이렉트(lib/seo/redirect-map). */}
+        {records.ok && (
+          <section className="rise-in-3 card mt-6 p-5" aria-label="준비 중인 공공 자료">
+            <h2 className="t-section font-bold text-ink">
+              준비 중인 공공 자료
+              {recordRows > 0 && <span className="t-sub font-medium text-text-3"> 총 {recordRows.toLocaleString("ko-KR")}건</span>}
+            </h2>
+            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
+              {CODEF_PRODUCTS.map((p) => {
+                const rows = records.stats.find((x) => x.dataset === p.dataset)?.rows ?? 0;
+                return (
+                  <div key={p.key} className="flex items-center justify-between gap-3 rounded-lg border border-line px-3 py-2.5">
+                    <div className="min-w-0">
+                      <div className="t-body font-bold text-ink">{p.label}</div>
+                      <div className="mt-0.5 truncate t-sub text-text-3">{p.description}</div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      {rows > 0 ? (
+                        <span className="t-sub font-bold text-primary">{rows.toLocaleString("ko-KR")}건</span>
+                      ) : (
+                        <span className="rounded-full bg-bg chip-pad t-caption font-semibold text-text-3">준비 중</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <h3 className="mt-4 t-body font-bold text-ink">단지 자료 조회</h3>
+            <RecordsSearchClient />
+          </section>
+        )}
 
         {/* [1062] 정책 카드 5장(제목+문단) → 접힌 행 + 낱말 칩. 질문·답이 아니므로 FAQPage JSON-LD 는 내지 않는다 */}
         <p className="mt-8 measure t-body leading-[1.7] text-text-2">

@@ -956,23 +956,33 @@ export function SearchClient() {
           </div>
           <div className="lq-panel mt-1 flex flex-col divide-y" data-tone="blue">
             {shownAreas.map((a) => (
-              <button
-                key={a.key}
-                type="button"
-                onClick={() => runSearch(a.q)}
-                className="flex min-h-10 w-full items-center gap-2.5 py-2.5 text-left transition-colors hover:text-primary"
-              >
-                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-bg text-text-2">
-                  <Icon name="pin" size={15} />
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate t-body font-bold text-ink">
-                    <Hl text={a.label} q={settledQuery} />
+              /* [1094 · 기능] 동 줄은 두 갈래 — 단지 보기(범위 검색) · 실거래(법정동 실거래 화면 /dong · 1083). 구 · 시 줄은 전처럼 하나 */
+              <div key={a.key} className="flex items-stretch gap-2">
+                <button
+                  type="button"
+                  onClick={() => runSearch(a.q)}
+                  className="flex min-h-10 min-w-0 flex-1 items-center gap-2.5 py-2.5 text-left transition-colors hover:text-primary"
+                >
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-bg text-text-2">
+                    <Icon name="pin" size={15} />
                   </span>
-                  <span className="block truncate t-caption text-text-3">{areaDetail(a)}</span>
-                </span>
-                <span className="shrink-0 t-sub font-bold text-primary">단지 보기 ›</span>
-              </button>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate t-body font-bold text-ink">
+                      <Hl text={a.label} q={settledQuery} />
+                    </span>
+                    <span className="block truncate t-caption text-text-3">{areaDetail(a)}</span>
+                  </span>
+                  <span className="shrink-0 t-sub font-bold text-primary">단지 보기 ›</span>
+                </button>
+                {a.href && (
+                  <Link
+                    href={a.href}
+                    className="inline-flex min-h-10 shrink-0 items-center self-center rounded-full border border-line px-3 t-sub font-bold text-ink no-underline hover:border-primary hover:text-primary"
+                  >
+                    실거래 ›
+                  </Link>
+                )}
+              </div>
             ))}
           </div>
         </section>

@@ -44,15 +44,15 @@ test("C1 북마크 API — DB 가 insert 를 거절하면 503 + \"저장 실패 
 });
 
 test("C1 /my 저장한 노트 — [1059] note 타입만 읽어 노트로 푼다(전체 북마크를 풀지 않는다)", () => {
-  const my = code("app/my/page.tsx");
+  const my = code("app/my/(index)/page.tsx");
   assert.doesNotMatch(my, /listBookmarks\(email\)\s*;/, "타입 없는 전체 북마크 조회 없음");
   assert.match(my, /listBookmarks\(email, "note"\)/);
-  assert.match(read("app/my/page.tsx"), /\[1056 · C1 → 1059\]/);
+  assert.match(read("app/my/(index)/page.tsx"), /\[1056 · C1 → 1059\]/);
 });
 
 /* ---------- C2 저장한 글 ---------- */
 test("C2 /my 저장한 글 — type=post 북마크 3건 · postHref · 빈 상태 \"저장한 글 없음\" · 전체 보기 링크", () => {
-  const my = code("app/my/page.tsx");
+  const my = code("app/my/(index)/page.tsx");
   assert.match(my, /listBookmarks\(email, "post"\)/);
   assert.match(my, /\.slice\(0, 3\)/);
   assert.match(my, /href: postHref\(p\)/);

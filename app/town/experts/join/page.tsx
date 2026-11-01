@@ -1,6 +1,6 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb, ShellNarrow } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
 import { JsonLd } from "@/app/components/JsonLd";
 import { ComplianceNotice } from "@/app/components/ComplianceNotice";
@@ -79,7 +79,8 @@ export default function ExpertJoinPage() {
   const other = EXPERT_TYPES.find((t) => t.id === "other");
 
   return (
-    <PageShell breadcrumb="동네이야기 › 전문가 › 참여 안내">
+    <ShellNarrow>
+      <ShellBreadcrumb>동네이야기 › 전문가 › 참여 안내</ShellBreadcrumb>
       <JsonLd data={faqJsonLd(EXPERT_JOIN_FAQ)} />
       <JsonLd
         data={breadcrumbJsonLd([
@@ -280,6 +281,6 @@ export default function ExpertJoinPage() {
       </section>
 
       <ComplianceNotice variant="market" />
-    </PageShell>
+    </ShellNarrow>
   );
 }

@@ -103,13 +103,8 @@ export function dongDescription(label: string, complexCount: number, recentTrade
 }
 
 /** "202609" → "2026.09" */
-export function ymDot(ym: string): string {
-  return /^\d{6}$/.test(ym) ? `${ym.slice(0, 4)}.${ym.slice(4, 6)}` : ym;
-}
-/** "202609" → "2026년 9월" */
-export function ymKo(ym: string): string {
-  return /^\d{6}$/.test(ym) ? `${ym.slice(0, 4)}년 ${Number(ym.slice(4, 6))}월` : ym;
-}
+import { ymDotLabel as ymDot, ymKoLabel as ymKo } from "@/lib/format/ym"; /* [1097 · 통폐합] 본체는 lib/format/ym */
+export { ymDot, ymKo };
 
 function median(sorted: number[]): number | null {
   if (sorted.length === 0) return null;

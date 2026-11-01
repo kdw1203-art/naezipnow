@@ -61,7 +61,7 @@ test.describe("인증 여정", () => {
     await page.goto("/my");
     await expect(page).toHaveURL(/\/my/);
     await expect(
-      /* [v4 · 규칙 1] 게스트 제목 문장 → 짧은 제목(app/my/page.tsx GuestView) */
+      /* [v4 · 규칙 1] 게스트 제목 문장 → 짧은 제목(app/my/(index)/page.tsx GuestView) */
       page.getByText("로그인하고 마이 보기", { exact: false }),
     ).toBeVisible({ timeout: 15_000 });
     await ctx.close();

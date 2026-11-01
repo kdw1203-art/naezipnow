@@ -216,7 +216,7 @@ test("C5 NoteRating 이 nz:note-rating 을 쏘고 머리 칩(NoteRatingChip)이 
   assert.match(strip(chip), /if \(!fact \|\| fact\.count <= 0 \|\| fact\.average == null\) return null;/, "0명이면 칩 없음");
   const body = chip.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g, " ");
   assert.ok(Buffer.byteLength(body, "utf8") < 1024, `주석·공백을 뺀 본문 1KB 미만(${Buffer.byteLength(body, "utf8")}B)`);
-  const page = strip(read("app/notes/[id]/page.tsx"));
+  const page = strip(read("app/notes/[id]/(index)/page.tsx"));
   assert.match(page, /<NoteRatingChip noteId=\{realNote\.id\} initial=\{\{ count: ratingR\.count, average: ratingR\.average \}\} \/>/);
   assert.doesNotMatch(page, /ratingFact\(ratingR\)/);
 });

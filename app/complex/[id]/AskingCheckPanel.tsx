@@ -150,7 +150,7 @@ export function AskingCheckPanel({ apiId }: { apiId: string }) {
   if (options.length === 0) {
     return (
       <p className="mt-3 rounded-xl bg-bg px-3 py-3 t-sub text-text-2">
-최근 24개월에 이 단지의 매매 실거래 신고 없음 · 비교할 거래가 없어 위치를 말할 수 없어요.
+최근 24개월 이 단지 매매 실거래 신고 없음 · 비교할 거래 없음
       </p>
     );
   }

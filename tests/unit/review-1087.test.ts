@@ -42,9 +42,9 @@ test("단지 화면 — 셸은 layout 한 벌 · page·loading 은 안쪽만(ISR
   assert.match(layout, /if \(!\(await exists\(pureIdFromParam\(decodeURIComponent\(raw\)\)\)\)\) notFound\(\);/, "404 판정은 셸보다 먼저");
   const page = strip(read("app/complex/[id]/page.tsx"));
   assert.doesNotMatch(page, /PageShell/);
-  const loading = strip(read("app/complex/[id]/loading.tsx"));
-  assert.doesNotMatch(loading, /PageShell/);
-  assert.ok(existsSync("app/complex/[id]/loading.tsx"), "스켈레톤은 남긴다(클라이언트 이동 · 무거운 화면 목록)");
+  /* [1093] 단지 화면의 loading.tsx 는 없다 — 본문(제목 · 사실 · 실거래)이 숨은 조각(<div hidden>)으로 저장돼 JS 없는 크롤러 · AI 봇이
+     셸만 읽던 것(운영 실측 · review-1093). 이동 표시는 NavigationProgress 막대 */
+  assert.equal(existsSync("app/complex/[id]/loading.tsx"), false);
 });
 
 test("지역별 실거래 구간 — 같은 구조 · 경로 줄·제목은 같은 마크업(ShellBreadcrumb·ShellTitle)", () => {
@@ -55,7 +55,7 @@ test("지역별 실거래 구간 — 같은 구조 · 경로 줄·제목은 같�
     assert.match(s, /<ShellBreadcrumb>\{`홈 › 지역별 실거래 구간 › \$\{region\.name\}/, p);
     assert.match(s, /<ShellTitle>/, p);
   }
-  assert.doesNotMatch(strip(read("app/tx/[region]/loading.tsx")), /PageShell/);
+  assert.equal(existsSync("app/tx/[region]/loading.tsx"), false); // [1093]
   const shell = read("app/components/PageShell.tsx");
   assert.match(shell, /export function ShellBreadcrumb\(/);
   assert.match(shell, /<nav aria-label="브레드크럼" className="mb-2 t-sub text-text-3">/);

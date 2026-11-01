@@ -71,7 +71,7 @@ test("[1022] 머리 한 모양 — 허브·동네 9칸·동네 홈·임장노트
   assert.ok(!code("app/town/news/(index)/page.tsx").includes("t-display"), "뉴스룸 머리 t-display 없음");
   /* TownHero 호출부(청약·입주·공매·정비사업)는 그대로 — API 불변.
      [1079] /qna 는 보관 영역(카테고리 목록에 없음)이라 TownHero 가 비어 있었다 → PageHead 직접 */
-  for (const p of ["app/apply/page.tsx", "app/auctions/page.tsx", "app/supply/page.tsx", "app/redevelopment/(index)/page.tsx"]) {
+  for (const p of ["app/apply/(index)/page.tsx", "app/auctions/page.tsx", "app/supply/page.tsx", "app/redevelopment/(index)/page.tsx"]) {
     assert.match(read(p), /<TownHero/, `${p} TownHero 유지`);
   }
   assert.match(read("app/qna/page.tsx"), /<PageHead icon="help" title="단지 Q&A"/, "app/qna/page.tsx PageHead");
@@ -105,7 +105,7 @@ test("[1022] 문구 — 권유문·부연 라벨 제거(동네 피드 빈 상태
   assert.ok(!code("app/town/news/[id]/CommentThread.tsx").includes("남겨보세요"));
   assert.ok(!code("app/town/news/[id]/page.tsx").includes("공유해 보세요"));
   assert.ok(!code("app/notes/[id]/card/NoteCardStudio.tsx").includes("넘겨 보세요"));
-  assert.ok(!code("app/notes/[id]/page.tsx").includes("실데이터 기준 ·"));
+  assert.ok(!code("app/notes/[id]/(index)/page.tsx").includes("실데이터 기준 ·"));
   assert.ok(!code("app/town/experts/join/page.tsx").includes(">전문가 모집<"));
 });
 

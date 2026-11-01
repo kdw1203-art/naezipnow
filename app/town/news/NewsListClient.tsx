@@ -15,6 +15,7 @@
 
 import Link from "@/app/components/IntentLink";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { groupNewsRowsByDay } from "@/lib/town/news-day";
 import { Icon } from "@/app/components/Icon";
 import { CoverImage } from "@/app/components/CoverImage";
 import { findNewsRegionChip, type NewsRegionChip } from "@/lib/town/news-regions";
@@ -106,7 +107,8 @@ function NewsRowView({ row, lead = false }: { row: NewsRow; lead?: boolean }) {
           {row.city && <span>· {row.city}</span>}
         </div>
         <Link href={`/town/news/${row.id}`} className="news-row__title no-underline">
-          {/* [1075] 제목은 한 줄(넘치면 말줄임) — 두 줄 제목이 목록의 결을 끊었다. 전문은 기사 화면에 */}
+          {/* [1075] 제목은 한 줄(넘치면 말줄임) — 두 줄 제목이 목록의 결을 끊었다. 전문은 기사 화면에.
+              [1097] 폰도 한 줄 그대로 — 1012 폰 배율 규칙("최대한 한 줄로" · html[data-mscale] 이 line-clamp-2/3 을 1로)이 소유자 지시라 두 줄로 풀지 않는다 */}
           <span className={lead ? "line-clamp-3" : "line-clamp-1"}>{row.title}</span>
         </Link>
         {row.summary && (
@@ -332,10 +334,20 @@ export function NewsListClient({
 
       {/* 행 목록 — [1075] 첫 행 톱기사(제목 t-title · 두 줄 접힘)를 걷었다. 소유자(2026-10-18): "이것도 두 줄이고 뉴스 이외의 요소가 복잡".
           모든 행이 같은 꼴(제목 한 줄 굵게 · 요약 한 줄) — 네이버 뉴스 목록처럼 훑는다 */}
+      {/* [1097 · 디자인] 소유자 "구분이 제대로 안 되어 있는 것 같아 가독성이 떨어져" — 40행이 얇은 선 하나로만 나뉘어 한 덩어리로 읽혔다.
+          날짜(한국 시간) 머리로 묶는다("10월 31일 (금) · 12건" · 절대 날짜 — "오늘"은 서버·브라우저가 다르게 그린다). 행은 그대로 한 꼴 */}
       {list.length > 0 && (
         <div className="news-list rise-in">
-          {list.map((row) => (
-            <NewsRowView key={row.id} row={row} />
+          {groupNewsRowsByDay(list).map((g) => (
+            <section key={g.key} className="news-day" aria-label={g.label}>
+              <h2 className="news-day__head">
+                {g.label}
+                <span className="news-day__count">{g.rows.length}건</span>
+              </h2>
+              {g.rows.map((row) => (
+                <NewsRowView key={row.id} row={row} />
+              ))}
+            </section>
           ))}
         </div>
       )}
@@ -347,8 +359,8 @@ export function NewsListClient({
             <Icon name="newspaper" size={26} />
           </div>
           <div className="t-body font-bold text-text-1">
-            {[active, activeCat].filter(Boolean).join(" · ")} 관련 기사가{" "}
-            {more ? "지금까지 받은 목록엔 없어요" : "아직 없어요"}
+            {/* [1094] 빈 상태는 "○○ 없음"(사실 낱말) — 더 받을 수 있으면 "받은 목록에 없음" */}
+            {[active, activeCat].filter(Boolean).join(" · ")} 관련 기사 {more ? "받은 목록에 없음" : "없음"}
           </div>
           <div className="flex flex-wrap justify-center gap-2">
             {more && (

@@ -17,7 +17,7 @@ const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/(^|[^:"
 
 test("S1 말투 2차 — 짧은 라벨·제목", () => {
   const checks: Array<[string, string, string]> = [
-    ["app/not-found.tsx", "페이지 없음<span", "이 집은 이사 갔어요"],
+    ["app/components/NotFoundBody.tsx", "페이지 없음<span", "이 집은 이사 갔어요"],
     ["app/login/LoginClient.tsx", 'title: "로그인 완료"', "다시 오셨네요"],
     ["lib/brand/home-copy.ts", 'HOME_START_DOORS_TITLE = "시작 지점"', 'HOME_START_DOORS_TITLE = "어디서부터'],
     ["lib/brand/home-copy.ts", 'title: "둘러보기"', "구경하러 왔어요"],
@@ -61,7 +61,7 @@ test("S1 말투 2차 — 짧은 라벨·제목", () => {
 });
 
 test("S2·S3 노트 상세 — 머리가 판단 카드 앞 · 규칙 기반 요약 판 없음", () => {
-  const p = read("app/notes/[id]/page.tsx");
+  const p = read("app/notes/[id]/(index)/page.tsx");
   const head = p.indexOf("{/* ① 지역·단지 칩 */}");
   const verdict = p.indexOf("<NoteVerdictCard");
   const h1 = p.indexOf('<h1 className="t-title text-ink">');

@@ -18,6 +18,7 @@ export default function Error({
       error={error}
       reset={reset}
       links={[{ href: "/analysis", label: "분석 허브" }, { href: "/", label: "홈" }]}
+      inShell
     />
   );
 }

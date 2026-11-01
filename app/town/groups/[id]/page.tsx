@@ -4,7 +4,7 @@ import Link from "@/app/components/IntentLink";
 import { getMeeting } from "@/lib/meetings/store-db";
 import { findImjangRegionForLabel } from "@/lib/imjang/guide";
 import { safeAuth } from "@/lib/safe-auth";
-import { PageShell } from "../../../components/PageShell";
+import { ShellBreadcrumb, ShellNarrow } from "../../../components/PageShell";
 import { ShareButton } from "./ShareButton";
 import { LocationMap } from "../../LocationMap";
 import { Icon } from "@/app/components/Icon";
@@ -73,9 +73,10 @@ export default async function TownGroupDetailPage({
 
   if (!meeting) {
     return (
-      <PageShell breadcrumb="동네이야기 › 임장 모임">
+      <ShellNarrow>
+        <ShellBreadcrumb>동네이야기 › 임장 모임</ShellBreadcrumb>
         <div className="mx-auto flex max-w-[420px] flex-col items-center gap-3 py-20 text-center">
-          <div className="t-title font-bold text-ink">모임을 찾을 수 없어요</div>
+          <div className="t-title font-bold text-ink">모임 없음</div>
           <p className="t-body leading-[1.6] text-text-2">
             삭제되었거나 잘못된 링크일 수 있어요.
           </p>
@@ -86,7 +87,7 @@ export default async function TownGroupDetailPage({
             모임 목록으로
           </Link>
         </div>
-      </PageShell>
+      </ShellNarrow>
     );
   }
 
@@ -121,7 +122,8 @@ export default async function TownGroupDetailPage({
   const fillPct = Math.min(100, Math.round((meeting.currentMembers / Math.max(1, meeting.maxMembers)) * 100));
 
   return (
-    <PageShell breadcrumb="동네이야기 › 임장 모임">
+    <ShellNarrow>
+      <ShellBreadcrumb>동네이야기 › 임장 모임</ShellBreadcrumb>
       {/* [998 · A5] md → lg: 태블릿은 1열, 2열은 lg 부터. 사이드바 폭은 340 하나. */}
       <div className="mx-auto grid max-w-[900px] grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         {/* ---------- 모임 정보 카드 ---------- */}
@@ -278,7 +280,7 @@ export default async function TownGroupDetailPage({
                   : isPast
                     ? "일정이 지난 모임이에요. 후기·정리는 채팅에서"
                     : isFull
-                      ? "정원이 차서 새로 참여할 수는 없어요"
+                      ? "정원 마감 · 새 참여 없음"
                       : "채팅방 입장 시 모임 참여로 확정돼요"}
               </p>
             </>
@@ -298,6 +300,6 @@ export default async function TownGroupDetailPage({
           )}
         </div>
       </div>
-    </PageShell>
+    </ShellNarrow>
   );
 }

@@ -8,7 +8,7 @@ import { complexFacts, complexPlace, type ComplexPreview } from "@/lib/search/co
 /** [1026d] 검색 범위(어디를 · 어떤 조건으로) — 서버 lib/search/intent-server SearchIntentInfo 와 같은 모양 */
 export interface IntentJson {
   mode: "filter" | "area" | "name";
-  scope: { label: string; kind: string; q: string; lat: number | null; lng: number | null } | null;
+  scope: { label: string; kind: string; q: string; lat: number | null; lng: number | null; href?: string | null } | null;
   chips: { key: string; label: string; token: string }[];
   unsupported: { key: string; label: string; token: string }[];
   total: number | null;
@@ -23,6 +23,8 @@ export interface AreaJson {
   recentTradeCount: number;
   lat: number | null;
   lng: number | null;
+  /** [1094] 동이면 법정동 실거래 화면 주소 */
+  href?: string | null;
 }
 /** [1026d] 연관 검색("마포구 신축" 23곳) */
 export interface RelatedJson {

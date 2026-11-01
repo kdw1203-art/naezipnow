@@ -69,7 +69,7 @@ test("S4 화면 — 노트 저장 단추 · 마이 · 관심 › 저장 · 크�
   assert.doesNotMatch(btn, /[가-힣]!|해 보세요/);
   const act = code("app/notes/[id]/note-actions.tsx");
   assert.match(act, /\{!isOwner && isPublic && <NoteSaveButton/);
-  const my = code("app/my/page.tsx");
+  const my = code("app/my/(index)/page.tsx");
   assert.match(my, /listBookmarks\(email, "note"\)/);
   assert.match(my, /loadSavedNotes\(email\)/);
   const tab = code("app/my/watchlist/page.tsx");

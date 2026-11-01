@@ -9,6 +9,12 @@
  * "느슨한(loose)" 이유: 404 화면은 "이 조합이 유효한가"를 판정하지 않는다. 방문자가
  * 찾던 단지 이름을 검색 링크로 돌려주는 게 목적이라, 형태만 맞으면 이름을 꺼낸다.
  */
+/** [1096] slug 조립 — encodeURIComponent(A) + "--" + encodeURIComponent(B) + "--" + regionId.
+    lib/market/complex-pairs(server-only)가 다시 내보낸다 · 비교 허브의 클라이언트 조각(ComparePairTiles)이 이름·지역으로 주소를 만든다. */
+export function buildComplexPairSlug(complexA: string, complexB: string, regionId: string): string {
+  return `${encodeURIComponent(complexA)}--${encodeURIComponent(complexB)}--${regionId}`;
+}
+
 export function parsePairSlugLoose(
   rawSlug: string,
 ): { first: string; second: string; regionId: string } | null {

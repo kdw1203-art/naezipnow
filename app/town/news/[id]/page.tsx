@@ -2,10 +2,10 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { notFound, permanentRedirect } from "next/navigation";
-import { PageShell } from "../../../components/PageShell";
+import { ShellBreadcrumb, ShellNarrow } from "../../../components/PageShell";
 import { AIPanel } from "../../../components/AIPanel";
 import { ReportButton } from "../../../components/ReportButton";
-import { getTownPost, readRelatedTownPosts } from "@/lib/newui/board-posts";
+import { getTownPost, readRelatedTownPostsStale } from "@/lib/newui/board-posts";
 import { isStoryPost } from "@/lib/town/story";
 import { relatedInCluster } from "@/lib/news/cluster";
 import { isPostHidden } from "@/lib/moderation/reports-store";
@@ -64,6 +64,8 @@ import { jsonLdScript } from "@/lib/seo/jsonld";
    바뀌는 경우는 둘뿐이고 둘 다 즉시 비운다:
      · 옛 주소로 남은 이웃 글 — app/api/community/posts/** 가 revalidatePath(`/town/news/{id}`)
      · 관련 보도 목록 — 동네 글 병합 목록(related-town-posts-v1)이 town-posts 태그로 비워진다
+       → [1090] 이 화면은 태그 없는 판(related-town-posts-stale-v1 · 7일)을 읽는다. 그 태그가 화면에 붙어 뉴스 재검증
+         크론(하루 3슬롯)마다 기사 1,400여 쪽이 통째로 비워졌기 때문이다 — 관련 보도는 제목 · 출처 · 시각뿐이라 7일 지연이 틀린 말을 만들지 않는다.
    ※ 그 데이터 캐시가 15분일 때는 이 라우트의 실제 TTL 도 15분이었다(Next 는 세그먼트
      revalidate 와 데이터 캐시 revalidate 중 작은 값을 쓴다 — lib/town/cache-tags.ts 실측). */
 export const revalidate = 604_800;
@@ -192,7 +194,8 @@ export default async function TownNewsDetailPage({
   /* [1043 · 성능] 글과 무관하게 시작할 수 있는 두 조회(숨김 여부 · 관련글 목록)를 글 조회와 함께 띄운다 —
      예전엔 글 → 숨김 → 관련글이 줄을 섰다(처음 열리는 기사의 TTFB 0.9~1.1초의 한 몫). 결과를 쓰는 자리와 뜻은 그대로다. */
   const hiddenP = isPostHidden(uuid).catch(() => false);
-  const relatedP = readRelatedTownPosts().then(
+  /* [1090] 태그 없는 판 — 뉴스 재검증 크론(하루 3슬롯)이 기사 1,400여 쪽을 비우지 않게(lib/newui/board-posts 주석) */
+  const relatedP = readRelatedTownPostsStale().then(
     (rows) => ({ ok: true as const, rows }),
     (error: unknown) => ({ ok: false as const, error }),
   );
@@ -354,7 +357,8 @@ export default async function TownNewsDetailPage({
   const regionLinkName = regionId ? (findCatalogRegionById(regionId)?.name ?? null) : null;
 
   return (
-    <PageShell breadcrumb={`뉴스룸 › ${category} › ${region}`}>
+    <ShellNarrow>
+      <ShellBreadcrumb>{`뉴스룸 › ${category} › ${region}`}</ShellBreadcrumb>
       {/* [945-G] 읽기 진행 바 — 긴 글에서만 나타난다(컴포넌트가 판정) */}
       <ReadingProgress />
       <script
@@ -681,6 +685,6 @@ export default async function TownNewsDetailPage({
           </div>
         </aside>
       </div>
-    </PageShell>
+    </ShellNarrow>
   );
 }

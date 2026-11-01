@@ -62,8 +62,6 @@ const ComplexInfoPanel = dynamic(
   () => import("./ComplexInfoPanel").then((m) => m.ComplexInfoPanel),
   { ssr: false },
 );
-/* #412 — 버튼 하나에 허브 클라이언트 전체가 딸려오지 않게 독립 모듈에서 */
-import { CompareTrayButton } from "@/app/components/CompareTrayButton";
 const HistogramRangeSlider = dynamic(
   () => import("./HistogramRangeSlider").then((m) => m.HistogramRangeSlider),
   { ssr: false },
@@ -105,10 +103,9 @@ import {
   tierColor,
   tierTextColor,
 } from "@/lib/map/price-tiers";
-import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { placeWatchItems, viewportCountLabel } from "@/lib/map/watch-layer";
 import { useCopy } from "@/lib/ui/use-copy";
-import { formatKrwManwon, formatKrwWon } from "@/lib/format/krw";
+import { formatKrwManwon } from "@/lib/format/krw";
 
 /** [968 · 25] 모바일 목록 뷰 한 번에 그리는 카드 수 — "더 보기" 마다 이만큼 더 */
 const MAP_LIST_PAGE_SIZE = 40;
@@ -214,9 +211,6 @@ function zoomCaption(tab: Zoom, _level: number): string {
 /** 내부 level(1~14) — naver zoom = 21 - level (city 9 / dong 12 / danji 15) */
 const LEVEL_BY_ZOOM: Record<Zoom, number> = { city: 12, dong: 9, danji: 6 };
 
-// 사실 우선: 단지 상세 탭 라벨엔 허위 건수(매물 12·노트 15)를 넣지 않는다
-const DETAIL_TABS = ["요약", "매물", "실거래", "노트", "이야기"] as const;
-type DetailTab = (typeof DETAIL_TABS)[number];
 
 function HomeIcon() {
   return (
@@ -443,51 +437,9 @@ interface ClusterPointItem {
   builder?: string;
 }
 
-/** item9 — 노트 탭에 싣는 그 단지 임장노트 (GET /api/map/complex-notes) */
-interface ComplexNoteItem {
-  id: string;
-  title: string;
-  visitDate: string | null;
-  region: string | null;
-  mine: boolean;
-  /** [1015 · 규칙 H] 40px 정사각 썸네일 — /api/map/complex-notes 가 붙이면 그린다 */
-  cover?: string | null;
-}
-
-/** 매물 탭 — /api/listings?complex= 응답에서 실제로 쓰는 필드만 (PublicListing 부분집합) */
-interface ComplexListingItem {
-  id: string;
-  listingType: "sale" | "jeonse" | "monthly";
-  priceKrw: number | null;
-  depositKrw: number | null;
-  monthlyKrw: number | null;
-  areaM2: number | null;
-  floor: number | null;
-  ownerVerified: boolean;
-}
-
-const LISTING_TYPE_LABEL: Record<ComplexListingItem["listingType"], string> = {
-  sale: "매매",
-  jeonse: "전세",
-  monthly: "월세",
-};
-
-/** 원(₩) → "12억" / "8.0억" / "8,200만". 값이 없으면 null — 0 으로 적으면 "0원 매물"이 된다.
- *  [967 · 31] 본체는 lib/format/krw.ts "listing" — 마커 라벨은 억 정수부에 천단위 구분이 없던 얼굴(groupEok:false) */
-function wonShort(krw: number | null): string | null {
-  if (krw == null || !Number.isFinite(krw) || krw <= 0) return null;
-  return formatKrwWon(krw, { style: "listing", groupEok: false });
-}
-
-/** 매물 가격 라벨 — 유형별로 읽는 컬럼이 다르다 */
-function listingPriceLabel(l: ComplexListingItem): string {
-  if (l.listingType === "monthly") {
-    const dep = wonShort(l.depositKrw) ?? "-";
-    const rent = l.monthlyKrw ? Math.round(l.monthlyKrw / 10_000).toLocaleString("ko-KR") : "-";
-    return `${dep} / ${rent}만`;
-  }
-  return wonShort(l.listingType === "sale" ? l.priceKrw : l.depositKrw) ?? "가격 미기재";
-}
+/* [1097] 예전 "단지 클릭 → 상세 팝업"(selected 모달 · 요약·매물·실거래·노트·이야기 탭 · 약 450줄)은 1024 뒤로 열리는 길이 없었다 —
+   selectedId 를 값으로 놓는 코드가 어디에도 없어 늘 null 이었고(목록·마커 모두 ComplexInfoPanel), 노트·매물 탭 조회 효과와
+   그 타입(ComplexNoteItem · ComplexListingItem)도 같이 죽어 있었다. 지도 청크에서 뺐다. */
 
 /** 범례가 "언제 신고된 거래인지"를 말하게 하는 근거 — 서버가 뷰포트 기준으로 계산 */
 interface PriceMeta {
@@ -787,8 +739,6 @@ export function MapClient({
      있었다(누르면 level 만 바뀌고 아무것도 안 움직인다). NaverMap 이 error 를 확정하는
      순간 한 번 알려 준다(onFallbackChange). */
   const [mapFallback, setMapFallback] = useState(false);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detailTab, setDetailTab] = useState<DetailTab>("요약");
   const [center, setCenter] = useState(() => {
     // ?region= 으로 지목된 지역이 있으면 그 좌표가 최우선이다.
     if (initialFocus) return { lat: initialFocus.lat, lng: initialFocus.lng };
@@ -876,24 +826,10 @@ export function MapClient({
   const handleZoomTab = (k: Zoom) => {
     setZoom(k);
     setLevel(LEVEL_BY_ZOOM[k]);
-    setSelectedId(null);
     setInfoComplex(null);
     setSearchMarker(null);
   };
 
-  const selected = danji.find((d) => d.id === selectedId) ?? null;
-
-  /* [1055] 단지 상세(role=dialog) — Esc 로 닫고, 열리면 초점을 패널 안으로. 전엔 둘 다 없어 키보드로 닫을 길이 없었다 */
-  const detailPanelRef = useRef<HTMLElement | null>(null);
-  useEffect(() => {
-    if (!selected) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setSelectedId(null);
-    };
-    window.addEventListener("keydown", onKey);
-    detailPanelRef.current?.focus();
-    return () => window.removeEventListener("keydown", onKey);
-  }, [selected]);
 
   /* ===== 검색 선택 · 단지 정보 패널 (item1·item2) =====
      infoComplex: 목록 밖 단지(검색/포인트)용 정보 패널 대상.
@@ -1682,7 +1618,7 @@ export function MapClient({
      좌측 패널의 오른쪽 끝은 340px 인데 접기 핸들 ‹ 이 340~356 에 반쯤 걸쳐 있다.
      그래서 352 를 쓰면 패널이 핸들의 오른쪽 4px 을 덮어 핸들이 반만 눌린다
      (1280폭 실측 4×64px). 364 = 356 + 8 로 핸들 바깥에 세운다. */
-  const leftPanelEdgePx = !selected && !infoComplex && panelOpen ? 364 : 0;
+  const leftPanelEdgePx = !infoComplex && panelOpen ? 364 : 0;
   const filterLeftMdPx = Math.max(364, leftPanelEdgePx);
   const filterLeftLgPx = Math.max(200, leftPanelEdgePx);
 
@@ -1954,7 +1890,6 @@ export function MapClient({
           setFiltersExpanded((v) => {
             const next = !v;
             if (next) {
-              setSelectedId(null);
               setInfoComplex(null);
             }
             return next;
@@ -2324,7 +2259,7 @@ export function MapClient({
             <>
               {" "}
               <b className="text-text-2">
-                조건을 모두 만족하는 등록 매물이 이 화면에 없어요.
+                조건에 맞는 등록 매물 없음
               </b>
             </>
           )}
@@ -3272,7 +3207,7 @@ export function MapClient({
         if (!json.office) {
           setCommuteMinutes(null);
           setCommuteOfficeResolved(false);
-          setCommuteError(json.error ?? "회사 위치를 확인할 수 없어요.");
+          setCommuteError(json.error ?? "회사 위치 확인 실패 · 잠시 후 다시");
           return;
         }
         const map = new Map<string, number>();
@@ -3857,7 +3792,7 @@ export function MapClient({
             // 시세 말풍선 스타일 강제 (avgPricePerM2 정의 시 price marker)
             avgPricePerM2: d.avgPriceWon ? d.avgPriceWon / 84 : 1,
             momPct: d.momPct ?? undefined,
-            selected: d.id === selectedId || d.id === infoId,
+            selected: d.id === infoId,
             infoHtml: "", // 인포윈도우 대신 글래스 상세 패널 사용
             // 단지 줌에서만 이름을 값과 함께 — 넓은 줌에선 이름끼리 겹친다.
             showName: zoom === "danji",
@@ -3967,7 +3902,6 @@ export function MapClient({
     filteredDanji,
     rangeActive,
     ranges,
-    selectedId,
     infoComplex,
     searchMarker,
     listingMarkers,
@@ -4014,8 +3948,6 @@ export function MapClient({
 
   const selectDanji = (id: string) => {
     setFiltersExpanded(false);
-    setSelectedId(null);
-    setDetailTab("요약");
     const d = danji.find((x) => x.id === id);
     // 목록·마커 모두 밀도 높은 ComplexInfoPanel 경로로 통일 (얇은 selected 모달 대체).
     setInfoComplex({ id, name: d?.name ?? id });
@@ -4039,7 +3971,6 @@ export function MapClient({
         return;
       }
       // 목록 밖 단지 → 정보 패널 + 주소 on-demand 지오코딩으로 지도 이동·핀
-      setSelectedId(null);
       setInfoComplex({ id: item.id, name: item.name });
       setLevel(LEVEL_BY_ZOOM.danji);
       const addr = item.address?.trim();
@@ -4067,7 +3998,6 @@ export function MapClient({
 
   const handleSearchSelectAddress = useCallback((item: MapSearchSelectAddress) => {
     setFiltersExpanded(false);
-    setSelectedId(null);
     setInfoComplex(null);
     setSearchMarker(null);
     setCenter({ lat: item.lat, lng: item.lng });
@@ -4094,7 +4024,6 @@ export function MapClient({
    */
   const openInfoPanel = useCallback(
     (id: string, name: string, lat: number, lng: number) => {
-      setSelectedId(null);
       setInfoComplex({ id, name });
       if (Number.isFinite(lat) && Number.isFinite(lng)) {
         setSearchMarker({ id, name, lat, lng });
@@ -4172,7 +4101,6 @@ export function MapClient({
     // 매물 마커 클릭 → 하단 미리보기 패널(이탈 없이). 상세는 패널의 "상세 보기"로.
     if (m.id.startsWith("listing:")) {
       setInfoComplex(null);
-      setSelectedId(null);
       setListingPreviewId(m.id.slice("listing:".length));
       return;
     }
@@ -4183,7 +4111,6 @@ export function MapClient({
         selectDanji(id);
         return;
       }
-      setSelectedId(null);
       setCenter({ lat: m.lat, lng: m.lng });
       setSearchMarker({ id, name: m.label, lat: m.lat, lng: m.lng });
       setInfoComplex({ id, name: m.label });
@@ -4200,7 +4127,6 @@ export function MapClient({
       return;
     }
     // API 포인트(목록 밖 단지) — 중심 이동 + 정보 패널 열기(item2)
-    setSelectedId(null);
     setCenter({ lat: m.lat, lng: m.lng });
     setSearchMarker({ id: m.id, name: m.label, lat: m.lat, lng: m.lng });
     setInfoComplex({ id: m.id, name: m.label });
@@ -4210,95 +4136,6 @@ export function MapClient({
      여기 있던 goToMyLocation 은 지웠다 — 같은 자리에 버튼이 두 개 겹쳐 그려져
      있었고, 가려져서 눌리지도 않던 이쪽 구현은 확대를 하지 않고, 실패를 알리지도
      않으며, center 상태가 같으면 두 번째 누름이 아무 일도 하지 않았다. */
-
-  // 사실 우선: 실거래는 서버(market_transactions) 실데이터만 — 없으면 빈 배열(안내 문구)
-  const trades = selected ? selected.trades : [];
-
-  /* ===== item10 — 노트 쓰기 링크에 단지ID·좌표까지 전달 (작성 페이지가 읽는 파라미터) ===== */
-  const noteHrefFor = (d: DanjiItem) => {
-    const params = new URLSearchParams({
-      apt: d.name,
-      complexId: d.id,
-      lat: String(d.lat),
-      lng: String(d.lng),
-    });
-    return `/notes/new?${params.toString()}`;
-  };
-
-  /* ===== item9 — 노트 탭: 그 단지 임장노트 실제 조회 (inspection_notes 단지명 매칭) ===== */
-  const [complexNotes, setComplexNotes] = useState<ComplexNoteItem[]>([]);
-  const [complexNotesStatus, setComplexNotesStatus] = useState<
-    "idle" | "loading" | "ok" | "error"
-  >("idle");
-  const selectedName = selected?.name ?? null;
-  const selectedComplexId = selected?.id ?? null;
-  useEffect(() => {
-    if (detailTab !== "노트" || (!selectedName && !selectedComplexId)) {
-      setComplexNotes([]);
-      setComplexNotesStatus("idle");
-      return;
-    }
-    const controller = new AbortController();
-    setComplexNotesStatus("loading");
-    const qs = new URLSearchParams();
-    if (selectedComplexId) qs.set("complexId", selectedComplexId);
-    if (selectedName) qs.set("name", selectedName);
-    fetch(`/api/map/complex-notes?${qs.toString()}`, {
-      signal: controller.signal,
-    })
-      .then((r) => (r.ok ? (r.json() as Promise<{ notes?: ComplexNoteItem[] }>) : null))
-      .then((j) => {
-        if (controller.signal.aborted) return;
-        if (!j) {
-          setComplexNotesStatus("error");
-          return;
-        }
-        setComplexNotes(Array.isArray(j.notes) ? j.notes : []);
-        setComplexNotesStatus("ok");
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setComplexNotesStatus("error");
-      });
-    return () => controller.abort();
-  }, [detailTab, selectedName, selectedComplexId]);
-
-  /* ===== 매물 탭 — 그 단지의 승인 매물 실제 조회 =====
-     2026-07-27 이전에는 이 탭이 어떤 단지를 골라도 "이 단지의 실매물은 준비
-     중이에요" 카드 하나를 고정으로 그렸다. 조회를 한 적이 없으니 매물이 있는지
-     없는지 확인한 적도 없었다 — 실제로는 같은 단지의 승인 매물을 단지 홈
-     (app/complex/[id]/page.tsx)이 listApprovedListings({ complexName }) 로
-     이미 보여주고 있었다. 같은 데이터를 /api/listings?complex= 로 읽는다.
-     조회 실패는 "0건"이 아니라 실패로 말한다. */
-  const [complexListings, setComplexListings] = useState<ComplexListingItem[]>([]);
-  const [complexListingsStatus, setComplexListingsStatus] = useState<
-    "idle" | "loading" | "ok" | "error"
-  >("idle");
-  useEffect(() => {
-    if (detailTab !== "매물" || !selectedName) {
-      setComplexListings([]);
-      setComplexListingsStatus("idle");
-      return;
-    }
-    const controller = new AbortController();
-    setComplexListingsStatus("loading");
-    fetch(`/api/listings?complex=${encodeURIComponent(selectedName)}`, {
-      signal: controller.signal,
-    })
-      .then((r) => (r.ok ? (r.json() as Promise<{ items?: ComplexListingItem[] }>) : null))
-      .then((j) => {
-        if (controller.signal.aborted) return;
-        if (!j) {
-          setComplexListingsStatus("error");
-          return;
-        }
-        setComplexListings(Array.isArray(j.items) ? j.items.slice(0, 12) : []);
-        setComplexListingsStatus("ok");
-      })
-      .catch(() => {
-        if (!controller.signal.aborted) setComplexListingsStatus("error");
-      });
-    return () => controller.abort();
-  }, [detailTab, selectedName]);
 
   /* ===== SDK 로드 실패/미설정 시 폴백 — 허위 시세 대신 정직한 안내 =====
      기존엔 가짜 지역 시세 버블(동안구 7.1억 등)을 그렸으나, 사실 우선 원칙에 따라
@@ -4556,7 +4393,7 @@ export function MapClient({
 
   const nativeMapLayers = useMemo(() => ({ cadastral: showCadastral }), [showCadastral]);
 
-  const mdSidebarOpen = !selected && !infoComplex && panelOpen;
+  const mdSidebarOpen = !infoComplex && panelOpen;
   const mdLeftLegendX = mdSidebarOpen
     ? "md:left-[356px] md:max-w-[calc(100vw_-_356px_-_var(--nz-map-right-lane))]"
     : "md:left-5 md:max-w-[calc(100vw_-_20px_-_var(--nz-map-right-lane))]";
@@ -4836,7 +4673,7 @@ export function MapClient({
       {/* ===== 모바일 검색 (md 미만) — 패널 열려 있으면 숨김 ===== */}
       {/* [968 · 24] 접힌 동안은 투명·inert 로 비킨다(언마운트하지 않는다 — 입력값 유지).
           감속 모션이면 전환 없이 즉시(motion-safe). */}
-      {!selected && !infoComplex && (
+      {!infoComplex && (
         <div
           className={`absolute left-4 right-4 z-40 md:hidden ${chromeFoldClass}`}
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 82px)" }}
@@ -4854,7 +4691,7 @@ export function MapClient({
            검색·필터·레이어 셋 다 여기서 닿는다: 누르면 크롬을 펴고(검색), 펴면서
            상세 필터 패널을 연다(필터·레이어 — 레이어 토글은 그 패널 안 "지도 레이어"
            절에 있다). 숫자는 실제 적용 수(activeCount·activeLayerCount). */}
-      {chromeCompact && !selected && !infoComplex && (
+      {chromeCompact && !infoComplex && (
         <div
           role="group"
           aria-label="접힌 지도 컨트롤"
@@ -4874,7 +4711,6 @@ export function MapClient({
             onClick={() => {
               dispatchChrome("tap");
               setFiltersExpanded(true);
-              setSelectedId(null);
               setInfoComplex(null);
             }}
             className={`map-chip ${activeCount > 0 ? "map-chip-soft" : ""}`}
@@ -4887,7 +4723,6 @@ export function MapClient({
             onClick={() => {
               dispatchChrome("tap");
               setFiltersExpanded(true);
-              setSelectedId(null);
               setInfoComplex(null);
               /* 패널이 열린 다음 프레임에 레이어 절로 스크롤 — 패널은 열릴 때 마운트된다 */
               window.requestAnimationFrame(() => {
@@ -4919,16 +4754,14 @@ export function MapClient({
            inline style 은 반응형 top 클래스를 덮어쓰므로 top 은 클래스로만 준다. */}
       {/* [968 · 24] 접힌 동안 투명·inert (md 미만에서만 접힌다).
           [968 · 27] 가로 스크롤 레일 — 설치 앱의 당겨서 새로고침이 여기서 시작되지 않게. */}
-      {!selected && (
-        <div
-          data-ptr-ignore=""
-          inert={chromeCompact}
-          className={`scroll-x-hidden-bar absolute left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+176px)] z-30 flex items-center gap-1.5 py-0.5 md:left-[356px] md:right-[240px] md:top-[calc(env(safe-area-inset-top,0px)+88px)] lg:hidden [&>*]:shrink-0 ${chromeFoldClass}`}
-        >
-          {filterBar}
-          {viewportCountChip}
-        </div>
-      )}
+      <div
+        data-ptr-ignore=""
+        inert={chromeCompact}
+        className={`scroll-x-hidden-bar absolute left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+176px)] z-30 flex items-center gap-1.5 py-0.5 md:left-[356px] md:right-[240px] md:top-[calc(env(safe-area-inset-top,0px)+88px)] lg:hidden [&>*]:shrink-0 ${chromeFoldClass}`}
+      >
+        {filterBar}
+        {viewportCountChip}
+      </div>
 
       {/* ===== 상세 필터 확장 패널 (item3) — 접이식·모바일 친화 =====
            md 상단이 184 였을 때 우상단 줌 캡션(top 168~195, right-5)의 왼쪽
@@ -5239,11 +5072,11 @@ export function MapClient({
           집계 소스가 없어 허위 수치였으므로 사실 우선 원칙에 따라 제거함. */}
 
       {/* ===== 좌측 사이드 패널 (320px, 접기 핸들) =====
-          단지를 고르면(selected = 목록 클릭, infoComplex = 마커·검색·인기목록 클릭)
+          단지를 고르면(infoComplex = 목록·마커·검색·인기목록 클릭 — [1097] 예전 selected 모달은 어디서도 열리지 않아 지웠다)
           이 목록은 사라지고 같은 자리에 단지 상세가 들어선다. 예전에는 infoComplex
           를 조건에서 빠뜨려, 마커를 눌러도 목록이 그대로 남고 상세가 지도 하단을
           가리는 채로 둘 다 떠 있었다(소유자 지적). */}
-      {!selected && !infoComplex && panelOpen && (
+      {!infoComplex && panelOpen && (
         <aside
           data-tour="map-price-panel"
           className="glass-strong absolute bottom-[var(--nz-map-bottom-lane)] left-5 z-30 hidden w-[320px] flex-col overflow-hidden rounded-3xl md:flex"
@@ -5396,7 +5229,7 @@ export function MapClient({
       )}
 
       {/* ===== 모바일 목록 뷰 (지도↔목록 전환) — 데스크탑은 좌측 패널이 담당 ===== */}
-      {mobileView === "list" && !selected && (
+      {mobileView === "list" && (
         <div
           className="absolute inset-x-0 bottom-0 z-30 flex flex-col bg-bg md:hidden"
           /* [970 · B-19] 86px 은 상단 검색 카드 높이에 못 미쳐 목록 헤더("○○ 단지 N")가
@@ -5484,7 +5317,7 @@ export function MapClient({
       {/* 상세 필터 패널이 열려 있으면 숨긴다 — 패널이 이 버튼(131~271 × 737~778)
           위에 그대로 덮여(실측 140×41px) 눌리지 않는다. */}
       {/* [968 · 24] 끌기 중엔 아래로 비킨다(inert) — 멈추면 1.2초 뒤 제자리 */}
-      {!selected && !filtersExpanded && (
+      {!filtersExpanded && (
         <button
           type="button"
           inert={chromeCompact}
@@ -5499,350 +5332,16 @@ export function MapClient({
       )}
 
       {/* 접기 핸들 ‹ */}
-      {!selected && (
-        <button
-          type="button"
-          onClick={() => setPanelOpen((v) => !v)}
-          aria-label={panelOpen ? "패널 접기" : "패널 열기"}
-          className={`absolute top-1/2 z-30 hidden h-16 w-4 -translate-y-1/2 items-center justify-center rounded-r-xl border border-line bg-[var(--glass-bg-strong)] t-sub text-text-3 shadow-[6px_0_14px_rgba(16,28,54,.08)] md:flex ${
-            panelOpen ? "left-[340px]" : "left-0"
-          }`}
-        >
-          {panelOpen ? "‹" : "›"}
-        </button>
-      )}
-
-      {/* ===== 단지 클릭 → 상세 팝업 =====
-           예전에는 좌측에 460px 세로 패널로 붙였다. 폭이 좁아 표·그래프가 다
-           눌렸고, 같은 자리를 쓰는 필터·인기 단지 패널과 계속 부딪혔다(소유자 지적).
-           화면 가운데 큰 팝업으로 띄우면 두 문제가 같이 사라진다. 더 깊이 보고
-           싶으면 아래 "단지 홈 보기"로 단지 홈 페이지로 넘어간다. */}
-      {selected && (
-        <div
-          className="absolute inset-0 z-[48] flex items-center justify-center px-4 py-6"
-          role="dialog"
-          aria-modal="true"
-          aria-label={`${selected.name} 단지 상세`}
-        >
-          <button
-            type="button"
-            aria-label="상세 닫기"
-            onClick={() => setSelectedId(null)}
-            className="absolute inset-0 h-full w-full cursor-default bg-[rgba(11,20,40,.45)]"
-          />
-          {/* ComplexInfoPanel 과 같은 판단(2026-08-16): 어두운 딤 위 반투명 시트는
-              backdrop-filter 가 약한 환경에서 탁해진다 — 불투명 bg-surface 로 고정. */}
-          <aside
-            ref={detailPanelRef}
-            tabIndex={-1}
-            className="rise-in relative z-10 flex max-h-[min(88dvh,860px)] w-full max-w-[860px] flex-col overflow-hidden rounded-3xl bg-surface shadow-[0_28px_70px_rgba(16,28,54,.32)] outline-none"
-          >
-          <div className="flex items-start justify-between border-b border-[rgba(16,28,54,.06)] px-[22px] pb-3.5 pt-5">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="t-title text-ink">{selected.name}</span>
-                {selected.note && (
-                  <span className="rounded-md bg-primary-soft chip-pad t-caption font-bold text-primary">
-                    내 {selected.note}
-                  </span>
-                )}
-              </div>
-              <div className="mt-1 t-sub text-text-2">{selected.meta}</div>
-            </div>
-            <div className="flex items-center gap-2">
-              {/* [지도확장 2026-08-31] 네이버지도 새 탭 — 거리뷰·로드뷰·주변시설은
-                  네이버가 이미 잘한다. 흉내내는 대신 이어 준다(임장 전 현장 확인 동선).
-                  이름 검색 딥링크는 공식 문서화된 안정 경로다. */}
-              <a
-                href={`https://map.naver.com/p/search/${encodeURIComponent(`${selected.meta?.split(" · ").pop() ?? ""} ${selected.name}`.trim())}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hidden rounded-xl border border-line px-3 py-2 t-caption font-bold text-text-1 no-underline hover:border-primary hover:text-primary md:inline-flex"
-              >
-                네이버지도 ↗
-              </a>
-              <Link
-                href={complexHrefFromId(selected.id)}
-                className="btn-primary btn-cta hidden rounded-xl px-3.5 py-2 t-sub font-bold text-white md:inline-flex"
-              >
-                단지 홈 보기 ›
-              </Link>
-              {/* [1055] 40×40 실상자 — 전엔 글자 크기(약 15px)뿐이라 폰에서 닫기 어려웠다 */}
-              <button
-                type="button"
-                onClick={() => setSelectedId(null)}
-                aria-label="패널 닫기"
-                className="-mr-[10px] -mt-[6px] inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl t-body text-text-3"
-              >
-                ✕
-              </button>
-            </div>
-          </div>
-          <div className="flex border-b border-[rgba(16,28,54,.06)] px-[22px]">
-            {DETAIL_TABS.map((t) => (
-              <button
-                key={t}
-                type="button"
-                aria-pressed={detailTab === t}
-                onClick={() => setDetailTab(t)}
-                className={`px-3.5 py-[11px] t-body ${
-                  detailTab === t
-                    ? "border-b-2 border-primary font-bold text-primary"
-                    : "font-semibold text-text-2"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-
-          {/* 요약은 카드가 많아 넓은 화면에서 두 단으로 흘린다 — 460px 시절에는
-              한 줄로 세울 수밖에 없어 스크롤이 길었다. */}
-          <div
-            className={`flex flex-1 flex-col gap-3 overflow-y-auto px-[22px] py-4 ${
-              detailTab === "요약" ? "md:grid md:grid-cols-2 md:content-start md:gap-4" : ""
-            }`}
-          >
-            {detailTab === "요약" && (
-              <>
-                {/* 사실 우선: 서버 실데이터(시세·전월비)만 표시. 조회수·전문가수·급매·판정은
-                    집계 소스가 없어 허위였으므로 제거. */}
-                <div className="card rounded-lg px-[15px] py-3.5">
-                  {/* item3 — 대표가격 근거 병기: 면적 통합 평균 + 언제·몇 건인지 */}
-                  <div className="t-caption text-text-3">
-                    실거래 평균 (면적 통합
-                    {selected.latestYm && selected.latestDealCount != null
-                      ? ` · ${selected.latestYm} ${selected.latestDealCount}건`
-                      : ""}
-                    ) · 국토교통부 기준
-                  </div>
-                  <div className="mt-1 flex items-baseline gap-2">
-                    <span className="t-title text-ink">{selected.price}</span>
-                    {selected.delta === "표본 부족" ? (
-                      // 최신월 3건 미만 — 등락률은 노이즈라 표시하지 않는다
-                      <span className="t-sub text-text-3">표본 부족 · 전월비 생략</span>
-                    ) : (
-                      <span className={`t-sub ${deltaClass(selected.deltaTone)}`}>
-                        {selected.delta === "—" ? "— (전월비)" : `${selected.delta} (전월비)`}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <Link
-                  href={complexHrefFromId(selected.id)}
-                  className="flex items-center justify-between rounded-lg border border-line bg-surface px-[15px] py-[13px] text-left"
-                >
-                  <span className="t-body font-bold text-ink">
-                    실거래 이력·노트 보기
-                  </span>
-                  <span className="t-sub font-bold text-primary">›</span>
-                </Link>
-                <div className="flex gap-2">
-                  <Link
-                    href={noteHrefFor(selected)}
-                    className="btn-primary btn-cta flex-1 rounded-xl p-[11px] text-center t-sub"
-                  >
-                    이 단지 임장노트
-                  </Link>
-                  <Link
-                    href={`/analysis?complexId=${encodeURIComponent(selected.id)}`}
-                    className="btn-secondary flex-1 rounded-xl p-[11px] text-center t-sub"
-                  >
-                    AI 분석
-                  </Link>
-                  {/* 예전엔 <Link href="/notes/compare"> 였다. 단지 식별자가 URL 에
-                      없어서 아무것도 담기지 않았고, 도착지는 하드코딩된 예시 표였다.
-                      단지 홈이 쓰는 진짜 컨트롤(CompareTrayButton)로 교체. */}
-                  <CompareTrayButton
-                    complexId={selected.id}
-                    name={selected.name}
-                    region={selected.note ?? undefined}
-                  />
-                </div>
-              </>
-            )}
-
-            {detailTab === "매물" && (
-              <div className="flex flex-col gap-3">
-                {complexListingsStatus === "loading" && (
-                  <div className="card rounded-lg px-[15px] py-6 text-center t-sub text-text-3">
-                    매물을 불러오는 중…
-                  </div>
-                )}
-                {/* 못 읽은 것을 "매물 없음"으로 적지 않는다 — 멀쩡히 올라와 있는
-                    남의 매물을 없다고 말하는 셈이 된다. */}
-                {complexListingsStatus === "error" && (
-                  <div className="card rounded-lg px-[15px] py-6 text-center">
-                    <div className="t-body font-bold text-ink">매물 불러오기 실패</div>
-                    <div className="mt-1 t-sub text-text-3">
-                      잠시 후 다시 시도해 주세요.
-                    </div>
-                  </div>
-                )}
-                {complexListingsStatus === "ok" && complexListings.length > 0 && (
-                  <div className="card flex flex-col rounded-lg px-[15px] py-1">
-                    {complexListings.map((l, i) => (
-                      <Link
-                        key={l.id}
-                        href={`/listings/${encodeURIComponent(l.id)}`}
-                        className={`flex items-center justify-between gap-2 py-2.5 ${
-                          i < complexListings.length - 1 ? "border-b border-divider" : ""
-                        }`}
-                      >
-                        <span className="flex min-w-0 flex-col">
-                          <span className="t-body font-bold text-ink">
-                            {LISTING_TYPE_LABEL[l.listingType]} {listingPriceLabel(l)}
-                          </span>
-                          <span className="truncate t-sub text-text-3">
-                            {[
-                              l.areaM2 ? `${Math.round(l.areaM2)}㎡` : null,
-                              l.floor != null ? `${l.floor}층` : null,
-                              l.ownerVerified ? "소유 확인" : null,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ") || "상세 보기"}
-                          </span>
-                        </span>
-                        <span className="shrink-0 t-sub font-bold text-primary">›</span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-                {complexListingsStatus === "ok" && complexListings.length === 0 && (
-                  <div className="card rounded-lg px-[15px] py-6 text-center">
-                    <div className="t-body font-bold text-ink">
-이 단지에 등록된 매물 없음
-                    </div>
-                    <div className="mt-1 t-sub text-text-3">
-                      지도 상단의 “매물” 레이어를 켜면 주변 단지의 등록 매물을 볼 수 있어요.
-                    </div>
-                  </div>
-                )}
-                <Link href="/listings/new" className="btn-soft rounded-xl p-3 text-center t-body">
-                  내 매물 등록하기
-                </Link>
-              </div>
-            )}
-
-            {detailTab === "실거래" && (
-              <>
-                <div className="px-1 t-sub font-bold text-text-3">
-                  국토교통부 실거래가 기준
-                </div>
-                {trades.length > 0 ? (
-                  <div className="card flex flex-col rounded-lg px-[15px] py-2">
-                    {trades.map((t, i) => (
-                      <div
-                        key={`${t.date}-${i}`}
-                        className={`flex items-center justify-between py-2.5 t-body ${
-                          i < trades.length - 1 ? "border-b border-divider" : ""
-                        }`}
-                      >
-                        <span className="text-text-2">
-                          {t.date} · {t.sub}
-                        </span>
-                        <span className="flex items-baseline gap-2">
-                          <span className="font-bold text-ink">{t.price}</span>
-                          <span className={`t-sub ${deltaClass(t.tone)}`}>{t.delta}</span>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
-수집된 국토교통부 실거래 없음
-                  </div>
-                )}
-              </>
-            )}
-
-            {detailTab === "노트" && (
-              <>
-                {/* item9 — inspection_notes 단지명 매칭 실조회. 없으면 정직한 빈 상태 + 실링크 */}
-                {complexNotesStatus === "loading" && (
-                  <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
-                    이 단지 임장노트를 찾는 중…
-                  </div>
-                )}
-                {complexNotesStatus === "error" && (
-                  <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
-노트 불러오기 실패 · 잠시 후 다시
-                  </div>
-                )}
-                {complexNotesStatus === "ok" && complexNotes.length > 0 && (
-                  /* [1015 · 규칙 H·I] 노트 행 = hanji 리퀴드 판 + 40px 정사각 썸네일(API 가 cover 를 주면 그림, 없으면 단색 칸) */
-                  <div className="lq-panel flex flex-col divide-y py-1" data-tone="hanji">
-                    {complexNotes.map((n) => (
-                      <Link
-                        key={n.id}
-                        href={`/notes/${encodeURIComponent(n.id)}`}
-                        className="flex items-center justify-between gap-2 py-2.5 t-body"
-                      >
-                        <span className="h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-brand-hanji" aria-hidden="true">
-                          {n.cover && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={n.cover} alt="" width={40} height={40} loading="lazy" className="h-10 w-10 object-cover" />
-                          )}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate font-bold text-ink">
-                          {n.mine && (
-                            <span className="mr-1.5 rounded-sm bg-primary-soft chip-pad-tight t-caption font-bold text-primary">
-                              내 노트
-                            </span>
-                          )}
-                          {n.title}
-                        </span>
-                        <span className="shrink-0 t-sub text-text-3">
-                          {n.visitDate ?? ""}
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                )}
-                {complexNotesStatus === "ok" && complexNotes.length === 0 && (
-                  <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">이 단지의 임장노트 없음</div>
-                )}
-                <div className="flex gap-2">
-                  <Link
-                    href={noteHrefFor(selected)}
-                    className="btn-primary btn-cta flex-1 rounded-xl p-3 text-center t-body"
-                  >
-                    이 단지 노트 쓰기
-                  </Link>
-                  <Link
-                    href="/notes"
-                    className="btn-soft flex-1 rounded-xl p-3 text-center t-body"
-                  >
-                    공개 노트 모아보기
-                  </Link>
-                </div>
-              </>
-            )}
-
-            {detailTab === "이야기" && (
-              <>
-                {/* 사실 우선: 하드코딩 Q&A 제거 — 동네이야기로 연결 */}
-                <div className="card rounded-lg px-[15px] py-6 text-center t-body text-text-3">
-                  이 지역의 질문·이야기는 동네이야기에
-                </div>
-                <Link href="/town" className="btn-soft rounded-xl p-3 text-center t-body">
-                  동네이야기 보기
-                </Link>
-              </>
-            )}
-          </div>
-          {/* 모바일에서는 헤더에 넣을 자리가 없어 아래에 고정 CTA 로 둔다. */}
-          <div className="border-t border-[rgba(16,28,54,.06)] px-[22px] py-3 md:hidden">
-            <Link
-              href={complexHrefFromId(selected.id)}
-              className="btn-primary btn-cta block rounded-xl p-3 text-center t-body font-bold text-white"
-            >
-              단지 홈 보기 ›
-            </Link>
-          </div>
-          </aside>
-        </div>
-      )}
+      <button
+        type="button"
+        onClick={() => setPanelOpen((v) => !v)}
+        aria-label={panelOpen ? "패널 접기" : "패널 열기"}
+        className={`absolute top-1/2 z-30 hidden h-16 w-4 -translate-y-1/2 items-center justify-center rounded-r-xl border border-line bg-[var(--glass-bg-strong)] t-sub text-text-3 shadow-[6px_0_14px_rgba(16,28,54,.08)] md:flex ${
+          panelOpen ? "left-[340px]" : "left-0"
+        }`}
+      >
+        {panelOpen ? "‹" : "›"}
+      </button>
 
       {/* ===== 단지 정보 패널 (item2) — 검색/포인트 선택 시 실데이터 하단 시트 ===== */}
       {infoComplex && (
@@ -5902,7 +5401,7 @@ export function MapClient({
           범위는 SDK 줌 범위(6~21)와 같게 — 예전 1~14 자르기는 핀치로 끝까지 간 뒤 반대로 튀었다. */}
       <div
         className={`absolute right-5 z-30 flex-col gap-1.5 ${
-          mapFallback ? "hidden" : mobileView === "list" && !selected ? "hidden md:flex" : "flex"
+          mapFallback ? "hidden" : mobileView === "list" ? "hidden md:flex" : "flex"
         }`}
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 134px)" }}
       >

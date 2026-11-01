@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { readPosts } from "@/lib/posts-store";
 import { readMarketRequestsFile } from "@/lib/market-store-file";
@@ -201,7 +202,11 @@ async function safeCountSinceTable(
   return typeof count === "number" ? count : null;
 }
 
-export async function loadAdminKpi(): Promise<AdminKpi> {
+/* [1097 · 성능] 요청 안에서 한 번만 — /admin/ops 는 직접 + getOperatingMetrics 경유로 두 번 불렀고(28개 조회 × 2), 대시보드 계열도
+   같은 렌더에서 겹쳐 부른다. React cache() 는 같은 요청의 같은 인자 호출을 하나로 접는다(요청 밖 캐시 없음). */
+export const loadAdminKpi = cache(loadAdminKpiUncached);
+
+async function loadAdminKpiUncached(): Promise<AdminKpi> {
   const sb = getServiceSupabase();
   const today = startOfDay(new Date()).toISOString();
   const weekAgo = daysAgo(7).toISOString();

@@ -4,7 +4,9 @@ import { AreaError } from "@/app/components/AreaError";
 
 export default function Error({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
+    /* [1092] 셸이 레이아웃에 있으므로 main 을 겹치지 않는다(inShell) */
     <AreaError
+      inShell
       area="rent"
       title="실거래 자료 불러오기 실패"
       desc="잠시 후 다시 시도해 주세요."

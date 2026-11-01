@@ -1,4 +1,5 @@
 import "server-only";
+import { buildComplexPairSlug } from "@/lib/market/complex-pair-slug";
 
 import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
 import {
@@ -102,14 +103,8 @@ function toPair(row: SourceRow): ComplexPair | null {
 
 /* ---------- slug ---------- */
 
-/** slug = encodeURIComponent(A) + "--" + encodeURIComponent(B) + "--" + regionId */
-export function buildComplexPairSlug(
-  complexA: string,
-  complexB: string,
-  regionId: string,
-): string {
-  return `${encodeURIComponent(complexA)}--${encodeURIComponent(complexB)}--${regionId}`;
-}
+/** slug = encodeURIComponent(A) + "--" + encodeURIComponent(B) + "--" + regionId — [1096] 조립식은 complex-pair-slug(클라이언트 안전)에 */
+export { buildComplexPairSlug };
 
 export function complexPairPath(pair: ComplexPair): string {
   return `/complex/compare/${buildComplexPairSlug(pair.complexA, pair.complexB, pair.region.id)}`;

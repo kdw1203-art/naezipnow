@@ -4,7 +4,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { useRouter, useSearchParams } from "next/navigation";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb, ShellNarrow } from "../../components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { useMoment } from "@/app/components/motion/moment-context";
@@ -104,11 +104,12 @@ export default function TownWritePage() {
   return (
     <Suspense
       fallback={
-        <PageShell breadcrumb="동네이야기 › 이야기 쓰기">
+        <ShellNarrow>
+          <ShellBreadcrumb>동네이야기 › 이야기 쓰기</ShellBreadcrumb>
           <div className="mx-auto w-full max-w-[640px] px-1 py-10 t-body text-text-3">
             글쓰기 화면을 준비하고 있어요…
           </div>
-        </PageShell>
+        </ShellNarrow>
       }
     >
       <TownWriteForm />
@@ -379,7 +380,8 @@ function TownWriteForm() {
   };
 
   return (
-    <PageShell breadcrumb="동네이야기 › 이야기 쓰기">
+    <ShellNarrow>
+      <ShellBreadcrumb>동네이야기 › 이야기 쓰기</ShellBreadcrumb>
       <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4 max-md:gap-3">
         {/* [1006] 여기서 쓰는 건 **이야기**(사람의 기록)다 — 뉴스룸의 기사와 다른 재질.
             올라가면 동네이야기 피드의 "이야기" 탭과 /town/story/[id] 에 보인다.
@@ -609,6 +611,6 @@ function TownWriteForm() {
           </button>
         </div>
       </div>
-    </PageShell>
+    </ShellNarrow>
   );
 }

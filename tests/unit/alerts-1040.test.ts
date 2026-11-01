@@ -237,7 +237,7 @@ test("보관 화면 — 메타 robots 가 머리(X-Robots-Tag)와 같은 noindex
     "app/town/library/page.tsx",
     "app/town/library/[id]/page.tsx",
     "app/town/prompt/[idx]/page.tsx",
-    "app/dev-deals/page.tsx",
+    "app/dev-deals/(index)/page.tsx",
     "app/dev-deals/[id]/page.tsx",
     "app/dev-deals/fees/page.tsx",
     "app/dev-deals/partners/page.tsx",

@@ -577,7 +577,9 @@ export function TalkPanel({
             onScroll={(e) => {
               if (fresh > 0 && e.currentTarget.scrollTop <= 40) setFresh(0);
             }}
-            className={`relative min-h-[160px] flex-1 overflow-y-auto ${feedMax}`}
+            /* [1091] min-h 160 은 뼈대(skeleton)가 보이는 동안만 — 글이 0건이면 "토론글 없음" 한 줄 아래 110px 이 비어 있었다(운영 실측 ·
+               단지 화면 폰). 빈 상태 · 실패 안내는 제 높이(py-8)로 선다 */
+            className={`relative flex-1 overflow-y-auto ${feedMax} ${feed.status !== "ok" || feed.regionId !== selectedId ? "min-h-[160px]" : ""}`}
           >
             {fresh > 0 && (
               <div className="sticky top-1.5 z-10 flex justify-center">

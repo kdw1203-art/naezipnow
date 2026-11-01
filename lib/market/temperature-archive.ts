@@ -153,6 +153,18 @@ export type TemperatureLatest = {
   previous: TemperatureSnapshot | null;
 };
 
+/* [1097 · 비용] 온도 지도 화면(클라이언트)이 실제로 읽는 네 값만 — 414개 기록 × 15개 필드가 RSC 로 실려 /analysis/temperature 한 장이
+   276KB(RSC 209KB)였다(로컬 실측). 화면 쪽 도우미(temp-map-model)는 이 모양만 요구하고, 전체 기록(TemperatureLatest)도 그대로 들어간다. */
+export type TemperaturePoint = Pick<TemperatureSnapshot, "regionId" | "regionLabel" | "score" | "headline">;
+export type TemperatureLatestSlim = {
+  current: TemperaturePoint;
+  previous: Pick<TemperatureSnapshot, "score"> | null;
+};
+export function slimTemperatureLatest(r: TemperatureLatest): TemperatureLatestSlim {
+  const { regionId, regionLabel, score, headline } = r.current;
+  return { current: { regionId, regionLabel, score, headline }, previous: r.previous ? { score: r.previous.score } : null };
+}
+
 export async function listLatestTemperatures(): Promise<{
   weekStart: string | null;
   rows: TemperatureLatest[];

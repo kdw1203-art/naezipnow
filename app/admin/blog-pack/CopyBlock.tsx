@@ -31,7 +31,7 @@ export function CopyBlock({
           }}
           className="rounded-lg bg-[#3182f6] px-3 py-1 text-[12px] font-bold text-white"
         >
-          {copied ? "복사됨 ✓" : "복사"}
+          {copied ? "복사했어요" : "복사"}
         </button>
       </div>
       <textarea

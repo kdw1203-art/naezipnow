@@ -3,7 +3,7 @@
    searchParams 안 읽음·FAQ(JSON-LD)·출처 줄(면책)은 그대로.
    [1023 · AI 분석] 머리 통일 — h1 t-display 손 마크업(.pxs-head) → 공용 PageHead(t-title). 본문은 그대로. */
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
 import { getAllRegionSnapshots } from "@/lib/market/store";
 import {
@@ -117,7 +117,8 @@ export default async function GapScreenerPage() {
   const measured = rows.filter((r) => r.measuredGap !== undefined).length;
 
   return (
-    <PageShell breadcrumb="분석 › 전세가율·갭" toolScope={personaVars(TOOL_PERSONAS["market:gap"])}>
+    <div className="tool-scope" style={personaVars(TOOL_PERSONAS["market:gap"])}>
+      <ShellBreadcrumb>분석 › 전세가율·갭</ShellBreadcrumb>
       {/* 머리 — 아이콘 칩 · 제목 · 사실 한 줄(정의·계산은 ⓘ) | 집계 지역 수 칩. [1023] 공용 PageHead(t-title) */}
       <PageHead
         icon="landmark"
@@ -150,8 +151,8 @@ export default async function GapScreenerPage() {
       {loadFailed ? (
         <div className="mt-3">
           <ErrorState
-            title="지역 시세 불러오기 실패"
-            desc="잠시 후 다시 시도해 주세요."
+            title="전세가율 불러오기 실패"
+            desc="잠시 후 다시"
           />
         </div>
       ) : rows.length === 0 ? (
@@ -218,6 +219,6 @@ export default async function GapScreenerPage() {
         );
       })()}
 
-    </PageShell>
+    </div>
   );
 }

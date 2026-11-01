@@ -237,9 +237,9 @@ test("[1027] 버튼 — 누르면 구독(기존 API) · 문구는 실제로 오�
     "app/analysis/timing/region-verdict.tsx",
     "app/analysis/ai/[tool]/ResultRail.tsx",
     "app/region/[id]/page.tsx",
-    "app/notes/[id]/page.tsx",
+    "app/notes/[id]/(index)/page.tsx",
   ]) {
     assert.doesNotMatch(code(p), /실거래 등록·지수 변동|시세 알림 받기/, p);
   }
-  assert.match(code("app/notes/[id]/page.tsx"), /로그인하고 실거래 알림 받기/);
+  assert.match(code("app/notes/[id]/(index)/page.tsx"), /로그인하고 실거래 알림 받기/);
 });

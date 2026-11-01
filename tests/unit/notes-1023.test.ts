@@ -183,7 +183,7 @@ test("[1023] 상세 — RelatedNotes 같은 단지 앞줄 · 댓글 재시도 ·
   const rel = code("app/notes/[id]/RelatedNotes.tsx");
   assert.ok(rel.includes("orderRelatedByApt(pool, currentApt)"));
   assert.ok(rel.includes('"같은 단지"') && rel.includes('"같은 지역"'));
-  const page = code("app/notes/[id]/page.tsx");
+  const page = code("app/notes/[id]/(index)/page.tsx");
   assert.ok(page.includes("aptName={realNote.aptName}"), "aptName 전달");
   assert.ok(page.includes("<CommentsRetry />"), "댓글 실패 자리 재시도");
   assert.ok(!page.includes("잠시 후 새로고침해 주세요"), "새로고침 권유문 없음");

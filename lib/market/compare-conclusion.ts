@@ -118,7 +118,11 @@ export const COMPARE_DECIDE_HREF = "/decide";
 export function compareActionLinks(ids: readonly string[]): ActionLink[] {
   const out: ActionLink[] = [];
   if (ids.length >= 2) {
-    out.push({ href: `/analysis/ai/ai-compare?ids=${encodeURIComponent(ids.slice(0, 3).join(","))}`, label: "AI 비교 해석" });
+    /* [1097] 비교함은 5곳 · AI 비교 도구는 3곳(AI-22) — 넷째부터는 조용히 빠졌다. 빠지는 수를 라벨에 적는다("앞 3곳") */
+    out.push({
+      href: `/analysis/ai/ai-compare?ids=${encodeURIComponent(ids.slice(0, 3).join(","))}`,
+      label: ids.length > 3 ? "AI 비교 해석 · 앞 3곳" : "AI 비교 해석",
+    });
   }
   out.push({ href: "/notifications", label: "알림 받기" }, { href: "/map", label: "지도에서 보기" });
   return out;

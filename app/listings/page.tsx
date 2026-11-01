@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "../components/PageShell";
+import { ShellBreadcrumb } from "@/app/components/PageShell";
 import { listApprovedListings } from "@/lib/listings/store-db";
 import { DISTRICTS } from "@/lib/regions";
 import { ListingCompareTray } from "@/components/ListingCompareTray";
@@ -56,7 +56,8 @@ export default async function ListingsPage() {
   const seoulGus = DISTRICTS["서울특별시"];
 
   return (
-    <PageShell breadcrumb="홈 › 실매물">
+    <>
+      <ShellBreadcrumb>홈 › 실매물</ShellBreadcrumb>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3 max-md:mb-3">
         <div>
           <h1 className="rise-in t-title font-bold text-ink">실매물</h1>
@@ -105,6 +106,6 @@ export default async function ListingsPage() {
       </div>
       {/* 수익 문구 미기재 방침(소유자 방침 2026-08-11) — 마켓 표면 공통 고지 */}
       <ComplianceNotice variant="market" className="mt-2" />
-    </PageShell>
+    </>
   );
 }

@@ -99,7 +99,7 @@ test("recentComplexCards: 빈 이름·중복 id 제거 · 상한 · href 는 규
 
 /* ── 화면 소스 규칙 ── */
 const VIEW = readFileSync(new URL("../../app/my/MyHubView.tsx", import.meta.url), "utf8");
-const PAGE = readFileSync(new URL("../../app/my/page.tsx", import.meta.url), "utf8");
+const PAGE = readFileSync(new URL("../../app/my/(index)/page.tsx", import.meta.url), "utf8");
 
 test("마이 화면에 포인트 '충전' 문구가 없다(적립·교환만)", () => {
   for (const src of [VIEW, PAGE]) {

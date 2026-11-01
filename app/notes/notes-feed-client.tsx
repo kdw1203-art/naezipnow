@@ -11,7 +11,6 @@ import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { matchesInterest } from "@/lib/notes/region-match";
-import { PageShell } from "../components/PageShell";
 import { PageHead } from "../components/PageHead";
 import { ExampleBadge } from "../components/ExampleBadge";
 import { EmptyState } from "@/app/components/ui/EmptyState";
@@ -1235,7 +1234,9 @@ export function NotesFeedClient({
   };
 
   return (
-    <PageShell>
+    /* [1093 · 개편] 셸(PageShell)은 app/notes/(index)/layout.tsx 한 벌 — 클라이언트 조각이 셸을 그리면 헤더 · 옆 메뉴 · 푸터가 클라이언트 번들에
+       들어가고 화면 안 이동 때 다시 그려졌다. 여기는 안쪽(3단 격자)만 */
+    <>
       {/* [1005] 안쪽 폭 1240 — 홈·PageShell 과 같은 컨테이너(예전 1120 은 이 화면만 좁았다). */}
       {/* [1016] 데스크톱(lg+)은 페이스북 3단 — 왼쪽 바로가기 240 · 가운데 피드(최대 640) · 오른쪽 최근 임장 300.
           폰·태블릿은 전과 같은 한 열(스토리 줄 + 격자/피드). */}
@@ -1560,7 +1561,11 @@ export function NotesFeedClient({
               />
             </div>
             {/* [1016] 게시물 피드 — 폰은 피드 보기일 때, md+ 는 데스크톱 보기가 피드일 때.
-                숨긴 사진은 lazy 라 내려받지 않는다(priority 는 격자 첫 칸이 맡는다). */}
+                숨긴 사진은 lazy 라 내려받지 않는다(priority 는 격자 첫 칸이 맡는다).
+                [1093 · 개편] 피드는 **골라야 그린다** — 세 보기(격자 · 표 · 피드)를 전부 HTML 에 그리고 CSS 로 숨기던 것이 공개 노트 허브 HTML 의
+                42%(카드 30장 · 168KB · 운영 실측)였다. 첫 화면 기본은 폰 격자 · 데스크톱 표라 SSR 에서 피드는 어차피 숨겨져 있었다(저장된 보기는
+                마운트 뒤 localStorage 에서 읽는다 — 수화 뒤에 그려지므로 불일치 없음). */}
+            {(view === "feed" || deskView === "feed") && (
             <div className={`flex-col gap-4 md:gap-4 ${view === "feed" ? "flex" : "hidden"} ${deskView === "feed" ? "md:flex" : "md:hidden"}`}>
               {mineGroups
                 ? /* [1023 · 임장노트 ①] 내 노트 — 같은 단지 2건 이상은 묶음 카드(접힘), 나머지는 낱장 */
@@ -1575,6 +1580,7 @@ export function NotesFeedClient({
                     <PostCard key={n.id} n={n} priority={view === "feed" && i === 0} />
                   ))}
             </div>
+            )}
           </>
         )}
 
@@ -1644,6 +1650,6 @@ export function NotesFeedClient({
       >
         <Icon name="plus" size={24} />
       </Link>
-    </PageShell>
+    </>
   );
 }

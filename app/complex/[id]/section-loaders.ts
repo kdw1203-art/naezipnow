@@ -7,7 +7,7 @@ import { getAreaBands, getRegionRelative } from "@/lib/complex/complex-store";
 import { getSupplyForAreaStrict } from "@/lib/market/supply";
 import { unstable_cache } from "next/cache";
 import { getServiceSupabase } from "@/lib/supabase/service";
-import { readRelatedTownPosts } from "@/lib/newui/board-posts";
+import { readRelatedTownPostsStale } from "@/lib/newui/board-posts";
 import { logger } from "@/lib/log";
 import { startDeadline, SectionBudgetExpiredError, type Deadline } from "@/lib/data/section-budget";
 /* [1015 · 규칙 H] 노트 목록 썸네일 — 홈·동네 피드·프로필과 같은 함수(고른 썸네일 → 첫 사진 → null) */
@@ -68,10 +68,13 @@ export const loadRegionRelative = cache((complexId: string) => getRegionRelative
       비해 너무 촘촘했다(키당 하루 4회 재생성 × 250키 = 하루 1,000건의 읽히지도 않는 쓰기).
    ③ 반대로 키가 단지별이라 재사용이 없는 캐시는 TTL 을 올려도 소용이 없다 — 그래서
       단지 축(live-complex-axes)은 [1007] 에 데이터 캐시에서 아예 뺐다(아래 loadAxisContext). */
+/* [1090 · 비용] "supply" 태그를 뗀다 — 입주물량 적재(매일)가 invalidateAfterIngest("supply") 로 이 태그를 비우면 단지 화면
+   2.4만 쪽이 날마다 통째로 비워졌다(1089 실측 · 태그 목록). 이 섹션(앞으로 입주 N세대)은 7일 안에(화면 수명) · 그 지역에 새
+   실거래가 들어오면 그때(cx-r 태그) 새로 읽힌다. 지역 화면(/region)의 입주 예정 물량은 제 캐시 · 경로 비움 그대로다. */
 const loadSupplyDataCached = unstable_cache(
   (area: string, city: string) => getSupplyForAreaStrict(area, 24, undefined, city || null),
-  ["upcoming-supply-v2"],
-  { revalidate: 604_800, tags: ["supply"] },
+  ["upcoming-supply-v3"],
+  { revalidate: 604_800 },
 );
 export const loadUpcomingSupply = cache((area: string, city: string) =>
   loadSupplyDataCached(area, city),
@@ -243,7 +246,8 @@ export interface HubNewsRow {
 
 async function readRelatedNews(name: string, region: string): Promise<HubNewsRow[]> {
   try {
-    const posts = await readRelatedTownPosts();
+    /* [1090] 태그 없는 판 — 뉴스 재검증 크론이 단지 화면 2.4만 쪽을 비우지 않게(lib/newui/board-posts 주석) */
+    const posts = await readRelatedTownPostsStale();
     const core = normalizeComplexName(name);
     // 지역명은 "서울 노원구" 처럼 붙어 오므로 토막으로 쪼개 각각 본다.
     const regionTokens = region

@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { authorProfileHref } from "@/lib/profile/author-href";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb, ShellNarrow } from "@/app/components/PageShell";
 import { ReportButton } from "@/app/components/ReportButton";
 import { CoverImage } from "@/app/components/CoverImage";
 import { AdZone } from "@/app/components/ads/AdZone";
@@ -209,7 +209,8 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
   }
 
   return (
-    <PageShell breadcrumb={`동네이야기 › 이야기 › ${region}`}>
+    <ShellNarrow>
+      <ShellBreadcrumb>{`동네이야기 › 이야기 › ${region}`}</ShellBreadcrumb>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -426,6 +427,6 @@ export default async function TownStoryPage({ params }: { params: Promise<{ id: 
           </div>
         </aside>
       </div>
-    </PageShell>
+    </ShellNarrow>
   );
 }

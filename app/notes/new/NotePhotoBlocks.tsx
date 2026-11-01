@@ -210,7 +210,7 @@ export function NotePhotoStrip({
                   isPlan ? "chip-active" : "border border-line bg-surface text-text-2"
                 }`}
               >
-                {isPlan ? "평면도 ✓" : "평면도로 표시"}
+                {isPlan ? "평면도로 표시됨" : "평면도로 표시"}
               </button>
             )}
           </li>

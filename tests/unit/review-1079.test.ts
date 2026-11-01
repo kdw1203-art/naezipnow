@@ -90,7 +90,7 @@ test("S5 폰 탭 — 손수 만든 알약 40px · 텍스트 단추 .tap-line · 
   const a = read("app/apply/ApplySearchClient.tsx");
   assert.match(a, /"press inline-flex min-h-10 items-center rounded-full bg-brand-navy px-3 py-1\.5 t-sub font-bold text-on-dark md:min-h-8"/);
   assert.match(a, /"press glass inline-flex min-h-10 items-center rounded-full px-3 py-1\.5 t-sub font-semibold text-text-2 md:min-h-8"/);
-  assert.match(read("app/apply/page.tsx"), /className="glass press inline-flex min-h-10 items-center rounded-full px-3\.5 py-2 t-sub font-bold text-primary no-underline md:min-h-8"/);
+  assert.match(read("app/apply/(index)/page.tsx"), /className="glass press inline-flex min-h-10 items-center rounded-full px-3\.5 py-2 t-sub font-bold text-primary no-underline md:min-h-8"/);
   const d = read("app/dev-deals/DevDealsListClient.tsx");
   assert.equal((d.match(/glass inline-flex min-h-10 items-center rounded-full px-3\.5 py-2 t-sub font-bold text-(text-1|primary) no-underline press md:min-h-8/g) ?? []).length, 2);
   const r = read("app/redevelopment/RedevelopmentMap.tsx");

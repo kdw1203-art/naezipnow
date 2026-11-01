@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { HScroll } from "@/app/components/HScroll";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { ShellBreadcrumb, ShellTitle } from "../../../../components/PageShell";
@@ -12,11 +11,11 @@ import {
   type TxRegionSummary,
 } from "@/lib/market/tx-bands";
 import { BAND_KIND_LABEL, isBandKind, type BandKind } from "@/lib/market/bands";
-import { formatKrwShort, formatYm, formatYmRange, m2ToPyeong } from "@/lib/market/format";
+import { formatKrwShort, formatYmRange, m2ToPyeong } from "@/lib/market/format";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
-import { complexHrefFromNames } from "@/lib/seo/complex-slug";
+import { BandComplexTable, type BandComplexWire } from "./BandComplexTable";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
@@ -234,48 +233,11 @@ export default async function TxBandPage({ params }: { params: Promise<Params> }
             이 구간 단지별 내역 없음
           </p>
         ) : (
-          <div data-tone="blue"><HScroll className="lq-panel mt-3 max-md:mt-2">
-            <table className="w-full min-w-[520px] text-left t-body">
-              <thead>
-                <tr className="border-b border-border t-sub text-text-3">
-                  <th className="py-2 font-medium">단지</th>
-                  <th className="py-2 text-right font-medium">전용</th>
-                  <th className="py-2 text-right font-medium">평균</th>
-                  <th className="py-2 text-right font-medium">최저~최고</th>
-                  <th className="py-2 text-right font-medium">거래</th>
-                  <th className="py-2 text-right font-medium">최근</th>
-                </tr>
-              </thead>
-              <tbody>
-                {complexes.map((c) => (
-                  <tr key={c.name} className="border-b border-border last:border-b-0">
-                    {/* [1074] 밑줄 파란 글자 40줄이 표를 덮었다 · 폰 세로 히트 16px — 밑줄은 손을 올렸을 때만, 폰은 이름 칸이 40px */}
-                    <td className="py-0.5 md:py-2.5">
-                      <Link
-                        href={complexHrefFromNames(region.name, c.name)}
-                        className="inline-flex min-h-[40px] items-center font-bold text-primary no-underline hover:underline md:min-h-0"
-                      >
-                        {c.name}
-                      </Link>
-                    </td>
-                    <td className="py-2.5 text-right t-sub tabular-nums text-text-3">
-                      {c.avgAreaM2 !== null ? `${c.avgAreaM2.toFixed(0)}㎡` : "—"}
-                    </td>
-                    <td className="py-2.5 text-right t-num font-bold text-ink">
-                      {formatKrwShort(c.avgKrw)}
-                    </td>
-                    <td className="py-2.5 text-right t-sub tabular-nums text-text-2">
-                      {formatKrwShort(c.minKrw)}~{formatKrwShort(c.maxKrw)}
-                    </td>
-                    <td className="py-2.5 text-right tabular-nums text-text-2">{c.txCount}건</td>
-                    <td className="py-2.5 text-right t-sub tabular-nums text-text-3">
-                      {formatYm(c.latestYm)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </HScroll></div>
+          /* [1092 · 비용] 표는 클라이언트 조각이 압축 행으로 그린다(BandComplexTable 머리 주석) */
+          <BandComplexTable
+            region={region.name}
+            rows={complexes.map((c) => [c.name, c.avgAreaM2, c.avgKrw, c.minKrw, c.maxKrw, c.txCount, c.latestYm] as BandComplexWire)}
+          />
         )}
       </section>
 

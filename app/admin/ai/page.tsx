@@ -199,7 +199,7 @@ export default async function AdminAiPage() {
               },
               {
                 label: "피드백(30일)",
-                value: `👍${stats.feedback.up} 👎${stats.feedback.down}`,
+                value: `좋아요 ${stats.feedback.up} · 싫어요 ${stats.feedback.down}`,
                 sub: "도구 심화 우선순위 근거",
               },
             ].map((k) => (

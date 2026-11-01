@@ -148,7 +148,7 @@ const PREF_GROUPS: {
         key: "pushWeeklyDigest",
         label: "주간 다이제스트",
         /* [1056 · A6] "저녁 · 기본 꺼짐" → 월요일 오후(15시쯤) · 기본 켜짐(DEFAULT_PREFS.pushWeeklyDigest=true) */
-        desc: "매주 월요일 15시경 · 최근 7일 뉴스·시세 요약 1회 (기본 켜짐)",
+        desc: "매주 월요일 15시경 · 최근 7일 뉴스·실거래 요약 1회 (기본 켜짐)",
       },
     ],
   },
@@ -243,7 +243,7 @@ function SmsAlertCard({
             관심단지 가격 변동 SMS 받기
           </span>
           <span className="block t-caption text-text-3">
-            시세 변동 시 문자 알림
+            새 실거래 신고 문자 알림
           </span>
         </span>
         <Toggle on={on} />
@@ -379,8 +379,12 @@ function GuestCard() {
 }
 
 /* ---------------- 알림 탭 ---------------- */
-function NotificationTab({ channels }: { channels: NotifyChannels }) {
-  const { prefs, phase, saveError, toggle } = usePrefs();
+/** [1097 · 성능] 알림 설정은 화면이 한 번만 읽는다(SettingsClient 의 usePrefs) — 전엔 탭마다 훅을 새로 만들어 탭을 오갈 때마다
+    /api/me/notification-prefs 를 다시 받았고, 알림 탭에서 끈 값이 개인정보 탭에선 옛 값으로 보일 수 있었다 */
+type PrefsApi = ReturnType<typeof usePrefs>;
+
+function NotificationTab({ channels, prefsApi }: { channels: NotifyChannels; prefsApi: PrefsApi }) {
+  const { prefs, phase, saveError, toggle } = prefsApi;
   const groups = PREF_GROUPS.filter((g) => channels[g.channel]);
 
   return (
@@ -406,7 +410,7 @@ function NotificationTab({ channels }: { channels: NotifyChannels }) {
       {phase === "guest" && <GuestCard />}
       {phase === "error" && (
         <div className="card rounded-2xl px-4 py-8 text-center t-body text-text-3">
-설정 불러오기 실패 · 새로고침 후 다시 시도해 주세요.
+설정 불러오기 실패 · 잠시 후 다시
         </div>
       )}
 
@@ -542,8 +546,8 @@ function usePrivacyConsents() {
   return { phase, marketing, location, updatedAt, saveError, patch };
 }
 
-function PrivacyTab() {
-  const { prefs, phase, saveError, setPref } = usePrefs();
+function PrivacyTab({ prefsApi }: { prefsApi: PrefsApi }) {
+  const { prefs, phase, saveError, setPref } = prefsApi;
   const consents = usePrivacyConsents();
   /* [1000] 표시는 동의 기록(consents.marketing) **하나만** 본다. 예전엔 `emailMarketing ||
      consents.marketing` 이라 한쪽만 켜져 있어도 켜진 것으로 그렸고, 끄려고 누르면 한쪽은
@@ -562,7 +566,7 @@ function PrivacyTab() {
           <div className="py-6 text-center t-body text-text-3">불러오는 중…</div>
         ) : phase === "error" || !prefs || consents.phase === "error" ? (
           <div className="py-6 text-center t-body text-text-3">
-불러오기 실패 · 새로고침 후 다시 시도해 주세요.
+동의 기록 불러오기 실패 · 잠시 후 다시
           </div>
         ) : (
           <>
@@ -747,7 +751,7 @@ function ProfileRows() {
         <div className="py-4 text-center t-sub text-text-3">프로필을 불러오는 중…</div>
       ) : phase === "error" || !profile ? (
         <div className="py-4 text-center t-sub text-text-3">
-프로필 불러오기 실패 · 새로고침 후 다시 시도해 주세요.
+프로필 불러오기 실패 · 잠시 후 다시
         </div>
       ) : (
         <>
@@ -887,7 +891,7 @@ function DeleteAccountSection() {
         void signOut({ callbackUrl: "/?bye=1" });
       }, 2500);
     } catch {
-      setError("네트워크 오류가 발생했습니다.");
+      setError("저장 실패 · 잠시 후 다시");
     } finally {
       setBusy(false);
     }
@@ -988,6 +992,7 @@ export function SettingsClient({ channels }: { channels: NotifyChannels }) {
      헤더 아바타와 같은 1회 호출(hasSession). 판정 전(null)엔 로그인 상태로 그려 깜빡임을
      줄이고, 게스트로 판명되면 계정 탭이 GuestCard 로 바뀐다. */
   const [guest, setGuest] = useState<boolean | null>(null);
+  const prefsApi = usePrefs();
   useEffect(() => {
     let dead = false;
     hasSession()
@@ -1027,8 +1032,8 @@ export function SettingsClient({ channels }: { channels: NotifyChannels }) {
             ) : (
               <RecordPrefsTab onGoNotification={() => setTab("notification")} />
             ))}
-          {tab === "notification" && <NotificationTab channels={channels} />}
-          {tab === "privacy" && <PrivacyTab />}
+          {tab === "notification" && <NotificationTab channels={channels} prefsApi={prefsApi} />}
+          {tab === "privacy" && <PrivacyTab prefsApi={prefsApi} />}
         </div>
       </div>
     </PageShell>

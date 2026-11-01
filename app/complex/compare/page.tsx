@@ -4,8 +4,9 @@ import { PageShell } from "../../components/PageShell";
 import { QaBlock } from "../../components/QaBlock";
 /* [1015 · 규칙 B] "조합을 고른 기준" 문단은 제목 옆 ⓘ 하나로(단지 상세와 같은 지연 청크) */
 import { ExplainLazy as Explain } from "../[id]/ExplainLazy";
+import { ComparePairTiles, type ComparePairWire } from "./ComparePairTiles";
+import { OpenDetailsOnHash } from "@/app/components/OpenDetailsOnHash";
 import {
-  complexPairPath,
   listComplexPairs,
   type ComplexPair,
 } from "@/lib/market/complex-pairs";
@@ -188,12 +189,14 @@ export default async function ComplexComparePage() {
       />
 
       {/* [1015 · 규칙 B·D] 기능 설명 문장은 걷고 사실 한 줄(숫자·출처·시점) + 기준은 ⓘ 하나 */}
-      <p className="rise-in mb-5 flex flex-wrap items-center gap-x-1 t-sub text-text-2 max-md:mb-3">
+      {/* [1096 · 디자인] 폰에서 두 절 사이 가운뎃점이 줄 끝(또는 줄 머리)에 홀로 남았다(로컬 실측 390px) — 두 절은 flex 항목이라 낱말처럼 꺾이지
+          않는다. 사이 가운뎃점을 빼고 간격(gap-x-3)으로 가른다: 한 줄이면 띄어서, 두 줄이면 줄마다 한 절. */}
+      <p className="rise-in mb-5 flex flex-wrap items-center gap-x-3 gap-y-0.5 t-sub text-text-2 max-md:mb-3">
         {pairs.length > 0 && (
           <span className="tabular-nums">
             {groups.length}개 지역 · {dongCount.toLocaleString("ko-KR")}개 동 · 단지{" "}
             {complexCount.toLocaleString("ko-KR")}개 · {pairs.length.toLocaleString("ko-KR")}개 조합
-            {lastYm && ` · ${lastYm} 신고분까지`} ·{" "}
+            {lastYm && ` · ${lastYm} 신고분까지`}
           </span>
         )}
         <span className="inline-flex items-center">
@@ -233,6 +236,8 @@ export default async function ComplexComparePage() {
               나머지는 접힌 <details>. 링크는 전부 HTML 에 그대로(검색 색인 동일). */}
           {/* [1074] 폰에서 63개 칩이 줄바꿈으로 쌓여 첫 화면(약 700px)을 다 덮었다 — 폰은 한 줄 가로 밀기(PC 는 그대로 줄바꿈).
               칩·순서·이동 대상은 그대로 */}
+          {/* [1096 · 고도화] 칩이 가리키는 지역이 접혀 있으면 펼친다(주소 #region-… · 해시 변경마다) */}
+          <OpenDetailsOnHash />
           <nav
             aria-label="지역 바로가기"
             className="scroll-x-hidden-bar flex gap-1.5 max-md:-mx-3.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3.5 md:flex-wrap"
@@ -264,27 +269,11 @@ export default async function ComplexComparePage() {
               <Link href={`/region/${group.regionId}`} className="mt-1 inline-flex min-h-[40px] items-center t-sub font-bold text-primary md:min-h-6">
                 {group.label} 지역 화면 ›
               </Link>
-              <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-                {group.pairs.map((pair) => (
-                  <Link
-                    key={complexPairPath(pair)}
-                    href={complexPairPath(pair)}
-                    className="tile rounded-lg border border-border px-3 py-2.5"
-                  >
-                    {/* [1005] body 는 keep-all — 띄어쓰기 없는 긴 단지명(예: 17자)은 못 꺾여
-                        390px 에서 화면을 35px 밀어냈다. 넘칠 때만 꺾는다(overflow-wrap). */}
-                    <span className="block break-words t-body font-bold text-ink">
-                      {pair.complexA}
-                      <span className="mx-1 t-sub font-medium text-text-3">vs</span>
-                      {pair.complexB}
-                    </span>
-                    <span className="mt-0.5 block t-sub text-text-3">
-                      {pair.dong} · 12개월 {pair.tradeCountA.toLocaleString("ko-KR")}건 vs{" "}
-                      {pair.tradeCountB.toLocaleString("ko-KR")}건
-                    </span>
-                  </Link>
-                ))}
-              </div>
+              {/* [1096 · 비용] 타일은 클라이언트 조각이 압축 행으로 그린다(ComparePairTiles 머리 주석) — 허브 한 장 1,842KB 의 대부분이 이 타일이었다 */}
+              <ComparePairTiles
+                regionId={group.regionId}
+                pairs={group.pairs.map((pair): ComparePairWire => [pair.complexA, pair.complexB, pair.dong, pair.tradeCountA, pair.tradeCountB])}
+              />
             </details>
           ))}
         </div>

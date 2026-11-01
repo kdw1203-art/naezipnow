@@ -52,7 +52,6 @@ export default function robots(): MetadataRoute.Robots {
           "/analysis/price",
           "/analysis/scenario",
           "/analysis/portfolio",
-          "/analysis/switch",
           // 기계용 엔드포인트 (OG 이미지는 위 allow 로 예외)
           "/api",
           // bot-only waste paths (31.8% of RUM, no index value)

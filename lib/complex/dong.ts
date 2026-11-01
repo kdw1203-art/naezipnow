@@ -133,13 +133,9 @@ export interface MonthCountLike {
 }
 
 /** YYYYMM 에서 n개월 앞의 YYYYMM (n=11 이면 12개월 창의 시작월) */
-export function shiftYm(ym: string, months: number): string {
-  const y = Number(ym.slice(0, 4));
-  const m = Number(ym.slice(4, 6)) - 1 + months;
-  const yy = y + Math.floor(m / 12);
-  const mm = ((m % 12) + 12) % 12;
-  return `${yy}${String(mm + 1).padStart(2, "0")}`;
-}
+/* [1097 · 통폐합] 본체는 lib/format/ym — 같은 이름으로 다시 내보낸다 */
+import { shiftYm } from "@/lib/format/ym";
+export { shiftYm };
 
 /**
  * 기준월(nowYm)로 끝나는 최근 `months`개월 창 안의 실거래 건수 합.

@@ -254,7 +254,7 @@ test("Y2 소스 — 한도 셈 · 요약 · 마이 표가 같은 기간 규칙�
   assert.match(view, /usagePeriodNote\(period, r\.resetsAt\)/);
   assert.match(view, /<span className="t-sub font-bold text-ink">사용량<\/span>/);
   assert.doesNotMatch(view, /"이번 달 사용량"/, "표 제목 하나로 세 줄의 기간을 말하지 않는다");
-  assert.match(code("app/my/page.tsx"), /\.\.\.\(i\.resetsAt \? \{ resetsAt: i\.resetsAt \} : \{\}\)/);
+  assert.match(code("app/my/(index)/page.tsx"), /\.\.\.\(i\.resetsAt \? \{ resetsAt: i\.resetsAt \} : \{\}\)/);
 });
 
 /* ── GROWTH ────────────────────────────────────────────────────────────── */

@@ -26,3 +26,21 @@ export function ymMonthsBefore(nowYm: string, n: number): string {
 export function ymDotLabel(ym: string): string {
   return /^\d{6}$/.test(ym) ? `${ym.slice(0, 4)}.${ym.slice(4, 6)}` : ym;
 }
+
+/* [1097 · 통폐합] 같은 yyyymm 셈이 lib·app 열 곳에 따로 적혀 있었다(shiftYm 5벌 · ymDot 3벌 · formatYmKo 2벌 · ymShort 2벌 · ymDotLabel 2벌).
+   본체는 여기 하나 — 예전 모듈은 같은 이름으로 다시 내보낸다(호출부 · 테스트 그대로). */
+
+/** ym ± n 개월 — 음수면 전. ymMonthsBefore(ym, n) === shiftYm(ym, -n) */
+export function shiftYm(ym: string, deltaMonths: number): string {
+  return ymMonthsBefore(ym, -deltaMonths);
+}
+
+/** "202609" → "2026년 9월" (형식이 아니면 그대로) */
+export function ymKoLabel(ym: string): string {
+  return /^\d{6}$/.test(ym) ? `${ym.slice(0, 4)}년 ${Number(ym.slice(4, 6))}월` : ym;
+}
+
+/** "202609" → "26.09" — 좁은 칸(달 변화 · 지역 개요) */
+export function ymShortLabel(ym: string): string {
+  return `${ym.slice(2, 4)}.${ym.slice(4, 6)}`;
+}

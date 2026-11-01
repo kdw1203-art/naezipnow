@@ -15,6 +15,9 @@ import {
   findCatalogRegionByName,
   normalizeRegionKey,
 } from "@/lib/region/catalog";
+import { molitRegionLabel } from "@/lib/market/molit-core";
+import { sidoShort } from "@/lib/onbid/region-summary";
+import { getAllSido, getSigunguBySido, getSigunguInfo, sidoShortLabel, type SigunguInfo } from "@/lib/national-data/region-codes";
 
 /** 광역 시/도 접두 — market_transactions.region_name 은 "서울 종로구"·"부산 해운대구" 꼴이다
  *  (lib/market/molit-transactions.ts molitRegionLabel). 세종은 구가 없어 단독 표기.
@@ -65,20 +68,61 @@ export function sidoOfRegionName(name: string): string | null {
   return null;
 }
 
+/* ── [1096 · 고도화] 실거래 표기 전수 → 시/도 ────────────────────────────────────────────────────────
+   카탈로그(lib/region/catalog)는 수도권·광역시 위주라 실거래 허브의 "그 밖의 지역"이 /tx 214곳 중 142곳(66% · 239,772건) ·
+   /dong 192곳 중 87곳이었다 — 김해시 · 천안 서북구 · 전주 완산구가 전부 한 묶음 끝에 몰렸다(로컬 실측 2026-10-31).
+   시군구 코드 표(lib/national-data/region-codes · 건축HUB 시군구코드)의 행마다 적재가 쓰는 표기 규칙 그대로(molitRegionLabel)
+   라벨을 만들고, 코드 앞 두 자리의 시도 행("41000" 경기도 · "12000" 전남광주통합특별시)에서 시/도를 읽는다 — 지어낸 매핑 없음.
+   같은 라벨이 두 시/도에 있으면(고성군 · 강원·경남) 모른다고 둔다(null). 카탈로그가 먼저(998 규칙 · 별칭 포함) · 못 찾을 때만
+   코드 표. 알림(lib/alerts/region-value)은 sidoOfRegionName 그대로 쓴다 — 구독 값 해석 규칙은 바꾸지 않는다. */
+let marketLabelSido: Map<string, string | null> | null = null;
+
+function sidoShortOfInfo(info: SigunguInfo): string {
+  const top = getSigunguInfo(`${info.sigunguCd.slice(0, 2)}000`);
+  const sido = top?.sido ?? info.sido;
+  /* 전남광주통합특별시(12) — 구는 "광주" · 시·군은 "전남"(region-codes sidoShortLabel · 실거래 표기와 같은 규칙) */
+  if (sido === "전남광주통합특별시") return sidoShortLabel({ sido, sigungu: info.sigungu });
+  return sidoShort(sido);
+}
+
+function buildMarketLabelSido(): Map<string, string | null> {
+  const map = new Map<string, string | null>();
+  for (const sido of getAllSido()) {
+    for (const info of getSigunguBySido(sido)) {
+      const label = molitRegionLabel(info);
+      const short = sidoShortOfInfo(info);
+      const prev = map.get(label);
+      if (prev === undefined) map.set(label, short);
+      else if (prev !== short) map.set(label, null);
+    }
+  }
+  return map;
+}
+
+/** 실거래 표기(market_transactions.region_name) → 시/도. 카탈로그 → 코드 표 순 · 둘 다 모르면 null */
+export function sidoOfMarketRegionName(name: string): string | null {
+  const cat = sidoOfRegionName(name);
+  if (cat) return cat;
+  if (!marketLabelSido) marketLabelSido = buildMarketLabelSido();
+  return marketLabelSido.get(name.trim()) ?? null;
+}
+
 export type SidoGroup<T> = { sido: string; items: T[] };
 
 /**
  * 시/도별 묶음 — 각 묶음 안의 순서는 입력 순서를 지키고(입력이 이미 거래 많은 순),
  * 묶음 순서는 `weightOf` 합이 큰 순. 시/도를 모르는 항목은 마지막 "그 밖의 지역".
+ * [1096] 넷째 인자로 해석기를 바꿀 수 있다 — 실거래 허브(/tx · /dong)는 sidoOfMarketRegionName.
  */
 export function groupBySido<T>(
   items: readonly T[],
   nameOf: (item: T) => string,
   weightOf: (item: T) => number = () => 1,
+  sidoOf: (name: string) => string | null = sidoOfRegionName,
 ): SidoGroup<T>[] {
   const map = new Map<string, { items: T[]; weight: number }>();
   for (const item of items) {
-    const sido = sidoOfRegionName(nameOf(item)) ?? OTHER_SIDO_LABEL;
+    const sido = sidoOf(nameOf(item)) ?? OTHER_SIDO_LABEL;
     const g = map.get(sido) ?? { items: [], weight: 0 };
     g.items.push(item);
     g.weight += weightOf(item);

@@ -7,7 +7,7 @@
  * 여기엔 **새 계산이 없다**: 색 구간은 눈금을 나누는 규칙이고, 통계(평균·최고·최저·오른 곳·내린 곳)는
  * 예전 page.tsx 가 히어로 KPI 로 내던 것을 주(week)마다 다시 낼 수 있게 함수로 옮긴 것이다.
  */
-import type { TemperatureLatest, TemperatureSnapshot } from "@/lib/market/temperature-archive";
+import type { TemperatureLatest, TemperatureLatestSlim, TemperatureSnapshot } from "@/lib/market/temperature-archive";
 import {
   KOREA_SIDO_TILES,
   regionCoord,
@@ -58,15 +58,15 @@ export type WeekStats = {
   count: number;
   /** 소수 첫째 자리 반올림 */
   avg: number | null;
-  hottest: TemperatureLatest | null;
-  coldest: TemperatureLatest | null;
+  hottest: TemperatureLatestSlim | null;
+  coldest: TemperatureLatestSlim | null;
   rising: number;
   falling: number;
   /** 직전 주 기록이 있어 비교가 되는 지역 수 */
   compared: number;
 };
 
-export function weekStats(rows: readonly TemperatureLatest[]): WeekStats {
+export function weekStats(rows: readonly TemperatureLatestSlim[]): WeekStats {
   const count = rows.length;
   const avg =
     count > 0 ? Math.round((rows.reduce((a, r) => a + r.current.score, 0) / count) * 10) / 10 : null;
@@ -87,7 +87,7 @@ export function sidoOfTemperatureLabel(label: string): string {
   return label.trim().split(/\s+/)[0] ?? "";
 }
 
-export function sidoOptions(rows: readonly TemperatureLatest[]): string[] {
+export function sidoOptions(rows: readonly TemperatureLatestSlim[]): string[] {
   const seen = new Map<string, number>();
   for (const r of rows) {
     const s = sidoOfTemperatureLabel(r.current.regionLabel);
@@ -129,8 +129,8 @@ export function matchWatchRegion<T extends { current: { regionLabel: string } }>
    기록 없는 시/도는 count 0 · avg null(회색 "기록 없음", 누를 수 없음). 칸 좌표는 lib/market/korea-tile-layout. */
 export type SidoTileView = SidoTile & { count: number; avg: number | null; band: TempBand | null };
 
-export function sidoTiles(rows: readonly TemperatureLatest[]): SidoTileView[] {
-  const by = new Map<string, TemperatureLatest[]>();
+export function sidoTiles(rows: readonly TemperatureLatestSlim[]): SidoTileView[] {
+  const by = new Map<string, TemperatureLatestSlim[]>();
   for (const r of rows) {
     const k = sidoKeyOfLabel(r.current.regionLabel);
     if (!k) continue;
@@ -146,7 +146,7 @@ export function sidoTiles(rows: readonly TemperatureLatest[]): SidoTileView[] {
 }
 
 /** 시/도 안 타일 배치 입력 — 기록 행에 카탈로그 좌표를 붙인다(없으면 null → 맨 뒤 칸). */
-export function layoutInputs(rows: readonly TemperatureLatest[]): LayoutInput[] {
+export function layoutInputs(rows: readonly TemperatureLatestSlim[]): LayoutInput[] {
   return rows.map((r) => {
     const c = regionCoord(r.current.regionId);
     return { id: r.current.regionId, lat: c?.lat ?? null, lng: c?.lng ?? null };

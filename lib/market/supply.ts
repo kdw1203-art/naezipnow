@@ -18,6 +18,9 @@ export type SupplyItem = {
   households: number | null;
 };
 
+/* [1092] 전송용 압축 행(toSupplyWire · fromSupplyWire)은 lib/market/supply-wire.ts — 클라이언트(SupplyClient)도 부르므로 server-only 밖 */
+export { toSupplyWire, fromSupplyWire, type SupplyItemWire } from "@/lib/market/supply-wire";
+
 export type SupplyMonthBucket = {
   ym: string;
   count: number;

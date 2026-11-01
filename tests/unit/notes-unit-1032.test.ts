@@ -221,7 +221,7 @@ test("NoteUnitPick — 실거래 타입은 /api/complex/[id]/trades 에서만 ·
 });
 
 test("노트 상세 — 임장한 타입·세부 기록 블록은 값이 있을 때만", () => {
-  const s = src("app/notes/[id]/page.tsx");
+  const s = src("app/notes/[id]/(index)/page.tsx");
   assert.match(s, /임장한 타입 · 세부 기록/);
   assert.match(s, /if \(!u && lines\.length === 0 && planN === 0\) return null;/);
 });

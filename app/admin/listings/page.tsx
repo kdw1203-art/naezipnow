@@ -140,7 +140,7 @@ export default async function AdminListingsPage() {
               {(l.isDuplicate || l.flagReason) && (
                 <div className="flex flex-wrap items-center gap-1.5 rounded-lg bg-[rgba(214,69,69,.08)] px-2.5 py-1.5">
                   <span className="rounded-lg bg-[rgba(214,69,69,.2)] chip-pad text-[10px] font-bold text-ai-danger">
-                    ⚠ 자동 플래그
+                    자동 플래그
                   </span>
                   <span className="text-[12px] font-bold text-[#ffb3b3]">
                     {l.flagReason ?? "중복 주소 의심"}

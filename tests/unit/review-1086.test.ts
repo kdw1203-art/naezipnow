@@ -201,7 +201,7 @@ test("A6 공개 노트 벽 — 하루 3편 · 하루 한 번 닫기 · 닫은 �
 /* ───────────────────────── A7 · A8 · A9 ───────────────────────── */
 
 test("A7 공개 노트 카카오톡 공유 — 공개일 때만 · 노트 상세 번들 밖(지연 청크)", () => {
-  const page = read("app/notes/[id]/page.tsx");
+  const page = read("app/notes/[id]/(index)/page.tsx");
   assert.match(page, /\{realNote\.isPublic && \(\s*<NoteKakaoShare/);
   assert.match(page, /utm_source=kakao&utm_medium=note/);
   assert.doesNotMatch(page, /from "@\/app\/components\/KakaoShareButton"/, "페이지가 직접 import 하지 않는다");

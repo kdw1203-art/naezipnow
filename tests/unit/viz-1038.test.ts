@@ -13,7 +13,7 @@ test("[1038] ScoreRing — 서버 SVG 링(토큰 클래스 · 값 없으면 호 
 });
 
 test("[1038 · 1·4·5·8·9·10] 노트 상세 — 링+레이더 · 점 3개 · 두 칸 카드 · 요약 링+칩 · 재방문 표 · 도보 막대", () => {
-  const page = read("app/notes/[id]/page.tsx");
+  const page = read("app/notes/[id]/(index)/page.tsx");
   assert.match(page, /radar: scoreEntries\.map/);
   assert.match(page, /avgScore: scored \? Math\.round\(avg \* 10\) \/ 10 : null/);
   assert.match(page, /radar=\{v\.radar\}/);

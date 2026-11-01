@@ -16,7 +16,7 @@
    페르소나 전제문(persona.premise)은 넣지 않는다(1015 규칙). 나머지 8종은 예전 머리 그대로. 캐시·메타·면책은 그대로. */
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
 import { ToolGlyph, WORKBENCH_GLYPH } from "../../ToolGlyph";
 import { WORKBENCH_ICONS } from "../../tool-catalog";
@@ -107,7 +107,8 @@ export default async function AiToolPage({
     : null;
 
   return (
-    <PageShell breadcrumb={`AI 분석 › ${identity.title}`}>
+    <>
+      <ShellBreadcrumb>{`AI 분석 › ${identity.title}`}</ShellBreadcrumb>
       <div
         /* [993] 880 → 1240: 데스크톱은 입력 좌·결과 우 2열이라 폭이 필요하다(계산기·시나리오와 동일)
            [1026 → 1026b] 12종 모두 도구 색을 걷는다(버튼·그래프·칩이 전역 파랑 하나) */
@@ -150,6 +151,6 @@ export default async function AiToolPage({
           자문이 아니며, 최종 판단과 책임은 이용자 본인에게 있습니다.
         </p>
       </div>
-    </PageShell>
+    </>
   );
 }

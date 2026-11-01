@@ -280,7 +280,7 @@ test("buildFieldBrief — 평 설정이면 ㎡당 매매를 평당으로 환산�
 /* ── 상세 ──────────────────────────────────────────────────────────── */
 
 test("상세 — 회차 줄은 링크, 라이트박스는 지연 로드 + 포커스 트랩", () => {
-  const page = readFileSync("app/notes/[id]/page.tsx", "utf8");
+  const page = readFileSync("app/notes/[id]/(index)/page.tsx", "utf8");
   assert.ok(page.includes("href={`/notes/${visit.id}`}"), "다른 회차로 가는 링크");
   assert.ok(page.includes("bandLabelPyeong: areaBandLabels("), "평 표기를 같이 넘긴다");
   const carousel = readFileSync("app/notes/[id]/NotePhotoCarousel.tsx", "utf8");

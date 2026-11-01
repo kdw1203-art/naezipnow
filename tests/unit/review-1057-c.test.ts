@@ -104,8 +104,8 @@ test("C1 라우트·DB — author_email `.in` · is_public · created_at+id 정�
 
 /* ---------- C2 /my 섹션 ---------- */
 test("C2 /my — FollowedAuthorsNotes(서버 컴포넌트) · 5줄 · 세 상태 문구 · CTA 없음", () => {
-  const page = strip(read("app/my/page.tsx"));
-  assert.match(page, /import \{ FollowedAuthorsNotes \} from "\.\/FollowedAuthorsNotes"/);
+  const page = strip(read("app/my/(index)/page.tsx"));
+  assert.match(page, /import \{ FollowedAuthorsNotes \} from "\.\.\/FollowedAuthorsNotes"/); // [1092] (index) 그룹
   assert.match(page, /<FollowedAuthorsNotes email=\{email\} \/>/);
   const sec = read("app/my/FollowedAuthorsNotes.tsx");
   assert.doesNotMatch(sec, /"use client"/, "서버 컴포넌트");

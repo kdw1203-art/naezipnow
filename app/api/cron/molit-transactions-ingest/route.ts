@@ -16,7 +16,8 @@
  */
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
-import { complexRegionTagsFor } from "@/lib/complex/region-tag";
+import { complexInvalidationTagsFor } from "@/lib/complex/region-tag";
+import { complexPairPath, listComplexPairs } from "@/lib/market/complex-pairs";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { ingestMolitTransactions, type MolitIngestResult } from "@/lib/market/molit-transactions";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
@@ -128,7 +129,7 @@ async function handle(req: Request) {
   let touchedStats: { revalidated: number } = { revalidated: 0 };
   if (run.value.inserted > 0) {
     invalidateAfterIngest("molit");
-    touchedStats = invalidateTouchedComplexes(run.value);
+    touchedStats = await invalidateTouchedComplexes(run.value);
   }
 
   /* 응답에는 **개수만** 싣는다 — touchedComplexes 는 최대 2,000개라 그대로 실으면
@@ -157,7 +158,7 @@ async function handle(req: Request) {
  *
  * 재검증 실패가 적재 결과를 되돌리면 안 된다 — 헬퍼가 이미 예외를 삼키지만 호출도 감싼다.
  */
-function invalidateTouchedComplexes(result: MolitIngestResult): { revalidated: number } {
+async function invalidateTouchedComplexes(result: MolitIngestResult): Promise<{ revalidated: number }> {
   try {
     const ids: string[] = [];
     const txPaths: string[] = [];
@@ -171,9 +172,16 @@ function invalidateTouchedComplexes(result: MolitIngestResult): { revalidated: n
        2,000 = 단지 500곳 × 4경로 — 슬라이스 하나(시군구 16곳)의 상당 부분을 덮으면서
        revalidatePath 호출 수가 네 자리 초반에 머문다. 남는 몫은 7일 TTL 이 받는다. */
     const stats = invalidateComplexIds(ids, { budget: 2_000 });
-    /* [1089] 위 상한(단지 500곳)을 넘는 날에도 빠뜨리지 않게 — 이번 적재가 건드린 **지역**의 단지 화면을 태그로 비운다
-       (단지 화면이 렌더 때 붙이는 실거래 지역 태그 · lib/complex/region-tag). 하루 수십 지역 = revalidateTag 수십 번. */
-    for (const tag of complexRegionTagsFor(result.touchedComplexes)) revalidateTag(tag);
+    /* [1089] 위 상한(단지 500곳)을 넘는 날에도 빠뜨리지 않게 — 이번 적재가 건드린 지역의 단지 화면을 태그로 비운다.
+       [1091] 두 가지를 좁혔다. (1) 태그는 **id 비움이 상한에 걸린 날에만** — 바뀐 단지가 전부 경로로 비워진 날에 지역까지 비우면
+       바뀌지 않은 단지 수천 쪽을 괜히 다시 만든다(운영 실측 10/18~23: 바뀐 단지 58~3,224곳/일 · 상한 500곳 안인 날이 절반).
+       (2) 비울 때도 지역 전체가 아니라 **지역 안 묶음**(단지 이름 해시 32묶음)만 — 묶음이 1,000개를 넘는 날은 지역 태그로
+       물러선다(lib/complex/region-tag complexInvalidationTagsFor). 건드린 단지 자체도 1091 부터 "바뀐 행이 있는 단지"뿐이다. */
+    if (stats.truncated || result.touchedTruncated) {
+      const inv = complexInvalidationTagsFor(result.touchedComplexes);
+      for (const tag of inv.tags) revalidateTag(tag);
+      logger.info(`[molit-ingest] 단지 화면 태그 비움 — ${inv.mode} ${inv.tags.length}개`);
+    }
     invalidatePathList(txPaths, { budget: 1_000, label: "complex-tx" });
     /* [1010 · 동네축] 지역 임장 가이드(/imjang/{slug})와 그 인덱스(/imjang)도 이 실거래만으로
        그려진다(lib/imjang/guide.ts) — SOURCE_MAP.molit 에는 없던 자리다. 이 두 화면의 TTL 을
@@ -181,7 +189,10 @@ function invalidateTouchedComplexes(result: MolitIngestResult): { revalidated: n
        /tx/{slug} 와 같은 한 줄(regionToSlug)이라 지역 표기를 그대로 넘긴다. */
     invalidateImjangForTxRegions(result.touchedComplexes.map((c) => c.region));
     revalidatePath("/complex/compare");
-    revalidatePath("/complex/compare/[slug]", "page");
+    /* [1093 · 비용] 비교 조합 화면(1,119쪽)을 적재마다 라우트 단위로 통째 비우던 것 → **바뀐 단지가 낀 조합만**. 1091 부터 "건드린 단지"가
+       실제로 바뀐 행의 단지뿐이라 가능해졌다. 조합 목록(complex_pair_source · 1,119행 · 이름 두 개)을 한 번 읽어 고른다 —
+       목록을 못 읽거나 건드린 단지가 상한에 잘린 날은 예전처럼 라우트 단위로 비운다(빠뜨리지 않는다). */
+    await invalidateTouchedPairs(result);
     if (stats.truncated || result.touchedTruncated) {
       logger.warn(
         "[molit-tx] 단지 무효화 일부 생략 — 남은 단지는 TTL(7일)로 처리",
@@ -193,6 +204,29 @@ function invalidateTouchedComplexes(result: MolitIngestResult): { revalidated: n
   } catch (e) {
     logger.warn("[molit-tx] 단지 재검증 실패(무시) — 적재 결과는 그대로", e);
     return { revalidated: 0 };
+  }
+}
+
+/** [1093] 바뀐 단지가 낀 비교 조합만 비운다. 조합 키 = 지역 이름 + 단지 이름(실거래 표기 · 둘 다 같은 원천). */
+async function invalidateTouchedPairs(result: MolitIngestResult): Promise<void> {
+  const fallback = () => revalidatePath("/complex/compare/[slug]", "page");
+  if (result.touchedTruncated || result.touchedComplexes.length === 0) {
+    fallback();
+    return;
+  }
+  try {
+    const key = (region: string, name: string) => `${region.trim()}\u0001${name.trim()}`;
+    const touched = new Set(result.touchedComplexes.map((c) => key(c.region, c.name)));
+    const pairs = await listComplexPairs();
+    const paths = pairs
+      .filter((p) => touched.has(key(p.regionName, p.complexA)) || touched.has(key(p.regionName, p.complexB)))
+      .map(complexPairPath);
+    const stats = invalidatePathList(paths, { budget: 600, label: "complex-pair" });
+    if (stats.truncated) fallback();
+    logger.info(`[molit-ingest] 비교 조합 비움 — ${paths.length}/${pairs.length}쪽${stats.truncated ? " (상한 → 라우트 단위)" : ""}`);
+  } catch (e) {
+    logger.warn("[molit-tx] 비교 조합 목록 읽기 실패 — 라우트 단위로 비운다", e);
+    fallback();
   }
 }
 

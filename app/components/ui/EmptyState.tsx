@@ -205,7 +205,7 @@ export type ErrorStateProps = {
  * 실패를 "데이터 없음"으로 표시하거나 목업으로 덮으면 사실이 아닌 화면이 됩니다.
  */
 export function ErrorState({
-  title = "지금은 불러올 수 없어요",
+  title = "불러오기 실패 · 잠시 후 다시",
   desc,
   cause,
   action,

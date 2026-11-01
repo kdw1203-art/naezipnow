@@ -41,6 +41,16 @@ export function ScopeBar({
           {where}
         </span>
       )}
+      {/* [1094 · 기능] 동 범위면 법정동 실거래 화면(/dong · 1083)으로 — 범위 검색은 단지 목록, 이쪽은 그 동의 월별 · 면적대별 · 단지별 집계 */}
+      {intent.scope?.href && (
+        <Link
+          href={intent.scope.href}
+          prefetch={false}
+          className="inline-flex min-h-[40px] items-center rounded-full border border-line px-2.5 t-caption font-bold text-ink no-underline hover:border-primary hover:text-primary md:min-h-[24px]"
+        >
+          {intent.scope.label.split(" ").at(-1)} 실거래 ›
+        </Link>
+      )}
       {intent.chips.map((c) => (
         <span key={`${c.key}-${c.token}`} className={chip}>
           {c.label}

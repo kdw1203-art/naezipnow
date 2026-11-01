@@ -157,6 +157,14 @@ if (exists("app/og-image/route.tsx") || exists("app/og-image/page.tsx")) {
       .readdirSync(parentDir)
       .some((name) => /^\[[^\]]+\]$/.test(name) && exists(`app/${parts.slice(0, -1).join("/")}/${name}/page.tsx`));
   };
+  /* [1093] 라우트 그룹 — app/notes/(index)/page.tsx 처럼 셸 레이아웃 · 스켈레톤 범위를 좁히려 (index) 그룹에 둔 화면은 주소가 같다 */
+  const servedByGroup = (seg) => {
+    const dir = path.join(ROOT, "app", seg);
+    if (!fs.existsSync(dir)) return false;
+    return fs
+      .readdirSync(dir, { withFileTypes: true })
+      .some((d) => d.isDirectory() && d.name.startsWith("(") && exists(`app/${seg}/${d.name}/page.tsx`));
+  };
   const missing = paths.filter((p) => {
     if (p === "/") return !exists("app/page.tsx");
     const seg = p.replace(/^\//, "");
@@ -164,6 +172,7 @@ if (exists("app/og-image/route.tsx") || exists("app/og-image/page.tsx")) {
       !exists(`app/${seg}/page.tsx`) &&
       !exists(`app/${seg}/route.ts`) &&
       !exists(`app/${seg}/route.tsx`) &&
+      !servedByGroup(seg) &&
       !servedByDynamic(seg)
     );
   });
@@ -260,23 +269,29 @@ if (read("app/layout.tsx").includes("#main-content")) {
   fail("접근성", "Skip link");
 }
 
-// ── 접근성/체감 — 무거운 동적 라우트 스켈레톤 회귀 게이트 (고도화 42) ──
-// 이 4개 라우트는 DB 곁다리 조회 예산(최대 8초) 동안 loading.tsx 가 없으면
-// 흰 화면이 된다. 한 번 지워지면 아무 테스트도 안 깨지는 종류의 회귀라 여기서 잡는다.
+// ── 색인 — 공개 ISR 화면에 loading 경계가 없다 (고도화 42 의 반대 · [1081] → [1093]) ──
+// 예전(고도화 42)에는 무거운 라우트의 loading.tsx 를 "흰 화면 방지"로 지켰다. 운영 실측(1081 지역 상세 · 1093 단지 화면): loading 경계가
+// 있으면 ISR 첫 렌더가 스트리밍되거나 본문이 12.8KB 를 넘을 때 React 가 본문을 숨은 청크(<div hidden> + $RC)로 내보내, JS 를 돌리지 않는
+// 크롤러 · AI 검색 봇이 셸만 읽는다(단지 화면 2.4만 쪽의 본문 전부). 이동 중 "눌렸다" 표시는 NavigationProgress 막대가 맡는다.
 {
-  /* [1081] 지역 상세(app/region/[id])는 스켈레톤을 뺐다 — ISR(7일) 첫 렌더가 스트리밍되면 본문이 숨은 청크(<div hidden>)로
-     나가 JS 를 돌리지 않는 크롤러(네이버 일부·AI 봇)가 골격만 보고, 없는 달 리포트의 notFound 가 200 으로 나갔다(소프트 404). */
-  const heavyRoutes = [
+  const inlineRoutes = [
     "app/complex/[id]/loading.tsx",
-    "app/map/loading.tsx",
     "app/tx/[region]/loading.tsx",
+    "app/town/loading.tsx",
+    "app/town/news/(index)/loading.tsx",
+    "app/analysis/loading.tsx",
+    "app/notes/(index)/loading.tsx",
+    "app/region/[id]/loading.tsx",
   ];
-  const missing = heavyRoutes.filter((p) => !exists(p));
-  if (missing.length === 0) {
-    pass("접근성", "Heavy-route skeletons (loading.tsx)", `${heavyRoutes.length}개 확인`);
+  const present = inlineRoutes.filter((p) => exists(p));
+  if (present.length === 0) {
+    pass("색인", "ISR 화면 본문 인라인(loading 경계 없음)", `${inlineRoutes.length}개 확인`);
   } else {
-    fail("접근성", "Heavy-route skeletons (loading.tsx)", `누락: ${missing.join(", ")}`);
+    fail("색인", "ISR 화면 본문 인라인(loading 경계 없음)", `loading.tsx 가 돌아옴: ${present.join(", ")}`);
   }
+  /* 지도는 클라이언트 지도라 색인 본문이 없다 — 스켈레톤(셸)을 그대로 둔다 */
+  if (exists("app/map/loading.tsx")) pass("접근성", "지도 스켈레톤(loading.tsx)");
+  else fail("접근성", "지도 스켈레톤(loading.tsx)", "app/map/loading.tsx 누락");
 }
 
 // ── 결제 — 토스 전 구간 배선 게이트 (2026-08-03) ──────────────

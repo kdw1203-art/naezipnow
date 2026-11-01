@@ -45,7 +45,7 @@ function stripComments(src: string): string {
 /* ───────────── 1) 지역 칩 재료 ───────────── */
 
 test("[1012] 노트 상세 — 이모지 배지·축 아이콘이 선 아이콘 이름·글자로, 현장 인증은 사실 명사 배지", () => {
-  const src = stripComments(read("app/notes/[id]/page.tsx"));
+  const src = stripComments(read("app/notes/[id]/(index)/page.tsx"));
   assert.ok(!/[📷📍🔊🚇]/u.test(src), "상세 페이지 UI 문자열에 이모지 없음");
   /* [v4 · 규칙 7] 축 앞 장식 아이콘까지 걷었다 — 이름 + 상/중/하 글자만(아이콘은 조작 버튼에만) */
   /* [1014] 축 앞 선 아이콘(icon: "sun"·"train" — Icon.tsx 이름)은 개편 전 모습 그대로 둔다 */

@@ -27,6 +27,8 @@ const NAV_GROUPS: Array<{ title: string; items: NavItem[]; defaultOpen: boolean 
       { href: "/admin/search", label: "검색 유입" },
       { href: "/admin/freshness", label: "데이터 신선도" },
       { href: "/admin/moderation", label: "신고 · 모더레이션" },
+      /* [1097] 22개 화면 중 유일하게 메뉴에 없던 매일 큐(검수 대기 · 신고 3건 숨김 · 소유 확인) — 대시보드 단추로만 닿았다 */
+      { href: "/admin/listings", label: "매물 검수" },
       { href: "/admin/ops", label: "운영 · 공지" },
       { href: "/admin/support", label: "고객 문의" },
     ],

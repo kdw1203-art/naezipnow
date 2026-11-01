@@ -125,7 +125,7 @@ export function NoteAudioTools({
                 }}
                 className="ml-2 t-sub font-bold text-primary"
               >
-                {copied && copiedUrl === u ? "복사됨 ✓" : "복사"}
+                {copied && copiedUrl === u ? "복사했어요" : "복사"}
               </button>
               <span className="ml-1 t-caption text-text-3">
                 · 음성 메모 {i + 1} · 노트 수정의 메모에 붙여넣기

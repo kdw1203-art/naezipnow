@@ -11,6 +11,12 @@ import { formatKstMeetingTime } from "@/lib/format/kst";
 
 export const dynamic = "force-dynamic";
 
+/* [1090] 동네이야기 셸이 레이아웃(app/town/layout.tsx)으로 올라갔다 — 이 화면은 셸 없는 전용 화면(h-dvh 채팅)이라
+   셸 위에 **고정 판**으로 선다(헤더 · 탭바 z-50 위 · 바탕은 화면 토큰). 안쪽 마크업 · 흐름(없음 · 로그인 안내 · 채팅방)은 그대로다. */
+function ChatScreen({ children }: { children: React.ReactNode }) {
+  return <div className="fixed inset-0 z-[60] overflow-y-auto bg-bg">{children}</div>;
+}
+
 /* 비공개 모임 채팅방 — 참여자만 접근하는 화면이라 색인 금지. */
 export const metadata = { robots: { index: false, follow: false } };
 
@@ -35,8 +41,9 @@ export default async function TownGroupChatPage({
 
   if (!meeting) {
     return (
+      <ChatScreen>
       <div className="mx-auto flex h-dvh w-full max-w-[480px] flex-col items-center justify-center gap-3 bg-bg px-6 text-center">
-        <div className="t-title font-bold text-ink">모임을 찾을 수 없어요</div>
+        <div className="t-title font-bold text-ink">모임 없음</div>
         <p className="t-body leading-[1.6] text-text-2">
           삭제되었거나 잘못된 링크일 수 있어요.
         </p>
@@ -47,6 +54,7 @@ export default async function TownGroupChatPage({
           모임 목록으로
         </Link>
       </div>
+      </ChatScreen>
     );
   }
 
@@ -61,6 +69,7 @@ export default async function TownGroupChatPage({
 
   if (!myEmail) {
     return (
+      <ChatScreen>
       <div className="mx-auto flex h-dvh w-full max-w-[480px] flex-col bg-bg">
         <div className="glass mx-3.5 mt-3.5 flex items-center gap-2.5 rounded-2xl px-3.5 py-2.5">
           <Link href={`/town/groups/${id}`} aria-label="뒤로" className="t-body text-text-1">
@@ -89,6 +98,7 @@ export default async function TownGroupChatPage({
           </Link>
         </div>
       </div>
+      </ChatScreen>
     );
   }
 
@@ -96,11 +106,13 @@ export default async function TownGroupChatPage({
     /* myEmail 을 더는 내리지 않는다 — "내 메시지" 판별은 서버가 isMine/isSelf 로
        해서 내려준다(가명 계약). 클라이언트 번들에 이메일 비교 로직이 없어야
        원본 이메일을 내려보낼 이유도 다시 생기지 않는다. */
-    <ChatRoom
-      groupId={id}
-      title={meeting.title}
-      metaLine={metaLine}
-      memberCount={meeting.currentMembers}
-    />
+    <ChatScreen>
+      <ChatRoom
+        groupId={id}
+        title={meeting.title}
+        metaLine={metaLine}
+        memberCount={meeting.currentMembers}
+      />
+    </ChatScreen>
   );
 }

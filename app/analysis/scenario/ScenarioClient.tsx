@@ -15,7 +15,7 @@ import { StepLine } from "@/app/components/StepLine";
 import { PageHead } from "@/app/components/PageHead";
 import { Icon } from "@/app/components/Icon";
 import { MobilePrimaryBar } from "@/app/components/MobilePrimaryBar";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb } from "../../components/PageShell";
 import { SimulationNotice } from "../../components/ExampleBadge";
 import type { PickedComplex } from "../ComplexPicker";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
@@ -280,7 +280,8 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
   );
 
   return (
-    <PageShell breadcrumb="분석 › 시장·대출 시나리오">
+    <>
+      <ShellBreadcrumb>분석 › 시장·대출 시나리오</ShellBreadcrumb>
       <div className="nz-dot-blue mx-auto w-full max-w-[1200px]">
         <PageHead
           icon="calculator"
@@ -293,7 +294,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
               onClick={copyShareLink}
               className="press min-h-[40px] rounded-lg border border-line-strong bg-surface px-3 py-1.5 t-sub font-bold text-text-1"
             >
-              {shareCopied ? "링크 복사됨 ✓" : "이 조건 공유"}
+              {shareCopied ? "링크 복사했어요" : "이 조건 공유"}
             </button>
           }
         />
@@ -392,6 +393,6 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
         {/* [1026b] 폰 하단 바 — 레일의 채움 파랑과 같은 요소(화면에 한 번) */}
         <MobilePrimaryBar label={SCENARIO_PRIMARY.label}>{primary}</MobilePrimaryBar>
       </div>
-    </PageShell>
+    </>
   );
 }

@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb } from "@/app/components/PageShell";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { cleanAiMarkdown } from "@/lib/ai/ai-tail";
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
@@ -104,7 +104,8 @@ export default async function SharedRunPage({
   const external = Boolean(run.source && run.source !== "internal" && run.source !== "stub");
 
   return (
-    <PageShell breadcrumb={`${identity.title} 공유`}>
+    <>
+      <ShellBreadcrumb>{`${identity.title} 공유`}</ShellBreadcrumb>
       <div className="mx-auto flex w-full max-w-[760px] flex-col gap-3">
         <div className="rise-in">
           <div className="t-sub font-bold text-text-3">
@@ -174,6 +175,6 @@ export default async function SharedRunPage({
           지금 자료로 다시 계산 ›
         </Link>
       </div>
-    </PageShell>
+    </>
   );
 }

@@ -2,14 +2,14 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 
 import { Fineprint } from "@/app/components/Fineprint";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "@/app/components/IntentLink";
 import nextDynamic from "next/dynamic";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { Icon } from "@/app/components/Icon";
-import type { HubTrade } from "@/lib/complex/hub-trades";
+import { fromHubTradeWire, type HubTrade, type HubTradeWire } from "@/lib/complex/hub-trades";
 import type { DealTuple } from "@/lib/complex/hub-price";
 import { TradeRow } from "./TradeRow";
 import type { MonthDeltaView } from "@/lib/complex/month-delta";
@@ -395,7 +395,7 @@ export function ComplexHubTabs({
   aiTitle,
   aiBody,
   listingsLabel,
-  trades,
+  tradesWire,
   notes,
   notesFailed = false,
   notesWriteHref,
@@ -416,7 +416,8 @@ export function ComplexHubTabs({
   aiTitle: string;
   aiBody: string;
   listingsLabel: string;
-  trades: HubTrade[];
+  /** [1091] 월별 집계의 압축 행 — 여기서 HubTrade[] 로 편다(표기 · 전월비 계산은 lib/complex/hub-trades 그대로) */
+  tradesWire: HubTradeWire[];
   notes: HubNote[];
   /** 조회 자체가 실패했는지 — "아직 없어요"와 "지금 못 불러왔어요"는 다른 말이다. */
   notesFailed?: boolean;
@@ -450,6 +451,7 @@ export function ComplexHubTabs({
   summaryDeals?: boolean;
 }) {
   /* [1036 · 밀도] 요약 글 = 첫 문장 + 나머지(접힘). 문장 경계는 첫 ". "(마침표 + 공백 — "9.9억" 같은 소수점은 공백이 없다) */
+  const trades: HubTrade[] = useMemo(() => fromHubTradeWire(tradesWire), [tradesWire]);
   const aiCut = aiBody.indexOf(". ");
   const aiLead = aiCut > 0 ? aiBody.slice(0, aiCut + 1) : aiBody;
   const aiRest = aiCut > 0 ? aiBody.slice(aiCut + 1).trim() : "";

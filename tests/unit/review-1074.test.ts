@@ -22,12 +22,13 @@ test("P1 단지 비교 — 폰 한 줄 가로 밀기 · PC 줄바꿈 · 지역 �
 });
 
 test("P2 실거래 구간 — 이름 밑줄 없음(손 올리면) · 폰 40px · 지역 칸 이름 한 줄", () => {
-  const band = read("app/tx/[region]/[kind]/[band]/page.tsx");
-  assert.match(band, /<td className="py-0\.5 md:py-2\.5">\s*<Link\s+href=\{complexHrefFromNames\(region\.name, c\.name\)\}\s+className="inline-flex min-h-\[40px\] items-center font-bold text-primary no-underline hover:underline md:min-h-0"/);
+  /* [1092] 표는 클라이언트 조각(BandComplexTable · 압축 행) — 같은 마크업 */
+  const band = read("app/tx/[region]/[kind]/[band]/BandComplexTable.tsx");
+  assert.match(band, /<td className="py-0\.5 pr-3 md:py-2\.5">\s*<Link\s+href=\{complexHrefFromNames\(region, name\)\}\s+className="inline-flex max-w-\[46vw\] min-h-\[40px\] items-center whitespace-normal break-keep font-bold text-primary no-underline hover:underline md:min-h-0 md:max-w-none"/);
   assert.doesNotMatch(band, /className="font-bold text-primary underline"/);
   const region = read("app/tx/[region]/page.tsx");
   assert.match(region, /className="inline-flex min-h-\[40px\] items-center font-bold text-primary no-underline hover:underline md:min-h-6"/);
-  const idx = read("app/tx/page.tsx");
+  const idx = read("app/tx/TxRegionGroups.tsx"); // [1092] 지역 칸은 클라이언트 조각
   assert.match(idx, /flex min-w-0 items-baseline justify-between gap-3 sm:flex-col sm:items-start sm:justify-start sm:gap-0\.5/);
 });
 

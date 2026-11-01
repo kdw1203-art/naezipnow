@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import Link from "@/app/components/IntentLink";
 import { cache } from "react";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb } from "../../components/PageShell";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
 import { QaBlock } from "../../components/QaBlock";
 import { CitationBlock } from "../../components/CitationBlock";
@@ -12,8 +12,7 @@ import {
   listTemperaturesForWeek,
   shiftWeeks,
   type TemperatureLatest,
-  type TemperatureSnapshot,
-} from "@/lib/market/temperature-archive";
+  type TemperatureSnapshot, slimTemperatureLatest } from "@/lib/market/temperature-archive";
 import { formatWeekKorean } from "@/lib/market/temperature";
 import { breadcrumbJsonLd, jsonLdScript, type FaqItem } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
@@ -25,6 +24,8 @@ import { logger } from "@/lib/log";
 import { weekSlots } from "./week-slots";
 import { pairWeeks } from "./temp-map-model";
 import { TempMapClient, type HistoryView, type WeekView } from "./TempMapClient";
+/** 서버 쪽 주 묶음은 전체 기록(TemperatureLatest) — 화면에는 slimTemperatureLatest 로 줄여 넘긴다 */
+type WeekViewFull = Omit<WeekView, "rows"> & { rows: TemperatureLatest[] };
 import { OpenOnDesktop } from "./OpenOnDesktop";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
@@ -86,7 +87,7 @@ type HubData = {
   /** 조회가 실패했거나 상한 안에 끝나지 않았다. false 라야 "읽었고 결과가 이만큼"이다. */
   loadFailed: boolean;
   /** [1021] 주 선택 칩 — 이번 주(rows) + 기록이 있는 지난주·4주 전만 */
-  weeks: WeekView[];
+  weeks: WeekViewFull[];
   /** [1021] 1위 지역 최근 12주(오래된 → 최근). 없으면 [] */
   history: TemperatureSnapshot[];
 };
@@ -107,7 +108,7 @@ const loadHub = cache(async (): Promise<HubData> => {
   const run = await loadWithinPrerenderBudget("[/analysis/temperature] 주간 기록", async () => {
     const base = await listLatestTemperatures();
     const ws = base.weekStart;
-    if (!ws || base.rows.length === 0) return { ...base, weeks: [] as WeekView[], history: [] as TemperatureSnapshot[] };
+    if (!ws || base.rows.length === 0) return { ...base, weeks: [] as WeekViewFull[], history: [] as TemperatureSnapshot[] };
     const hottest = base.rows[0].current;
     const weekOf = (offset: number) =>
       quiet(`${offset}주 전`, () => listTemperaturesForWeek(shiftWeeks(ws, offset)), [] as TemperatureSnapshot[]);
@@ -118,7 +119,7 @@ const loadHub = cache(async (): Promise<HubData> => {
       weekOf(-5),
       quiet("1위 지역 최근 주", () => listRegionTemperatureHistory(hottest.regionId, HISTORY_WEEKS), [] as TemperatureSnapshot[]),
     ]);
-    const weeks: WeekView[] = [{ key: "this", weekStart: ws, rows: base.rows }];
+    const weeks: WeekViewFull[] = [{ key: "this", weekStart: ws, rows: base.rows }];
     const prev = pairWeeks(w1, w2);
     if (prev.length > 0) weeks.push({ key: "prev", weekStart: shiftWeeks(ws, -1), rows: prev });
     const four = pairWeeks(w4, w5);
@@ -201,7 +202,8 @@ export default async function TemperatureHubPage() {
   ];
 
   return (
-    <PageShell breadcrumb="홈 › 분석 › 시장 온도 주간 기록" toolScope={personaVars(TOOL_PERSONAS["market:temperature"])}>
+    <div className="tool-scope" style={personaVars(TOOL_PERSONAS["market:temperature"])}>
+      <ShellBreadcrumb>홈 › 분석 › 시장 온도 주간 기록</ShellBreadcrumb>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
@@ -222,7 +224,7 @@ export default async function TemperatureHubPage() {
                 <span key={i} className="block h-8 rounded-lg border border-dashed border-line-strong" />
               ))}
             </div>
-            <p className="mt-3 t-body text-text-2">아직 쌓인 주가 없습니다.</p>
+            <p className="mt-3 t-body text-text-2">쌓인 주 없음</p>
             <Link href="/analysis/timing" className="inline-flex min-h-10 items-center t-sub font-bold text-primary no-underline">
               현재 시장 온도 보기 ›
             </Link>
@@ -231,7 +233,8 @@ export default async function TemperatureHubPage() {
           /* [1021] 시안(mock8/temp) 본문 — 머리·타일·타일 지도·12주 선·레일. 주 칩은 기록이 있는 주만(loadHub 가 이번 주→지난주→4주 전 순으로 담는다) */
           <div className="mb-6 max-md:mb-3">
             <TempMapClient
-              weeks={weeks}
+              /* [1097 · 비용] 화면이 읽는 네 값만 넘긴다(slimTemperatureLatest) — 기록 414개 × 15필드가 RSC 에 통째로 실리던 것 */
+              weeks={weeks.map((w) => ({ ...w, rows: w.rows.map(slimTemperatureLatest) }))}
               history={historyView}
               totalCount={rows.length}
               rail={
@@ -280,6 +283,6 @@ export default async function TemperatureHubPage() {
           </Link>
         </nav>
       </div>
-    </PageShell>
+    </div>
   );
 }

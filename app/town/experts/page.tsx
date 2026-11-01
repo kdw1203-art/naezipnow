@@ -3,7 +3,7 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb } from "../../components/PageShell";
 import { ExpertApplyCta } from "./ExpertApplyCta";
 import { QuoteRequestBanner } from "./QuoteRequest";
 import { ExpertsClient, type ExpertPublicRow } from "./ExpertsClient";
@@ -120,7 +120,8 @@ export default async function TownExpertsPage() {
        형제들(214px)보다 44px 아래(258px)에 있었다(Pixel 5 실측).
        공통 머리를 앞에 세우고 네이비 카드는 **소개 블록**으로 내린다 — 담고 있던
        내용(설명·보증 문구·커버리지·두 CTA)은 그대로 두고, h1 만 공통 머리로 옮겼다. */
-    <PageShell breadcrumb="동네이야기 › 전문가" wide>
+    <>
+      <ShellBreadcrumb>동네이야기 › 전문가</ShellBreadcrumb>
       <JsonLd data={faqJsonLd(EXPERT_FAQ)} />
       {/* [978] 홈과 같은 네이비 히어로. 버튼은 카테고리 목록의 heroCta
           ("전문가로 참여" → /town/experts/join)가 그대로 그린다. */}
@@ -296,6 +297,6 @@ export default async function TownExpertsPage() {
         상담·견적 요청은 로그인 후 · 전화번호·계좌 기재 금지 · 플랫폼 밖 결제 유도는 신고 대상
       </p>
       <ComplianceNotice className="mt-3" />
-    </PageShell>
+    </>
   );
 }

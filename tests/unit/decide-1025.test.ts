@@ -272,7 +272,7 @@ test("배선 — /decide · /my/assistant · API · 마이 링크 · 면책 · �
   assert.ok(read("app/my/assistant/ScheduleForm.tsx").includes('"/api/inspection/schedule"'));
   const css = read("app/globals.css");
   assert.ok(css.includes("[1025b · 결정·비서]") && css.includes("body.nz-has-primarybar") && css.includes("main .nz-dot-blue :is(section, article)"));
-  const my = read("app/my/page.tsx");
+  const my = read("app/my/(index)/page.tsx");
   assert.ok(my.includes('href: "/decide"') && my.includes('href: "/my/assistant"'));
   const sql = read("supabase/migrations/20260929104418_1025_user_decisions.sql");
   assert.ok(sql.includes("enable row level security"));

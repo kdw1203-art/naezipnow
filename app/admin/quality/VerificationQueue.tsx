@@ -149,7 +149,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
                   title={f.message}
                   className={`rounded px-1.5 py-px text-[10px] font-bold ${SEVERITY_CLS[f.severity] ?? SEVERITY_CLS.warn}`}
                 >
-                  ⚑ {f.ruleId} · {f.severity}
+                  {f.ruleId} · {f.severity}
                 </span>
               ))}
             </div>

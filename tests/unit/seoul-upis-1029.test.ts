@@ -364,7 +364,7 @@ test("[1030 · G4] 동네 카드 제목 = 노트 제목 · 홈 동네이야기 0
 
 /* ── [1030 · 2차] 추가 검토 ─────────────────────────────────────────────── */
 test("[1030 · 2차] Lab 노트 상세 — 직접 방문 도장 없음 · 출처 '자료 조사' · 방문 기록 비교 숨김", () => {
-  const s = src1030("app/notes/[id]/page.tsx");
+  const s = src1030("app/notes/[id]/(index)/page.tsx");
   assert.ok(s.includes("directVisit: Boolean(n.visitDate) && !isLabAuthor(n.authorLabel),"));
   assert.ok(s.includes('isLabAuthor(n.authorLabel) ? "내집나우 Lab 자료 조사(실거래·통계·언론 원문)" : "작성자 직접 방문 기록"'));
   assert.ok(s.includes('{v.lab ? "본문 · 자료 조사" : "현장에서 적은 것"}'));
@@ -387,7 +387,7 @@ test("[1030 · 2차] 단지 비교 목록 — 지역 바로가기 + 첫 지역�
 test("[1030 · 2차] 열린 면적 구간 화면 이름 — /tx 셀·면적대별 실거래가 선반·노트 상세도 같은 함수", () => {
   assert.ok(src1030("lib/market/tx-bands.ts").includes("bandLabel: areaBandDisplayLabel(label),"));
   assert.ok(src1030("app/analysis/price/page.tsx").includes("label: areaBandDisplayLabel(c.bandLabel),"));
-  assert.ok(src1030("app/notes/[id]/page.tsx").includes("bandLabel: areaBandDisplayLabel(r.price.bandLabel),"));
+  assert.ok(src1030("app/notes/[id]/(index)/page.tsx").includes("bandLabel: areaBandDisplayLabel(r.price.bandLabel),"));
 });
 
 /* ── [1030 · 3차] 추가 검토 ─────────────────────────────────────────────── */
@@ -407,7 +407,7 @@ test("[1030 · 3차] 동네 피드 NEW 배지 — 서버 렌더 시각(now) 기�
 });
 
 test("[1030 · 3차] 청약 화면 — 라이트 토큰 인라인 고정(THEME_APPLY) 제거 · presets 파일 삭제", () => {
-  assert.ok(!src1030("app/apply/page.tsx").includes("style={THEME_APPLY}"));
+  assert.ok(!src1030("app/apply/(index)/page.tsx").includes("style={THEME_APPLY}"));
   assert.ok(!existsSync(join(process.cwd(), "lib/theme/presets.ts")));
 });
 
@@ -420,7 +420,7 @@ test("[1030 · 3차] 키보드 — 가로 스크롤 영역 tabIndex · 본문 �
   /* [1084] 단계 칩 줄도 HScroll(넘칠 때만 tabIndex=0 · 오른쪽 흐림) — 예전 고정 tabIndex 틀 */
   assert.ok(src1030("app/redevelopment/(index)/page.tsx").includes('<HScroll hint={null} className="mt-3 -mx-1 px-1 pb-1">'));
   assert.equal((src1030("app/developers/page.tsx").match(/<pre tabIndex=\{0\}/g) ?? []).length, 2);
-  assert.ok(src1030("app/not-found.tsx").includes('<main id="main-content"'));
+  assert.ok(src1030("app/components/NotFoundBody.tsx").includes('<main id="main-content"'));
   assert.ok(src1030("app/login/LoginClient.tsx").includes('id="main-content"'));
   assert.ok(src1030("app/notes/market/page.tsx").includes('<main id="main-content"'));
   assert.ok(src1030("app/notes/new/NoteForm.tsx").includes('id="main-content"'));
@@ -462,7 +462,7 @@ test("[1030 · 4차] 면적대 선반 막대는 가로(width) · 정비사업 �
   assert.ok(src1030("app/analysis/price/BandShelf.tsx").includes("style={{ width: `${c.barPct}%` }}"));
   const r = src1030("app/redevelopment/RedevelopmentMap.tsx");
   assert.ok(r.includes('active ? "chip-active" : "text-text-2"') && !r.includes('style={active ? { color: "#fff" } : undefined}'));
-  assert.equal((src1030("app/apply/page.tsx").match(/청약 캘린더\n/g) ?? []).length, 0);
+  assert.equal((src1030("app/apply/(index)/page.tsx").match(/청약 캘린더\n/g) ?? []).length, 0);
   assert.ok(src1030("app/components/QaBlock.tsx").includes('className="measure mt-1 t-body'));
   assert.ok(src1030("app/globals.css").includes(".measure {\n  max-width: 72ch;\n}"));
 });
@@ -503,7 +503,7 @@ test("[1031] 본문 없는 화면엔 광고 스크립트 없음 — 로그인·�
   for (const p of ["/", "/guides/x", "/notes/abc", "/region/gangnam", "/town/news/1"]) assert.equal(pathExcluded1031(p, ADS_EX_1031), false, p);
   const js = bootScript1031("ca-pub-test", ADS_EX_1031);
   assert.ok(js.includes('document.querySelector("[data-nz-noads]")'));
-  assert.ok(src1030("app/not-found.tsx").includes('data-nz-noads=""'));
+  assert.ok(src1030("app/components/NotFoundBody.tsx").includes('data-nz-noads=""'));
 });
 test("[1031] 운영 루프 스크립트 — routes.json · probe-prod · design-probe · report · run.sh · pack.sh · 주간 액션", () => {
   for (const f of ["scripts/review/routes.json", "scripts/review/probe-prod.mjs", "scripts/review/design-probe.mjs", "scripts/review/report.mjs", "scripts/review/run.sh", "scripts/review/pack.sh", "scripts/review/apply-template.ps1", ".github/workflows/weekly-review.yml", "docs/ops/review-loop.md"]) assert.ok(existsSync(join(process.cwd(), f)), f);

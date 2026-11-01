@@ -57,7 +57,7 @@ export function ReplyForm({
       setOpen(false);
       router.refresh();
     } catch {
-      setError("네트워크 오류가 발생했습니다.");
+      setError("답변 저장 실패 · 잠시 후 다시");
     } finally {
       setBusy(false);
     }

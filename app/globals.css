@@ -8509,3 +8509,65 @@ footer.footer-cv {
     top: 88px;
   }
 }
+
+/* [1091] 옆으로 미는 표(HScroll stickyFirst) — 첫 열을 왼쪽에 고정. 바탕은 판(.lq-panel)의 채움과 같은 식(변수는 판에서 상속) ·
+   판 밖이면 표면색. 밀린 뒤(.nz-hscroll-scrolled)에만 열 오른쪽에 선 하나 — 밀지 않았을 때는 표가 예전과 같다. */
+.nz-hscroll-sticky table :is(th, td):first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--lq-fill, color-mix(in srgb, var(--lq-tint, var(--surface)) 9%, var(--surface)));
+}
+.nz-hscroll-scrolled table :is(th, td):first-child {
+  box-shadow: 1px 0 0 var(--border);
+}
+
+/* [1093] 이동 진행바 — 공개 화면의 loading.tsx(스켈레톤)를 뺐으므로 캐시에 없는 단지 화면으로의 이동(최대 8초)은 이 막대가 유일한
+   "눌렸다" 표시다. 7초에 80% 에서 멈추던 곡선을 10초로(NavigationProgress MAX_MS 와 같은 눈금). 끝나면 전처럼 100% 로 채우고 사라진다. */
+.nav-progress-bar {
+  animation-duration: 10s;
+}
+
+/* [1097 · 디자인] 뉴스룸 구분 — 소유자(2026-10-31) "구분이 제대로 안 되어 있는 것 같아 가독성이 떨어져". 40행이 1px 연한 선(--divider)으로만 나뉘어
+   한 덩어리로 읽혔다(데스크톱 실측). 날짜 머리(.news-day__head · 굵은 밑선)로 묶고, 행 사이 선은 --border · 행 안쪽 여백을 한 단 키운다 ·
+   요약은 제목보다 한 단 옅게(--text-3) · 데스크톱 썸네일 88 → 96px. 값은 전부 토큰(색 · 글자 크기). */
+.news-list {
+  border-top: 0;
+}
+.news-day + .news-day {
+  margin-top: 12px;
+}
+.news-day__head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 2px 6px;
+  border-bottom: 2px solid var(--border-strong);
+  font-size: var(--fs-sub);
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+.news-day__count {
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--text-3);
+}
+.news-row {
+  padding: 14px 2px;
+  border-bottom-color: var(--border);
+}
+.news-row__summary {
+  color: var(--text-3);
+}
+@media (min-width: 768px) {
+  .news-row {
+    padding: 16px 6px;
+  }
+  .news-row--thumb {
+    grid-template-columns: 96px minmax(0, 1fr) auto;
+  }
+  .news-day__head {
+    padding: 10px 6px 8px;
+  }
+}

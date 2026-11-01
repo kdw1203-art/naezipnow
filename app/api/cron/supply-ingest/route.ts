@@ -46,8 +46,12 @@ async function handle(req: Request) {
         message: `공고 업서트=${result.announcementsUpserted} 경쟁률 업서트=${result.competitionUpserted} (상세 ${result.fetched}행 중)`,
       });
     }
-    /* [OPT-10] 수집이 실제로 끝난 순간에만 캐시를 비운다 — 시간 추측 제거 */
-    invalidateAfterIngest("supply");
+    /* [OPT-10] 수집이 실제로 끝난 순간에만 캐시를 비운다 — 시간 추측 제거.
+       [1090] 그리고 **무엇인가 실제로 바뀐 날에만** — 이 적재는 매일 도는데 바뀐 행이 0 인 날에도 "supply" 태그와 /apply · /supply ·
+       청약 달력을 비워 다시 만들게 했다(태그가 붙은 화면은 그날 전부 재렌더). 바뀐 것이 없으면 화면도 그대로다. */
+    const anyChanged =
+      result.upserted + result.migrated + result.announcementsUpserted + result.competitionUpserted > 0;
+    if (anyChanged) invalidateAfterIngest("supply");
     /* [1010] 지역 페이지(/region/[id])의 "입주 예정 물량" 섹션도 이 적재로 바뀐다.
        그 라우트의 TTL 을 6시간 → 7일로 늘렸으므로(1010 브리프 원칙 1) 여기 비움이
        없으면 새 입주물량이 최대 7일 안 보인다.

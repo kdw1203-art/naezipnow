@@ -38,5 +38,7 @@ export async function searchComplexPreviews(
     });
     return null;
   }
-  return rankPreviewRows(parseComplexQuery(q), (data as PreviewRow[] | null) ?? []);
+  /* [1094 · 기능] 전월세만 있는 단지(trade_count 0 · MV 40,317곳 중 6,003곳)는 단지 화면이 없다(404) — 결과에서 뺀다 */
+  const rows = ((data as PreviewRow[] | null) ?? []).filter((r) => r.trade_count == null || Number(r.trade_count) > 0);
+  return rankPreviewRows(parseComplexQuery(q), rows);
 }

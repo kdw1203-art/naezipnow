@@ -115,7 +115,7 @@ test("D4 HScroll — 넘칠 때만 끝 흐림·안내, 끝에 닿으면 '표 끝
   assert.doesNotMatch(fade, /gradient/i);
   for (const f of [
     "app/tx/[region]/page.tsx",
-    "app/tx/[region]/[kind]/[band]/page.tsx",
+    "app/tx/[region]/[kind]/[band]/BandComplexTable.tsx", // [1092] 표는 클라이언트 조각으로
     "app/complex/tx/[slug]/page.tsx",
     "app/complex/compare/[slug]/page.tsx",
     "app/rent/[region]/page.tsx",
@@ -293,7 +293,7 @@ test("D8 오류·빈 상태·권유 문구", () => {
 test("D8 자료 조사 노트 그림 = '자료' · 최근 실거래 머리 · 재개발 평단가 억 단위", () => {
   const notes = read("app/notes/notes-feed-client.tsx");
   assert.match(notes, /\{n\.lab \? "자료" : "사진"\} \{n\.photoCount\}/);
-  assert.match(read("app/notes/[id]/page.tsx"), /label=\{v\.lab \? "자료 이미지" : "현장 사진"\}/);
+  assert.match(read("app/notes/[id]/(index)/page.tsx"), /label=\{v\.lab \? "자료 이미지" : "현장 사진"\}/);
   const deals = read("app/complex/[id]/RecentDealsTable.tsx");
   assert.match(deals, /건\(해제 제외\)/);
   assert.match(deals, /해제 신고는 취소선/);

@@ -1,5 +1,5 @@
 import Link from "@/app/components/IntentLink";
-import type { TemperatureSnapshot } from "@/lib/market/temperature-archive";
+import type { TemperaturePoint, TemperatureSnapshot } from "@/lib/market/temperature-archive";
 import { DiffBadge } from "./score-diff";
 
 /* 점수 밴드 색 — 예전엔 #dc2626·#ea580c·#0284c7·#2563eb 를 인라인 style 로
@@ -20,8 +20,9 @@ export function TempRegionCard({
   previous,
   href,
 }: {
-  current: TemperatureSnapshot;
-  previous: TemperatureSnapshot | null;
+  /* [1097] 읽는 값(점수 · 이름 · 한 줄)만 요구 — 온도 지도는 압축 행(TemperatureLatestSlim)을 넘긴다 · 지역 화면은 전체 기록 그대로 */
+  current: TemperaturePoint;
+  previous: Pick<TemperatureSnapshot, "score"> | null;
   href: string;
 }) {
   const diff = previous ? current.score - previous.score : null;

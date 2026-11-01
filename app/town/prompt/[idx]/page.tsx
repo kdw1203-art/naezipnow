@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb, ShellNarrow } from "@/app/components/PageShell";
 import { EmptyState } from "@/app/components/ui/EmptyState";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
 import { Icon } from "@/app/components/Icon";
@@ -69,7 +69,8 @@ export default async function PromptThreadPage({
   const isToday = todayPromptIndex() === i;
 
   return (
-    <PageShell breadcrumb="동네이야기 › 오늘의 질문">
+    <ShellNarrow>
+      <ShellBreadcrumb>동네이야기 › 오늘의 질문</ShellBreadcrumb>
       <TownCategoryNav />
       <div className="mx-auto w-full max-w-[720px]">
         <section className="rise-in card mb-4 p-5 max-md:mb-3 max-md:p-3.5">
@@ -145,6 +146,6 @@ export default async function PromptThreadPage({
           </div>
         </div>
       </div>
-    </PageShell>
+    </ShellNarrow>
   );
 }

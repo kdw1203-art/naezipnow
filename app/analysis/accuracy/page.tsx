@@ -1,5 +1,5 @@
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb } from "@/app/components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { runPredictionBacktest, BACKTEST } from "@/lib/ai/backtest";
 import { formatEokMan } from "@/lib/format/eok-man";
@@ -26,7 +26,8 @@ export default async function AccuracyPage() {
   const bt = await runPredictionBacktest();
 
   return (
-    <PageShell breadcrumb="예측 적중률">
+    <>
+      <ShellBreadcrumb>예측 적중률</ShellBreadcrumb>
       <div className="mx-auto flex w-full max-w-[880px] flex-col gap-4">
         <div className="rise-in">
           {/* [1015 · 규칙 D] 물음형 제목 → 명사 · 설명 문단 → 사실 한 줄(숫자) */}
@@ -129,6 +130,6 @@ export default async function AccuracyPage() {
           </Link>
         </div>
       </div>
-    </PageShell>
+    </>
   );
 }

@@ -55,13 +55,9 @@ export function kstYm(ms: number): string {
 }
 
 /** YYYYMM ± n개월 */
-export function shiftYm(ym: string, months: number): string {
-  const y = Number(ym.slice(0, 4));
-  const m = Number(ym.slice(4, 6)) - 1 + months;
-  const yy = y + Math.floor(m / 12);
-  const mm = ((m % 12) + 12) % 12;
-  return `${yy}${String(mm + 1).padStart(2, "0")}`;
-}
+/* [1097 · 통폐합] 본체는 lib/format/ym — 같은 이름으로 다시 내보낸다 */
+import { shiftYm } from "@/lib/format/ym";
+export { shiftYm };
 
 /** 이번 달 포함 N개월 창의 첫 달(단지 허브 countDealsInWindow 와 같은 달력 규칙) */
 export function windowStartYm(nowYm: string, months: number): string {

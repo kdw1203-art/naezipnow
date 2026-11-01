@@ -46,14 +46,9 @@ function num(v: unknown): number | null {
  * 이메일 마스킹 — local-part 앞 3글자 + "***".
  * 예: "kdw1203@gmail.com" → "kdw***". 값이 없으면 "익명".
  */
-export function maskEmail(email: string): string {
-  const raw = (email ?? "").trim();
-  if (!raw) return "익명";
-  const at = raw.indexOf("@");
-  const local = at > 0 ? raw.slice(0, at) : raw;
-  if (!local) return "익명";
-  return `${local.slice(0, 3)}***`;
-}
+/* [1097 · 통폐합] lib/privacy/mask-email maskEmailPublic 과 글자 하나까지 같았다 — 본체는 그쪽 */
+import { maskEmailPublic as maskEmail } from "@/lib/privacy/mask-email";
+export { maskEmail };
 
 function mapQuestion(r: Record<string, unknown>): QnaQuestion {
   return {

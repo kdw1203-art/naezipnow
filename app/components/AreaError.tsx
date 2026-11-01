@@ -25,6 +25,7 @@ export function AreaError({
   error,
   reset,
   links,
+  inShell = false,
 }: {
   area: string;
   title: string;
@@ -33,6 +34,8 @@ export function AreaError({
   reset: () => void;
   /** 되돌아갈 곳 — 첫 항목이 그 영역의 홈 */
   links: { href: string; label: string }[];
+  /** [1090] 셸이 레이아웃에 있는 구역(분석) — 이 오류 화면은 이미 <main> 안에 그려지므로 main 을 겹치지 않는다 */
+  inShell?: boolean;
 }) {
   useEffect(() => {
     reloadOnceOnChunkFailure(error);
@@ -42,8 +45,9 @@ export function AreaError({
     reportClientError(error, `route:${area}`);
   }, [error, area]);
 
+  const Body = inShell ? "div" : "main";
   return (
-    <main className="mx-auto flex min-h-[60vh] w-full max-w-[520px] flex-col items-center justify-center gap-4 px-6">
+    <Body className="mx-auto flex min-h-[60vh] w-full max-w-[520px] flex-col items-center justify-center gap-4 px-6">
       <ErrorState
         title={title}
         desc={desc}
@@ -66,6 +70,6 @@ export function AreaError({
           문의하기
         </Link>
       </div>
-    </main>
+    </Body>
   );
 }

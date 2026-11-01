@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb } from "@/app/components/PageShell";
 import { ReportButton } from "../../components/ReportButton";
 import { RefreshButton } from "./RefreshButton";
 import { ListingViewPing } from "./ViewPing";
@@ -232,7 +232,8 @@ export default async function ListingDetailPage({
     : null;
 
   return (
-    <PageShell breadcrumb="홈 › 실매물 › 상세">
+    <>
+      <ShellBreadcrumb>홈 › 실매물 › 상세</ShellBreadcrumb>
       {countView && <ListingViewPing listingId={listing.id} />}
       {/* JSON-LD(RealEstateListing) — SEO 구조화 데이터 */}
       <script
@@ -563,6 +564,6 @@ export default async function ListingDetailPage({
         등록자에게 있으며, 내집나우의 검수는 형식 요건 확인일 뿐 진위를 보증하지 않습니다. 중개
         행위는 해당 매물을 등록한 개업공인중개사가 수행합니다.
       </div>
-    </PageShell>
+    </>
   );
 }

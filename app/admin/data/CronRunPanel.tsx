@@ -142,7 +142,7 @@ const JOBS: Job[] = [
     key: "agg",
     label: "실거래 집계 갱신",
     path: "/api/cron/market-aggregates-refresh",
-    hint: "/tx 랜딩·지도 시세 색상이 쓰는 집계 MV 재계산 (실측 약 9초)",
+    hint: "/tx 랜딩·지도 실거래 색상이 쓰는 집계 MV 재계산 (실측 약 9초)",
     group: "집계",
     schedule: "하루 2회 (적재 직후)",
   },

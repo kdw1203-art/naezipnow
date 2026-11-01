@@ -28,7 +28,7 @@ const ROOTS = [
   "app/redevelopment",
   "app/digest",
   "app/qna",
-  "app/data",
+  /* [1097] app/data(/data/records)는 /data-sources 한 절로 접혔다 — 폴더 없음 */
   "app/data-sources",
 ];
 

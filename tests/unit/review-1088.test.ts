@@ -92,7 +92,7 @@ test("링크 전수 — next/link 를 직접 쓰는 파일은 심사 고정 화�
     "app/tx/[region]/page.tsx",
     "app/town/news/[id]/page.tsx",
     "app/page.tsx",
-    "app/not-found.tsx",
+    "app/components/NotFoundBody.tsx",
     "app/components/home/HomeHeroSearch.tsx",
   ]) {
     assert.match(read(f), /import Link from "@\/app\/components\/IntentLink";/, f);

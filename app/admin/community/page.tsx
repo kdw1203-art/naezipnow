@@ -25,17 +25,13 @@ export default async function AdminCommunityPage() {
     try {
       const weekAgo = new Date(Date.now() - 7 * 86400_000).toISOString();
       const dayAgo = new Date(Date.now() - 86400_000).toISOString();
-      const [posts7, comments7, adopted7, unansweredR, zeroR] = await Promise.all([
+      /* [1097] 같은 조회(comments · 7일 · 500)를 두 번 보내고 두 번째는 버렸다(void adopted7) — 한 번만 */
+      const [posts7, comments7, unansweredR, zeroR] = await Promise.all([
         sb
           .from("posts")
           .select("id", { count: "exact", head: true })
           .gte("created_at", weekAgo),
         sb.from("posts").select("comments").gte("updated_at", weekAgo).limit(500),
-        sb
-          .from("posts")
-          .select("comments")
-          .gte("updated_at", weekAgo)
-          .limit(500),
         sb
           .from("posts")
           .select("id, title, created_at, comment_count")
@@ -59,7 +55,6 @@ export default async function AdminCommunityPage() {
           (c) => c && typeof c === "object" && (c as { adopted?: boolean }).adopted,
         ).length;
       }
-      void adopted7;
 
       metrics = [
         { label: "이번 주 새 글", value: String(posts7.count ?? 0) },

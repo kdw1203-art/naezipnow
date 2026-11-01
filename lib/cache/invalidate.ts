@@ -46,7 +46,6 @@ const SOURCE_MAP: Record<string, { tags: string[]; paths: string[]; pageRoutes?:
       "/analysis/temperature",
       "/tx",
       "/map",
-      "/data/records",
       "/reports",
       "/digest",
     ],

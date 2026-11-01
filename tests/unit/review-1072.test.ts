@@ -27,8 +27,8 @@ test("D1 경로 줄 하나 — 4종 머리의 둘째 경로 줄(nav · header.cr
   assert.doesNotMatch(head, /<nav\b/);
   assert.doesNotMatch(workbench, /header\.crumb|crumb: string/);
   assert.doesNotMatch(page, /crumb:/);
-  /* 경로 줄은 PageShell 의 것 하나 */
-  assert.match(page, /<PageShell breadcrumb=\{`AI 분석 › \$\{identity\.title\}`\}>/);
+  /* 경로 줄은 셸의 것 하나 — [1090] 셸은 app/analysis/layout.tsx · 경로 줄은 같은 마크업의 ShellBreadcrumb */
+  assert.match(page, /<ShellBreadcrumb>\{`AI 분석 › \$\{identity\.title\}`\}<\/ShellBreadcrumb>/);
   /* 제목·사실 한 줄은 그대로 */
   assert.match(head, /<h1 className="t-title text-ink">\{title\}<\/h1>/);
 });

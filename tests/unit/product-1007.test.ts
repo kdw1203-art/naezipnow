@@ -255,7 +255,7 @@ test("단지 허브 — buildComplexFacts 재료를 이미 띄운 로더로 채�
 /* ---------- 6. JSON-LD 발행 주체 참조 ---------- */
 
 test("노트 Article.publisher · /developers WebAPI.provider 가 전역 Organization 참조를 쓴다", () => {
-  const note = read("app/notes/[id]/page.tsx");
+  const note = read("app/notes/[id]/(index)/page.tsx");
   assert.match(note, /publisher: publisherRef\(\)/);
   assert.doesNotMatch(note, /publisher: \{\s*"@type": "Organization"/);
   const dev = read("app/developers/page.tsx");
@@ -292,15 +292,18 @@ test("trackNoteSaved / trackNewsletterOptIn — gtag 가 없으면 요청 0, 있
 /* ---------- 8. 404 — 검색창·인기 경로·정적 ---------- */
 
 test("404 — JS 없는 검색 폼(/search?q=)·인기 경로 5곳·홈 링크, dynamic API 없음, 라벨은 목적지 그대로", () => {
-  const src = read("app/not-found.tsx");
+  /* [1091] 몸체는 클라이언트 조각(NotFoundBody) — 마크업 검사는 그 파일 · dynamic API · "use client" 금지는 not-found.tsx 그대로 */
+  const shell = read("app/not-found.tsx");
+  const src = read("app/components/NotFoundBody.tsx");
   assert.match(src, /<form\s+action="\/search"\s+method="get"/);
   assert.match(src, /name="q"/);
   for (const href of ["/", "/map", "/complex/browse", "/tx", "/town/news", "/town", "/notes"]) {
     assert.ok(src.includes(`"${href}"`), `404 에 ${href} 링크`);
   }
   /* 주석은 코드가 아니다 — 주석을 지운 소스로 dynamic API 사용 여부를 본다 */
-  const code = src.replace(/\/\*[\s\S]*?\*\//g, "");
+  const code = shell.replace(/\/\*[\s\S]*?\*\//g, "");
   assert.doesNotMatch(code, /cookies\(|headers\(|searchParams|"use client"/);
+  assert.doesNotMatch(src.replace(/\/\*[\s\S]*?\*\//g, ""), /cookies\(|headers\(|searchParams/);
   assert.doesNotMatch(code, /실거래 시세|내 임장노트/, "시세 표현·잘못된 라벨이 남아 있다");
   assert.match(src, /뉴스룸/);
   /* 칩·버튼은 40px */

@@ -152,7 +152,7 @@ test("임장노트 표 — 목록이 바뀌면 펼침 닫기 · 펼친 칸 화�
 });
 
 test("노트 상세 — 감각 축(채광·소음·주차)을 다른 축 점수로 지어내지 않는다 · 도구 딥링크에 단지 id", () => {
-  const page = code("app/notes/[id]/page.tsx");
+  const page = code("app/notes/[id]/(index)/page.tsx");
   assert.match(page, /axisOrNull\("채광", \["채광", "햇빛", "일조", "남향"\], 0\)/);
   assert.match(page, /axisOrNull\("소음", \["소음", "시끄", "조용"\], 0\)/);
   assert.match(page, /axisOrNull\("주차", \["주차", "이중주차"\], 0\)/);

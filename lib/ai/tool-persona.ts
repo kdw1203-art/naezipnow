@@ -320,7 +320,8 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
       weak: "한 곳에 몰려 있어요. 그 한 곳의 사정이 곧 전체의 사정이에요.",
       thin: "모아 둔 자산이 모자라요. 비중을 말하기엔 이릅니다.",
     },
-    nextAction: { label: "갈아타기 시나리오 보기", href: "/analysis/switch" },
+    /* [1097] /analysis/switch(준비 중 빈 화면)는 지웠다 — 자산 배분 예시 계산으로 */
+    nextAction: { label: "자산 배분 시뮬레이터 보기", href: "/analysis/portfolio" },
   },
   "ai-timing": {
     id: "ai-timing",

@@ -14,6 +14,7 @@
 import { changeLabel, pctChange, pctLabel } from "@/lib/format/delta";
 import { formatKrwShort } from "@/lib/market/format";
 import { reportingClosed, splitByReporting } from "@/lib/newui/reporting-window";
+import { ymMonthsBefore } from "@/lib/format/ym";
 
 export type SeriesPoint = { period: string; value: number };
 export type VolumePoint = { month: string; count: number; avgDealAmountKrw?: number | null };
@@ -34,9 +35,8 @@ export function ymLong(ym: string): string {
 }
 
 /** "202607" → "26.07" (차트 축·말풍선) */
-export function ymShort(ym: string): string {
-  return `${ym.slice(2, 4)}.${ym.slice(4, 6)}`;
-}
+import { ymShortLabel as ymShort } from "@/lib/format/ym"; /* [1097 · 통폐합] 본체는 lib/format/ym */
+export { ymShort };
 
 /** "202607" → "7월" */
 export function ymMonth(ym: string): string {
@@ -44,13 +44,9 @@ export function ymMonth(ym: string): string {
 }
 
 /** yyyymm 에서 n 달 전(음수면 뒤) */
+/** n 개월 **전** — 다른 모듈의 shiftYm(±)과 부호가 반대라 이름을 바꾸지 않고 본체만 lib/format/ym 으로(ymMonthsBefore) */
 export function shiftYm(ym: string, n: number): string {
-  const y = Number(ym.slice(0, 4));
-  const m = Number(ym.slice(4, 6));
-  const idx = y * 12 + (m - 1) - n;
-  const ny = Math.floor(idx / 12);
-  const nm = (idx % 12) + 1;
-  return `${ny}${String(nm).padStart(2, "0")}`;
+  return ymMonthsBefore(ym, n);
 }
 
 /* 신고 기한 판정은 lib/newui/reporting-window.ts(홈 지역 카드와 같은 규칙) — 여기서도 그대로 내보낸다 */

@@ -174,7 +174,7 @@ test("B7 설정 키를 읽는 발송자가 있다 — pushLikes·pushComments·p
 
 test("B8 작성자 이름 링크 — 노트 상세·이야기 상세·토론 패널이 /u/ 로 간다", () => {
   for (const p of [
-    "app/notes/[id]/page.tsx",
+    "app/notes/[id]/(index)/page.tsx",
     "app/town/story/[id]/page.tsx",
     "app/components/talk/TalkPanel.tsx",
   ]) {
@@ -211,7 +211,7 @@ test("[1056] 바뀐 파일마다 사실을 적은 표식이 있다", () => {
     "app/api/inspection/notes/route.ts",
     "lib/notifications/comment-notify.ts",
     "app/notifications/page.tsx",
-    "app/notes/[id]/page.tsx",
+    "app/notes/[id]/(index)/page.tsx",
     "app/town/story/[id]/page.tsx",
     "app/components/talk/TalkPanel.tsx",
     "lib/notifications/engagement-notify.ts",

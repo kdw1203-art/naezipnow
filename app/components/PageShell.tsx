@@ -77,3 +77,12 @@ export function ShellBreadcrumb({ children }: { children: React.ReactNode }) {
 export function ShellTitle({ children, as: TitleTag = "h1" }: { children: React.ReactNode; as?: "h1" | "h2" }) {
   return <TitleTag className="rise-in mb-3.5 t-title text-ink md:mb-4">{children}</TitleTag>;
 }
+
+/**
+ * [1090 · 비용] 넓은(wide) 셸 레이아웃 아래의 보통 폭 화면 — 본문을 PageShell(wide 아님)과 같은 폭으로 가둔다.
+ * PageShell 의 <main> 은 max-w 1240px 에 좌우 패딩 20px(md+)이라 본문 폭은 1200px 이다. 셸을 레이아웃으로 올린 라우트
+ * (app/town/layout.tsx 는 wide 한 벌)에서 좁은 화면은 이 판에 담는다 — 1240 보다 넓은 창에서 본문 1200px · 그보다 좁은 창에서는
+ * 창 폭 − 패딩으로, 예전 PageShell 과 모든 폭에서 같다. */
+export function ShellNarrow({ children }: { children: React.ReactNode }) {
+  return <div className="mx-auto w-full max-w-[1200px]">{children}</div>;
+}

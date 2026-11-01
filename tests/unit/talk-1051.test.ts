@@ -146,8 +146,8 @@ test("홈 — 맨 아래 실시간 토론(전폭) · 판은 화면 가까이 오
 });
 
 test("배포 막힘 — 노트 상세의 댓글·음성 도구·가입 배너를 따로 받는 청크로 · 예산 검사 여유 경고", () => {
-  const page = code("app/notes/[id]/page.tsx");
-  assert.match(page, /from "\.\/NoteLazyParts"/);
+  const page = code("app/notes/[id]/(index)/page.tsx");
+  assert.match(page, /from "\.\.\/NoteLazyParts"/); // [1092] (index) 그룹
   assert.doesNotMatch(page, /import \{ NoteComments, /);
   assert.doesNotMatch(page, /from "\.\/NoteSoftWall"/);
   const lazy = read("app/notes/[id]/NoteLazyParts.tsx");

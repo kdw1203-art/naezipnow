@@ -131,9 +131,6 @@ export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
      (CDN 1800초) fetch. auctions 삼분할 선례 */
   /* [1010] 600 → 86400 — 라우트 revalidate 와 같은 눈금. 지역 전환은 /api/timing(CDN 1800초). */
   { path: "/analysis/timing", sMaxAge: 86400, swr: 86400 },
-  /* 2026-08-11 ISR — 통계만 페이지에, ?complex= 자유 텍스트 검색은
-     /api/public-records(검색어별 CDN 600초). 실측 0행(CODEF 대기) */
-  { path: "/data/records", sMaxAge: 86_400, swr: 86400 },
   /* `/town/market` 은 공개 캐시 목록에서 뺐다(2026-07-27). 화면이 아니라
      `/town/groups` 로 넘기는 리다이렉트 스텁이고, searchParams 를 읽어 쿼리를
      그대로 넘기느라 동적 라우트다 — prerender 산출물이 없어 이 목록에 남아
@@ -208,7 +205,6 @@ export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
      이 목록의 계약을 어긴다). 실거래 집계는 tx-bands 모듈 캐시(10분)로 이미 싸다. */
   /* [1010] 라우트 revalidate 86400 과 눈금을 맞춘다(STATIC_DOC 은 3600). */
   { path: "/analysis/scenario", sMaxAge: 86400, swr: 86400 },
-  { path: "/analysis/switch", ...STATIC_DOC },
 
   // 약관·고지 — 가장 오래 캐시해도 되는 문서
   { path: "/legal", ...STATIC_DOC },

@@ -241,7 +241,7 @@ test("배선 — 단지 화면 · 임장노트 · AI 분석(프롬프트 + 결�
   assert.ok(view.indexOf("<SignalBoard") > view.indexOf('aria-label="이 단지 결과 요약"'), "결과 요약 바로 아래");
   /* 예산은 API 쪽(라이브 컨텍스트 2.5초 · 전체 3.5초) */
   assert.match(code("lib/complex/insight.ts"), /const TOTAL_BUDGET_MS = 3_500;/);
-  const note = code("app/notes/[id]/page.tsx");
+  const note = code("app/notes/[id]/(index)/page.tsx");
   assert.match(note, /<Suspense fallback=\{null\}>\s*<NoteSignals/);
   assert.match(code("app/api/inspection/ai/route.ts"), /marketSignals: signals \? signalPromptLines\(signals\) : undefined/);
   const ana = code("app/api/ai/analysis/route.ts");

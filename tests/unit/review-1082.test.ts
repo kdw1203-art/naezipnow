@@ -22,7 +22,7 @@ test("공개 노트 제목 — 예전 규칙은 보여 줄 때 새 규칙으로 
   assert.equal(noteDisplayTitle({ title: "헬리오시티 84㎡ 임장노트 · 2026년 10월", aptName: "헬리오시티" }, null), "헬리오시티 84㎡ 임장노트 · 2026년 10월");
   assert.equal(noteMetaTitle("헬리오시티 84㎡ 임장노트 · 2026년 10월", "송파구"), "헬리오시티 84㎡ 임장노트 · 2026년 10월 · 송파구 | 내집나우");
   assert.equal(noteMetaTitle("내가 직접 쓴 제목", "송파구"), "내가 직접 쓴 제목 · 송파구 임장노트 | 내집나우");
-  const page = strip(read("app/notes/[id]/page.tsx"));
+  const page = strip(read("app/notes/[id]/(index)/page.tsx"));
   assert.match(page, /const seoTitle = noteDisplayTitle\(note, unitFromMetadata\(note\.metadata\)\);/);
   assert.match(page, /const title = noteMetaTitle\(seoTitle, note\.region\);/);
   assert.match(page, /title: seoTitle,/, "OG 카드도 같은 제목");
@@ -118,7 +118,7 @@ test("가이드 Article 스키마 + 갱신일 · 허브 7곳 BreadcrumbList", ()
     ["app/notes/(index)/page.tsx", "/notes"],
     ["app/complex/browse/page.tsx", "/complex/browse"],
     ["app/town/news/(index)/page.tsx", "/town/news"],
-    ["app/apply/page.tsx", "/apply"],
+    ["app/apply/(index)/page.tsx", "/apply"],
   ];
   for (const [f, path] of hubs) {
     const s = strip(read(f));

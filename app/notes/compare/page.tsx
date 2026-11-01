@@ -7,10 +7,12 @@ import { CompareView } from "./CompareView";
 import { safeAuth } from "@/lib/safe-auth";
 import {
   getNote,
+  listNotes,
   listNotesByAuthorForApt,
   listNotesByAuthorForComplex,
   type InspectionNote,
 } from "@/lib/inspection/store-db";
+import { compareCandidates, type CompareCandidate } from "@/lib/inspection/compare-candidates";
 import {
   buildVisitCompareModel,
   type CellTone,
@@ -55,17 +57,19 @@ async function loadCompareNotes(
 ): Promise<
   | { kind: "ok"; notes: InspectionNote[]; model: VisitCompareModel }
   | { kind: "need_login" }
-  | { kind: "need_note" }
+  /* [1097 · 기능] noteId 없이 들어오면(노트 허브 레일 "노트 비교") 내 노트 중 같은 단지 2회 이상인 단지를 골라 준다 — 전엔 "골라 주세요"뿐이라 막다른 길이었다 */
+  | { kind: "need_note"; candidates: CompareCandidate[] }
   | { kind: "need_more"; aptName: string; count: number; noteId: string }
   | { kind: "forbidden" }
   | { kind: "error"; message: string }
 > {
   if (!email) return { kind: "need_login" };
-  if (!noteId) return { kind: "need_note" };
+  const pickable = async (): Promise<CompareCandidate[]> => compareCandidates(await listNotes(email).catch(() => [] as InspectionNote[]));
+  if (!noteId) return { kind: "need_note", candidates: await pickable() };
 
   try {
     const note = await getNote(noteId);
-    if (!note) return { kind: "need_note" };
+    if (!note) return { kind: "need_note", candidates: await pickable() };
     if (note.authorEmail.trim().toLowerCase() !== email.trim().toLowerCase()) {
       return { kind: "forbidden" };
     }
@@ -277,7 +281,9 @@ export default async function NotesComparePage({
           ? "회차 비교 불러오기 실패"
           : result.kind === "need_more"
             ? `${result.aptName} 방문이 ${result.count}회예요`
-            : "비교할 노트를 골라 주세요";
+            : result.kind === "need_note" && result.candidates.length > 0
+              ? "비교할 단지 선택"
+              : "비교할 노트 없음";
 
   const emptyDesc =
     result.kind === "need_login"
@@ -285,10 +291,13 @@ export default async function NotesComparePage({
       : result.kind === "forbidden"
         ? "다른 사람의 임장노트 회차는 비교 화면에서 열 수 없어요."
         : result.kind === "error"
-          ? result.message
+          ? /* [1097] 예외 문장(result.message)을 그대로 보이지 않는다 — 사실 낱말 한 줄 · 원문은 서버 로그에 */
+            "회차 비교 불러오기 실패 · 잠시 후 다시"
           : result.kind === "need_more"
             ? "같은 단지 노트 2회 이상부터 표·타임라인이 채워져요."
-            : "노트 상세의 ‘회차 전체 비교’에서 들어올 수 있어요.";
+            : result.kind === "need_note" && result.candidates.length > 0
+              ? `같은 단지를 2회 이상 기록한 단지 ${result.candidates.length}곳 · 누르면 회차 비교`
+              : "같은 단지를 2회 이상 기록하면 회차 비교가 열린다 · 노트 상세의 ‘회차 전체 비교’에서도";
 
   return (
     <PageShell breadcrumb="임장노트 › 회차 비교">
@@ -328,6 +337,21 @@ export default async function NotesComparePage({
               </>
             ) : (
               <>
+                {/* [1097 · 기능] 비교 가능한 단지(같은 단지 2회 이상) — 바로 그 비교로 */}
+                {result.kind === "need_note" && result.candidates.length > 0 && (
+                  <div className="mb-2 flex w-full flex-wrap justify-center gap-1.5" aria-label="비교 가능한 단지">
+                    {result.candidates.map((c) => (
+                      <Link
+                        key={c.noteId}
+                        href={`/notes/compare?noteId=${encodeURIComponent(c.noteId)}`}
+                        className="tile inline-flex min-h-10 items-center gap-1.5 rounded-full border border-border px-3 py-1.5 t-sub font-bold text-ink no-underline md:min-h-8"
+                      >
+                        {c.label}
+                        <span className="font-medium text-text-3">{c.count}회</span>
+                      </Link>
+                    ))}
+                  </div>
+                )}
                 <Link
                   href="/notes?mine=1"
                   className="btn-primary rounded-xl px-4 py-2.5 t-body no-underline"

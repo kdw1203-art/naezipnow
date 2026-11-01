@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "../../components/PageShell";
 import { listImjangRegions } from "@/lib/imjang/guide";
 import { IMJANG_CHECKPOINTS } from "@/lib/imjang/checkpoints";
 import type { TxRegionSummary } from "@/lib/market/tx-bands";
@@ -64,7 +63,7 @@ export default async function ImjangIndexPage() {
   ]);
 
   return (
-    <PageShell breadcrumb="홈 › 임장 가이드" title="임장 가이드">
+    <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }} />
 
       {/* [1015 · 규칙 B·D] 설명 문단("임장(臨場)은 … 남기세요") → 사실 한 줄. "시세" 낱말은 실거래만 있는 화면이라 쓰지 않는다 */}
@@ -131,6 +130,6 @@ export default async function ImjangIndexPage() {
           지역별 실거래 구간
         </Link>
       </section>
-    </PageShell>
+    </>
   );
 }

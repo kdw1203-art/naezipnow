@@ -53,6 +53,8 @@ const LEGAL_LINKS = [
      "임장"은 이 사이트의 핵심 낱말인데 사이트가 스스로 가리키지 않고 있었다. */
   { label: "임장 가이드", href: "/imjang", bold: false, group: "service" },
   { label: "실거래 구간", href: "/tx", bold: false, group: "data" },
+  /* [1094 · 기능] 동별 실거래 허브(1083 · 동 1,155쪽) — 1069 와 같은 현상: 사이트맵에는 있는데 3D 지도의 뒤로 가기 한 곳에서만 닿았다 */
+  { label: "동별 실거래", href: "/dong", bold: false, group: "data" },
   { label: "시장 온도", href: "/analysis/temperature", bold: false, group: "data" },
   /* N20 — 공개 집계 API 문서. 링크가 없으면 크롤러도 사람도 도달하지 못한다. */
   { label: "공개 API", href: "/developers", bold: false, group: "data" },

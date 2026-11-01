@@ -397,6 +397,5 @@ export function ymLongKo(ym: string): string {
 }
 
 /** "2026.08" */
-export function ymDot(ym: string): string {
-  return `${ym.slice(0, 4)}.${ym.slice(4, 6)}`;
-}
+import { ymDotLabel as ymDot } from "@/lib/format/ym"; /* [1097 · 통폐합] 본체는 lib/format/ym(형식이 아니면 그대로) */
+export { ymDot };

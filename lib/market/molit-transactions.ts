@@ -44,6 +44,7 @@ import {
   molitDatasetLabel,
   molitRegionLabel,
   MOLIT_REDO_KEY,
+  pickChangedRows,
   redoCodesFor,
   redoTypesKey,
   UPSERT_CHUNK_ROWS,
@@ -250,6 +251,35 @@ export async function upsertInChunks(
   return { written, error: null, statements };
 }
 
+/**
+ * [1091 · 비용] (구, 월, 유형)의 기존 행 (external_key → is_cancelled). 한 달치를 다시 받을 때 바뀐 행만 넣기 위한 읽기 —
+ * 인덱스(region_code, contract_ym) · PostgREST 한 페이지 상한(1,000행) 안에서 넘긴다(운영 실측: 구·월당 평균 400행 · 최대 2,600행).
+ * 실패하거나 상한(10,000행)을 넘으면 null — 호출부는 예전처럼 전부 upsert 한다(안전한 쪽 · 바뀐 행을 빠뜨리지 않는다).
+ */
+export async function readExistingKeys(
+  sb: SupabaseClient,
+  regionCode: string,
+  yyyymm: string,
+  propertyTypes: readonly string[],
+): Promise<Map<string, boolean> | null> {
+  const PAGE = 1_000;
+  const MAX_PAGES = 10;
+  const out = new Map<string, boolean>();
+  for (let page = 0; page < MAX_PAGES; page += 1) {
+    const { data, error } = await sb
+      .from("market_transactions")
+      .select("external_key,is_cancelled")
+      .eq("region_code", regionCode)
+      .eq("contract_ym", yyyymm)
+      .in("property_type", propertyTypes)
+      .range(page * PAGE, page * PAGE + PAGE - 1);
+    if (error) return null;
+    for (const r of data ?? []) out.set(String(r.external_key), Boolean(r.is_cancelled));
+    if ((data?.length ?? 0) < PAGE) return out;
+  }
+  return null;
+}
+
 export async function findCoverageGaps(
   sb: SupabaseClient,
   yyyymm: string,
@@ -393,8 +423,10 @@ export interface MolitIngestResult {
   attempted: number;
   /** 이미 데이터가 있어 건너뛴 시군구 수 */
   alreadyCovered: number;
-  /** 적재된 행 수 */
+  /** 적재된 행 수 — [1091] 받은 행 가운데 DB 와 다른 행(새 키 · 해제 표식 변경)만 넣으므로 "바뀐 행 수"다 */
   inserted: number;
+  /** [1091] 받았지만 DB 와 같아 넣지 않은 행 수 — 받은 행 = inserted + unchanged(기존 키 읽기에 실패한 구는 전부 넣고 0) */
+  unchanged: number;
   /** API 가 0건을 반환한 시군구 수 */
   empty: number;
   errors: number;
@@ -406,7 +438,8 @@ export interface MolitIngestResult {
    * "이미 봤다" 고 착각한다.
    */
   aborted: boolean;
-  regions: { code: string; name: string; rows: number; status: "inserted" | "covered" | "empty" | "error" }[];
+  /** [1091] unchanged = 받았지만 DB 와 같은 행뿐(rows 는 받은 행 수 · 넣지 않음 · 단지 화면도 비우지 않음) */
+  regions: { code: string; name: string; rows: number; status: "inserted" | "unchanged" | "covered" | "empty" | "error" }[];
   /**
    * [1010] 이번 실행이 **실제로 upsert 한 행들**의 (region_name, complex_name) 집합.
    *
@@ -513,6 +546,7 @@ export async function ingestMolitTransactions(opts: {
     attempted: 0,
     alreadyCovered: 0,
     inserted: 0,
+    unchanged: 0,
     empty: 0,
     errors: 0,
     aborted: false,
@@ -712,11 +746,24 @@ export async function ingestMolitTransactions(opts: {
       // external_key 중복 제거 후 upsert
       const dedup = new Map<string, Record<string, unknown>>();
       for (const r of rows) dedup.set(String(r.external_key), r);
-      const payload = [...dedup.values()];
+      const fetched = [...dedup.values()];
+      const redoEntry: RedoEntry = { code: info.sigunguCd, ym: yyyymm, types: typesKey };
+
+      /* [1091 · 비용] 바뀐 행만 넣는다 — 기존 (external_key, is_cancelled) 를 읽어 새 키 · 해제 표식이 바뀐 행만(pickChangedRows 주석).
+         최근 달을 날마다 다시 받을 때 같은 행을 다시 쓰지 않고, 같은 단지의 화면을 다시 비우지 않는다. 읽기 실패면 전부 넣는다. */
+      const existing = (count ?? 0) > 0 ? await readExistingKeys(sb, info.sigunguCd, yyyymm, propertyTypes) : new Map<string, boolean>();
+      const payload = existing ? pickChangedRows(fetched, existing) : fetched;
+      if (existing) result.unchanged += fetched.length - payload.length;
+      if (payload.length === 0) {
+        /* 받은 행이 전부 DB 와 같다 — 적재도 비움도 없다(사실). 다시 받기 명단은 "채워졌다"로 닫는다 */
+        if (redoCodes.has(info.sigunguCd)) redoDone.push(redoEntry);
+        consecutiveDbErrors = 0;
+        result.regions.push({ code: info.sigunguCd, name: regionName, rows: fetched.length, status: "unchanged" });
+        continue;
+      }
 
       /* [1040] 500행씩 나눠 넣는다 — 한 구 한 달치(백필은 최대 6,000행)를 한 문장으로 넣으면 문장 시간 제한(8초)에
          걸린다(2026-10-06 시흥시). 시간 제한에 걸린 조각은 반으로 쪼개 다시 넣는다(upsertInChunks). */
-      const redoEntry: RedoEntry = { code: info.sigunguCd, ym: yyyymm, types: typesKey };
       const up = await upsertInChunks(sb, payload);
       if (up.error) {
         /* 앞 조각은 들어갔다(사실) — 행 수에 세고, 이 (구, 월)을 다음 실행이 먼저 다시 받게 적어 둔다 */
@@ -733,7 +780,7 @@ export async function ingestMolitTransactions(opts: {
       if (redoCodes.has(info.sigunguCd)) redoDone.push(redoEntry);
       consecutiveDbErrors = 0;
       result.inserted += payload.length;
-      /* [1010] upsert 가 성공한 뒤에만 센다 — 실패한 구의 단지를 비우면 "바뀌었다"는 거짓말이다. */
+      /* [1010] upsert 가 성공한 뒤에만 센다 — 실패한 구의 단지를 비우면 "바뀌었다"는 거짓말이다. [1091] 바뀐 행의 단지만 */
       for (const r of payload) touched.note(regionName, String(r.complex_name ?? ""));
       result.regions.push({ code: info.sigunguCd, name: regionName, rows: payload.length, status: "inserted" });
     } catch (e) {
@@ -808,7 +855,7 @@ export async function ingestMolitTransactions(opts: {
             ? "ok"
             : "skipped",
     message:
-      `slice=${result.slice} 시도=${result.attempted} 기존커버=${result.alreadyCovered} 빈응답=${result.empty} 오류=${result.errors}` +
+      `slice=${result.slice} 시도=${result.attempted} 기존커버=${result.alreadyCovered} 빈응답=${result.empty} 오류=${result.errors} 같음=${result.unchanged}행` +
       (keepRaw ? "" : " raw=미저장") +
       /* [1040] 중단 사유를 가른다 — 활용신청 중단에도 "DB오류 5회 연속"이라고 적혀 원인을 잘못 짚게 했다 */
       (aborted

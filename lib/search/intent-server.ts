@@ -14,6 +14,7 @@
 import "server-only";
 import { getReadOnlySupabase } from "@/lib/newui/supabase-read";
 import { logger } from "@/lib/log";
+import { dongPath } from "@/lib/dong/format";
 import { expandComplexAlias } from "@/lib/search/normalize-query";
 import { previewRowToHit, type ComplexSearchHit, type PreviewRow } from "@/lib/search/complex-preview-rows";
 import {
@@ -52,13 +53,15 @@ export interface AreaItem {
   recentTradeCount: number;
   lat: number | null;
   lng: number | null;
+  /** [1094 · 기능] 동이면 법정동 실거래 화면(/dong/<지역>/<동>) 주소 — 검색에서 동 랜딩(1083)으로 바로 간다. 구 · 시는 null */
+  href: string | null;
 }
 
 /** 화면이 그리는 "검색 범위" — 어디를 · 어떤 조건으로 찾았는지 */
 export interface SearchIntentInfo {
   mode: "filter" | "area" | "name";
   /** null = 전국(조건만 쳤을 때) 또는 지역 없음(이름 검색) */
-  scope: { label: string; kind: AreaKind; q: string; lat: number | null; lng: number | null } | null;
+  scope: { label: string; kind: AreaKind; q: string; lat: number | null; lng: number | null; href: string | null } | null;
   chips: IntentChip[];
   unsupported: IntentChip[];
   /** 조건·지역 검색의 전체 단지 수(이름 검색은 null) */
@@ -128,6 +131,8 @@ function toAreaItem(r: AreaRow): AreaItem {
     recentTradeCount: r.recentTradeCount,
     lat: r.lat,
     lng: r.lng,
+    /* 동 행의 regions 는 그 동이 속한 지역 하나(market_transactions.region_name) — 동 화면 주소 규칙(lib/dong/format)과 같은 원천 */
+    href: r.kind === "dong" && r.dong && r.regions.length === 1 ? dongPath(r.regions[0], r.dong) : null,
   };
 }
 
@@ -240,7 +245,15 @@ export function intentInfo(plan: SearchPlan, total: number | null): SearchIntent
   return {
     mode: plan.mode,
     scope: s
-      ? { label: s.label, kind: s.kind, q: scopeQuery(s), lat: s.lat, lng: s.lng }
+      ? {
+          label: s.label,
+          kind: s.kind,
+          q: scopeQuery(s),
+          lat: s.lat,
+          lng: s.lng,
+          /* [1094] 동 범위면 법정동 실거래 화면 주소(지역 줄과 같은 규칙) — 범위 줄에 "실거래 ›" */
+          href: s.kind === "dong" && s.dong && s.regions.length === 1 ? dongPath(s.regions[0], s.dong) : null,
+        }
       : null,
     chips: plan.parsed.chips,
     unsupported: plan.parsed.unsupported,
@@ -282,8 +295,10 @@ export async function runFilteredSearch(
     return null;
   }
   const rows = (data as FilteredRow[] | null) ?? [];
+  /* [1094 · 기능] 전월세만 있는 단지(trade_count 0)는 단지 화면이 없다(404) — 결과 목록에서 뺀다. 총 개수는 MV 기준 그대로(범위 설명용). */
+  const tradeable = rows.filter((r) => num(r.trade_count) === null || (num(r.trade_count) ?? 0) > 0);
   return {
-    hits: rows.map((r) => ({
+    hits: tradeable.map((r) => ({
       ...previewRowToHit({ ...r, sim: null, exact: true }, false),
       roadAddress: r.road_address?.trim() || null,
       bandPriceManwon: num(r.band_price_manwon),

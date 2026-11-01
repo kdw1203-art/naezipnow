@@ -1,4 +1,4 @@
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb, ShellNarrow } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { EXPERT_TYPES } from "@/lib/experts/taxonomy";
@@ -24,7 +24,8 @@ const STEPS: readonly { title: string; desc: string }[] = [
 
 export default function ExpertApplyPage() {
   return (
-    <PageShell breadcrumb="동네 › 전문가 › 등록">
+    <ShellNarrow>
+      <ShellBreadcrumb>동네 › 전문가 › 등록</ShellBreadcrumb>
       <PageHead
         icon="shield"
         title="전문가 등록"
@@ -42,6 +43,6 @@ export default function ExpertApplyPage() {
       <div className="mt-4">
         <ApplyForm />
       </div>
-    </PageShell>
+    </ShellNarrow>
   );
 }

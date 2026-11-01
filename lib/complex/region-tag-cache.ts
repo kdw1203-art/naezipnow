@@ -1,7 +1,7 @@
 import "server-only";
 
 import { unstable_cache } from "next/cache";
-import { complexRegionTag } from "@/lib/complex/region-tag";
+import { complexBucketTag, complexRegionTag } from "@/lib/complex/region-tag";
 import { logger } from "@/lib/log";
 
 /**
@@ -10,11 +10,14 @@ import { logger } from "@/lib/log";
  * 화면 수명(7일)을 건드리지 않는다. 실패해도 화면은 그대로 그린다(태그만 빠진다 — 그 단지는 id 비움 · 7일 TTL 로 남는다).
  * 규칙 · 이유: lib/complex/region-tag.ts.
  */
-export async function tagComplexPageRegion(region: string | null | undefined): Promise<void> {
+export async function tagComplexPageRegion(region: string | null | undefined, name?: string | null): Promise<void> {
   const tag = complexRegionTag(region);
   if (!tag) return;
+  /* [1091] 지역 태그 + 지역 안 묶음 태그(단지 이름 해시) — 적재는 보통 묶음만 비우고, 많이 바뀐 날은 지역을 비운다 */
+  const bucket = complexBucketTag(region, name);
+  const tags = bucket ? [tag, bucket] : [tag];
   try {
-    await unstable_cache(async () => 1, ["cx-region-tag-v1", tag], { tags: [tag] })();
+    await unstable_cache(async () => 1, ["cx-region-tag-v2", ...tags], { tags })();
   } catch (e) {
     logger.warnSampled("cx-region-tag", "[complex] 실거래 지역 태그 실패(무시)", e);
   }

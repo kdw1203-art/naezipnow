@@ -76,7 +76,7 @@ test("평가 API — 로그인 · 공개 노트 · 내 노트 불가 · 한 사�
 });
 
 test("노트 상세 — 평가 칸이 댓글과 한 카드 · 목록 바닥줄은 있을 때만", () => {
-  const page = code("app/notes/[id]/page.tsx");
+  const page = code("app/notes/[id]/(index)/page.tsx");
   assert.match(page, /getNoteRating\(realNote\.id, viewerEmail\)/);
   /* 평가 부품은 따로 받는 청크(NoteRatingLazy) — /notes/[id] 라우트 번들 상한(495KB) 안에 머문다 */
   assert.match(page, /<NoteRatingLazy/);
@@ -116,7 +116,7 @@ test("뉴스룸 머리 — 다른 동네 카테고리와 같은 부품(PageHead 
   assert.ok(!news.includes("<PageHead"), "화면 안에 따로 짠 머리 없음");
   for (const s of ["같은 사건 묶어", "최근 <b", "todayCount"]) assert.ok(!news.includes(s), `숫자 줄 없음: ${s}`);
   /* 같은 부품을 쓰는 화면들 */
-  for (const p of ["app/apply/page.tsx", "app/supply/page.tsx", "app/auctions/page.tsx", "app/redevelopment/(index)/page.tsx"]) {
+  for (const p of ["app/apply/(index)/page.tsx", "app/supply/page.tsx", "app/auctions/page.tsx", "app/redevelopment/(index)/page.tsx"]) {
     assert.match(code(p), /<TownHero/, p);
   }
   const town = code("app/town/page.tsx");

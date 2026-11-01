@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { cache } from "react";
 import { notFound } from "next/navigation";
-import { PageShell } from "@/app/components/PageShell";
+import { ShellBreadcrumb, ShellTitle } from "@/app/components/PageShell";
 import { HScroll } from "@/app/components/HScroll";
 import { QaBlock } from "@/app/components/QaBlock";
 import { CitationBlock } from "@/app/components/CitationBlock";
@@ -176,10 +176,9 @@ export default async function TemperatureRegionPage({
   /* 기록이 아직 없는 경우 — 지역은 유효하므로 404 가 아니라 사실을 적는다. */
   if (!latest) {
     return (
-      <PageShell
-        breadcrumb={`홈 › 분석 › 시장 온도 주간 기록 › ${region.label}`}
-        title={`${region.label} 시장 온도 주간 기록`}
-      >
+      <>
+        <ShellBreadcrumb>{`홈 › 분석 › 시장 온도 주간 기록 › ${region.label}`}</ShellBreadcrumb>
+        <ShellTitle>{`${region.label} 시장 온도 주간 기록`}</ShellTitle>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
@@ -203,7 +202,7 @@ export default async function TemperatureRegionPage({
           </Link>
           에서 볼 수 있습니다.
         </p>
-      </PageShell>
+      </>
     );
   }
 
@@ -285,10 +284,9 @@ export default async function TemperatureRegionPage({
   ];
 
   return (
-    <PageShell
-      breadcrumb={`홈 › 분석 › 시장 온도 주간 기록 › ${region.label}`}
-      title={`${region.label} 시장 온도 주간 기록`}
-    >
+    <>
+      <ShellBreadcrumb>{`홈 › 분석 › 시장 온도 주간 기록 › ${region.label}`}</ShellBreadcrumb>
+      <ShellTitle>{`${region.label} 시장 온도 주간 기록`}</ShellTitle>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, datasetJsonLd]) }}
@@ -464,6 +462,6 @@ export default async function TemperatureRegionPage({
           데이터 방법론
         </Link>
       </section>
-    </PageShell>
+    </>
   );
 }

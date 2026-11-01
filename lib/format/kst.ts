@@ -24,7 +24,8 @@ export type KstParts = {
   weekday: number;
 };
 
-const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"] as const;
+/** [1097] 뉴스룸 날짜 머리(lib/town/news-day)도 같은 표기를 쓴다 */
+export const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"] as const;
 const WEEKDAY_INDEX: Record<string, number> = {
   Sun: 0,
   Mon: 1,

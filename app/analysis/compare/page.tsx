@@ -12,7 +12,7 @@ import { withJosa } from "@/lib/format/josa";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb } from "../../components/PageShell";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
 import type { PickedComplex } from "../ComplexPicker";
 import { VerdictCard } from "../timing/region-verdict";
@@ -281,7 +281,8 @@ export default function ComparePage() {
   const open = panelOpen ?? count < 2;
 
   return (
-    <PageShell breadcrumb="분석 › 단지 비교">
+    <>
+      <ShellBreadcrumb>분석 › 단지 비교</ShellBreadcrumb>
       <div className="nz-dot-blue mx-auto w-full max-w-[1200px]">
         <PageHead icon="scale" title="후보 단지 비교" sub={`국토교통부 실거래 · 최대 ${COMPARE_TRAY_MAX}곳`} />
 
@@ -352,6 +353,6 @@ export default function ComparePage() {
         {/* [1026b] 폰 하단 바 — 레일의 채움 파랑과 같은 요소(담은 단지가 있을 때 · 화면에 한 번) */}
         {count > 0 && <MobilePrimaryBar label="결정 카드에 담기">{primary}</MobilePrimaryBar>}
       </div>
-    </PageShell>
+    </>
   );
 }

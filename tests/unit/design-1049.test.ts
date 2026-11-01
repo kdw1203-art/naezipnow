@@ -97,5 +97,5 @@ test("마이 — 월별 기록 막대 · 평균 점수 · 사용량 표", () => 
   const v = code("app/my/MyHubView.tsx");
   assert.match(v, /<ColumnBars/);
   assert.match(v, /<UsageTable rows=\{usage\} \/>/);
-  assert.match(code("app/my/page.tsx"), /activity: notesLoaded\.ok/);
+  assert.match(code("app/my/(index)/page.tsx"), /activity: notesLoaded\.ok/);
 });

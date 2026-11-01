@@ -141,7 +141,7 @@ export function PostActions({
       <ShareLinkButton
         title={title}
         label="공유"
-        copiedLabel="링크 복사됨 ✓"
+        copiedLabel="링크 복사했어요"
         variant="text"
         className="press rounded-lg bg-[var(--glass-bg)] px-3.5 py-2 font-semibold text-text-2"
       />

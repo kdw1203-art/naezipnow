@@ -72,8 +72,11 @@ test("색인 — 뉴스 hreflang · 지역 스켈레톤 제거 · IndexNow 지�
   assert.match(news, /seoAlternates\(canonicalNewsPath\(/);
   assert.match(news, /\balternates,/);
   assert.equal(existsSync("app/region/[id]/loading.tsx"), false, "ISR 7일 지역 상세는 완전한 HTML 로");
-  assert.ok(existsSync("app/complex/[id]/loading.tsx"), "단지는 그대로(게이트·UX)");
-  assert.doesNotMatch(strip(read("scripts/check-final-release.mjs")), /"app\/region\/\[id\]\/loading\.tsx"/);
+  assert.equal(existsSync("app/complex/[id]/loading.tsx"), false, "[1093] 단지도 완전한 HTML 로(지역 상세와 같은 이유)");
+  /* [1093] 최종 게이트는 이제 반대 방향 — 공개 ISR 화면에 loading 경계가 **없음**을 확인한다(지역 · 단지 포함) */
+  const gate = strip(read("scripts/check-final-release.mjs"));
+  assert.match(gate, /const inlineRoutes = \[[\s\S]*?"app\/complex\/\[id\]\/loading\.tsx",[\s\S]*?"app\/region\/\[id\]\/loading\.tsx",[\s\S]*?\];/);
+  assert.doesNotMatch(gate, /heavyRoutes/);
   const idx = strip(read("app/api/cron/indexnow-submit/route.ts"));
   assert.match(idx, /function isKstMonday\(/);
   assert.match(idx, /getAllRegionSnapshots\(\)/);

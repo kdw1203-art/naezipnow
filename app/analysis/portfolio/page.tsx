@@ -1,5 +1,5 @@
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb } from "../../components/PageShell";
 import { NextActions } from "../../components/NextActions";
 import { EmptyState } from "@/app/components/ui/EmptyState";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
@@ -45,7 +45,8 @@ export const metadata = buildPageMetadata({
 
 export default function PortfolioPage() {
   return (
-    <PageShell breadcrumb="분석 도구 › 자산 배분">
+    <>
+      <ShellBreadcrumb>분석 도구 › 자산 배분</ShellBreadcrumb>
       <div className="mb-3 flex items-center justify-between">
         <h1 className="rise-in t-title text-ink">자산 배분 시뮬레이터</h1>
       </div>
@@ -89,6 +90,6 @@ export default function PortfolioPage() {
           </Link>
         </div>
       </div>
-    </PageShell>
+    </>
   );
 }

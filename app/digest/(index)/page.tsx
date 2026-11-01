@@ -1,6 +1,5 @@
 import { formatKstDateTime, formatKstShortDate } from "@/lib/format/kst";
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "@/app/components/PageShell";
 import { HouseMark } from "@/app/components/Logo";
 import { ErrorState } from "@/app/components/ui";
 import { AdZone } from "@/app/components/ads/AdZone";
@@ -54,7 +53,7 @@ export default async function DigestPage() {
 
   if (!digest) {
     return (
-      <PageShell breadcrumb="뉴스룸 › 주간 다이제스트">
+      <>
         <div className="mx-auto flex w-full max-w-[480px] flex-col gap-2.5">
           <h1 className="mt-2 t-title text-ink">주간 다이제스트</h1>
           <ErrorState
@@ -64,7 +63,7 @@ export default async function DigestPage() {
             action={{ label: "뉴스룸 보기", href: "/town/news" }}
           />
         </div>
-      </PageShell>
+      </>
     );
   }
 
@@ -84,7 +83,7 @@ export default async function DigestPage() {
         : "이번 주 새로 모인 소식 없음";
 
   return (
-    <PageShell breadcrumb="뉴스룸 › 주간 다이제스트">
+    <>
       {/* [1015] 데스크톱 2단 — 480px 한 열이라 옆이 비던 화면(브리프 규칙 F). 본문 카드는 그대로 두고
           아카이브 링크·기준 시각·관련 링크·광고 1 을 오른쪽 340px 레일로 옮겼다. 폰은 한 열 그대로(순서 같음). */}
       <div className="mx-auto grid w-full max-w-[860px] grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -303,6 +302,6 @@ export default async function DigestPage() {
       {/* [1015] 광고 — 페이지 끝 1곳(브리프 규칙 G: 첫 화면 밖). 레일은 짧아 데스크톱 첫 화면 안에 들어오므로
           본문이 끝난 뒤에 둔다. 이 화면에 광고 자리가 없었다. */}
       <AdZone placement="page_bottom" seed={0} plan={null} className="mx-auto mt-6 w-full max-w-[860px] max-md:mt-4" />
-    </PageShell>
+    </>
   );
 }

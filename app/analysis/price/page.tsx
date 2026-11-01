@@ -7,7 +7,7 @@
 import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import Link from "@/app/components/IntentLink";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
-import { PageShell } from "../../components/PageShell";
+import { ShellBreadcrumb } from "../../components/PageShell";
 import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
 import { PageHead } from "@/app/components/PageHead";
 import type { HeroKpi } from "@/app/components/analysis/ToolHero";
@@ -107,10 +107,11 @@ export default async function PricePage({
     regions = await listTxRegions();
   } catch {
     return (
-      <PageShell breadcrumb="분석 · 면적대별 실거래가">
+      <>
+        <ShellBreadcrumb>분석 · 면적대별 실거래가</ShellBreadcrumb>
         {/* [1054] 오류 문구 꼴 "○○ 불러오기 실패 · 잠시 후 다시"(빈 상태 "없음"과 구분) */}
         <EmptyState msg="실거래 집계 불러오기 실패 · 잠시 후 다시" />
-      </PageShell>
+      </>
     );
   }
 
@@ -118,9 +119,10 @@ export default async function PricePage({
   const areaRegions = regions.filter((r) => r.areaCells.length > 0);
   if (areaRegions.length === 0) {
     return (
-      <PageShell breadcrumb="분석 · 면적대별 실거래가" toolScope={personaVars(TOOL_PERSONAS["market:price"])}>
+      <div className="tool-scope" style={personaVars(TOOL_PERSONAS["market:price"])}>
+        <ShellBreadcrumb>분석 · 면적대별 실거래가</ShellBreadcrumb>
         <EmptyState msg="면적대별로 정리된 실거래 없음" />
-      </PageShell>
+      </div>
     );
   }
 
@@ -302,7 +304,8 @@ export default async function PricePage({
   );
 
   return (
-    <PageShell breadcrumb="분석 · 면적대별 실거래가">
+    <>
+      <ShellBreadcrumb>분석 · 면적대별 실거래가</ShellBreadcrumb>
       <div className="nz-dot-blue mx-auto w-full max-w-[1200px]">
         {/* [D62] 넘겨받은 지역을 못 찾았으면 **그 사실을 말한다.**
             예전에는 조용히 첫 지역으로 갈아탔다 — 화면에는 다른 동네의 숫자가
@@ -361,6 +364,6 @@ export default async function PricePage({
         {/* [1026] 폰 하단 바 — 레일의 채움 파랑과 같은 요소(화면에 한 번) */}
         <RegionPrimaryBar regionLabel={target.name} />
       </div>
-    </PageShell>
+    </>
   );
 }

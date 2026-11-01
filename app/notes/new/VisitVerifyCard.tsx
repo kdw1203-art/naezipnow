@@ -68,7 +68,7 @@ export function VisitVerifyCard({
         </div>
         {verified ? (
           <span className="rounded-md bg-success-soft px-2 py-1 t-sub font-bold text-success">
-            ✓ 현장 인증됨 · 단지 반경{" "}
+            현장 인증됨 · 단지 반경{" "}
             {verified.distanceM >= 1000
               ? `${(verified.distanceM / 1000).toFixed(1)}km`
               : `${verified.distanceM}m`}

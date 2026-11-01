@@ -14,7 +14,7 @@ import { existsSync, readFileSync } from "node:fs";
 
 const read = (p: string) => readFileSync(p, "utf8");
 
-/** 존재 확인을 레이아웃에 둔 상세 경로 — 자기 세그먼트에 loading.tsx 가 남아 있는 곳 */
+/** 존재 확인을 레이아웃에 둔 상세 경로 — [1093] 자기 세그먼트에 loading.tsx 가 없다(본문 인라인) */
 const LAYOUT_GUARDED = [
   "app/complex/[id]",
   "app/notes/[id]",
@@ -22,31 +22,29 @@ const LAYOUT_GUARDED = [
   "app/rent/[region]",
 ];
 
-/** 조상 스켈레톤을 라우트 그룹 안으로 옮긴 목록 화면 */
+/** 목록 화면의 (index) 라우트 그룹 — 1066 에서 스켈레톤을 옮겼고 1092 는 셸 레이아웃을 두었다 · [1093] 스켈레톤은 없다 */
 const GROUPED = ["app/notes", "app/town/news", "app/reports", "app/redevelopment", "app/imjang", "app/digest"];
 
-test("Y1 진짜 404 — 존재 확인이 layout 에 있고, 그 세그먼트의 스켈레톤은 그대로다", () => {
+test("Y1 진짜 404 — 존재 확인이 layout 에 있다 · [1093] 공개 화면의 세그먼트에는 loading 경계가 없다(본문이 숨은 조각으로 저장되지 않게)", () => {
   for (const seg of LAYOUT_GUARDED) {
     const layout = `${seg}/layout.tsx`;
     assert.ok(existsSync(layout), `${layout} 없음 — page 에서만 notFound() 하면 200 이 된다`);
     const src = read(layout);
     assert.match(src, /notFound\(\)/, layout);
     assert.match(src, /from "next\/navigation"/, layout);
-    /* 스켈레톤을 지우는 방식으로 404 를 얻지 않았다(로딩 중 빈 화면 방지).
-       [1081] 지역 상세(app/region/[id])만 예외 — 404 는 layout 이 이미 보장하고, ISR(7일) 첫 렌더가 스트리밍되면 본문이
-       숨은 청크(<div hidden>)로 나가 검색엔진이 읽는 HTML 이 아니었다(운영 실측). 완전한 HTML 을 위해 스켈레톤을 뺐다. */
-    if (seg === "app/region/[id]") {
-      assert.ok(!existsSync(`${seg}/loading.tsx`), `${seg}/loading.tsx 가 돌아왔다 — 본문이 다시 숨은 청크가 된다`);
-      continue;
-    }
-    assert.ok(existsSync(`${seg}/loading.tsx`), `${seg}/loading.tsx 가 사라졌다`);
+    /* [1081] 지역 상세 · [1093] 단지 · 노트 상세 · 전월세 — 스켈레톤(loading 경계)이 있으면 ISR 첫 렌더(또는 12.8KB 를 넘는 본문)가
+       숨은 청크(<div hidden> + $RC)로 나가 JS 를 돌리지 않는 크롤러 · AI 봇이 셸만 읽는다(운영 실측 · 단지 화면 본문 전부). 완전한 HTML 을
+       위해 스켈레톤을 두지 않는다 — 이동 중 "눌렸다" 표시는 NavigationProgress 막대(최대 10초). 404 판정은 레이아웃이 그대로 보장한다. */
+    assert.ok(!existsSync(`${seg}/loading.tsx`), `${seg}/loading.tsx 가 돌아왔다 — 본문이 다시 숨은 청크가 된다`);
+    assert.ok(!existsSync(`${seg}/(index)/loading.tsx`), `${seg}/(index)/loading.tsx 가 돌아왔다`);
   }
 });
 
-test("Y2 경계 — 목록 스켈레톤은 라우트 그룹 안에만 있고, 상세를 덮는 조상 loading 은 없다", () => {
+test("Y2 경계 — 목록 화면에도 조상 loading 이 없다(상세를 덮지 않고 · 본문이 숨은 조각이 되지 않게)", () => {
   for (const seg of GROUPED) {
     assert.ok(existsSync(`${seg}/(index)/page.tsx`), `${seg}/(index)/page.tsx 없음`);
-    assert.ok(existsSync(`${seg}/(index)/loading.tsx`), `${seg}/(index)/loading.tsx 없음`);
+    /* [1093] 라우트 그룹은 셸 레이아웃을 그 화면에만 두는 자리(1092)로 남고, 스켈레톤은 없다 */
+    assert.ok(!existsSync(`${seg}/(index)/loading.tsx`), `${seg}/(index)/loading.tsx 가 남아 있다 — 본문이 숨은 청크가 된다`);
     /* 조상 자리에 남아 있으면 그 아래 상세 경로의 notFound() 가 다시 삼켜진다(탐침 ②) */
     assert.ok(!existsSync(`${seg}/loading.tsx`), `${seg}/loading.tsx 가 남아 있다 — 상세가 다시 200 이 된다`);
     assert.ok(!existsSync(`${seg}/page.tsx`), `${seg}/page.tsx 가 남아 있다 — 같은 주소에 두 쪽`);
@@ -75,20 +73,18 @@ test("Y3 h1 하나 — 스켈레톤 머리는 h2, 부품의 기본값은 h1 그�
   assert.match(read("app/town/TownHero.tsx"), /as = "h1"/);
   assert.match(read("app/town/news/NewsHead.tsx"), /as = "h1"/);
 
-  /* 스켈레톤 열 곳이 h2 로 받는다 — 하나라도 빠지면 그 주소의 h1 이 둘이 된다 */
+  /* 남은 스켈레톤(비공개 · 보관 화면)은 h2 로 받는다 — [1093] 공개 ISR 화면의 스켈레톤은 없다(review-1093) */
   const SKELETONS: [string, RegExp][] = [
-    ["app/apply/loading.tsx", /<TownHero as="h2"/],
-    ["app/auctions/loading.tsx", /<TownHero as="h2"/],
     ["app/qna/loading.tsx", /<PageHead icon="help" title="단지 Q&A" sub="단지별 질문 · 답변" as="h2"/], // [1079] 보관 영역 — PageHead 직접
-    ["app/redevelopment/(index)/loading.tsx", /<TownHero as="h2"/],
-    ["app/supply/loading.tsx", /<TownHero as="h2"/],
-    ["app/town/news/(index)/loading.tsx", /<NewsHead as="h2"/],
-    ["app/dev-deals/loading.tsx", /<PageShell titleAs="h2"/],
-    ["app/imjang/(index)/loading.tsx", /<PageShell titleAs="h2"/],
-    ["app/my/loading.tsx", /<PageShell titleAs="h2"/],
-    ["app/search/loading.tsx", /<PageShell titleAs="h2"/],
+    /* [1092] 셸이 레이아웃으로 올라간 곳 — 제목(h1)은 레이아웃 한 벌이거나(임장 가이드 · 검색) 화면이 그린다(마이 · 스켈레톤은 h2) */
+    ["app/my/(index)/loading.tsx", /<ShellTitle as="h2">마이<\/ShellTitle>/],
   ];
   for (const [p, re] of SKELETONS) assert.match(read(p), re, p);
+  assert.match(read("app/imjang/(index)/layout.tsx"), /title="임장 가이드"/);
+  assert.match(read("app/search/layout.tsx"), /title="통합 검색"/);
+  for (const p of ["app/apply/(index)/loading.tsx", "app/auctions/loading.tsx", "app/redevelopment/(index)/loading.tsx", "app/supply/loading.tsx", "app/town/news/(index)/loading.tsx", "app/imjang/(index)/loading.tsx", "app/search/loading.tsx", "app/dev-deals/(index)/loading.tsx"]) {
+    assert.ok(!existsSync(p), `${p}: [1093] 공개 화면의 스켈레톤은 없다`);
+  }
 });
 
 test("Y4 이미지 설명 — 색인되는 목록 썸네일에 alt 가 비어 있지 않다", () => {

@@ -183,14 +183,7 @@ export const HUB_TOOLS: readonly HubTool[] = [
     tier: "record",
     sim: true,
   },
-  {
-    href: "/analysis/switch",
-    title: "갈아타기 추천 지역",
-    desc: "조건을 넣어 갈아타기 시나리오를 예시로 비교",
-    icon: "repeat",
-    tier: "record",
-    sim: true,
-  },
+  /* [1097 · 통폐합] 갈아타기 추천(/analysis/switch)은 추천 엔진 없이 "준비 중" 빈 화면이라 지웠다 → /analysis/timing 으로 리다이렉트 */
 ] as const;
 
 export const LIVE_TOOLS = HUB_TOOLS.filter((t) => !t.sim);

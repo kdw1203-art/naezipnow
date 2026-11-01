@@ -154,7 +154,7 @@ test("인증 마크가 붙는 자리 — 동네이야기 글·댓글·피드 · 
     ["app/town/news/[id]/CommentThread.tsx", /<ExpertBadge badge=\{c\.expertBadge\} \/>/],
     ["app/town/feed-client.tsx", /<ExpertBadge badge=\{card\.authorBadge\} link=\{false\} \/>/],
     ["lib/town/feed.ts", /loadPostAuthorBadges\(visible\.map\(\(p\) => p\.id\)\)/],
-    ["app/notes/[id]/page.tsx", /<ExpertBadge badge=\{authorExpertBadge\} \/>/],
+    ["app/notes/[id]/(index)/page.tsx", /<ExpertBadge badge=\{authorExpertBadge\} \/>/],
     ["app/notes/[id]/NoteComments.tsx", /<ExpertBadge badge=\{c\.expertBadge\} \/>/],
     ["lib/inspection/note-comments.ts", /comments: await withBadges\(rows\)/],
     ["app/notes/notes-feed-client.tsx", /<ExpertBadge badge=\{n\.authorBadge\} \/>/],

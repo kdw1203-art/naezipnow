@@ -140,7 +140,7 @@ test("기록 점수 — 상세 toView 와 같은 식(입력한 축 평균 × 20 
   assert.deepEqual(s, { location: 3, school: 0, transport: 3, facility: 5, future: 0 });
   assert.equal(noteTotalScore(s), 73);
   /* 상세 page.tsx 의 식이 그대로인지(바뀌면 이 규칙도 같이 바꿔야 한다) */
-  const page = read("app/notes/[id]/page.tsx");
+  const page = read("app/notes/[id]/(index)/page.tsx");
   assert.ok(page.includes("const total = scored ? Math.round(avg * 20) : null;"));
 });
 
@@ -297,7 +297,7 @@ test("저장 완료 카드 — 공개일 때만 채움 파랑 '공유하기'(Sha
 });
 
 test("상세 — ?saved=1 + 작성자일 때만, '다음 행동' 자리 한 곳에서 저장 완료 카드 · 썸네일 고르기는 saved 를 넘긴다", () => {
-  const page = code("app/notes/[id]/page.tsx");
+  const page = code("app/notes/[id]/(index)/page.tsx");
   assert.ok(page.includes("saved: savedRaw } = await searchParams;"));
   assert.ok(page.includes("{isOwner && isSavedFlag(savedRaw) ? ("), "작성자 + saved=1");
   assert.match(page, /isSavedFlag\(savedRaw\) \? \(\s*<NoteSavedCard[\s\S]*?\) : \(\s*nextActionCard\s*\)\}/);

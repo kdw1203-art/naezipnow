@@ -7,6 +7,8 @@ import { AdZone } from "@/app/components/ads/AdZone";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { AiBriefingLazy } from "./AiBriefingLazy";
 import { ComplexAreaMapLazy } from "./ComplexAreaMapLazy";
+import { ComplexPairChips } from "./ComplexPairChips";
+import type { ComplexPairLink } from "@/lib/dong/landing";
 
 export interface RailStat {
   key: string;
@@ -23,6 +25,7 @@ export function ComplexRail({
   noteHref,
   askingHref,
   nearby,
+  pairs = [],
   nearbyLabel,
   briefingRegion,
   location,
@@ -35,6 +38,8 @@ export function ComplexRail({
   /** 실거래가 없는 단지는 없음(칸을 만들지 않는다) */
   askingHref: string | null;
   nearby: readonly { id: string; name: string; meta: string }[];
+  /** [1095] 이 단지가 낀 비교 조합 — 인근 단지 아래 칩(없으면 없음) */
+  pairs?: readonly ComplexPairLink[];
   nearbyLabel: string;
   briefingRegion: string;
   /** [1047] 단지 좌표 — 있으면 레일 맨 위에 위치·주변 지도(소유자 지시: 오른쪽 레일 노란 자리) */
@@ -95,6 +100,12 @@ export function ComplexRail({
               </li>
             ))}
           </ul>
+        </section>
+      )}
+      {/* [1095] 단지 비교 칩 — 인근 단지와 독립된 카드(인근 단지가 비어도 선다) */}
+      {pairs.length > 0 && (
+        <section className="card rise-in-2 rounded-2xl px-4 py-3.5" aria-label="단지 비교">
+          <ComplexPairChips pairs={pairs} />
         </section>
       )}
 

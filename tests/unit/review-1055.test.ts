@@ -229,11 +229,12 @@ test("U1 지도 검색 — 고른 뒤 재열림 없음 · dialog Esc/초점 · �
   assert.match(box, /const suppressOpenRef = useRef<string \| null>\(null\)/);
   assert.match(box, /if \(picked === null \|\| picked\.trim\(\) !== q\) setOpen\(true\)/);
   assert.equal((box.match(/suppressOpenRef\.current = (c\.name|a\.address|p\.name|a\.q);/g) ?? []).length, 4);
+  /* [1097] 지도의 selected 모달(Esc · detailPanelRef)은 열리는 길이 없는 죽은 코드라 지웠다 — 살아 있는 단지 패널(ComplexInfoPanel)의 Esc · 초점은 아래에서 */
   const mc = read("app/map/map-client.tsx");
-  assert.match(mc, /if \(e\.key === "Escape"\) setSelectedId\(null\)/);
-  assert.match(mc, /detailPanelRef\.current\?\.focus\(\)/);
-  assert.match(mc, /aria-label="패널 닫기"\s+className="-mr-\[10px\] -mt-\[6px\] inline-flex h-10 w-10/);
+  assert.doesNotMatch(mc, /setSelectedId\(|detailPanelRef/);
   const panel = read("app/map/ComplexInfoPanel.tsx");
+  /* 닫기 손잡이 32px + after:-inset-1.5(양쪽 6px) = 44px 터치 면 */
+  assert.match(panel, /aria-label="패널 닫기"[\s\S]{0,160}className="[^"]*\bh-8 w-8\b[^"]*after:-inset-1\.5/);
   assert.match(panel, /if \(e\.key === "Escape"\) onClose\(\)/);
   assert.match(panel, /sheetRef\.current\?\.focus\(\)/);
   const sc = read("app/search/search-client.tsx");
@@ -287,5 +288,5 @@ test("M1 단지 제목 60자 안 · /my noindex", () => {
   assert.doesNotMatch(code(hub === "" ? "" : "app/complex/[id]/page.tsx"), /titleParen/);
   const sample = `${"헬리오시티"} 실거래가 ${"29억 6,750만원"} · ${"가락동 "}실거래·거래 이력 | 내집나우`;
   assert.ok(sample.length <= 60, `${sample.length}자`);
-  assert.match(read("app/my/page.tsx"), /robots: \{ index: false, follow: false \}/);
+  assert.match(read("app/my/(index)/page.tsx"), /robots: \{ index: false, follow: false \}/);
 });

@@ -267,7 +267,8 @@ test("[1028 · 1029·19] 오류 문구 표준 — '○○ 불러오기 실패 ·
   assert.match(wb, /<p className="t-body font-bold text-warning">자료 불러오기 실패 · 잠시 후 다시<\/p>/);
   assert.ok(!wb.includes("없는 것과는 달라요"));
   const gap = code("app/analysis/gap/page.tsx");
-  assert.match(gap, /title="지역 시세 불러오기 실패"\s+desc="잠시 후 다시 시도해 주세요\."/);
+  /* [1097] 화면의 자료는 전세가율(실거래 비율)이라 "시세"가 아니다 · 실패 문구는 사실 낱말 꼴 */
+  assert.match(gap, /title="전세가율 불러오기 실패"\s+desc="잠시 후 다시"/);
   assert.ok(!gap.includes("조회가 실패했습니다") && !gap.includes("(조회 실패)"));
   assert.ok(gap.includes("월세 환산 수익률·실측 갭 열 불러오기 실패 · 전세가율 열은 그대로 볼 수 있어요."));
 });

@@ -60,12 +60,9 @@ export function isRecentMonth(yyyymm: string, now: Date): boolean {
 }
 
 /** yyyymm 에서 deltaMonths 만큼 이동(음수 = 과거) — 월 커서 계산 */
-export function shiftYm(yyyymm: string, deltaMonths: number): string {
-  const y = Number(yyyymm.slice(0, 4));
-  const m = Number(yyyymm.slice(4, 6));
-  const d = new Date(Date.UTC(y, m - 1 + deltaMonths, 1));
-  return `${d.getUTCFullYear()}${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
+/* [1097 · 통폐합] 본체는 lib/format/ym(같은 결과 · Date 없이 정수 셈) — 같은 이름으로 다시 내보낸다 */
+import { shiftYm } from "@/lib/format/ym";
+export { shiftYm };
 
 /** yyyymm 형식 검사 */
 export function isYm(v: unknown): v is string {
@@ -223,6 +220,25 @@ export function chunkRows<T>(rows: readonly T[], size: number = UPSERT_CHUNK_ROW
   const out: T[][] = [];
   for (let i = 0; i < rows.length; i += n) out.push(rows.slice(i, i + n));
   return out;
+}
+
+/**
+ * [1091 · 비용] 받은 행 가운데 **DB 와 다른 행만** — 새 external_key 이거나 해제 표식(is_cancelled)이 바뀐 행.
+ * external_key 가 거래의 사실(유형 · 구 · 월 · 단지 · 동 · 지번 · 면적 · 층 · 일 · 금액)을 다 담으므로(molit-transactions toRow),
+ * 같은 키에서 뒤에 바뀔 수 있는 값은 해제 표식뿐이다.
+ * 왜: 최근 달은 신고 지연을 흡수하려고 매일 한 달치를 다시 받는데, 전에는 받은 행 전부를 upsert 하고 그 단지 전부를
+ * "건드린 단지"로 세어 화면을 비웠다. 운영 실측(2026-10-18~23 · updated_at 기준): 지역 단지의 37~63% 가 날마다 비워졌지만
+ * 새 행이 생긴 단지는 3~41%(평균 17%) — 나머지는 같은 값을 다시 쓰고 같은 화면을 다시 만든 것이다.
+ * existing 은 (external_key → is_cancelled). 읽기에 실패했으면 호출부가 이 함수를 건너뛰고 예전처럼 전부 넣는다(안전한 쪽).
+ */
+export function pickChangedRows<T extends { external_key?: unknown; is_cancelled?: unknown }>(
+  payload: readonly T[],
+  existing: ReadonlyMap<string, boolean>,
+): T[] {
+  return payload.filter((r) => {
+    const prev = existing.get(String(r.external_key));
+    return prev === undefined || prev !== Boolean(r.is_cancelled);
+  });
 }
 
 /** Postgres 57014(문장 시간 제한) — 나눠서 다시 넣으면 되는 오류다 */

@@ -14,15 +14,19 @@ export function HScroll({
   children,
   className = "",
   hint = "옆으로 밀어 전체 열 보기",
+  stickyFirst = false,
 }: {
   children: ReactNode;
   className?: string;
   /** [1084] null 이면 아래 안내 줄 없이 오른쪽 흐림만(칩 줄 · 단계 줄) */
   hint?: string | null;
+  /** [1091] 표의 첫 열(이름)을 왼쪽에 고정 — 옆으로 밀어도 어느 줄인지 보인다(globals.css .nz-hscroll-sticky). 밀린 뒤에는 열 오른쪽에 선 */
+  stickyFirst?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [overflowing, setOverflowing] = useState(false);
   const [atEnd, setAtEnd] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
     const el = ref.current;
@@ -31,6 +35,7 @@ export function HScroll({
       const over = el.scrollWidth - el.clientWidth > 4;
       setOverflowing(over);
       setAtEnd(!over || el.scrollLeft + el.clientWidth >= el.scrollWidth - 2);
+      setScrolled(el.scrollLeft > 2);
     };
     measure();
     const ro = typeof ResizeObserver === "function" ? new ResizeObserver(measure) : null;
@@ -48,7 +53,7 @@ export function HScroll({
       {/* 넘치고 끝이 아니면 오른쪽 가장자리를 마스크로 흐린다(.tab-scroll 과 같은 방식 · globals.css .nz-hscroll-fade) */}
       <div
         ref={ref}
-        className={`overflow-x-auto ${overflowing && !atEnd ? "nz-hscroll-fade" : ""}`}
+        className={`overflow-x-auto ${overflowing && !atEnd ? "nz-hscroll-fade" : ""} ${stickyFirst ? "nz-hscroll-sticky" : ""} ${stickyFirst && scrolled ? "nz-hscroll-scrolled" : ""}`}
         tabIndex={overflowing ? 0 : undefined}
       >
         {children}

@@ -67,7 +67,7 @@ import {
 import { kstParts } from "@/lib/format/kst";
 /* [967 · 16] 억/만 표기·전월비·행 변환은 클라이언트 필터(면적대·정렬)와 같은
    구현을 써야 하므로 lib 로 옮겼다 — 이 파일 안의 사본을 지웠다. */
-import { ALL_BANDS, formatManwon, toHubTrades, tradeDeltaBases } from "@/lib/complex/hub-trades";
+import { ALL_BANDS, formatManwon, toHubTrades, toHubTradeWire, tradeDeltaBases, type HubTradeWire } from "@/lib/complex/hub-trades";
 /* [967 · 17] 모바일 하단 액션 바(관심·노트·호가 점검·AI 분석) — 클라이언트, 원래 CTA 가 보이면 숨김.
    [1008 · Q] 본체는 처음 스크롤할 때 받는다(MobileActionBarLazy — 번들 상쇄) */
 import { MobileActionBarLazy } from "./MobileActionBarLazy";
@@ -131,6 +131,8 @@ import { ComplexRentSection } from "./ComplexRentSection";
 import { ComplexNearbyPoi } from "./ComplexNearbyPoi";
 import { KakaoShareButton } from "@/app/components/KakaoShareButton";
 import { dongPath } from "@/lib/dong/format";
+import { loadComplexPairLinks } from "@/lib/dong/landing";
+import { ComplexPairChips } from "./ComplexPairChips";
 import { complexHrefFromNames } from "@/lib/seo/complex-slug";
 import { map3dPath, map3dSupported } from "@/lib/map3d/geo";
 import { ComplexReadMore } from "./ComplexReadMore";
@@ -509,6 +511,8 @@ interface HubView {
   /** [1009 · C] 단지 정보 격자(네이버식) — 값이 있는 항목만 칸이 된다 */
   spec: ComplexInfoFacts;
   trades: HubTrade[];
+  /** [1091] 같은 월별 집계의 전송용 압축 행 — 클라이언트 탭(ComplexHubTabs)에는 이것만 넘긴다(RSC 12KB → 약 5KB) */
+  tradesWire: HubTradeWire[];
   /** [970 · B-16] 집계 기간(trades 개월) 안의 실거래 **건수** 합 — 조회 실패면 null.
       trades.length 는 개월 수라 "실거래 N건"에 쓰면 틀린다. */
   dealCount: number | null;
@@ -696,6 +700,7 @@ function toView(
   const hubListings = listingRows.map(toHubListing);
   // 사실 우선: 실거래 데이터가 없으면 목업 대신 빈 배열(클라이언트가 안내 문구 표시)
   const trades = tx.length > 0 ? toHubTrades(tx) : [];
+  const tradesWire = tx.length > 0 ? toHubTradeWire(tx) : [];
   // 차트용 월별 평균 시계열 (tx는 과거→최신 정렬) — 실데이터만
   const priceSeries: PricePoint[] = tx.map((r) => ({
     ym: r.yyyymm,
@@ -847,6 +852,7 @@ function toView(
       kaptCode: row.kapt_code,
     },
     trades,
+    tradesWire,
     dealCount: txFailed ? null : dealSum,
     notes,
     notesFailed: postsFailed,
@@ -1265,7 +1271,8 @@ export default async function ComplexHubPage({
   if (!v) notFound();
   /* [1089] 실거래 지역 태그 — 실거래 적재가 이 지역을 건드리면 이 화면도 비워진다(lib/complex/region-tag 머리 주석).
      지역은 이름 id(canonical_id) 안의 값 = 실거래 region_name. 데이터 캐시 읽기 한 번 · 화면 수명(7일)은 그대로. */
-  await tagComplexPageRegion(decodeNameIdSafe(rowForFacts?.canonical_id ?? complexId)?.region);
+  const nameId = decodeNameIdSafe(rowForFacts?.canonical_id ?? complexId);
+  await tagComplexPageRegion(nameId?.region, nameId?.name);
   /* [1007 · P2] 전세가율·자료 완성도 — 지도 패널과 같은 규칙(buildComplexFacts). 재료는 위에서
      이미 띄운 로더들(전월세 원표본·임장노트·매매 원표본 창)이라 여기서 기다리기만 한다. */
   const facts = await loadHubFacts({
@@ -1341,6 +1348,12 @@ export default async function ComplexHubPage({
   const dongHref = (() => {
     const dec = decodeComplexId(socialId);
     return dec && v.emd ? dongPath(dec.region, v.emd) : null;
+  })();
+  /* [1095 · 기능] 이 단지가 낀 비교 조합(/complex/compare · 1,119쌍) — 인근 단지 옆 "단지 비교" 칩. 7일 데이터 캐시 한 벌(lib/dong/landing) ·
+     실패는 빈 배열. 비교 화면은 그동안 "비교 담기" 트레이와 사이트맵에서만 닿았다 */
+  const pairLinks = await (() => {
+    const dec = decodeComplexId(socialId);
+    return dec ? loadComplexPairLinks(dec.region, dec.name) : Promise.resolve([]);
   })();
   /* [1086 · 서울 3D] 서울 단지는 3D 동네 지도로(이 단지를 고른 채로 연다 · focus = 지도 API 와 같은 단지 주소 규칙) */
   const map3dHref = (() => {
@@ -1708,13 +1721,10 @@ export default async function ComplexHubPage({
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
         <div className="min-w-0">
           {/* [1024] 타입 탭(폰 sticky) → 매매|전세|월세 → 기간 칩 → 추이 그래프(월 중앙값 선·거래량 막대·신고가▲·신저가▼) */}
-          {trend ? (
-            <TxTrendLazy data={trend} complexName={v.name} />
-          ) : (
-            <div className="card rounded-2xl px-4 py-6 text-center t-body text-text-3">
-              {txFailed ? "실거래 불러오기 실패 · 잠시 후 다시" : `${v.name} · 신고된 매매·전월세 실거래 없음`}
-            </div>
-          )}
+          {/* [1091 · 같은 사실 두 곳 금지] 실거래가 없거나 못 읽은 단지에서 이 자리의 안내 카드("… 실거래 없음" · "불러오기 실패")는
+              머리 줄(신고된 실거래 없음)과 바로 아래 최근 실거래 표의 빈 상태가 같은 말을 이미 한다 — 한 화면에 같은 문장이 셋이었다
+              (운영 실측 성원대치2단지). 그래프는 실거래가 있을 때만, 없으면 아무것도 그리지 않는다. */}
+          {trend && <TxTrendLazy data={trend} complexName={v.name} />}
 
           {/* [1024] 최근 실거래 표 — 신고가 배지 · 해제 취소선. "전체 N건"은 실거래 탭(?tab=price) */}
           <RecentDealsTable
@@ -1795,7 +1805,7 @@ export default async function ComplexHubPage({
               aiTitle="요약"
               aiBody={summaryBody}
               listingsLabel={v.listingsLabel}
-              trades={v.trades}
+              tradesWire={v.tradesWire}
               notes={v.notes}
               notesFailed={v.notesFailed}
               notesWriteHref={v.notesWriteHref}
@@ -1840,6 +1850,12 @@ export default async function ComplexHubPage({
                   </Link>
                 ))}
               </div>
+            </section>
+          )}
+          {/* [1095] 단지 비교 칩 — 인근 단지와 독립(인근 단지가 비어도 선다 · lg 는 레일) */}
+          {pairLinks.length > 0 && (
+            <section className="cv-auto rise-in-5 mt-4 max-md:mt-3 lg:hidden" aria-label="단지 비교">
+              <ComplexPairChips pairs={pairLinks} />
             </section>
           )}
 
@@ -1939,6 +1955,7 @@ export default async function ComplexHubPage({
           noteHref={noteHref}
           askingHref={showAsking ? "#asking-check" : null}
           nearby={v.nearby}
+          pairs={pairLinks}
           nearbyLabel={v.emd && v.nearbyLabel.startsWith(v.emd) ? v.emd : v.dong}
           briefingRegion={v.dong ?? v.city ?? ""}
           location={typeof v.lat === "number" && typeof v.lng === "number" ? { lat: v.lat, lng: v.lng, buildYear: v.buildYear ?? null } : null}

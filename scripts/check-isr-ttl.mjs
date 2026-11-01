@@ -40,13 +40,19 @@ const ROUTES = [
   "reports/[ym]",
 ];
 
-/** 전역 적재 태그가 붙으면 안 되는 화면 — 바뀐 단지 · 기사만 비운다(lib/cache/invalidate · complex-invalidate) */
+/** 일정으로 비워지는 태그가 붙으면 안 되는 화면 — 바뀐 단지 · 지역 · 기사만 비운다(lib/cache/invalidate · complex-invalidate · region-tag) */
 const NO_GLOBAL_TAGS = new Set(["complex/[id]", "town/news/[id]"]);
-const GLOBAL_TAGS = ["market", "economy"];
+/** 크론이 일정으로 revalidateTag 하는 태그(1090 전수 · lib/cache/invalidate SOURCE_MAP · lib/town/invalidate-town):
+ *  market · economy(실거래 · 부동산원 · KB · 경제 적재 하루 3회+) · supply(입주물량 적재 매일) · town-posts · weekly-digest(뉴스 재검증 하루 3슬롯) ·
+ *  map-*(실거래 적재) · home-data(글 · 노트 작성). 롱테일 화면에 하나라도 붙으면 그 일정마다 수만 쪽이 통째로 비워진다. */
+const GLOBAL_TAGS = ["market", "economy", "supply", "town-posts", "weekly-digest", "map-region-markers", "map-danji", "home-data"];
 
-/** 번들에만 있고 그 화면 렌더에서 부르지 않는 캐시 — "라우트|키" → 이유 */
+/** 번들에만 있고 그 화면 렌더에서 부르지 않는 캐시 — "라우트|키" → 이유. 같은 모듈의 다른 함수를 부르는 화면은
+ *  tests/unit 이 "태그 없는 판을 부른다"를 소스로 잠근다(review-1090). */
 const ALLOW = {
   "town/news/[id]|related-notes-pool-v1": "공개 노트 상세(RelatedNotes)만 부른다 — 같은 청크에 함께 묶였다",
+  "complex/[id]|related-town-posts-v1": "단지 화면은 태그 없는 판(related-town-posts-stale-v1)을 부른다 — 같은 모듈(board-posts)이라 번들에 함께 있다",
+  "town/news/[id]|related-town-posts-v1": "뉴스 상세는 태그 없는 판(related-town-posts-stale-v1)을 부른다 — 같은 모듈이라 번들에 함께 있다",
 };
 
 const declaredRevalidate = (route) => {
@@ -120,7 +126,7 @@ for (const route of ROUTES) {
       const bad = c.tags.filter((t) => GLOBAL_TAGS.includes(t));
       if (bad.length > 0) {
         failed++;
-        console.error(`${TAG} FAIL — ${route}: "${c.key}" 태그 ${bad.join(",")} — 적재 때마다 이 화면 전부가 비워진다`);
+        console.error(`${TAG} FAIL — ${route}: "${c.key}" 태그 ${bad.join(",")} — 그 태그를 비우는 일정마다 이 화면 전부가 비워진다`);
       }
     }
   }

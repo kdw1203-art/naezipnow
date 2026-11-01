@@ -126,9 +126,9 @@ export function RegionMarketSummary({ regions }: { regions: string[] }) {
           담은 후보 {regions.length}개 지역 · {regions.join(" · ")}
         </div>
       ) : state.kind === "loading" ? (
-        <div className="t-sub text-text-3">지역 시세를 불러오는 중…</div>
+        <div className="t-sub text-text-3">지역 실거래 불러오는 중…</div>
       ) : state.kind === "empty" ? (
-        <div className="t-sub text-text-3">담은 후보 지역의 시세 통계 없음</div>
+        <div className="t-sub text-text-3">담은 후보 지역의 실거래 통계 없음</div>
       ) : state.kind === "limited" || state.kind === "error" ? (
         <div className="rounded-lg bg-danger-soft px-3 py-2.5 t-sub font-bold text-danger">{state.message}</div>
       ) : (

@@ -484,7 +484,8 @@ export default async function AdminDashboardPage() {
                   {
                     label: "매물 검수 대기",
                     value: pendingListingsLabel,
-                    sub: "소유확인 심사 큐",
+                    /* [1097] 값은 listings.status=pending 수 — "소유확인 심사 큐"(owner_verifications)와 다른 것이었다 */
+                    sub: "검수 대기 매물",
                   },
                 ].map((s) => (
                   <div

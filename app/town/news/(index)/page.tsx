@@ -3,7 +3,6 @@
 import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
 import Link from "@/app/components/IntentLink";
 import { AdZone } from "@/app/components/ads/AdZone";
-import { PageShell } from "../../../components/PageShell";
 import { NewsHead } from "../NewsHead";
 import { readTownPosts } from "@/lib/newui/board-posts";
 import { Icon } from "@/app/components/Icon";
@@ -119,7 +118,7 @@ export default async function TownNewsPage() {
   const mostRead = [...rows].filter((r) => r.views > 0).sort((a, b) => b.views - a.views).slice(0, 5);
 
   return (
-    <PageShell wide>
+    <>
       <HubBreadcrumbLd trail={[{ name: "부동산 뉴스룸", path: "/town/news" }]} />
       {/* [1044] 소유자 지시(2026-10-06): "뉴스랑 동네글을 분리해줘"(메뉴까지). 뉴스는 동네의 한 칸이 아니라 제 대분류다 —
           빵부스러기("동네이야기 › 뉴스룸")와 머리 아래 동네 카테고리 줄(동네이야기·청약·공매·입주·정비)을 걷었다.
@@ -226,6 +225,6 @@ export default async function TownNewsPage() {
           <AdZone placement="page_bottom" seed={4} plan={null} />
         </aside>
       </div>
-    </PageShell>
+    </>
   );
 }

@@ -119,6 +119,42 @@ export function toHubTrades(tx: readonly TxMonthLike[]): HubTrade[] {
 }
 
 /**
+ * [1091 · 비용] 전송용 압축 행 — 서버가 클라이언트(ComplexHubTabs)에 넘기는 모양. toHubTrades 의 **입력**(월별 집계 · 과거→최신)을
+ * 숫자 배열로 눌러 담고, 화면이 받아서 toHubTrades 로 같은 HubTrade[] 를 만든다(표기 문자열 · 전월비는 그때 계산).
+ * 왜: 단지 화면 RSC 에 trades 가 12KB(운영 실측 24개월 · 면적대 80조각)였다 — 키 이름(avgManwon · minManwon …)과 서버가 미리 만든
+ * 표기("29.3억" · "4건 · 26.9억~32.8억" · "▼ 5.1%")가 숫자보다 컸다. 같은 값이 HTML 안 RSC 와 .rsc 두 벌로 저장되므로 2배로 든다.
+ *   행: [yyyymm, 평균(만원), 건수, 최저|null, 최고|null, 전용㎡|null, 면적대[]] · 면적대: [slug, 평균, 최저, 최고, 건수]
+ */
+export type HubTradeBandWire = [string, number, number, number, number];
+export type HubTradeWire = [string, number, number, number | null, number | null, number | null, HubTradeBandWire[]];
+
+export function toHubTradeWire(tx: readonly TxMonthLike[]): HubTradeWire[] {
+  return tx.map((r) => [
+    r.yyyymm,
+    r.avg_manwon,
+    r.deal_count,
+    r.min_manwon ?? null,
+    r.max_manwon ?? null,
+    r.area_m2 ?? null,
+    (r.bands ?? []).map((b): HubTradeBandWire => [b.slug, b.avg_manwon, b.min_manwon, b.max_manwon, b.deal_count]),
+  ]);
+}
+
+/** 압축 행 → toHubTrades 입력. toHubTrades(tx) 와 fromHubTradeWire(toHubTradeWire(tx)) 는 같다(tests/unit/review-1091). */
+export function fromHubTradeWire(wire: readonly HubTradeWire[]): HubTrade[] {
+  const tx: TxMonthLike[] = wire.map(([yyyymm, avg, count, min, max, area, bands]) => ({
+    yyyymm,
+    avg_manwon: avg,
+    deal_count: count,
+    min_manwon: min,
+    max_manwon: max,
+    ...(area != null ? { area_m2: area } : {}),
+    bands: bands.map(([slug, a, mn, mx, c]) => ({ slug, avg_manwon: a, min_manwon: mn, max_manwon: mx, deal_count: c })),
+  }));
+  return toHubTrades(tx);
+}
+
+/**
  * [1009 · C 리뷰] 표 줄마다 등락의 **기준 달** — toHubTrades(전체: 바로 앞 줄)·viewTrades(면적대: 그 면적대가 있던 앞 줄)와
  * 같은 짝·같은 계산(pctDelta)으로 다시 센다. 기존 두 함수의 출력(테스트가 잠금)은 그대로 두고, 화면은 이 값으로
  * "전월 대비"(앞 줄이 정확히 전달) / "26.02 대비"(가운데 달이 빔)를 가른다 — lib/complex/month-delta.

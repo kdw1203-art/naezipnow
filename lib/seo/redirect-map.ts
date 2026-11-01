@@ -265,6 +265,19 @@ const REDIRECT_GROUPS: readonly RedirectGroup[] = [
     since: "2026-10-22",
     rules: [["/analysis/ai", "/analysis"]],
   },
+  {
+    /* [1097 · 통폐합] 갈아타기 추천(/analysis/switch)은 추천 엔진이 없어 "준비 중" 빈 상태 한 장(noindex · robots 차단)이었고,
+       그 화면의 유일한 행동이 시세·타이밍 분석이었다 — 화면을 지우고 거기로 보낸다(992 의 /analysis/cycle 과 같은 길).
+       공개 자료 현황(/data/records)은 11개 자료 전부 0행 "준비 중"에 내부 링크 0 · 사이트맵 밖(1027) — 자료 출처 화면의 한 절로.
+       요약 주간 목록(/digest/archive)은 /digest 와 /digest/[주] 에서만 닿던 목록 한 장 — /digest 의 한 절로(동적 형제 /digest/[week]
+       아래라 리다이렉트 페이지 파일로 남긴다 · 여기 표에는 없다). */
+    reason: "[1097] 통폐합 — 준비 중 빈 화면 · 0행 현황 화면을 역할이 있는 화면으로",
+    since: "2026-10-31",
+    rules: [
+      ["/analysis/switch", "/analysis/timing"],
+      ["/data/records", "/data-sources"],
+    ],
+  },
 ];
 
 /* 규칙을 평탄화하면서 from 중복을 즉시 터뜨린다.

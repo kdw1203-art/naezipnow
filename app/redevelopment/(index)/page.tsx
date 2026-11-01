@@ -3,7 +3,6 @@ import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
 import { HScroll } from "@/app/components/HScroll";
 import { seoAlternates } from "@/lib/seo/alternates";
 import Link from "@/app/components/IntentLink";
-import { PageShell } from "@/app/components/PageShell";
 import { ErrorState } from "@/app/components/ui";
 import { Icon } from "@/app/components/Icon";
 import { AdZone } from "@/app/components/ads/AdZone";
@@ -147,7 +146,7 @@ export default async function RedevelopmentPage() {
        위**에 그려져, 이 페이지만 제목이 102px 에 있고 나머지는 214px 에 있었다
        (Pixel 5 실측). 브레드크럼도 혼자 "홈 › …" 로 시작했다.
        9칸 공통 머리(TownPageHead: 아이콘 칩 + 제목 + 한 줄)로 맞춘다. */
-    <PageShell breadcrumb="동네이야기 › 정비사업 지도" wide>
+    <>
       <HubBreadcrumbLd trail={[{ name: "동네이야기", path: "/town" }, { name: "서울 재개발·재건축 지도", path: "/redevelopment" }]} />
       {/* 카테고리 줄 고정 — 형제 카테고리 페이지(청약·입주·공매)와 동일 패턴 */}
       {/* [978] 통계는 이 화면이 이미 들고 있는 값만 쓴다 — 머리를 붙이면서 조회를
@@ -427,6 +426,6 @@ export default async function RedevelopmentPage() {
         </aside>
         </div>
       </div>
-    </PageShell>
+    </>
   );
 }

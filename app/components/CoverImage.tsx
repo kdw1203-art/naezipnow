@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { buildImageSrcSet, canOptimizeImage } from "@/lib/images/srcset";
+import { buildImageSrcSet, canOptimizeImage, srcSetWidthsFor } from "@/lib/images/srcset";
 
 /* 이미지 폴백 (#18) — 커버/썸네일 이미지가 없거나(로드 실패 포함) 깨질 때
    브라우저 기본 "깨진 이미지" 아이콘 대신 지정한 폴백(그라디언트·아이콘)을 노출한다.
@@ -89,10 +89,11 @@ export function CoverImage({
 
   return (
     <>
+      {/* [1096 · 성능] 고정 px sizes 는 그 칸의 1x·2x·3x 폭만(srcSetWidthsFor) — 62px 썸네일이 384w 를 받던 것 */}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
         src={src as string}
-        {...(useOptimized ? { srcSet: buildImageSrcSet(src as string), sizes } : {})}
+        {...(useOptimized ? { srcSet: buildImageSrcSet(src as string, srcSetWidthsFor(sizes)), sizes } : {})}
         alt={alt}
         /* [968 · 17] priority 면 eager + high — 그 외는 종전대로 lazy */
         loading={priority ? "eager" : "lazy"}
