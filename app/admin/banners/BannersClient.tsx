@@ -65,6 +65,8 @@ type Draft = {
   bgTo: string;
   textColor: string;
   targetPlan: string;
+  /** [1098] 띠 배너 그림 — 있으면 상단 띠 배너 자리(TopBanner)에, 없으면 카드 자리(AdSlot)에 나간다 */
+  imageUrl: string;
 };
 
 const EMPTY_DRAFT: Draft = {
@@ -81,6 +83,7 @@ const EMPTY_DRAFT: Draft = {
   bgTo: "#1d4ed8",
   textColor: "white",
   targetPlan: "",
+  imageUrl: "",
 };
 
 function draftFrom(b: Row): Draft {
@@ -99,6 +102,7 @@ function draftFrom(b: Row): Draft {
     bgTo: b.bgTo,
     textColor: b.textColor,
     targetPlan: b.targetPlan ?? "",
+    imageUrl: b.imageUrl ?? "",
   };
 }
 
@@ -140,6 +144,7 @@ export function BannersClient({ initial }: { initial: Row[] }) {
       bgTo: draft.bgTo,
       textColor: draft.textColor,
       targetPlan: draft.targetPlan.trim() || null,
+      imageUrl: draft.imageUrl.trim() || null,
     };
     try {
       const res = await fetch("/api/admin/banners", {
@@ -264,6 +269,17 @@ export function BannersClient({ initial }: { initial: Row[] }) {
                 placeholder="/subscription"
               />
             </div>
+            <div className="flex flex-col gap-1 sm:col-span-2">
+              {/* [1098] 그림이 있으면 상단 띠 배너 자리(홈 · 뉴스룸 · 동네 · 실거래 구간 · 동별 · 단지 비교 · AI 분석 허브 머리 아래 · 폰 64 · PC 90px)에,
+                  없으면 종전 카드 자리에 나간다. 가로로 긴 그림(예: 1200×90 · 640×64)이 맞는다 — 비율은 유지되고(contain) 남는 바탕은 배경색 */}
+              <span className={label}>띠 배너 이미지 URL (https:// · 1200×90 권장 · PC 는 전체 · 폰은 왼쪽부터 64px 높이로 잘려 보이니 핵심은 왼쪽 1/3 에)</span>
+              <input
+                className={input}
+                value={draft.imageUrl}
+                onChange={(e) => set("imageUrl", e.target.value)}
+                placeholder="https://…/banner-1200x90.png"
+              />
+            </div>
             <div className="flex flex-col gap-1">
               <span className={label}>노출 위치</span>
               <select
@@ -333,8 +349,19 @@ export function BannersClient({ initial }: { initial: Row[] }) {
             </div>
           </div>
 
+          {/* [1098] 띠 배너 미리보기 — 실제 자리(.ad-strip__box)와 같은 높이·비율 */}
+          {draft.imageUrl.trim() && (
+            <div className="ad-strip" aria-label="띠 배너 미리보기">
+              <span className="ad-strip__box" style={{ background: draft.bgFrom || undefined }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={draft.imageUrl.trim()} alt="" className="ad-strip__img" />
+                <span className="ad-strip__label">광고</span>
+                {draft.ctaLabel ? <span className="ad-strip__text" style={{ color: draft.textColor || undefined }}>{draft.ctaLabel} ›</span> : null}
+              </span>
+            </div>
+          )}
           {/* 미리보기 — 실제 슬롯과 같은 배경/글자색으로 그린다. [1097] 실제 슬롯(AdSlot · 1015 규칙 G)은 bgFrom 단색 하나뿐인데
-              미리보기만 그라데이션이었다 — 운영자가 보는 것과 나가는 것이 달랐다 */}
+              미리보기만 그라데이션이었다 — 운영자가 보는 것과 나가는 것이 달랐다. [1098] 그림이 있으면 이 카드 미리보기는 "카드 자리엔 안 나감" */}
           <div
             className="flex flex-col gap-1 rounded-2xl px-5 py-4"
             style={{

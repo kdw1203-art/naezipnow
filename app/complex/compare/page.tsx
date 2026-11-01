@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
+import { TopBanner } from "@/app/components/ads/TopBanner";
 import { PageShell } from "../../components/PageShell";
 import { QaBlock } from "../../components/QaBlock";
 /* [1015 · 규칙 B] "조합을 고른 기준" 문단은 제목 옆 ⓘ 하나로(단지 상세와 같은 지연 청크) */
@@ -214,6 +215,9 @@ export default async function ComplexComparePage() {
           />
         </span>
       </p>
+
+      {/* [1098 · 배너] 상단 띠 배너 자리 */}
+      <TopBanner placement="page_bottom" plan={null} className="mb-4 max-md:mb-3" />
 
       {loadFailed ? (
         <section className="rise-in-1 card p-[var(--pad-card)]">

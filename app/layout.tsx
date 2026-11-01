@@ -97,6 +97,9 @@ export const viewport: Viewport = {
 /* [1054] 결정한 동의가 있으면 그리기 전에 표식 — CookieConsentBanner 주석 */
 const CONSENT_SCRIPT =
   "(function(){try{if(localStorage.getItem('nz_cookie_consent'))document.documentElement.setAttribute('data-cc','1')}catch(e){}})();";
+/* [1098 · 깜박임] 광고 제거 판정(lib/client/ad-free-flag)이 기억돼 있으면 그리기 전에 광고 자리를 숨긴다(globals.css html[data-ad-free="1"]) */
+const AD_FREE_SCRIPT =
+  "(function(){try{if(localStorage.getItem('nz_ad_free')==='1')document.documentElement.setAttribute('data-ad-free','1')}catch(e){}})();";
 const LOWEND_SCRIPT =
   "(function(){try{var m=navigator.deviceMemory;if(typeof m==='number'&&m<=4)document.documentElement.setAttribute('data-lowend','1');}catch(e){}})();";
 
@@ -170,6 +173,8 @@ export default function RootLayout({
             html[data-cc] 로 숨긴다(globals.css). 예전엔 배너가 하이드레이션 뒤에야 나타나 운영 Lighthouse 에서 /town/강남구 의
             가장 큰 요소(LCP)가 이 배너 글이었고 4.1초였다(TTFB 0.7초 + 그리기 지연 3.4초). 결정 뒤엔 컴포넌트가 스스로 내린다. */}
         <script dangerouslySetInnerHTML={{ __html: CONSENT_SCRIPT }} />
+        {/* [1098 · 깜박임] 유료 플랜의 광고 자리 — 공유 캐시 화면도 첫 그림부터 비워 둔다 */}
+        <script dangerouslySetInnerHTML={{ __html: AD_FREE_SCRIPT }} />
         {/* [969 · 16] 폰트 원점 3 → 0. 여기 있던 G7 preconnect/dns-prefetch(cdn.jsdelivr.net)
             와 아래 [949] preconnect(fonts.gstatic.com)를 지웠다 — 폰트 CSS·woff2 가 전부
             same-origin(/fonts/) 이 되어 미리 열 연결이 없다. 예전에는 폰트 때문에

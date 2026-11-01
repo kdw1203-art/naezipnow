@@ -7,3 +7,11 @@ export function isAdFreePlan(plan: string | null | undefined): boolean {
   const p = (plan ?? "").trim().toLowerCase();
   return p === "pro" || p === "expert" || p === "enterprise";
 }
+
+/* [1098] 보는 사람 기준 — 관리자는 광고 자리(배너 · 띠 배너)를 확인해야 하므로 유료 플랜이어도 광고를 본다.
+   소유자 계정(enterprise · admin)이 화면마다 광고 카드가 그려졌다 사라지는 것을 봤다("깜박거려") — 숨기는 대신 그대로 둔다. */
+export function adFreeForViewer(viewer: { plan?: string | null; role?: string | null } | null | undefined): boolean {
+  if (!viewer) return false;
+  if ((viewer.role ?? "").trim().toLowerCase() === "admin") return false;
+  return isAdFreePlan(viewer.plan);
+}

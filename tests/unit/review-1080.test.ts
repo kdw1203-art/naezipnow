@@ -217,8 +217,9 @@ test("15 가입 캡차 — 위젯 · 가입 요청에 토큰 · 서버 검증 ·
 test("기타 — 이미지 캐시 30일 · /api/health kv 칸 · .env.example 안내", () => {
   assert.match(read("next.config.ts"), /minimumCacheTTL: 60 \* 60 \* 24 \* 30,/);
   const h = read("app/api/health/route.ts");
-  assert.match(h, /kv: \{ configured: boolean; ok: boolean \};/);
-  assert.match(h, /kv: \{ configured: kvConfigured, ok: kvOk \},/);
+  /* [1099] 실패 이유 한 낱말(reason)을 더했다 */
+  assert.match(h, /kv: \{ configured: boolean; ok: boolean; reason: string \| null \};/);
+  assert.match(h, /kv: \{ configured: kvConfigured, ok: kvOk, reason: kvReason \},/);
   assert.match(h, /kv: ops\.kv,/);
   const env = read(".env.example");
   for (const k of ["KV_REST_API_URL", "AI_DAILY_REQUEST_BUDGET", "NEXT_PUBLIC_TURNSTILE_SITE_KEY", "TURNSTILE_SECRET_KEY", "NEWS_THUMB_DISABLED", "NAVER_DIRECTIONS_DAILY_CAP", "TRAFFIC_RETENTION_DAYS"])

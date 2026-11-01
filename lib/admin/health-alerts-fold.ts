@@ -176,3 +176,29 @@ export function criticalAlertNames(alerts: ReadonlyArray<Pick<HealthAlertRow, "c
   for (const a of alerts) n.set(a.checkName, (n.get(a.checkName) ?? 0) + 1);
   return [...n.entries()].map(([name, c]) => (c > 1 ? `${name}(${c})` : name));
 }
+
+/* ── [1099 · 운영 경보] 호스팅 정지 구간 — 같은 원인으로 울린 경보를 한 줄로 묶어 말한다 ──
+   2026-10-22 19:54 ~ 11-01 00:50 DEPLOYMENT_PAUSED 동안 ETL · 사이트맵 · 알림 스윕 경보 7종이 각각 37회씩 울렸다(소유자 화면).
+   site.http_probe / site.outage 경보의 첫 발생 ~ 회복 확인을 구간으로 보고, 그 구간에 시작된 다른 경보에 "정지 구간" 표식을 단다.
+   판정은 로그 사실만(첫 발생 · 회복 시각) · 구간이 없으면 null. 순수. */
+export type OutageWindow = { from: string; to: string | null; markedChecks: string[] };
+
+const OUTAGE_CHECKS = new Set(["site.http_probe", "site.outage", "app.health_endpoint"]);
+
+export function outageWindowOf(alerts: readonly HealthAlertRow[]): OutageWindow | null {
+  const probes = alerts.filter((a) => OUTAGE_CHECKS.has(a.checkName) && a.severity === "critical");
+  if (probes.length === 0) return null;
+  const from = probes.map((p) => p.firstAt).sort()[0]!;
+  const ends = probes.map((p) => p.recoveredAt).filter((x): x is string => Boolean(x)).sort();
+  const to = probes.every((p) => !p.active) && ends.length > 0 ? ends[ends.length - 1]! : null;
+  const fromMs = Date.parse(from) - 2 * 3600_000;
+  const toMs = to ? Date.parse(to) : Number.POSITIVE_INFINITY;
+  const markedChecks = alerts
+    .filter((a) => !OUTAGE_CHECKS.has(a.checkName) && a.severity !== "ok")
+    .filter((a) => {
+      const t = Date.parse(a.firstAt);
+      return Number.isFinite(t) && t >= fromMs && t <= toMs;
+    })
+    .map((a) => a.checkName);
+  return { from, to, markedChecks: [...new Set(markedChecks)] };
+}

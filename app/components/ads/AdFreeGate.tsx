@@ -2,7 +2,9 @@
 
 import { getSessionLite } from "@/lib/client/session-lite";
 import { useEffect, useState, type ReactNode } from "react";
-import { isAdFreePlan } from "@/lib/ads/ad-free";
+import { adFreeForViewer } from "@/lib/ads/ad-free";
+import { rememberAdFree } from "@/lib/client/ad-free-flag";
+import { readAuthedHint } from "@/lib/auth/authed-hint";
 
 /**
  * 정적 캐시 페이지(홈·동네 피드 등 `revalidate` 사용)용 광고 게이트.
@@ -20,7 +22,13 @@ export function AdFreeGate({ children }: { children: ReactNode }) {
     let cancelled = false;
     // 최적화 26 — 공유 세션 조회로 수렴
     getSessionLite().then((j) => {
-      if (!cancelled && isAdFreePlan(j?.user?.plan ?? undefined)) setHidden(true);
+      /* [1098 · 깜박임] 판정을 기억한다 — 다음 화면부터는 그리기 전에 숨긴다(html[data-ad-free]). 비회원(null)은 광고 있음.
+         관리자는 유료 플랜이어도 광고 자리를 본다(adFreeForViewer). 세션 쿠키 힌트는 있는데 조회가 실패한 경우(null)는 모르는 것 —
+         기억된 판정을 건드리지 않는다(실패 한 번에 유료 플랜의 광고 자리가 되살아나지 않게). */
+      if (j === null && readAuthedHint()) return;
+      const free = adFreeForViewer(j?.user ?? null);
+      rememberAdFree(free);
+      if (!cancelled && free) setHidden(true);
     });
     return () => {
       cancelled = true;
@@ -28,7 +36,12 @@ export function AdFreeGate({ children }: { children: ReactNode }) {
   }, []);
 
   if (hidden) return null;
-  return <>{children}</>;
+  /* data-ad-gate — 기억된 판정이 있으면 CSS 가 그리기 전에 숨긴다(globals.css html[data-ad-free="1"]) */
+  return (
+    <div data-ad-gate="" className="contents">
+      {children}
+    </div>
+  );
 }
 
 export default AdFreeGate;

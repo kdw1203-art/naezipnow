@@ -1,5 +1,6 @@
 import Link from "@/app/components/IntentLink";
 import { Header } from "./components/Header";
+import { TopBanner } from "@/app/components/ads/TopBanner";
 import { DesktopSideNav } from "./components/DesktopSideNav";
 import { TabBar } from "./components/TabBar";
 import { AIPanel } from "./components/AIPanel";
@@ -274,6 +275,9 @@ export default async function Home() {
               }
             />
           </div>
+
+          {/* [1098 · 배너] 상단 띠 배너 자리 — 검색 묶음과 오늘의 시장 사이 한 줄(띠 배너가 없으면 관리자에게만 점선 자리) */}
+          <TopBanner placement="home_feed" plan={null} className="mb-3 md:mb-4" />
 
           {/* ② 오늘의 시장 — 한 문장. 넷을 동시에 말하면 무엇이 중요한지 사라진다. */}
           <div className="mb-3 md:mb-4">

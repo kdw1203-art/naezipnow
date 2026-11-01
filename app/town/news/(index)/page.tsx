@@ -1,6 +1,7 @@
 /* [1023 · 동네 ①] 주제(NEWS_TAGS) 칩 줄 — 오른쪽 레일 끝의 같은 칩은 걷었다(레일엔 정비사업·입주 물량 링크만). [1044] 머리는 NewsHead · 동네 카테고리 줄 없음 · 칩 줄은 머리 아래. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
+import { TopBanner } from "@/app/components/ads/TopBanner";
 import Link from "@/app/components/IntentLink";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { NewsHead } from "../NewsHead";
@@ -126,6 +127,8 @@ export default async function TownNewsPage() {
           머리 모양은 1043 그대로(공용 PageHead — 아이콘 칩 · 제목 · 사실 한 줄 · 버튼 하나), 문구만 NewsHead 가 든다.
           숫자("오늘 n건 · 최근 n건")는 1043 에서 내린 그대로다 — 목록 위 "40 / 254건 · 같은 사건은 한 건으로 묶음"이 말한다. */}
       <NewsHead />
+      {/* [1098 · 배너] 상단 띠 배너 자리 — 머리 아래 · 목록 위 */}
+      <TopBanner placement="page_bottom" plan={null} className="mb-4 max-md:mb-3" />
       {/* [1075] 머리 아래 주제 칩 18개 줄은 레일 "주제" 카드로 내렸다 — 소유자(2026-10-18): "뉴스 이외의 요소들이 너무 복잡".
           첫 화면은 머리 → 분류 탭 → 지역 줄 → 목록. 주제 링크 18개는 그대로(레일, 검색 색인 동일). */}
 

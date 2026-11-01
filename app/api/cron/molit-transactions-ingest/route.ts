@@ -19,7 +19,7 @@ import { revalidatePath, revalidateTag } from "next/cache";
 import { complexInvalidationTagsFor } from "@/lib/complex/region-tag";
 import { complexPairPath, listComplexPairs } from "@/lib/market/complex-pairs";
 import { authorizeCron } from "@/lib/cron/authorize";
-import { ingestMolitTransactions, type MolitIngestResult } from "@/lib/market/molit-transactions";
+import { currentTargetMonth, defaultTargetMonth, ingestMolitTransactions, type MolitIngestResult } from "@/lib/market/molit-transactions";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
 import { invalidateAfterIngest, invalidateComplexIds, invalidatePathList } from "@/lib/cache/invalidate";
 import { invalidateImjangForTxRegions } from "@/lib/town/invalidate-town";
@@ -65,7 +65,9 @@ async function handle(req: Request) {
      아무 기록이 안 남는다. 슬라이스가 크거나 공공 API 가 느린 날 실제로 그랬다.
      270초에 스스로 접는다. 이미 채운 (시군구, 계약월) 조합은 건너뛰므로 중간에
      버려도 이중 계상이 없고, 남은 시군구는 다음 회전에서 다시 잡힌다. */
-  const run = await withBudget(
+  const startedAt = Date.now();
+  const gapsFirst = url.searchParams.get("gaps") === "1";
+  let run = await withBudget(
     Promise.resolve().then(() =>
       ingestMolitTransactions({
         yyyymm,
@@ -73,11 +75,47 @@ async function handle(req: Request) {
         sliceSize: num("size"),
         codes: codes?.length ? codes : undefined,
         /* [997] ?gaps=1 — 그 달에 0행인 시군구만(행정구역 개편 뒤 빈 구·월 메우기, GH ETL 이 매일 호출) */
-        gapsFirst: url.searchParams.get("gaps") === "1",
+        gapsFirst,
       }),
     ),
     CRON_WORK_BUDGET_MS,
   );
+
+  /* [1099 · 운영 경보] 자동 월(당월/전월 홀짝)이 **당월**인데 이번 슬라이스가 전부 빈 응답(적재 0 · 기존 커버 0)이면 같은 슬라이스로
+     **전월**을 이어서 받는다. 2026-11-01 00:40 UTC 실측: 당월 202611 → 빈응답 16 · 적재 0 으로 끝났고, 전월(202610)은 GitHub Actions
+     ETL(PREV_YM)만 받는데 그 잡이 10-22 뒤로 돌지 않아 누적 행수가 7일 정체(ops 경보 market_transactions.ingest). 월초 며칠은 당월이
+     비는 게 정상이라 그 날의 크론이 헛돌지 않게 한다. 남은 예산 안에서만(withBudget) · 이미 채운 (구, 월)은 건너뛰므로 재방문 비용은 낮다. */
+  let fallbackMonth: string | null = null;
+  if (
+    run.state === "ok" &&
+    !yyyymm &&
+    !gapsFirst &&
+    run.value.yyyymm === currentTargetMonth() &&
+    run.value.attempted > 0 &&
+    run.value.inserted === 0 &&
+    run.value.alreadyCovered === 0 &&
+    run.value.empty === run.value.attempted
+  ) {
+    const remaining = CRON_WORK_BUDGET_MS - (Date.now() - startedAt);
+    if (remaining > 30_000) {
+      fallbackMonth = defaultTargetMonth();
+      const second = await withBudget(
+        Promise.resolve().then(() =>
+          ingestMolitTransactions({
+            yyyymm: fallbackMonth ?? undefined,
+            slice: num("slice"),
+            sliceSize: num("size"),
+            codes: codes?.length ? codes : undefined,
+          }),
+        ),
+        remaining,
+      );
+      /* 전월 결과가 있으면 그것이 이번 실행의 결과(캐시 비움 · 응답) — 당월 빈 결과는 로그에 이미 남았다 */
+      if (second.state === "ok") run = second;
+      else if (second.state === "timeout") logger.warn(`[molit-cron] 전월 ${fallbackMonth} 이어받기 시간 초과 — 다음 실행에서`);
+      else logger.warn(`[molit-cron] 전월 ${fallbackMonth} 이어받기 실패`, second.error);
+    }
+  }
 
   /* yyyymm 미지정이면 ingestMolitTransactions 가 당월/전월을 날짜 홀짝으로 고른다.
      성공 로그의 dataset 은 그 함수가 실제 고른 yyyymm 으로 남기므로(logIngest 내부),
@@ -139,6 +177,8 @@ async function handle(req: Request) {
     ...payload,
     touched: touchedComplexes.length,
     touchedRevalidated: touchedStats.revalidated,
+    /* [1099] 당월이 비어 전월로 이어받았으면 그 달 */
+    ...(fallbackMonth ? { fallbackMonth } : {}),
     finishedAt: new Date().toISOString(),
   });
 }

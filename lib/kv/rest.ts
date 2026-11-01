@@ -48,6 +48,32 @@ export async function kvPipeline(commands: KvCommand[], timeoutMs = DEFAULT_TIME
   }
 }
 
+/**
+ * [1099 · 운영 경보] PING 과 **실패 이유** — /api/health 가 checks.kv 에 싣는다. 운영 실측 2026-11-01: `{configured:true, ok:false}` 가
+ * 279시간째인데 이유(401 토큰 회수 · 429 한도 · 시간 초과 · DNS)를 알 길이 없었다. 값은 상태 낱말 하나(키 재료 없음).
+ */
+export async function kvPingDetail(timeoutMs = DEFAULT_TIMEOUT_MS): Promise<{ ok: boolean; reason: string | null }> {
+  const cfg = kvConfig();
+  if (!cfg) return { ok: false, reason: "unconfigured" };
+  try {
+    const res = await fetch(`${cfg.url}/pipeline`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${cfg.token}`, "Content-Type": "application/json" },
+      body: JSON.stringify([["PING"]]),
+      signal: AbortSignal.timeout(timeoutMs),
+      cache: "no-store",
+    });
+    if (!res.ok) return { ok: false, reason: `http_${res.status}` };
+    const json = (await res.json().catch(() => null)) as Array<{ result?: unknown; error?: string }> | null;
+    if (!Array.isArray(json) || json.length !== 1) return { ok: false, reason: "bad_shape" };
+    if (typeof json[0]?.error === "string") return { ok: false, reason: "command_error" };
+    return String(json[0]?.result ?? "").toUpperCase() === "PONG" ? { ok: true, reason: null } : { ok: false, reason: "no_pong" };
+  } catch (e) {
+    const name = e instanceof Error ? e.name : "";
+    return { ok: false, reason: name === "TimeoutError" || name === "AbortError" ? "timeout" : "network" };
+  }
+}
+
 /** GET — 없으면 null · 백엔드 실패/미설정이면 undefined */
 export async function kvGet(key: string): Promise<string | null | undefined> {
   const r = await kvPipeline([["GET", key]]);

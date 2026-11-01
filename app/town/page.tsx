@@ -1,5 +1,6 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import Link from "@/app/components/IntentLink";
+import { TopBanner } from "@/app/components/ads/TopBanner";
 import { CountUp } from "@/app/components/motion/CountUp";
 import { PageHead } from "../components/PageHead";
 /* [967 · 19] 카드 변환·병합은 lib/town/feed.ts 로 옮겼다 — "더 보기"(/api/town/feed)와
@@ -189,6 +190,9 @@ export default async function TownPage() {
           ) : undefined
         }
       />
+
+      {/* [1098 · 배너] 상단 띠 배너 자리(동네) */}
+      <TopBanner placement="community_feed" plan={null} className="mb-4 max-md:mb-3" />
 
       {/* 동네이야기 카테고리 — 동네이야기 · 청약 · 공매 · 입주 · 정비사업 다섯 칸([1044] 뉴스룸 칸 없음 — 뉴스는 제 대분류).
           목록은 lib/town/category-links.ts 단일 소스. 하위 페이지도 같은 것을 쓴다. */}

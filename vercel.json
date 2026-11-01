@@ -95,6 +95,14 @@
     {
       "path": "/api/cron/seo-weekly-report",
       "schedule": "40 0 * * 1"
+    },
+    {
+      "path": "/api/cron/plan-expiry-sweep",
+      "schedule": "25 3 * * *"
+    },
+    {
+      "path": "/api/cron/points-expiry-sweep",
+      "schedule": "35 3 * * *"
     }
   ]
 }

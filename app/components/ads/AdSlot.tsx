@@ -9,6 +9,7 @@ import type { AdPlacement } from "@/lib/ads/adsense-policy";
 import { isAdFreePlan } from "@/lib/ads/ad-free";
 import { AdSlotTracker } from "./AdSlotTracker";
 import { AdFreeGate } from "./AdFreeGate";
+import { isStripBanner } from "./TopBanner";
 
 /**
  * H3·H4 — 광고 슬롯 (서버 컴포넌트).
@@ -125,6 +126,8 @@ export async function AdSlot({
 
   const all = await listBanners(PLACEMENT_MAP[placement]).catch(() => [] as Banner[]);
   const banners = all.filter((b) => {
+    /* [1098] 이미지 URL 이 있는 배너는 상단 띠 배너 자리(TopBanner)에 나간다 — 같은 배너가 한 화면에 두 번 나오지 않게 */
+    if (isStripBanner(b)) return false;
     if (!b.targetPlan) return true;
     if (!plan) return false;
     return b.targetPlan.toLowerCase() === plan.toLowerCase();

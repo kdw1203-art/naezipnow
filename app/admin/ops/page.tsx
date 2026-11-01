@@ -5,6 +5,7 @@ import { loadAdminKpi } from "@/lib/admin/stats";
 import { listBanners, type Banner } from "@/lib/admin/banners";
 import { loadRecentErrors } from "@/lib/admin/error-log";
 import { loadRecentHealthAlerts } from "@/lib/admin/health-alerts";
+import { outageWindowOf } from "@/lib/admin/health-alerts-fold";
 import { formatKstDateTime } from "@/lib/format/kst";
 import { listAuditLog, type AuditRow } from "@/lib/admin/audit";
 import { mailStatus } from "@/lib/email/send";
@@ -116,6 +117,7 @@ export default async function AdminOpsPage() {
   const criticalAlerts = alerts.filter((a) => a.severity === "critical" && a.active);
   const activeAlerts = alerts.filter((a) => a.active);
   const resolvedAlerts = alerts.filter((a) => !a.active);
+  const outage = outageWindowOf(alerts);
   const hasFunnel = funnel.length > 0 && funnel.some((s) => s.count > 0);
 
   // 운영 지표 — 실집계(loadAdminKpi). 조작 KPI(DAU/리텐션 등) 대신 실 수치만.
@@ -174,6 +176,16 @@ export default async function AdminOpsPage() {
               ops.health_alert_log · 같은 검사·대상끼리 접음 · 회복 기록이 뒤따르면 해소 · 없으면 마지막 발생이 검사 주기 안일 때 진행 중
             </span>
           </div>
+          {/* [1099] 호스팅 정지 구간에 시작된 경보는 원인이 하나 — 묶어서 말한다(정지가 풀린 뒤 각 검사의 다음 주기에 해소 · GitHub Actions 만
+              돌리는 소스는 GH 실행이 재개돼야 한다) */}
+          {outage && outage.markedChecks.length > 0 && (
+            <div className="rounded-xl border border-[rgba(255,180,168,.25)] bg-[rgba(255,107,107,.08)] px-3 py-2 text-[12px] leading-relaxed text-[#ffd9d2]">
+              호스팅 정지 구간 {formatKstDateTime(outage.from)} ~ {outage.to ? formatKstDateTime(outage.to) : "진행 중"} · 이 구간에 시작된 경보{" "}
+              {outage.markedChecks.length}종({outage.markedChecks.join(" · ")})은 원인이 같다 — 정지가 풀린 뒤 Vercel 크론은 다음 주기에 스스로
+              해소 · GitHub Actions(06:00 UTC)만 돌리는 소스(ecos · onbid · kosis · supply · redevelopment · applyhome · plan-expiry · points-expiry)는
+              GitHub › Actions › ETL 실행 기록을 확인(스케줄 비활성 · 분 한도 소진이면 멈춘다 · 1099 부터 plan-expiry · points-expiry 는 Vercel 크론도 돈다)
+            </div>
+          )}
           <div className="flex flex-col">
             {alerts.map((a) => (
               <div
@@ -194,6 +206,9 @@ export default async function AdminOpsPage() {
                   {a.severity}
                 </span>
                 <span className="text-[13px] font-bold text-white">{a.checkName}</span>
+                {outage?.markedChecks.includes(a.checkName) && (
+                  <span className="rounded px-1.5 py-px text-[10px] font-bold bg-[rgba(255,255,255,.08)] text-[#c9d2e0]">정지 구간</span>
+                )}
                 {/* [999] 진행 중 / 해소 — 마지막 발생 시각(KST)과 함께 */}
                 {a.active ? (
                   <span className="rounded px-1.5 py-px text-[10px] font-bold bg-[rgba(255,107,107,.12)] text-[#ffb4a8]">

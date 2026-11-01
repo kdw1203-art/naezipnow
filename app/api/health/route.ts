@@ -13,7 +13,7 @@ import {
   readOnlyClientHasServiceRole,
 } from "@/lib/newui/supabase-read";
 import { getSupabaseUrl } from "@/lib/supabase/env";
-import { kvAvailable, kvPipeline } from "@/lib/kv/rest";
+import { kvAvailable, kvPingDetail } from "@/lib/kv/rest";
 import { classifyIngestRun, type IngestOutcome } from "@/lib/market/ingest-outcome";
 /* [968 · T5] 토스 구성 진단 — 접두사 판정(boolean·enum)만, 키 값은 어디에도 싣지 않는다 */
 import { checkTossKeyPair } from "@/lib/payments/toss-keys";
@@ -67,7 +67,7 @@ type OpsChecks = {
   };
   env: { ok: boolean };
   /** [1080] KV(속도 제한·AI 일일 상한·썸네일 캐시 백엔드) — 변수 유무와 PING 결과만(값 없음) */
-  kv: { configured: boolean; ok: boolean };
+  kv: { configured: boolean; ok: boolean; reason: string | null };
 };
 
 type RawLogRow = { source?: unknown; status?: unknown; rows?: unknown; created_at?: unknown };
@@ -189,9 +189,12 @@ async function getOpsChecks(): Promise<OpsChecks> {
 
   const kvConfigured = kvAvailable();
   let kvOk = false;
+  /* [1099] 실패 이유 한 낱말(http_401 · http_429 · timeout · network …) — 운영 경보 app.health_check_false 가 "왜"를 말할 수 있게 */
+  let kvReason: string | null = null;
   if (kvConfigured) {
-    const r = await kvPipeline([["PING"]]);
-    kvOk = Boolean(r && String(r[0]).toUpperCase() === "PONG");
+    const r = await kvPingDetail();
+    kvOk = r.ok;
+    kvReason = r.reason;
   }
 
   return {
@@ -199,7 +202,7 @@ async function getOpsChecks(): Promise<OpsChecks> {
     privilegedRead: { configured: privConfigured, ok: privOk },
     etl: { ok: etlOk, lastSuccessAt, lastRunAt, lastRunOutcome, troubled },
     env: { ok: envOk },
-    kv: { configured: kvConfigured, ok: kvOk },
+    kv: { configured: kvConfigured, ok: kvOk, reason: kvReason },
   };
 }
 
