@@ -216,6 +216,9 @@ test("F6 화면 연결", () => {
   assert.ok(!panel.includes("clusterMode"));
   const slider = read("app/map/HistogramRangeSlider.tsx");
   assert.ok(!slider.includes("걸러지지 않아요"), "실제 동작과 반대 문구");
-  assert.match(slider, /값 없는 단지는 조건을 걸면 제외/);
+  /* [1102] 규칙 문장은 패널 머리 한 번 · 슬라이더 밑은 수만(같은 문장 네 번 반복 금지) */
+  assert.doesNotMatch(slider, /값 없는 단지는 조건을 걸면 제외/);
+  assert.match(slider, /값 있는 단지 \{available\.toLocaleString\("ko-KR"\)\} \/ 화면 \{total\.toLocaleString\("ko-KR"\)\}/);
+  assert.equal((mc.match(/값 없는 단지는 조건을 걸면 제외/g) ?? []).length, 1);
   assert.match(read("components/map/NaverMap.tsx"), /hoverFacts\?: string\[\];/);
 });

@@ -294,67 +294,10 @@ export function TempMapClient({
           {/* [1026] 결론 한 줄 — 주 칩·시/도 선택을 따라 바뀐다 */}
           {conclusion && <VerdictCard conclusion={conclusion} />}
 
-          {/* 타일 — 평균 · 가장 뜨거운 · 가장 차가운 · 지난주 대비 · 내 관심 지역(있을 때만). [1026] 폰은 결론과 겹치는 두 칸을 숨긴다 */}
+          {/* [1102 · 같은 사실 한 번] 타일 다섯 중 넷(평균 · 가장 뜨거운 곳 · 가장 차가운 곳 · 지난주 대비)은 바로 위 결론 카드
+              (제목 · "평균 N" 칩 · 근거 줄)와 같은 수였다(운영 PC 넷 다 · 폰 둘). 결론에 없는 "내 관심 지역"만 남긴다. */}
+          {mine && (
           <div className="tmp-stat">
-            {stats.avg !== null && (
-              <div className="kpi">
-                <span className="kpi-k">평균 온도</span>
-                <span className="kpi-v">{stats.avg}</span>
-                <span className="kpi-d">
-                  {stats.count}곳 · {chipLabel}
-                  {sido ? ` · ${sido}` : ""}
-                </span>
-              </div>
-            )}
-            {stats.hottest && (
-              <div className="min-w-0 max-md:hidden">
-                <div className="kpi h-full">
-                  <span className="kpi-k">가장 뜨거운 곳</span>
-                  {/* [1075] "경기 수원시 권선구 79" 가 칸에서 잘려 점수가 사라졌다(PC 실측) — 지역만 줄이고 점수는 늘 보인다 */}
-                  <span className="kpi-v flex items-baseline gap-1.5">
-                    <span className="min-w-0 truncate">{stats.hottest.current.regionLabel}</span>
-                    <span className="shrink-0">{stats.hottest.current.score}</span>
-                  </span>
-                  <span className="kpi-d truncate">{stats.hottest.current.headline}</span>
-                </div>
-              </div>
-            )}
-            {stats.coldest && (
-              <div className="min-w-0 max-md:hidden">
-                <div className="kpi h-full">
-                  <span className="kpi-k">가장 차가운 곳</span>
-                  {/* [1075] "경기 수원시 권선구 79" 가 칸에서 잘려 점수가 사라졌다(PC 실측) — 지역만 줄이고 점수는 늘 보인다 */}
-                  <span className="kpi-v flex items-baseline gap-1.5">
-                    <span className="min-w-0 truncate">{stats.coldest.current.regionLabel}</span>
-                    <span className="shrink-0">{stats.coldest.current.score}</span>
-                  </span>
-                  <span className="kpi-d truncate">{stats.coldest.current.headline}</span>
-                </div>
-              </div>
-            )}
-            {stats.compared > 0 && (
-              <div className="kpi">
-                <span className="kpi-k">지난주 대비</span>
-                <span className="kpi-v inline-flex items-baseline gap-1.5">
-                  <span className="delta-up">
-                    <span aria-hidden="true">▲</span>
-                    <span className="sr-only">오른 곳</span>
-                    {stats.rising}
-                  </span>
-                  <span aria-hidden="true" className="text-text-3">
-                    ·
-                  </span>
-                  <span className="delta-down">
-                    <span aria-hidden="true">▼</span>
-                    <span className="sr-only">내린 곳</span>
-                    {stats.falling}
-                  </span>
-                </span>
-                {/* [1075] "… 중 오른 곳 · 내린 곳" 은 칸에서 두 줄 — ▲·▼ 색은 사이트 표준(1029)이라 설명 없이 기준만 */}
-                <span className="kpi-d">비교 가능한 {stats.compared}곳 기준</span>
-              </div>
-            )}
-            {mine && (
               <Link href={`${PATH}/${encodeURIComponent(mine.current.regionId)}`} className="kpi tile no-underline">
                 <span className="kpi-k">내 관심 지역</span>
                 <span className="kpi-v flex items-baseline gap-1.5">
@@ -365,8 +308,8 @@ export function TempMapClient({
                   {mine.previous ? <DiffBadge diff={mine.current.score - mine.previous.score} /> : mine.current.headline}
                 </span>
               </Link>
-            )}
           </div>
+          )}
 
           {/* 대표 그림 — 온도 타일 지도 */}
           <section id="temp-map" className="card scroll-mt-20 rounded-2xl p-4 max-md:p-3.5" data-reveal="">

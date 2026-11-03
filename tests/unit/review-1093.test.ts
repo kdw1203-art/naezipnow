@@ -68,8 +68,8 @@ test("공개 노트 허브 — 셸은 (index) 레이아웃 한 벌 · 피드 보
   const client = strip(read("app/notes/notes-feed-client.tsx"));
   assert.doesNotMatch(client, /<PageShell|<\/PageShell>|PageShell \}/, "클라이언트 조각이 셸을 그리지 않는다");
   assert.match(client, /\{\(view === "feed" \|\| deskView === "feed"\) && \(\s*<div className=\{`flex-col gap-4 md:gap-4 \$\{view === "feed" \? "flex" : "hidden"\} \$\{deskView === "feed" \? "md:flex" : "md:hidden"\}`\}>/);
-  /* 첫 화면 기본은 폰 격자 · 데스크톱 표 — 저장된 보기는 마운트 뒤에 읽으므로 SSR 과 수화가 같다 */
-  assert.match(client, /useState<ViewMode>\("grid"\)/);
+  /* 첫 화면 기본은 폰 목록(표 · [1101] 격자 → 목록) · 데스크톱 표 — 저장된 보기는 마운트 뒤에 읽으므로 SSR 과 수화가 같다 */
+  assert.match(client, /useState<ViewMode>\("table"\)/);
   assert.match(client, /useState<DeskView>\("table"\)/);
   assert.match(client, /\{view === "grid" && \(/);
   assert.match(client, /deskView === "table" \? "md:block" : "md:hidden"/);

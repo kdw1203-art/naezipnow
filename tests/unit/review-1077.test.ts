@@ -90,7 +90,9 @@ test("R7 말투 — 문학 투 제목·라벨 → 표준 이름", () => {
   assert.match(cr, />자주 묻는 질문</);
   assert.doesNotMatch(cr, /있는 그대로의 고지|자주 묻는 것/);
   assert.match(read("app/region/[id]/page.tsx"), /title=\{`\$\{name\} 아파트 실거래 · 지역 분석`\}/);
-  assert.match(read("app/region/[id]/page.tsx"), /\{name\} 시장 흐름 요약/);
+  /* [1101 · 같은 사실 한 번] "{name} 시장 흐름 요약" 카드는 시세 흐름 카드 아래 줄로 합쳤다 — 문장은 그대로(marketRead) · 제목 없이 */
+  assert.match(read("app/region/[id]/page.tsx"), /\{marketRead\.paragraphs\.map\(\(p, i\) => \(/);
+  assert.match(read("app/region/[id]/page.tsx"), /\{name\} 요약 문장/);
   assert.match(read("app/region/[id]/RegionHero.tsx"), /`\$\{name\} 실거래·가격지수 요약`/);
   const checks: Array<[string, string, string]> = [
     ["app/data-sources/page.tsx", "보유 데이터", "지금 실제로 가지고 있는 것"],

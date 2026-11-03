@@ -5,6 +5,8 @@ import { AdZone } from "@/app/components/ads/AdZone";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { ShellBreadcrumb, ShellTitle } from "../../components/PageShell";
+import { RegionTabs } from "@/app/components/region/RegionTabs";
+import { catalogIdForTxRegionName } from "@/lib/region/region-tabs";
 import {
   findTxRegionBySlug,
   listTxRegions,
@@ -231,6 +233,7 @@ export default async function TxRegionPage({
     { name: region.name, url: `/tx/${encodeURIComponent(region.slug)}` },
   ]);
 
+  const catalogId = catalogIdForTxRegionName(region.name);
   return (
     /* [1087] 셸은 layout.tsx — 경로 줄·제목만 같은 마크업으로 */
     <>
@@ -240,6 +243,8 @@ export default async function TxRegionPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, datasetJsonLd]) }}
       />
+      {/* [1101 · 지역 화면 한 벌] 카탈로그 지역이면 지역 탭 줄(개요 · 실거래 구간 · 전월세 · 시장 온도 · 동네 · 월간 리포트) */}
+      {catalogId && <RegionTabs id={catalogId} current="tx" txSlug={region.slug} className="rise-in mb-3" />}
 
       {/* [1015 · 규칙 B] 사실 한 줄 */}
       <p className="rise-in mb-4 t-sub text-text-2 max-md:mb-3">

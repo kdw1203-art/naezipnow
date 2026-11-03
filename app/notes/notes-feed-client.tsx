@@ -167,67 +167,7 @@ function shortLabel(n: FeedNote): string {
   return n.title.slice(0, 6);
 }
 
-/* ── 상단 스토리 줄 (최근 임장 · 인스타 스토리 느낌) ──
-   [970 · B-04] 가장자리 붙이기는 PageShell 의 모바일 패딩(px-3.5)만큼만 — -mx-5 는
-   6px 을 더 빼서 가로 스크롤(넘침)을 만들었다. 아래 그리드도 같다. */
-function StoryRail({ notes }: { notes: FeedNote[] }) {
-  /* [1012 · 규칙 3] 인스타 무지개 링 → 브랜드 주홍 단색 링 */
-  const IG_RING = "var(--brand-red)";
-  return (
-    /* [1015 · 규칙 F] 데스크톱은 가로 스크롤 대신 줄바꿈(md:flex-wrap) — 폰은 레일 그대로 */
-    <div className="-mx-3.5 overflow-x-auto px-3.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:mx-0 md:overflow-visible md:rounded-2xl md:border md:border-line md:bg-surface md:px-4 md:py-3">
-      <div className="flex gap-3.5 pb-1 md:flex-wrap md:pb-0">
-        {/* 내 스토리 = 노트 쓰기 */}
-        <Link
-          href="/notes/new"
-          className="press flex w-[64px] shrink-0 flex-col items-center gap-1.5"
-        >
-          <span className="flex h-[62px] w-[62px] items-center justify-center rounded-full border-2 border-dashed border-line-strong text-primary">
-            <Icon name="plus" size={22} />
-          </span>
-          <span className="w-full truncate text-center t-caption text-text-2">
-            노트 쓰기
-          </span>
-        </Link>
-        {notes.slice(0, 14).map((n) => (
-          <Link
-            key={n.id}
-            href={noteHref(n)}
-            className="press flex w-[64px] shrink-0 flex-col items-center gap-1.5"
-          >
-            <span
-              className="h-[62px] w-[62px] rounded-full p-[2.5px]"
-              style={{ background: IG_RING }}
-            >
-              <span className="block h-full w-full overflow-hidden rounded-full border-2 border-surface bg-bg">
-                <CoverImage
-                  src={n.coverUrl}
-                  alt={`${shortLabel(n)} 노트 커버`}
-                  /* [B004] 62px 원에 기본 힌트(50vw)로는 384w 가 내려온다 —
-                     실 표시 크기를 말해 가장 작은 변환(384→실효 128w급)으로. */
-                  sizes="62px"
-                  imgClassName="h-full w-full object-cover"
-                  fallback={
-                    /* [1015] 단색 면(한지·연파랑·연회색) 위 흰 글자는 안 보였다 — 잉크색 */
-                    <span
-                      className="flex h-full w-full items-center justify-center t-section text-ink"
-                      style={{ background: seedGradient(n.id) }}
-                    >
-                      {shortLabel(n).slice(0, 2)}
-                    </span>
-                  }
-                />
-              </span>
-            </span>
-            <span className="w-full truncate text-center t-caption text-text-2">
-              {shortLabel(n)}
-            </span>
-          </Link>
-        ))}
-      </div>
-    </div>
-  );
-}
+/* [1101] 상단 스토리 줄(StoryRail)은 지웠다 — 아래 목록과 같은 노트를 원 사진으로 한 번 더 보이던 줄(같은 사실 두 곳). */
 
 /* ── 그리드 타일 (탐색·프로필 그리드) ── */
 /* [968 · 17] priority — 목록 첫 타일(LCP 후보)만 true. lazy 를 풀고 선점 요청한다. */
@@ -973,7 +913,10 @@ export function NotesFeedClient({
 }) {
   const router = useRouter();
   const [filter, setFilter] = useState<Filter>("최신");
-  const [view, setView] = useState<ViewMode>("grid");
+  /* [1101 · 첫 화면] 폰 기본 보기 = 목록(표). 격자는 Lab 커버(글자 많은 포스터)를 2열 190px 로 줄여 제목·숫자가 읽히지 않았고
+     커버 없는 칸은 빈 색면으로 남았다(운영 캡처 2026-11-02). 목록은 썸네일 44px · 제목 · 지역 · 점수가 한 줄씩 읽힌다.
+     격자 · 피드는 전환 단추 그대로 — 고른 보기는 이 브라우저에 기억된다(PHONE_VIEW_KEY). */
+  const [view, setView] = useState<ViewMode>("table");
   /* [1050 · 펼침] 폰 격자에서 펼친 노트(한 번에 하나) */
   const [gridOpen, setGridOpen] = useState<string | null>(null);
   /* [1049] 데스크톱 보기(표 기본) — 고른 보기는 이 브라우저에만 기억(저장소가 막혀도 표로 그린다) */
@@ -991,7 +934,7 @@ export function NotesFeedClient({
       const v = window.localStorage.getItem(PHONE_VIEW_KEY);
       if (v === "grid" || v === "feed" || v === "table") setView(v);
     } catch {
-      /* 저장소 차단 — 기본(격자) */
+      /* 저장소 차단 — 기본(목록) */
     }
   }, []);
   const pickView = (v: ViewMode) => {
@@ -1313,13 +1256,8 @@ export function NotesFeedClient({
           </div>
         )}
 
-        {/* 스토리 줄 */}
-        {/* [1016] lg+ 는 오른쪽 레일 "최근 임장" 이 같은 목록을 세로로 보여 준다 */}
-        {visible.length > 0 && (
-          <div className="lg:hidden">
-            <StoryRail notes={visible} />
-          </div>
-        )}
+        {/* [1101 · 같은 사실 한 번] 스토리 줄(폰)은 뺐다 — 바로 아래 목록의 앞 14편을 원 사진으로 한 번 더 보이던 줄이었다.
+            "노트 쓰기" 원은 탭바 가운데 + · 목록 끝 "노트 쓰기 · 현장 퀵 기록" 이 같은 곳으로 간다. */}
 
         {/* 필터 칩 + 뷰 전환. [1006] 내 노트가 0건이면 필터·뷰 전환을 그리지 않는다 — 고를 것이 없다 */}
         {(!mine || allNotes.length > 0) && (
@@ -1639,17 +1577,7 @@ export function NotesFeedClient({
       <RightRail notes={mine ? [] : visible} ad={mine ? null : adSide} />
       </div>
 
-      {/* 모바일 노트 쓰기 FAB — [961] 동네이야기 FAB 와 같은 자리·같은 모양(네이비 + 주홍 파문).
-          예전엔 오프셋 공식·그림자·글리프가 서로 달랐다. */}
-      <Link
-        href="/notes/new"
-        aria-label="노트 쓰기"
-        data-glyph="plus"
-        className="njn-fab fixed right-[18px] z-40 flex h-[52px] w-[52px] items-center justify-center rounded-full no-underline md:hidden"
-        style={{ bottom: "calc(var(--nz-tabbar-offset) + 12px)" }}
-      >
-        <Icon name="plus" size={24} />
-      </Link>
+      {/* [1101 · 조작 다이어트] 폰 노트 쓰기 FAB(네이비 + 원)는 뺐다 — 바로 아래 탭바 가운데 "+ 기록" 과 같은 단추가 한 화면에 둘이었다. */}
     </>
   );
 }

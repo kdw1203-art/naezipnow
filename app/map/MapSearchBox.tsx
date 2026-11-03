@@ -429,9 +429,7 @@ export function MapSearchBox({
             특이성 (0,3,1))이 이 t-body 유틸리티(0,1,0)를 이기므로 iOS 포커스 확대가
             나지 않는다. enterKeyHint 는 키보드 확인 키를 "검색"으로, 자동완성·자동교정은
             단지명(고유명사)에 방해라 끈다. [1026d] 입력은 음영 자동완성 겹침 칸(relative) 안에 둔다. */}
-        <span aria-hidden="true" className="t-body text-text-3">
-          ⌕
-        </span>
+        <Icon name="search" size={16} className="shrink-0 text-text-3" />
         <span className="relative min-w-0 flex-1">
         <input
           ref={inputRef}

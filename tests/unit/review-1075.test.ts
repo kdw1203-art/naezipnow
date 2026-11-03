@@ -88,8 +88,10 @@ test("Q4 설명 덜기 — 에이전트 한 줄 · 지역 머리 출처 한 줄"
   assert.match(rp, /매매가격지수·월별 거래량 두 달 치 이상 없음/);
   /* 시장 온도 타일 — 지역은 줄이고 점수는 늘 보인다 · "지난주 대비" 설명 한 줄 */
   const tm = read("app/analysis/temperature/TempMapClient.tsx");
-  assert.equal((tm.match(/<span className="kpi-v flex items-baseline gap-1\.5">\s*<span className="min-w-0 truncate">\{stats\.(hottest|coldest)\.current\.regionLabel\}<\/span>\s*<span className="shrink-0">\{stats\.(hottest|coldest)\.current\.score\}<\/span>/g) ?? []).length, 2);
-  assert.match(tm, /<span className="kpi-d">비교 가능한 \{stats\.compared\}곳 기준<\/span>/);
+  /* [1102] 결론 카드와 같은 수의 타일(평균 · 가장 뜨거운 · 가장 차가운 · 지난주 대비)은 걷었다 — 내 관심 지역 칸만(점수는 늘 보인다) */
+  assert.doesNotMatch(tm, /\{stats\.(hottest|coldest)\.current\.regionLabel\}/);
+  assert.doesNotMatch(tm, /비교 가능한 \{stats\.compared\}곳 기준/);
+  assert.match(tm, /<span className="min-w-0 truncate">\{mine\.current\.regionLabel\}<\/span>\s*<span className="shrink-0">\{mine\.current\.score\}<\/span>/);
   assert.doesNotMatch(tm, /kpi-v truncate/);
   assert.match(h, /overview\.hasReb \? "한국부동산원\(R-ONE\) 월간 통계" : "국토교통부 실거래 신고\(한국부동산원 지역 통계 없음 · 공표되면 반영\)"/);
 });

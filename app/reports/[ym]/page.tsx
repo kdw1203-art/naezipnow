@@ -292,9 +292,9 @@ export default async function MonthlyReportPage({
               {txText}
               <span className="won-u">건</span>
             </span>
+            {/* [1102] 등락 배지(▼4.2%)는 뺐다 — 바로 위 결론 줄이 "전월 대비 4.2% 감소"를 이미 말한다. 비교 기준 줄은 그대로 */}
             {compare && (
               <>
-                <Delta pct={compare.pct} srContext="같은 지역 전월보다" className="t-body" />
                 <span className="t-caption text-text-3">
                   두 달 모두 집계된 {compare.regionCount.toLocaleString("ko-KR")}곳 기준 · {prevLabel}{" "}
                   {compare.prevTx.toLocaleString("ko-KR")}건 → {compare.curTx.toLocaleString("ko-KR")}건

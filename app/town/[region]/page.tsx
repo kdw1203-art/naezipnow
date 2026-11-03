@@ -1,5 +1,5 @@
-/* [1024 · 원룸·오피스텔] 머리 sub 끝에 "원룸·오피스텔 실거래 월세 ›" 링크 1줄(수도권만) — /rent/[region]. 조회 추가 없음. */
-/* [1023 · 동네 ①] 머리 캡션(facts) — 이 동네 공개 임장노트 N · 최근 3건. 페이지가 이미 읽는 노트 배열만 센다(추가 조회 없음). */
+/* [1024 → 1101] 원룸·오피스텔 월세(수도권만 · /rent/[region]) — 머리 sub 의 링크 한 줄 → 지역 탭 줄(RegionTabs)의 "전월세". 조회 추가 없음. */
+/* [1023 · 동네 ① → 1101] 머리 캡션(facts) — 이 동네 공개 임장노트 N(최근 3건 제목은 아래 목록과 같아 뺐다). 페이지가 이미 읽는 노트 배열만 센다. */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
@@ -31,7 +31,7 @@ import { isStoryPost } from "@/lib/town/story";
 import { postAttachments } from "@/lib/community/attachments";
 import { Icon } from "@/app/components/Icon";
 import { AdZone } from "@/app/components/ads/AdZone";
-import { isSudogwonRegion } from "@/lib/rent/params";
+import { RegionTabs } from "@/app/components/region/RegionTabs";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
@@ -148,7 +148,6 @@ export default async function TownRegionHomePage({
     notesR.status === "fulfilled" ? notesR.value.filter((n) => noteMatchesRegion(n, nameKey)) : [];
   const notes: InspectionNote[] = regionNotes.slice(0, 6);
   /* 최근 3건 — listPublicNotes 는 최신순이므로 앞 3편 */
-  const recentNotes = regionNotes.slice(0, 3);
   const snapshot: RegionMarketSnapshot | null =
     snapR.status === "fulfilled" ? snapR.value : null;
   const spark: number[] = seriesR.status === "fulfilled" ? seriesR.value.map((r) => r.value) : [];
@@ -203,39 +202,18 @@ export default async function TownRegionHomePage({
               동네이야기
             </Link>
             {" › 동네 홈 · 이웃 글 · 시세 · 공개 임장노트"}
-            {/* [1024 · 원룸·오피스텔] 수도권(비아파트 수집 범위)만 — 동네 실거래 전월세 화면으로 한 줄 */}
-            {isSudogwonRegion(region) && (
-              <>
-                {" · "}
-                <Link href={`/rent/${id}`} className="inline-flex min-h-[24px] items-center font-bold text-primary no-underline hover:underline">
-                  원룸·오피스텔 실거래 월세 ›
-                </Link>
-              </>
-            )}
+            {/* [1101] 원룸·오피스텔 월세 링크는 아래 지역 탭 줄의 "전월세" 가 맡는다(수도권만 · 같은 판정 isSudogwonRegion) */}
           </>
         }
         subOnPhone
         className="mb-4 max-md:mb-3"
-        /* [1023 · 동네 ①] 이 동네 공개 임장노트 N · 최근 3건(제목 링크). 0편이면 캡션을 그리지 않는다(PageHead 규칙). */
+        /* [1023 · 동네 ①] 이 동네 공개 임장노트 N. 0편이면 캡션을 그리지 않는다(PageHead 규칙).
+           [1101 · 같은 사실 한 번] "최근 3건(제목 링크)" 은 뺐다 — 바로 아래 "공개 임장노트" 목록의 앞 세 편과 같은 노트였다(폰에서 세 줄). */
         facts={
           regionNotes.length > 0 ? (
-            <>
-              <span>
-                이 동네 공개 임장노트 <b className="t-num text-ink">{regionNotes.length}</b>
-              </span>
-              <span className="flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                <span>최근 {recentNotes.length}건</span>
-                {recentNotes.map((n) => (
-                  <Link
-                    key={n.id}
-                    href={`/notes/${n.id}`}
-                    className="inline-flex min-h-[24px] max-w-[220px] items-center truncate text-text-2 no-underline hover:underline"
-                  >
-                    {n.title}
-                  </Link>
-                ))}
-              </span>
-            </>
+            <span>
+              이 동네 공개 임장노트 <b className="t-num text-ink">{regionNotes.length}</b>
+            </span>
           ) : undefined
         }
         actions={
@@ -250,6 +228,9 @@ export default async function TownRegionHomePage({
           </>
         }
       />
+
+      {/* [1101 · 지역 화면 한 벌] 지역 탭 줄 — 개요 · 실거래 구간 · 전월세 · 시장 온도 · 동네(여기) · 월간 리포트 */}
+      <RegionTabs id={id} current="town" className="-mt-1 mb-4 max-md:mb-3" />
 
       {/* 시세 요약 스트립 — /region 페이지의 축약판 + 상호 링크.
           [1038 · 11] 글줄 → 타일 3개(평균 매매가 · 전세가율 · 거래) + 16주 지수 스파크라인 */}

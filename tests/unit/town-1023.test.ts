@@ -37,10 +37,10 @@ test("[1023 · 동네 ①] 동네 홈 머리 — 공개 임장노트 N · 최근
   assert.match(src, /^\/\* \[1023/m, "[1023] 표식");
   const c = code("app/town/[region]/page.tsx");
   assert.ok(c.includes("이 동네 공개 임장노트"), "캡션 문구");
-  assert.match(c, /regionNotes\.slice\(0, 3\)/, "최근 3건은 이미 읽은 배열의 앞 3편");
+  /* [1101 · 같은 사실 한 번] "최근 3건" 제목 링크는 뺐다 — 바로 아래 공개 임장노트 목록의 앞 세 편과 같았다 */
+  assert.doesNotMatch(c, /최근 \{recentNotes\.length\}건/);
   assert.match(c, /regionNotes\.length > 0 \?/, "0편이면 캡션을 그리지 않는다");
   assert.equal((c.match(/listPublicNotes\(/g) ?? []).length, 1, "노트 조회는 예전처럼 한 번");
-  assert.ok(c.includes('min-h-[24px]'), "최근 노트 링크 24px 하한");
   assert.match(c, /export const revalidate = 604_800;/, "ISR 정책 유지");
 });
 

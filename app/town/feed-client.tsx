@@ -735,12 +735,14 @@ export function TownFeed({
       )}
 
       {visible.length === 0 ? (
-        <div className="rise-in-3 card flex flex-col items-center gap-2 px-5 py-12 text-center">
-          <div className="t-title"><Icon name="pin" size={26} /></div>
+        /* [1101 · 빈 칸 접기] 큰 빈 판(위아래 48px · 핀 그림 · 세 줄)을 한 줄 띠로 — 문장(무엇이 0건인지) · 단추는 그대로.
+           동네 허브는 지금 사람 글 0건이라 이 판이 화면 아래 절반을 차지했다(운영 캡처 2026-11-02). */
+        <div className="rise-in-3 card flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-2xl px-4 py-3">
+          <div className="flex min-w-0 flex-col gap-0.5">
           {/* 조회 실패로 목록이 비었을 때 "글이 없어요"라고 하면 사실이 아니다.
               [967 · 19] 아직 안 받은 장이 남아 있을 때도 마찬가지 — "없다"가 아니라
               "지금까지 받은 것에는 없다"고 말하고 더 보기로 잇는다. */}
-          <div className="t-section text-ink">
+          <div className="t-body font-bold text-ink">
             {failed
               ? "글 불러오기 실패"
               : !onlyMine && !more
@@ -759,6 +761,7 @@ export function TownFeed({
             이웃 글 0건
             {more && allCards.length > 0 ? ` · 받은 글 ${allCards.length.toLocaleString("ko-KR")}건` : ""}
           </div>
+          </div>
           {/* [1023 · 동네 ②] 실패면 "다시 시도" 가 먼저(위 고지와 같은 함수). 글쓰기는 채움 파랑을 쓰지 않는다 —
               이 화면의 채움 파랑은 머리의 "이야기 쓰기" 하나(화면당 1개). */}
           {failed ? (
@@ -767,12 +770,12 @@ export function TownFeed({
               onClick={retryFeed}
               disabled={retrying}
               aria-busy={retrying}
-              className="btn-soft btn-md mt-2 rounded-xl disabled:opacity-60"
+              className="btn-soft btn-md shrink-0 rounded-xl disabled:opacity-60"
             >
               {retrying ? "불러오는 중…" : "다시 시도"}
             </button>
           ) : (
-            <Link href="/town/write" className="btn-soft btn-md mt-2 rounded-xl no-underline">
+            <Link href="/town/write" className="btn-soft btn-md shrink-0 rounded-xl no-underline">
               {allCards.length === 0 ? "첫 이야기 쓰기" : "글쓰기"}
             </Link>
           )}

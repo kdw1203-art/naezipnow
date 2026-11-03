@@ -513,7 +513,7 @@ export function TimingClient({
                     </div>
                   </>
                 ) : (
-                  <p className="t-sub text-text-3">이 지역은 지수 시계열이 아직 없어 온도를 계산할 수 없어요.</p>
+                  <p className="t-sub text-text-3">지수 시계열 없음 · 온도 계산 불가</p>
                 )}
               </section>
 

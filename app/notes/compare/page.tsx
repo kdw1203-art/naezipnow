@@ -276,7 +276,7 @@ export default async function NotesComparePage({
     result.kind === "need_login"
       ? "로그인 필요"
       : result.kind === "forbidden"
-        ? "내 노트만 비교할 수 있어요"
+        ? "내 노트만 비교 가능"
         : result.kind === "error"
           ? "회차 비교 불러오기 실패"
           : result.kind === "need_more"
@@ -287,7 +287,7 @@ export default async function NotesComparePage({
 
   const emptyDesc =
     result.kind === "need_login"
-      ? "같은 단지를 2회 이상 기록한 뒤 회차 비교를 볼 수 있어요."
+      ? "같은 단지 2회 이상 기록 뒤 회차 비교"
       : result.kind === "forbidden"
         ? "다른 사람의 임장노트 회차는 비교 화면에서 열 수 없어요."
         : result.kind === "error"

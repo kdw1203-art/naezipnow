@@ -91,11 +91,7 @@ import {
   type RedevLabelMode,
 } from "@/lib/redevelopment/map-layer";
 import { Icon } from "@/app/components/Icon";
-import type { CoachmarkStep } from "@/app/components/CoachmarkTour";
-const CoachmarkTour = dynamic(
-  () => import("@/app/components/CoachmarkTour").then((m) => m.CoachmarkTour),
-  { ssr: false },
-);
+import { TabBar } from "@/app/components/TabBar";
 import {
   NO_DATA_COLOR,
   PRICE_TIERS,
@@ -114,16 +110,9 @@ const MAP_LIST_PAGE_SIZE = 40;
     lib/map/price-tiers 의 NO_DATA_LABEL("데이터 없음")은 뜻(실거래 없음)을 범례가 괄호로 풀어야 했다. */
 const NO_PRICE_LABEL = "실거래 없음";
 
-/** A1 — 지도 첫 방문 안내 1장(금액 기준). 필터·노트 버튼은 화면에 이름이 있어 따로 안내하지 않는다([1028]).
-    대상이 화면에 없어도 가운데 카드로 뜬다(keepIfMissing). */
-const MAP_TOUR_STEPS: CoachmarkStep[] = [
-  {
-    target: "map-price-panel",
-    keepIfMissing: true,
-    title: "금액은 실거래가 평균",
-    body: "지도·목록 금액은 국토교통부 실거래가 평균 · 매물 호가와 다름",
-  },
-];
+/** [1101 · 첫 화면] A1 첫 방문 안내 카드("금액은 실거래가 평균" · 가운데 모달 · 확인 단추)는 걷었다 — 지도 첫 화면을 가렸다(운영 폰 캡처).
+    같은 사실은 화면에 늘 있다: 폰 범례 단추 글자("금액 = 실거래 평균") · 펼친 범례 · md+ 좌하단 범례("국토교통부 실거래가(매매) 기준 · 매물 호가 아님"). */
+const MAP_PRICE_BASIS_SHORT = "금액 = 실거래 평균";
 
 /* ============================================================
    지도 탐색 (6a) — 실제 네이버 지도 + 글래스 오버레이 UI
@@ -304,9 +293,11 @@ function FilterChipGroup({
               type="button"
               aria-pressed={active}
               onClick={() => onSelect(o.key)}
+              /* [1102] 고른 칩 = 옅은 채움(레이어 칩과 같은 꼴). 진한 파랑 채움은 패널 한 장에 열 개 넘게 떠서
+                 맨 아래 "보기" 단추(btn-primary)와 무게를 다퉜다 */
               className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
                 active
-                  ? "bg-primary text-white font-bold shadow-[0_2px_8px_rgba(29,79,216,.3)]"
+                  ? "bg-primary-soft font-bold text-primary"
                   : "bg-[var(--glass-bg)] text-text-2"
               }`}
             >
@@ -647,10 +638,10 @@ const LISTING_FETCH_DEBOUNCE_MS = 350;
 
 /* ===== 출퇴근 필터 (#10) — 회사 위치 기준 예상 소요시간 ===== */
 const COMMUTE_OPTIONS: { key: string; label: string; max: number | null }[] = [
-  { key: "off", label: "해제", max: null },
-  { key: "30", label: "≤30분", max: 30 },
-  { key: "45", label: "≤45분", max: 45 },
-  { key: "60", label: "≤60분", max: 60 },
+  { key: "off", label: "전체", max: null },
+  { key: "30", label: "30분 이내", max: 30 },
+  { key: "45", label: "45분 이내", max: 45 },
+  { key: "60", label: "60분 이내", max: 60 },
 ];
 /** 출퇴근 추정 요청 단지 수 상한(서버와 별개의 클라 가드) */
 const COMMUTE_MAX_POINTS = 60;
@@ -1444,18 +1435,7 @@ export function MapClient({
     roomsKey !== "all" ||
     bathroomsKey !== "all" ||
     parkingKey !== "all";
-  const filterActive =
-    rangeActive ||
-    listingTradeKey !== "all" ||
-    listingDetailFilterActive ||
-    commuteKey !== "off";
-  const activeCount =
-    [listingTradeKey, propertyKindKey, roomsKey, bathroomsKey, parkingKey, commuteKey].filter(
-      (k) => k !== "all" && k !== "off",
-    ).length +
-    (["price", "area", "year", "households"] as const).filter(
-      (k) => ranges[k][0] !== null || ranges[k][1] !== null,
-    ).length;
+  /* activeCount · filterActive 는 아래 filterSummary 에서 센다(배지 숫자 = 요약 토막 수 = 초기화가 푸는 것). */
 
   /* [968 · 24] 접힌 칩 행의 "레이어 N" — 주소창 layers= 토큰과 같은 집합(가짜 숫자 금지) */
   const activeLayerCount = [
@@ -1472,11 +1452,15 @@ export function MapClient({
     showCadastral,
   ].filter(Boolean).length;
 
-  /* [967 · 23] 접힌 필터 바에 적을 요약 토막 — 토막 수는 activeCount 와 같다 */
+  /* [967 · 23] 접힌 필터 바에 적을 요약 토막 — 토막 수는 activeCount 와 같다
+     [1102 · 지도 필터] 매매 · 전세 · 월세는 위 세그먼트가 이미 보이는 "보기 방식"이라 필터로 세지 않는다.
+     예전에는 전세를 누르면 "전세 · 1개 적용" + 필터 1 + 초기화가 붙었고, 다시 매매(기본)를 눌러도 "매매 · 1개 적용"이 남았다
+     (운영 재현 2026-11-03) — 같은 사실이 세그먼트 · 요약 · 배지 세 곳에 적혔고 PC 머리줄 검색 칸이 아이콘만큼 눌렸다.
+     단지 조건(cxSummary)은 요약에 있었는데 배지 · 초기화 노출에서 빠져 있었다 — 이제 한 셈. */
   const filterSummary = useMemo(
     () =>
       summarizeMapFilters({
-        tradeKey: listingTradeKey,
+        tradeKey: "all",
         propertyKindKey,
         roomsKey,
         bathroomsKey,
@@ -1484,12 +1468,14 @@ export function MapClient({
         commuteKey,
         ranges,
       }).concat(cxSummary(cx)),
-    [listingTradeKey, propertyKindKey, roomsKey, bathroomsKey, parkingKey, commuteKey, ranges, cx],
+    [propertyKindKey, roomsKey, bathroomsKey, parkingKey, commuteKey, ranges, cx],
   );
+  const activeCount = filterSummary.length;
+  const filterActive = activeCount > 0;
 
   const resetFilters = useCallback(() => {
     setRanges(EMPTY_RANGES);
-    setListingTradeKey("all");
+    /* [1102] 매매 · 전세 · 월세(보기 방식)는 그대로 — 필터를 풀었는데 보던 거래 종류가 바뀌면 안 된다 */
     setPropertyKindKey("all");
     setRoomsKey("all");
     setBathroomsKey("all");
@@ -1867,24 +1853,10 @@ export function MapClient({
       >
         <Icon name="house" size={14} className="inline align-middle" /> 매물
       </button>
-      {/* [967 · 23] 접힌 상태의 요약 — "필터 3" 숫자만으로는 무엇이 걸려 있는지
-          알 수 없어 지도가 왜 비었는지 되짚기 어려웠다. 걸린 축을 글자로 적는다
-          (summarizeMapFilters, lib/map/filter-summary.ts). 패널이 열려 있으면 안
-          그린다 — 패널이 곧 요약이다. 폭이 좁은 헤더에서는 잘리고 title 로 전문.
-          자리는 토글 **앞**: "무엇이 걸렸나 → 바꾸기(필터) → 초기화" 순서로 읽힌다. */}
-      {!filtersExpanded && filterSummary.length > 0 && (
-        <span
-          className="map-filter-summary t-caption"
-          title={`${filterSummary.join(" · ")} · ${filterSummary.length}개 적용`}
-          role="status"
-          aria-label={`적용된 필터: ${filterSummary.join(", ")}`}
-        >
-          {filterSummary.join(" · ")} · {filterSummary.length}개 적용
-        </span>
-      )}
       <button
         type="button"
         aria-expanded={filtersExpanded}
+        title={filterSummary.length > 0 ? filterSummary.join(" · ") : undefined}
         data-tour="map-filter"
         onClick={() =>
           setFiltersExpanded((v) => {
@@ -1903,8 +1875,27 @@ export function MapClient({
             {activeCount}
           </span>
         )}{" "}
+        {/* dead-control-ok: 필터 단추(<button aria-expanded>) 안 — 패널 펼침 표시 */}
         <span className={filtersExpanded ? "inline-block rotate-180" : "inline-block"}>▾</span>
       </button>
+      {/* [967 · 23] 접힌 상태의 요약 — "필터 3" 숫자만으로는 무엇이 걸려 있는지
+          알 수 없어 지도가 왜 비었는지 되짚기 어려웠다. 걸린 축을 글자로 적는다
+          (summarizeMapFilters, lib/map/filter-summary.ts). 패널이 열려 있으면 안
+          그린다 — 패널이 곧 요약이다. 폭이 좁은 헤더에서는 잘리고 title 로 전문.
+          [1102] 자리는 필터 버튼 **뒤** — 앞에 있을 때 폰 칩 줄(366px)에서 요약이 필터 버튼을 화면 밖으로 밀었다
+          (운영 재현: 전세 한 번 누르면 필터 버튼이 가로 밀기 뒤로). 끝의 "· N개 적용"은 버튼 배지와 같은 수라 뺐다. */}
+      {!filtersExpanded && filterSummary.length > 0 && (
+        /* [1102] PC 머리줄(lg+)에서는 그리지 않는다 — 검색 칸 · 줌 탭과 한 줄이라 요약이 붙는 순간 검색 칸이 아이콘만큼 눌렸다
+           (운영 1366 실측). 그 폭에서는 필터 단추의 title 과 배지 수가 요약을 맡는다. */
+        <span
+          className="map-filter-summary t-caption lg:hidden"
+          title={filterSummary.join(" · ")}
+          role="status"
+          aria-label={`적용된 필터: ${filterSummary.join(", ")}`}
+        >
+          {filterSummary.join(" · ")}
+        </span>
+      )}
       {filterActive && (
         <button
           type="button"
@@ -1936,29 +1927,10 @@ export function MapClient({
         }
         className="map-chip"
       >
-        ◎ 반경
+        반경
       </button>
-      {radiusMode &&
-        RADIUS_PRESETS.map((r) => (
-          <button
-            key={r}
-            type="button"
-            onClick={() => setRadiusM(r)}
-            aria-pressed={radiusM === r}
-            className={`map-chip ${radiusM === r ? "map-chip-soft" : ""}`}
-          >
-            {r >= 1000 ? `${r / 1000}km` : `${r}m`}
-          </button>
-        ))}
-      {radiusMode && radiusCenter && (
-        <button
-          type="button"
-          onClick={() => setRadiusCenter(null)}
-          className="inline-flex min-h-[40px] items-center whitespace-nowrap t-sub font-bold text-text-3 underline transition-colors hover:text-primary md:min-h-6"
-        >
-          중심 해제
-        </button>
-      )}
+      {/* [1102] 반경 크기(300m~3km) · 중심 해제는 반경 카드 안으로 — 칩 줄에 다섯 칸이 더 붙어 폰 줄이 950px 까지 늘고
+          PC 머리줄에서는 줌 탭 · "이 지역 노트 쓰기"가 밖으로 밀렸다(운영 재현). 카드에 직접 입력 · 중심 삭제가 이미 있다. */}
       {/* 거리 재기 — 지점을 찍어 직선거리를 잰다 */}
       <button
         type="button"
@@ -1980,7 +1952,7 @@ export function MapClient({
         }
         className="map-chip"
       >
-        ↔ 거리
+        거리
       </button>
     </>
   );
@@ -2010,15 +1982,17 @@ export function MapClient({
           type="button"
           onClick={() => setFiltersExpanded(false)}
           aria-label="필터 닫기"
-          className="t-body text-text-3"
+          className="-mr-2 inline-flex h-[40px] w-[40px] items-center justify-center rounded-full text-text-3 transition-colors hover:text-primary"
         >
-          ✕
+          <Icon name="x" size={18} />
         </button>
       </div>
       {/* ── 범위 슬라이더 (막대그래프) ──────────────────────────────────
           고정 칩("5억 이하 / 5~10억")을 걷어냈다. 남의 기준이라 "이 동네에서
           6~9억"을 고를 수 없었고, 무엇보다 그 구간에 몇 개가 있는지 모른 채
-          눌러야 했다. 막대는 지금 보이는 지역의 실측 분포다. */}
+          눌러야 했다. 막대는 지금 보이는 지역의 실측 분포다.
+          [1102] 값 없는 단지 제외 규칙을 슬라이더마다 적던 것(네 번)을 여기 한 번으로. 슬라이더 밑에는 수만. */}
+      <p className="-mt-1 t-caption text-text-3">단지 = 국토교통부 실거래 · 값 없는 단지는 조건을 걸면 제외</p>
       {facets ? (
         <>
           <HistogramRangeSlider
@@ -2076,11 +2050,8 @@ export function MapClient({
             available={facets.households.n}
             total={facets.total}
             step={10}
-            note={
-              facets.total > 0 && facets.households.n < facets.total
-                ? `세대수 있음 · 화면 안 단지의 ${Math.round((facets.households.n / facets.total) * 100)}% · K-apt 대장 없는 소규모 단지 공란`
-                : "세대수 · K-apt 대장 단지만 · 대장 없는 소규모 단지 공란"
-            }
+            /* [1102] 비율(51%)은 바로 위 "값 있는 단지 N / 화면 M" 과 같은 사실이라 뺐다 — 왜 비는지만 */
+            note="세대수 = K-apt 대장 단지만 · 대장 없는 소규모 단지 공란"
           />
         </>
       ) : facetsFailed ? (
@@ -2107,8 +2078,12 @@ export function MapClient({
         <p className="t-caption text-text-3">
           {cxc.total > 0
             ? `화면 단지 ${cxc.total.toLocaleString("ko-KR")}곳 기준${cxOn ? ` · 조건 맞는 단지 ${cxMatchCount.toLocaleString("ko-KR")}곳` : ""} · 확대해 단지가 하나씩 보일 때 적용`
-            : "확대해 단지가 하나씩 보일 때 적용 · 지금 화면 단지 없음"}
+            : "지금 화면 단지 없음 · 확대해 단지가 하나씩 보이면 조건 칩이 열림"}
         </p>
+        {/* [1102 · 빈 칸 접기] 넓게 볼 때(단지 0곳) 칩 여섯 줄이 전부 "0"으로 그려졌다(운영 재현: 난방 0 · 주차 0 · 동 수 0 …).
+            고를 수 없는 칩은 접고, 걸어 둔 조건이 있으면(cxOn) 풀 수 있게 그대로 둔다. */}
+        {(cxc.total > 0 || cxOn) && (
+        <>
         {pyeongFacet.n > 0 && pyeongFacet.lo !== null && pyeongFacet.hi !== null && (
           <HistogramRangeSlider
             label="평당가(실거래 평균)"
@@ -2178,32 +2153,30 @@ export function MapClient({
             onSelect={(k) => setCx((p) => ({ ...p, builder: k }))}
           />
         )}
-        <FilterChipGroup
-          label="마커에 표시"
-          options={MARKER_METRIC_OPTIONS.map((o) => ({ key: o.key, label: o.label }))}
-          valueKey={markerMetric}
-          onSelect={(k) => setMarkerMetric(parseMetric(k))}
-        />
         <p className="t-caption text-text-3">
-          난방 · 주차 · 동 수 · 승강기 · 시공사 = K-apt 단지 대장 · 6개월 매매 · 평당가 = 국토교통부 실거래. 대장 없는 단지(대부분
-          소규모)는 조건을 걸면 제외 · 인기 단지 순위에는 미반영.
+          난방 · 주차 · 동 수 · 승강기 · 시공사 = K-apt 단지 대장 · 6개월 매매 · 평당가 = 국토교통부 실거래 · 인기 단지 순위에는
+          미반영
         </p>
+        </>
+        )}
       </div>
+      {/* [1102] 등록 매물 조건 — 실거래 단지 조건과 섞여 있었다(같은 패널 한 줄기 · 고르면 매물 레이어가 말없이 켜짐).
+          따로 묶고, 매물 레이어가 꺼져 있고 건 조건도 없으면 접어 둔다. 고르면 매물이 켜지는 건 그대로(머리줄에 적는다). */}
+      <details
+        className="group border-t border-line pt-1"
+        open={showListings || listingDetailFilterActive}
+      >
+        <summary className="flex min-h-[40px] cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden md:min-h-8">
+          <span className="t-body font-bold text-ink">등록 매물 조건</span>
+          <span className="t-caption text-text-3">
+            {listingDetailFilterActive ? "조건 있음" : showListings ? "매물 켜짐" : "고르면 매물 켜짐"}{" "}
+            {/* dead-control-ok: <summary> 안 — 줄 전체가 펼침 단추(details) */}
+            <span className="inline-block transition-transform group-open:rotate-180">▾</span>
+          </span>
+        </summary>
+        <div className="mt-1.5 flex flex-col gap-3">
       <FilterChipGroup
-        label="거래유형 (매물)"
-        options={LISTING_TRADE_OPTIONS}
-        valueKey={listingTradeKey}
-        onSelect={(key) => {
-          setListingTradeKey(key);
-          if (key === "monthly" || key === "sale" || key === "jeonse") {
-            setShowListings(true);
-          }
-          if (key === "sale") setTxType("trade");
-          if (key === "jeonse") setTxType("rent");
-        }}
-      />
-      <FilterChipGroup
-        label="건물 유형 (등록 매물)"
+        label="건물 유형"
         options={PROPERTY_KIND_OPTIONS}
         valueKey={propertyKindKey}
         onSelect={(key) => {
@@ -2239,8 +2212,7 @@ export function MapClient({
         }}
       />
       <p className="t-caption text-text-3">
-        방·화장실·주차·건물 유형은 <b className="text-text-2">등록 매물</b> 기준. 값이 없는
-        매물은 제외. 단지 마커는 국토부 아파트 실거래가.
+        등록 매물 기준 · 값 없는 매물 제외
         {showListings &&
           listingFetchStatus === "ok" &&
           listingItems.length === 0 &&
@@ -2267,11 +2239,13 @@ export function MapClient({
           <>
             {" "}
             <b className="text-warning">
-              지금은 유형·방·화장실·주차 조건이 정확하지 않을 수 있어요.
+              유형 · 방 · 화장실 · 주차 자료 없음 · 조건 결과 참고용
             </b>
           </>
         )}
       </p>
+        </div>
+      </details>
 
       {/* ===== 지도 레이어 — 정비사업(실적재 공개 자료) ===== */}
       {/* [968 · 24] id — 접힌 칩 행의 "레이어 N" 이 패널을 열고 여기로 스크롤한다 */}
@@ -2597,20 +2571,26 @@ export function MapClient({
             <span className="t-caption text-text-3">전세 모드 · 구 표시 숨김</span>
           )}
         </div>
+        {/* [1102] 단지 마커에 적을 값 — 거르는 조건이 아니라 보이는 방식이라 "구 표시" 옆으로(단지 조건 절에서 옮김) */}
+        <FilterChipGroup
+          label="마커에 표시"
+          options={MARKER_METRIC_OPTIONS.map((o) => ({ key: o.key, label: o.label }))}
+          valueKey={markerMetric}
+          onSelect={(k) => setMarkerMetric(parseMetric(k))}
+        />
         <div className="t-caption text-text-3">
           정비사업은 공개 자료 기준 참고값 · 실제 추진 단계는 관할 구청 고시.
           {showSupply && supplyItems.length > 0 && (
             <>
               {" "}
               입주 예정 {supplyItems.length}곳 표시
-              {supplyUncoordinated > 0 ? ` · 좌표 준비 중 ${supplyUncoordinated}곳` : ""}. 입주월은
-              청약홈 공고 기준이에요.
+              {supplyUncoordinated > 0 ? ` · 좌표 준비 중 ${supplyUncoordinated}곳` : ""} · 입주월 = 청약홈 공고 기준.
             </>
           )}
           {showAuctions && auctionItems.length > 0 && (
             <>
               {" "}
-              공매는 물건 주소에 좌표가 없어 구 중심에 건수로 모아 보여요
+              공매 = 구 중심에 건수로 모아 표시(물건 좌표 없음)
               {auctionsUncharted > 0 ? ` · 지도 밖 권역 ${auctionsUncharted}건 제외` : ""}.
             </>
           )}
@@ -2620,6 +2600,7 @@ export function MapClient({
       {/* ===== 출퇴근 필터 (#10) — 회사 주소 + 임계 소요시간 ===== */}
       <div className="flex flex-col gap-1.5 border-t border-[rgba(16,28,54,.08)] pt-2.5">
         <div className="t-sub font-bold text-text-3">출퇴근 (회사 위치)</div>
+        <div className="flex items-center gap-1.5">
         <input
           type="text"
           value={officeInput}
@@ -2632,26 +2613,29 @@ export function MapClient({
           }}
           placeholder="회사 주소"
           aria-label="회사 주소"
-          className="w-full rounded-lg border border-line bg-[var(--glass-bg-strong)] px-2.5 py-1.5 t-sub text-text-1 placeholder:text-text-3"
+          className="min-w-0 flex-1 rounded-lg border border-line bg-[var(--glass-bg-strong)] px-2.5 py-1.5 t-sub text-text-1 placeholder:text-text-3"
         />
-        <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => setOfficeQuery(officeInput.trim())}
-            className="btn-soft rounded-lg px-2.5 py-1.5 t-sub font-bold"
+            className="btn-soft inline-flex min-h-[40px] shrink-0 items-center rounded-lg px-3 py-1.5 t-sub font-bold md:min-h-8"
           >
-            적용
+            주소 적용
           </button>
+        </div>
+        {/* [1102] 주소 적용 단추는 주소 칸 옆 · 시간 칩은 다른 칩 줄과 같은 꼴(고른 칩 옅은 채움 · "전체" = 조건 없음) */}
+        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="출퇴근 시간">
           {COMMUTE_OPTIONS.map((o) => {
             const active = o.key === commuteKey;
             return (
               <button
                 key={o.key}
                 type="button"
+                aria-pressed={active}
                 onClick={() => setCommuteKey(o.key)}
                 className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
                   active
-                    ? "bg-primary font-bold text-white"
+                    ? "bg-primary-soft font-bold text-primary"
                     : "bg-[var(--glass-bg)] text-text-2"
                 }`}
               >
@@ -2688,7 +2672,8 @@ export function MapClient({
           onClick={() => setFiltersExpanded(false)}
           className="btn-primary rounded-lg px-4 py-1.5 t-sub"
         >
-          단지 {filteredDanji.length} 적용
+          {/* [1102] 조건은 고르는 즉시 걸린다 — 이 단추는 패널을 닫고 지도를 본다. 넓게 볼 때 "단지 0 적용"은 거짓말처럼 읽혔다 */}
+          {filteredDanji.length > 0 ? `단지 ${filteredDanji.length.toLocaleString("ko-KR")}곳 보기` : "지도 보기"}
         </button>
       </div>
     </div>
@@ -2735,9 +2720,11 @@ export function MapClient({
   /* [1053] 마지막 뷰포트는 lastIdleRef(bounds + zoom) 하나만 — 매물 요청도 줌별 격자로 스냅한다 */
   const listingTimerRef = useRef<number | null>(null);
   const listingAbortRef = useRef<AbortController | null>(null);
-  // 거래유형 필터를 최신값으로 참조 (콜백 재생성 없이 type 파라미터 반영)
-  const listingTradeRef = useRef(listingTradeKey);
-  listingTradeRef.current = listingTradeKey;
+  // 거래유형을 최신값으로 참조 (콜백 재생성 없이 type 파라미터 반영)
+  /* [1102] 매물 거래유형 = 위 세그먼트(topTradeKey) 하나. 패널의 "거래유형 (매물)" 칩 줄(전체 · 매매 · 전세 · 월세)은
+     세그먼트와 같은 말을 한 번 더 했고, 둘이 어긋날 수 있었다(세그먼트 매매 · 매물 전체). */
+  const listingTradeRef = useRef(topTradeKey);
+  listingTradeRef.current = topTradeKey;
   const propertyKindRef = useRef(propertyKindKey);
   propertyKindRef.current = propertyKindKey;
   const roomsKeyRef = useRef(roomsKey);
@@ -2819,7 +2806,7 @@ export function MapClient({
     const last = lastIdleRef.current;
     if (showListings && last) fetchListings(last.bounds, last.zoom);
   }, [
-    listingTradeKey,
+    topTradeKey,
     propertyKindKey,
     roomsKey,
     bathroomsKey,
@@ -4370,8 +4357,7 @@ export function MapClient({
         : listingFetchStatus === "ok" && listingItems.length === 0 && !listingPreviewId
           ? "empty"
           : null;
-  const listingFilterNarrowed =
-    listingDetailFilterActive || listingTradeKey !== "all" || rangeActive;
+  const listingFilterNarrowed = listingDetailFilterActive || rangeActive;
 
   /* md 좌측 사이드바(320px)가 열려 있으면 좌하단 범례가 그 사각형 안으로
      들어간다 — 사이드바는 top safe+92 부터 bottom 20 까지, 즉 왼쪽 기둥 전체를
@@ -4584,7 +4570,7 @@ export function MapClient({
           {listingNoticeKind === "error" && (
             <div className="glass pointer-events-auto max-w-full rounded-xl px-3.5 py-2.5">
               <div className="t-sub font-bold text-ink">매물 불러오기 실패</div>
-              <div className="mt-0.5 t-sub text-text-3">잠시 후 다시 시도해 주세요. 지도를 움직이면 다시 불러와요.</div>
+              <div className="mt-0.5 t-sub text-text-3">잠시 후 다시 · 지도를 움직이면 다시 불러옴</div>
             </div>
           )}
 
@@ -4630,7 +4616,8 @@ export function MapClient({
           <Logo />
         </Link>
         {/* 단지·주소 검색 (item1) — 헤더 인라인 (md+) */}
-        <div className="hidden w-[280px] md:block">
+        {/* [1102] 검색 칸 하한 — 머리줄이 빠듯하면 이 칸이 먼저 눌려 아이콘만 남았다(운영 1366 · 전세 누른 뒤) */}
+        <div className="hidden w-[280px] min-w-[160px] md:block">
           <MapSearchBox
             variant="header"
             placeholder="아파트명·주소"
@@ -4704,7 +4691,7 @@ export function MapClient({
             className="map-chip"
             aria-label="검색 펼치기"
           >
-            ⌕ 검색
+            <Icon name="search" size={14} className="inline align-middle" /> 검색
           </button>
           <button
             type="button"
@@ -4796,11 +4783,25 @@ export function MapClient({
               <div className="t-sub font-bold text-ink">반경 보기</div>
               <p className="t-sub text-text-3">
                 {radiusCenter
-                  ? "중심·크기 핸들을 드래그하거나, 지도를 클릭해 중심을 옮겨요."
-                  : "지도를 클릭하면 중심이 찍혀요. 안 찍으면 화면 중앙 기준이에요."}
+                  ? "중심 · 테두리 끌어 조정 · 지도 누르면 중심 이동"
+                  : "지도 누르면 중심 · 안 누르면 화면 중앙 기준"}
               </p>
               <div className="rounded-lg bg-[rgba(29,79,216,.07)] px-2.5 py-2 t-sub font-bold text-primary">
                 반경 {radiusM >= 1000 ? `${radiusM / 1000}km` : `${radiusM}m`} 안 단지 표시
+              </div>
+              {/* [1102] 크기 고르기 — 예전엔 위 칩 줄에 붙어 있었다(줄이 950px 까지) */}
+              <div className="flex flex-wrap gap-1.5" role="group" aria-label="반경 크기">
+                {RADIUS_PRESETS.map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={() => setRadiusM(r)}
+                    aria-pressed={radiusM === r}
+                    className={`map-chip ${radiusM === r ? "map-chip-soft" : ""}`}
+                  >
+                    {r >= 1000 ? `${r / 1000}km` : `${r}m`}
+                  </button>
+                ))}
               </div>
               <label className="flex items-center gap-2 t-sub text-text-2">
                 <span className="shrink-0 font-bold">직접 입력</span>
@@ -4847,8 +4848,8 @@ export function MapClient({
               </div>
               <p className="t-sub text-text-3">
                 {measureRelocate
-                  ? "지도를 클릭하면 선택한 지점이 그곳으로 옮겨져요."
-                  : "클릭으로 지점 추가 · 번호 드래그로 이동 · 탭해서 선택 후 수정/삭제"}
+                  ? "지도 누르면 고른 지점이 그 자리로 이동"
+                  : "누르면 지점 추가 · 번호 끌어 이동 · 번호 누르면 수정 · 삭제"}
               </p>
               {measurePoints.length < 2 ? (
                 <p className="t-sub text-text-3">
@@ -5056,10 +5057,12 @@ export function MapClient({
       {/* ===== 줌 레벨 탭 (xl 미만 — xl 이상은 헤더에 표시) =====
            지도 위 플로팅 판은 우측 마커 라벨 위에 뜬다. 넓은 화면은 헤더로
            올렸고(위 헤더 블록), 이 판은 헤더에 자리가 없는 폭에서만 남는다. */}
-      {/* [968 · 24] 모바일 접힘 대상 — 줌 탭도 상단 크롬(128~166 레인)이다 */}
+      {/* [968 · 24] 모바일 접힘 대상 — 줌 탭도 상단 크롬(128~176 레인)이다
+          [1102] mt-9 는 이 테마의 간격 단위로 27px 이라 판이 119 에서 시작해 검색 칸(82~128) 아래끝 9px 를 파고들었다
+          (판 윗머리가 검색 칸에 가려 잘려 보임 · 운영 폰 재현). 픽셀로 못박는다 — 128~176(터치 40px 칸 + 안쪽 여백), 칩 줄은 176 부터. */}
       <div
         inert={chromeCompact}
-        className={`glass absolute right-5 z-30 mt-9 flex items-center gap-0.5 rounded-full p-1 md:mt-0 md:translate-y-9 xl:hidden ${chromeFoldClass}`}
+        className={`glass absolute right-5 z-30 mt-[36px] flex items-center gap-0.5 rounded-full p-1 md:mt-0 md:translate-y-9 xl:hidden ${chromeFoldClass}`}
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 92px)" }}
       >
         <ZoomTabButtons zoom={zoom} onSelect={handleZoomTab} />
@@ -5532,6 +5535,9 @@ export function MapClient({
                 ))}
               </div>
             )}
+            {txType !== "rent" && showPriceOverlay && (
+              <div className="t-caption text-text-2">국토교통부 실거래가 평균 · 매물 호가 아님</div>
+            )}
             <div className="t-caption text-text-3">{zoomCaption(zoom, level)}</div>
           </div>
         )}
@@ -5539,10 +5545,11 @@ export function MapClient({
           type="button"
           aria-expanded={mobileLegendOpen}
           onClick={() => setMobileLegendOpen((v) => !v)}
-          /* [989] 실측 54×32 — 지도 위에 떠 있는 조작이라 손가락으로 정확히 짚기 어렵다 */
+          /* [989] 실측 54×32 — 지도 위에 떠 있는 조작이라 손가락으로 정확히 짚기 어렵다.
+             [1101] 단추 글자가 금액의 기준을 말한다(첫 방문 모달을 대신) — 전세 보기 · 가격 색을 끈 동안은 예전대로 "범례" */
           className="glass min-h-[40px] rounded-full px-3 py-1.5 t-sub font-bold text-text-1"
         >
-          범례 {mobileLegendOpen ? "▾" : "▸"}
+          {txType !== "rent" && showPriceOverlay ? MAP_PRICE_BASIS_SHORT : "범례"} {mobileLegendOpen ? "▾" : "▸"}
         </button>
       </div>
       )}
@@ -5661,9 +5668,13 @@ export function MapClient({
            바 높이가 51 → 71px 로 늘어 아래 예약 레인(51px 기준)을 20px 뚫고 올라와
            좌우 범례 다섯 개를 11px 씩 덮었다(768폭 실측).
            inset-x-0 + mx-auto 로 바꾸면 가운데 정렬은 그대로면서 가로 전체를 쓴다. */}
+      {/* [1101 · 아래 바 통일] 폰(md 미만)은 다른 화면과 같은 탭바(홈 · 지도 · 기록 · 동네 · 마이)를 쓴다 — 예전엔 지도만
+          "홈 · 임장노트 · 지도" 알약이라 화면을 옮기면 아래 바의 이름 · 순서 · 모양이 바뀌었다. 단지 판(z-48 바닥 시트)이
+          열린 동안은 탭바가 그 아래 단추를 덮으므로 그리지 않는다. md+ 는 이 알약이 내비(헤더 메뉴와 같은 이름). */}
+      {!infoComplex && <TabBar />}
       <nav
         ref={mapNavRef}
-        className="glass-strong absolute inset-x-0 z-40 mx-auto flex w-fit max-w-[calc(100vw_-_24px)] items-center gap-0.5 rounded-full p-1.5"
+        className="glass-strong absolute inset-x-0 z-40 mx-auto hidden w-fit max-w-[calc(100vw_-_24px)] items-center gap-0.5 rounded-full p-1.5 md:flex"
         style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 20px)" }}
       >
         <Link
@@ -5696,12 +5707,10 @@ export function MapClient({
           href="/town"
           className="hidden rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary md:block"
         >
-          동네이야기
+          동네
         </Link>
       </nav>
 
-      {/* A1 — 첫 방문 코치마크. 한 번 보면 localStorage + app_users.onboarding_progress.tours 에 남는다. */}
-      <CoachmarkTour tourId="map" steps={MAP_TOUR_STEPS} />
     </div>
   );
 }

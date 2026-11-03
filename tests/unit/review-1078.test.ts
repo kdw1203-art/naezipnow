@@ -89,8 +89,10 @@ test("S5 빈 블록 순서 — 동네 홈 · 동네 허브 · 홈", () => {
   assert.match(r, /<p className="m-0 t-body text-text-2">\{region\.name\} 이웃 글 없음<\/p>/);
   const t = read("app/town/page.tsx");
   assert.match(t, /<div className=\{!loadFailed && firstPage\.length === 0 \? "order-2" : ""\}>\s*<TownFeed/);
-  assert.match(t, /<div className=\{!loadFailed && firstPage\.length === 0 \? "order-1" : ""\}>\s*<TownIndex \/>/);
-  assert.match(read("app/components/home/HomeTownBlock.tsx"), /storiesEmpty \? "order-2 card flex flex-col gap-2 rounded-2xl px-4 py-3 md:col-span-2/);
+  /* [1101] 맨 앞에 설 때는 위 간격을 줄인다(first) */
+  assert.match(t, /<div className=\{!loadFailed && firstPage\.length === 0 \? "order-1" : ""\}>\s*<TownIndex first=\{!loadFailed && firstPage\.length === 0\} \/>/);
+  /* [1101 · 빈 칸 접기] 홈은 0건 띠조차 그리지 않는다(뉴스룸이 두 칸) — 글이 생기면 예전 칸 */
+  assert.match(read("app/components/home/HomeTownBlock.tsx"), /\{!storiesEmpty && \(\s*<div className="card flex flex-col gap-2 rounded-2xl px-4 py-4">/);
 });
 
 test("S6 폰 노트 격자 2열", () => {

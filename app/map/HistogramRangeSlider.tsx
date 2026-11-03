@@ -216,10 +216,10 @@ export function HistogramRangeSlider({
       {/* 값이 없는 단지가 많으면 숨기지 않고 적는다.
           [1053] 예전 문구(값 없는 단지는 이 조건으로 안 걸러진다)는 실제 동작과 반대였다 — 지도(withinSel ·
           lib/map/complex-filters passesCx)는 조건을 걸면 값 없는 단지를 **뺀다**(모르는 값을 맞는 값으로 치지 않는다). */}
+      {/* [1102] 값 없는 단지 제외 규칙 문장은 패널 머리에 한 번(map-client) — 여기는 수만 */}
       {available !== undefined && total !== undefined && available < total && (
-        <div className="t-caption text-text-3">
-          이 값이 있는 단지 {available.toLocaleString("ko-KR")}개 / 화면 안{" "}
-          {total.toLocaleString("ko-KR")}개 · 값 없는 단지는 조건을 걸면 제외
+        <div className="t-caption tabular-nums text-text-3">
+          값 있는 단지 {available.toLocaleString("ko-KR")} / 화면 {total.toLocaleString("ko-KR")}
         </div>
       )}
       {note ? <div className="t-caption text-text-3">{note}</div> : null}

@@ -110,7 +110,6 @@ export default async function ReportsIndexPage() {
     else byYear.set(y, [m]);
   }
   const years = [...byYear.keys()].sort((a, b) => b.localeCompare(a));
-  const latest = months[0] ?? null;
 
   return (
     <>
@@ -132,21 +131,14 @@ export default async function ReportsIndexPage() {
           <Link href="/methodology" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
             데이터 방법론
           </Link>
-          {latest && (
-            <>
-              {" "}
-              최신 {formatYmKo(latest.ym)} · {latest.regionCount}개 지역 · {latest.txCount.toLocaleString("ko-KR")}건.
-            </>
-          )}
+          {/* [1102] "최신 ○월 · N개 지역 · N건" 꼬리는 뺐다 — 바로 아래 목록 첫 줄과 같은 수 */}
         </p>
 
         <div className="mt-4 grid grid-cols-1 gap-4 max-md:mt-3 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
           <div className="flex min-w-0 flex-col gap-5 max-md:gap-3">
             {loadError ? (
               <div className="card rounded-2xl px-5 py-8 text-center t-body text-text-3 max-md:py-5">
-                월간 집계를 <strong className="text-ink">불러오기 실패</strong>.
-                <br />
-                잠시 후 다시 시도해 주세요.
+                월간 집계 <strong className="text-ink">불러오기 실패</strong> · 잠시 후 다시
               </div>
             ) : months.length > 0 ? (
               years.map((y) => (
@@ -182,7 +174,7 @@ export default async function ReportsIndexPage() {
               ))
             ) : (
               <div className="card rounded-2xl px-5 py-8 text-center t-body text-text-3 max-md:py-5">
-집계된 월 없음 · 실거래 신고가 집계되면 표시돼요.
+집계된 월 없음 · 실거래 신고가 집계되면 표시
               </div>
             )}
 

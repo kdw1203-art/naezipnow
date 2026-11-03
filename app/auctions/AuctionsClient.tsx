@@ -528,10 +528,10 @@ export function AuctionsClient({
                 폰 첫 화면이 날짜 격자로 덮여 "지금 몇 건이 어떤 용도로 떠 있나"를 스크롤해야 알았다.
                 달력은 표 아래로 내렸고(날짜 표시는 그대로), 숫자는 전부 받은 목록에서 센 값이다. */}
             <section className="rise-in-1 card p-[var(--pad-card)]" aria-label="공매 물건 요약">
-              <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
+              <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
                 {[
+                  /* [1102] "표시 중 N건" 칸은 뺐다 — 바로 아래 용도별 요약 머리("표시 중 N건 기준")와 표 머리("현재 조건 N건")가 같은 수를 말한다 */
                   { k: "입찰 중·예정", v: `${activeTotal.toLocaleString()}건` },
-                  { k: "표시 중", v: `${cards.length.toLocaleString()}건` },
                   { k: "마감 임박 · D-3 이내", v: `${urgentCount.toLocaleString()}건` },
                   ...(endRange ? [{ k: "입찰마감", v: endRange }] : []),
                 ].map((f) => (

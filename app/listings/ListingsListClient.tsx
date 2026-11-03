@@ -141,7 +141,8 @@ export function ListingsListClient({
         </div>
       )}
 
-      {/* 유형 필터 */}
+      {/* 유형 필터 — [1102 · 빈 칸 접기] 매물 0건이면 고를 것이 없다(구 칩과 같은 규칙) · 유형을 골라 0건이면 풀 수 있게 남긴다 */}
+      {(items.length > 0 || Boolean(filter.type)) && (
       <div className="rise-in mb-2 flex gap-1.5 overflow-x-auto t-body">
         {TYPE_FILTERS.map((f) => (
           <button
@@ -157,6 +158,7 @@ export function ListingsListClient({
           </button>
         ))}
       </div>
+      )}
 
       {/* 서울 구 필터 — [1030 · 2차] 등록 매물이 0건이면 구 칩 26개는 고를 것이 없다(운영 실측: 0건 위에 칩 줄만) → 숨긴다 */}
       {items.length > 0 && (

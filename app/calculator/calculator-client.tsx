@@ -5,8 +5,6 @@ import Link from "@/app/components/IntentLink";
 import nextDynamic from "next/dynamic";
 import { PageShell } from "@/app/components/PageShell";
 import { Icon } from "@/app/components/Icon";
-import { LoadingHint } from "@/app/components/ui/LoadingHint";
-import { Segmented } from "@/app/components/ui/Segmented";
 import { Explain } from "@/app/components/explain/Explain";
 import { CalculatorNav } from "./CalculatorNav";
 import { TweenMoney } from "./TweenMoney";
@@ -48,31 +46,13 @@ import {
   type Ownership,
 } from "@/lib/finance/loan-rules";
 
-/* [1009 · T] 부동산 계산기 탭(전월세 전환·갭·수익률)은 탭을 눌러야 쓰인다 — 첫 로드 JS 에서 빼고 누를 때 받는다.
-   이번에 대출 계산기가 굴러가는 숫자·구성 막대·근거 시트로 모듈 기준 약 18KB(raw) 늘어, /calculator(2026-09-21 빌드
-   473KB)가 목록 밖 상한 495KB 에 4KB 까지 붙는 셈이었다. 탭 코드(약 9KB)를 빼 여유를 되찾는다. */
-const RealEstateTools = nextDynamic(() => import("./realestate-tools").then((m) => m.RealEstateTools), {
-  ssr: false,
-  loading: () => (
-    <div className="card flex min-h-[240px] items-center justify-center">
-      <LoadingHint text="부동산 계산기를 불러오는 중" />
-    </div>
-  ),
-});
-
 /* [1052 · 번들] 최대 대출 계산식 카드 — 따로 받는 청크. 서버 렌더는 그대로(가격이 주소에 있으면 첫 HTML 에 카드가 있다) */
 const LoanRuleCard = nextDynamic(() => import("./LoanRuleCard").then((m) => m.LoanRuleCard), {
   loading: () => <div aria-hidden className="card min-h-[320px] rounded-3xl" />,
 });
 
-/* B10: 상단 섹션 탭 — 기존 대출·수익률 계산기 + 신규 부동산 계산기.
-   [1009 · T] 같은 화면의 상태 전환이라 공용 Segmented(선택 표시가 미끄러진다)로 — 예전엔 네이비 알약 두 개가
-   순간 교체돼 "어디서 어디로" 바뀌었는지 눈이 따라가지 못했다. */
-const SECTIONS = [
-  { value: "loan", label: "대출·수익률" },
-  { value: "realestate", label: "부동산 계산기" },
-] as const;
-type Section = (typeof SECTIONS)[number]["value"];
+/* [1102] 위 "대출·수익률 | 부동산 계산기" 전환을 걷었다 — 전월세 전환 · 갭 · 임대수익률은 계산기 목록 줄(CalculatorNav)에
+   각자 화면이 있어 같은 계산기가 두 길로 열렸다. 예전 주소(?section=realestate)는 전월세 전환 화면으로 보낸다. */
 
 /* G10 / 사실 우선: 예전 상수명은 FALLBACK_RATE("은행 평균 4.19%")였다. 어떤 은행의
    평균도 아닌 임의값을 "은행 평균"이라 부르면 사용자가 시장 금리로 읽는다.
@@ -155,7 +135,6 @@ const extLinkCls =
   "inline-flex min-h-[24px] items-center font-bold text-primary no-underline underline-offset-2 hover:underline";
 
 export function CalculatorClient({ mortgage, after }: { mortgage: MortgageRatesProp; after?: ReactNode }) {
-  const [section, setSection] = useState<Section>("loan");
   /* [1015 · 규칙 B] 예전 기본값 84,000만원은 우리가 정한 예시 숫자였다 — 실데이터가 아닌 예시 값은 두지 않는다.
      빈 칸에서 시작하고(null), 매매가가 들어오기 전에는 결과 대신 빈 상태 한 줄만 그린다. 저장값·URL 프리필은 그대로 복원한다. */
   const [price, setPrice] = useState<number | null>(null); // 만원
@@ -240,8 +219,10 @@ export function CalculatorClient({ mortgage, after }: { mortgage: MortgageRatesP
       }
       const rg = sp.get("region");
       if (isLoanRegion(rg)) setRegion(rg);
-      const sec = sp.get("section");
-      if (sec === "realestate" || sec === "loan") setSection(sec);
+      if (sp.get("section") === "realestate") {
+        window.location.replace("/calculator/jeonse-monthly");
+        return;
+      }
     } catch {
       /* URL 이 깨졌으면 기본값으로 진행 */
     }
@@ -373,7 +354,7 @@ export function CalculatorClient({ mortgage, after }: { mortgage: MortgageRatesP
     }`;
 
   return (
-    <PageShell breadcrumb="투자 도구 › 대출·수익률 계산기" title="대출·수익률 계산기" wide>
+    <PageShell breadcrumb="투자 도구 › 대출 계산기" title="대출 계산기" wide>
       {/* [개선 #6] 계산기 랜딩 5장 상호 링크 — 중개보수·전월세 전환·갭·수익률이
           각자 검색 랜딩으로 분리됐다(방문 실측 상위 진입 경로의 SEO 확장). */}
       <CalculatorNav current="/calculator" />
@@ -381,17 +362,7 @@ export function CalculatorClient({ mortgage, after }: { mortgage: MortgageRatesP
           [1008 · M] 이제 계산이 전부 이 화면에서 끝나 문구가 사실이 됐다. [1015 · 규칙 D] 명사형 한 줄 */}
       <div className="rise-in -mt-2 mb-4 t-sub text-text-3 max-md:mb-3">입력값은 이 브라우저에만 저장 · 서버 전송 없음</div>
 
-      <Segmented
-        options={SECTIONS}
-        value={section}
-        onChange={setSection}
-        ariaLabel="계산기 종류"
-        className="rise-in mb-4"
-      />
-
-      {section === "realestate" && <RealEstateTools />}
-
-      {section === "loan" && (
+      {(
         <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[400px_minmax(0,1fr)]">
           {/* ---------- 입력 ---------- */}
           <div className="flex min-w-0 flex-col gap-3">

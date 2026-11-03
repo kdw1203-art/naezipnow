@@ -280,9 +280,10 @@ test("[1024] 단지 상세 — 시안 섹션 순서·흰 머리·번들 규칙(�
   const order = [
     "<PageHead",
     "<ComplexOverviewStrip",
-    'data-ai-summary=""',
+    /* [1101 · 첫 화면] 인용 요약은 최근 실거래 표 아래(폰 첫 화면에 대표가가 먼저) */
     "<TxTrendLazy",
     "<RecentDealsTable",
+    'data-ai-summary=""',
     "<JeonseGapCards",
     "<MgmtFeeCard",
     "<ComplexNearbyPoi",

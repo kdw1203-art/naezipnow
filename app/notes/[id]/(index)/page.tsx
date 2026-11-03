@@ -62,7 +62,6 @@ import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { NoteMiniMap } from "../NoteMiniMap";
 import { NoteVerdictCard } from "../NoteVerdictCard";
-import { ScoreRing } from "@/app/components/viz/ScoreRing";
 import type { RadarItem } from "@/app/components/viz/ScoreRadar";
 import { resolveComplexPrice } from "@/lib/market/complex-price";
 import { noteCoordsFromMetadata } from "@/lib/notes/note-coords";
@@ -1582,61 +1581,8 @@ export default async function NoteDetailPage({
         {/* ===== 우측: AI 분석 ===== */}
         <aside className="flex flex-col gap-3 md:gap-4">
           {/* [993] "판단 근거 정리" 패널 삭제 — 결론·점수·체크는 맨 위 판단 카드로 갔다(모바일에서 맨 끝에 오던 문제). */}
-          {/* 기록 축 점수 — 입력된 축만 평균. 미입력이면 링을 그리지 않는다.
-              [1015 · 규칙 E] 종합 점수 링은 맨 위 판단 카드의 "기록 점수 N/100"과 같은 사실이라 폰에서는 숨기고(max-md:hidden)
-              축 막대만 남긴다. 데스크톱(오른쪽 레일)은 그대로. */}
-          <div className="rise-in-2 card flex flex-col items-center gap-3 rounded-3xl p-6 max-md:gap-2 max-md:p-3.5">
-            {v.totalScore != null ? (
-              /* [1038 · 1] CSS 원뿔 그라데이션 링 → SVG ScoreRing(판단 카드와 같은 부품) */
-              <ScoreRing score={v.totalScore} size={110} className="max-md:hidden" />
-            ) : (
-              <div className="flex h-[110px] w-[110px] flex-col items-center justify-center rounded-full bg-bg max-md:hidden">
-                <span className="t-section text-text-3">—</span>
-                <span className="mt-0.5 t-caption text-text-3">미입력</span>
-              </div>
-            )}
-            <div className="flex items-center justify-center gap-1 text-center t-sub text-text-2">
-              {v.totalScore != null ? (
-                <span>
-                  기록 점수 <b className="text-primary">{v.totalScore}점</b> · 입력 {v.scoredAxisCount}개 축
-                </span>
-              ) : (
-                <span>축 점수 미입력</span>
-              )}
-              {/* [1015 · 규칙 B] 카드 맨 아래 계산 설명 문장 → ⓘ(데스크톱 hover 미리보기 · 폰 탭 시트) */}
-              <Explain
-                title="기록 점수"
-                body="항목 평점(입지·학군·교통·시설·미래가치 중 입력한 축의 평균, 5점 만점) × 20 이에요. 미입력 축은 평균과 막대에서 빼요."
-                source={v.lab ? "내집나우 Lab 자료 조사" : "작성자 직접 방문 기록"}
-                size={12}
-              />
-            </div>
-            <div className="flex w-full flex-col gap-[7px]">
-              {v.scoreBars.map((b) => (
-                <div key={b.label} className="flex items-center gap-2">
-                  <span className="w-11 shrink-0 t-sub text-text-2">
-                    {b.label}
-                  </span>
-                  <div className="relative h-2 flex-1 rounded bg-bg">
-                    <div
-                      className={`absolute left-0 h-2 rounded ${
-                        b.bad ? "bg-danger" : "bg-primary"
-                      }`}
-                      style={{ width: `${b.value}%` }}
-                    />
-                  </div>
-                  <span
-                    className={`t-sub font-bold tabular-nums ${
-                      b.bad ? "text-danger" : "text-ink"
-                    }`}
-                  >
-                    {b.value}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-
+          {/* [1101 · 같은 사실 한 번] 오른쪽 "기록 점수" 카드(링 110px + 축 막대 다섯)는 뺐다 — 맨 위 판단 카드가 같은 점수(알약 · 링)와
+              같은 다섯 축(레이더 · 축마다 점수)을 이미 그렸다(운영 실측: 점수 60 이 한 화면에 세 번 · 다섯 축이 두 번). 계산 설명(ⓘ)은 판단 카드 줄에 있다. */}
           {/* [1048] AI 다요인 분석 — 이 노트 지역의 시장 신호 8요인 + 이 노트 기록 점수(현장). 늦으면 그리지 않는다(스트리밍). */}
           <Suspense fallback={null}>
             <NoteSignals

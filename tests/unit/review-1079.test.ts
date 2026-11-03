@@ -106,7 +106,10 @@ test("S5 폰 탭 — 손수 만든 알약 40px · 텍스트 단추 .tap-line · 
 
 test("S6 지도 안내 — 낱말", () => {
   const m = read("app/map/map-client.tsx");
-  assert.match(m, /body: "지도·목록 금액은 국토교통부 실거래가 평균 · 매물 호가와 다름",/);
+  /* [1101 · 첫 화면] 첫 방문 모달(같은 문장)은 걷었다 — 폰 범례 단추 글자 + 펼친 범례 한 줄이 같은 사실(낱말 꼴 그대로) */
+  assert.match(m, /const MAP_PRICE_BASIS_SHORT = "금액 = 실거래 평균";/);
+  assert.match(m, /국토교통부 실거래가 평균 · 매물 호가 아님/);
+  assert.doesNotMatch(m, /<CoachmarkTour/);
   assert.doesNotMatch(m, /평균이에요|다른 값이에요|표시돼요/);
   assert.match(m, /목록 가격은 매매 실거래 평균 · 전세 보증금은 지도 마커/);
 });

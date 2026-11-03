@@ -12,7 +12,6 @@
    조건은 URL 쿼리에 남긴다 — 서버는 searchParams 를 읽지 않고(ISR 캐시 정책 유지) 전체 목록을 내려 주며,
    여기서 history.replaceState 로만 반영하고 필터·정렬·예산은 클라이언트 계산(screener-model). 폰: 조건 패널이 위(접이식), 표는 가로 스크롤. */
 import { useEffect, useMemo, useState } from "react";
-import { Explain } from "@/app/components/explain/Explain";
 import { StepLine } from "@/app/components/StepLine";
 import { formatKrwShort } from "@/lib/market/format";
 import { GAP_CARD_PAGE, gapConclusion, gapSteps, nextCardCount, regionActionLinks } from "@/lib/market/region-conclusion";
@@ -119,7 +118,6 @@ export function GapScreener({
   const matched = useMemo(() => applyFilter(rows, filter), [rows, filter]);
   const filtered = useMemo(() => sortRows(matched, sort), [matched, sort]);
   const maxRatio = rows[0]?.ratio ?? 0;
-  const top = rows[0] ?? null;
   const bottom = rows.length > 0 ? rows[rows.length - 1] : null;
   const mine = useMemo(() => budgetSummary(rows, budget), [rows, budget]);
   const hasCondition = filter.minRatio !== null || filter.maxGapMan !== null || filter.sido !== null || filter.minYield !== null;
@@ -300,52 +298,15 @@ export function GapScreener({
             </div>
           </div>
 
-          {/* 숫자 칸 4개 — 서버가 낸 값(중앙값·최고·최저) + 조건에 맞는 곳. [1026] 폰은 결론과 겹치는 앞 두 칸을 숨긴다 */}
-          <div className="gap-tiles">
-            <div className="min-w-0 max-md:hidden">
-              <div className="kpi h-full">
-                <span className="kpi-k">조건에 맞는 곳</span>
-                <span className="kpi-v">
-                  {filtered.length}곳 <span className="t-sub font-medium text-text-3">/ {rows.length}</span>
-                </span>
-                <span className="kpi-d truncate">{conditionLine(filter)}</span>
-              </div>
-            </div>
-            {median !== null && (
-              <div className="min-w-0 max-md:hidden">
-                <div className="kpi h-full">
-                  <span className="kpi-k inline-flex items-center gap-0.5">
-                    전세가율 중앙값
-                    <Explain
-                      term="jeonse-garyul"
-                      how="공표 지역 통계(한국부동산원)의 매매가 대비 전세가 비율. 집계 지역을 줄 세운 가운데 값."
-                      size={12}
-                    />
-                  </span>
-                  <span className="kpi-v">{median.toFixed(1)}%</span>
-                  <span className="kpi-d">전체 {rows.length}곳</span>
-                </div>
-              </div>
-            )}
-            {top && (
-              <div className="kpi">
-                <span className="kpi-k">가장 높은 곳</span>
-                <span className="kpi-v truncate">
-                  {top.name} {top.ratio.toFixed(1)}%
-                </span>
-                <span className="kpi-d">{effectiveGap(top) !== null ? `갭 ${formatKrwShort(effectiveGap(top))}` : "갭이 가장 작다"}</span>
-              </div>
-            )}
-            {bottom && (
-              <div className="kpi">
-                <span className="kpi-k">가장 낮은 곳</span>
-                <span className="kpi-v truncate">
-                  {bottom.name} {bottom.ratio.toFixed(1)}%
-                </span>
-                <span className="kpi-d">{effectiveGap(bottom) !== null ? `갭 ${formatKrwShort(effectiveGap(bottom))}` : "갭이 가장 크다"}</span>
-              </div>
-            )}
-          </div>
+          {/* [1102 · 같은 사실 한 번] 숫자 칸 넷 중 셋(조건에 맞는 곳 · 중앙값 · 가장 높은 곳)은 바로 위 결론 줄
+              ("조건에 맞는 N곳 · 전세가율 중앙 X% · 최고 ○○ Y%")과 결론 아랫줄(갭)을 그대로 되풀이했다(운영 PC "107곳" 일곱 번).
+              결론에 없는 "가장 낮은 곳"만 한 줄로 남긴다. */}
+          {bottom && (
+            <p className="t-sub text-text-2">
+              <span className="text-text-3">가장 낮은 곳</span> · <b className="text-ink">{bottom.name} {bottom.ratio.toFixed(1)}%</b>
+              {effectiveGap(bottom) !== null ? ` · 갭 ${formatKrwShort(effectiveGap(bottom))}` : ""}
+            </p>
+          )}
 
           {/* 대표 그림 — 결과(스크리너). md+ 표 · 폰 카드 목록 */}
           <section className="card rounded-2xl p-4 max-md:p-3.5" data-reveal="">

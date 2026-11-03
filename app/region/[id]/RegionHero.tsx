@@ -49,7 +49,7 @@ function Tile({
 }
 
 export function RegionHero({
-  id,
+  id: _id,
   name,
   mapRegion,
   overview,
@@ -89,7 +89,8 @@ export function RegionHero({
         value={formatByKey(index.value, "num1")}
         delta={index.momPct !== null ? <Delta pct={index.momPct} srContext="전월보다" /> : null}
         basis="전월 대비"
-        foot={`${ymLong(index.ym)} · 부동산원`}
+        /* [1101] 1년 전 대비(예전 제목 아래 굵은 줄 · overview.subline)를 이 칸 발에 — 제목 줄을 걷으며 사실은 남긴다 */
+        foot={overview.subline ? `${overview.subline} · 부동산원` : `${ymLong(index.ym)} · 부동산원`}
       />,
     );
   }
@@ -176,17 +177,29 @@ export function RegionHero({
     );
   }
 
+  /* [1101 · 같은 사실 한 번] 칸이 있으면 큰 제목 줄("매매가격지수 · 전월 대비 ▼1.6%" + "1년 전 대비 ▲2.8%")을 그리지 않는다 —
+     첫 칸이 같은 숫자를 바로 아래에서 다시 말했다(운영 강남구: 같은 수가 한 화면에 네 번 · 소유자 2026-11-02 검토).
+     제목은 기준(지역 · 달 · 원천) 한 줄로 내려 앉고, 1년 전 대비는 첫 칸 발로 간다. 칸이 하나도 없으면 예전 제목(결론 한 줄)을 그대로. */
+  const showHeadline = tiles.length === 0;
   return (
     <section aria-labelledby="region-hero-h" className="rise-in card mb-4 p-[var(--pad-card)]">
-      {overview.headlineCaption && (
-        <p className="m-0 t-caption text-text-3 break-words">{overview.headlineCaption}</p>
+      {showHeadline ? (
+        <>
+          {overview.headlineCaption && (
+            <p className="m-0 t-caption text-text-3 break-words">{overview.headlineCaption}</p>
+          )}
+          <h2 id="region-hero-h" className="mt-0.5 t-title text-ink break-words">
+            {overview.headline ?? `${name} 실거래·가격지수 요약`}
+          </h2>
+          {overview.subline && <p className="m-0 mt-0.5 t-body font-bold text-text-2">{overview.subline}</p>}
+        </>
+      ) : (
+        <h2 id="region-hero-h" className="m-0 t-sub font-bold text-text-2 break-words">
+          {overview.headlineCaption ?? `${name} 실거래·가격지수 요약`}
+        </h2>
       )}
-      <h2 id="region-hero-h" className="mt-0.5 t-title text-ink break-words">
-        {overview.headline ?? `${name} 실거래·가격지수 요약`}
-      </h2>
-      {overview.subline && <p className="m-0 mt-0.5 t-body font-bold text-text-2">{overview.subline}</p>}
       {tiles.length > 0 && (
-        <div className="mt-3 grid grid-cols-2 gap-2 md:grid-cols-4">{tiles}</div>
+        <div className="mt-2.5 grid grid-cols-2 gap-2 md:grid-cols-4">{tiles}</div>
       )}
       {/* [1075] 제목 아래 설명 두 줄("…통계 아직 없음 · 아래 숫자는 …" + "출처 · …")을 출처 한 줄로 — 사실은 그대로 */}
       <p className="m-0 mt-2.5 t-caption text-text-3 break-words">
@@ -197,26 +210,13 @@ export function RegionHero({
         · 매물 호가 아님
       </p>
       {freshnessLine}
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Link
-          href={`/map?region=${encodeURIComponent(mapRegion)}`}
-          className="chip inline-flex items-center border border-line bg-surface px-3 py-1.5 t-sub font-bold text-primary no-underline"
-        >
-          지도에서 단지 보기 ›
-        </Link>
-        <Link
-          href={`/region/${id}/report`}
-          className="chip inline-flex items-center border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1 no-underline"
-        >
-          월간 리포트 ›
-        </Link>
-        <Link
-          href={`/town/${id}`}
-          className="chip inline-flex items-center border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-1 no-underline"
-        >
-          {name} 동네 홈 ›
-        </Link>
-      </div>
+      {/* [1101] 월간 리포트 · 동네 홈 칩은 머리 위 지역 탭 줄(RegionTabs)로 갔다 — 지도는 지역 화면이 아니라 여기 한 줄로 남는다 */}
+      <Link
+        href={`/map?region=${encodeURIComponent(mapRegion)}`}
+        className="tap-line mt-2 inline-flex items-center t-sub font-bold text-primary no-underline"
+      >
+        지도에서 {name} 단지 보기 ›
+      </Link>
     </section>
   );
 }

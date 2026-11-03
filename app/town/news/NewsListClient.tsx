@@ -249,8 +249,9 @@ export function NewsListClient({
       )}
 
       {/* 지역 칩 — 얕은 pushState 라 서버 왕복이 없다. 첫 줄은 시·도(건수순) */}
+      {/* [1101 · 조작 다이어트] 폰은 지역 칩을 한 줄 가로 밀기로 — 시·도 칩 12개가 세 줄로 쌓여 기사보다 먼저 첫 화면의 1/4 을 썼다. PC 는 줄바꿈 그대로 */}
       {regions.length > 0 && (
-        <div className="rise-in mb-2 flex flex-wrap items-center gap-1.5" role="group" aria-label="지역">
+        <div className="scroll-x-hidden-bar rise-in mb-2 flex items-center gap-1.5 max-md:-mx-3.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3.5 md:flex-wrap [&>*]:shrink-0" role="group" aria-label="지역">
           <span className="t-caption font-bold tracking-wider text-text-3">지역</span>
           <button
             type="button"
@@ -291,7 +292,7 @@ export function NewsListClient({
       {/* [970 · C-23] 두 번째 줄 — 활성 시·도 안의 시·군·구(건수순) */}
       {activeGroup && activeGroup.children.length > 0 && (
         <div
-          className="rise-in mb-2 flex flex-wrap items-center gap-1.5"
+          className="scroll-x-hidden-bar rise-in mb-2 flex items-center gap-1.5 max-md:-mx-3.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3.5 md:flex-wrap [&>*]:shrink-0"
           role="group"
           aria-label={`${activeGroup.label} 안 지역`}
         >

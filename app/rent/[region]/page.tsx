@@ -6,6 +6,7 @@ import { HScroll } from "@/app/components/HScroll";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { PageHead } from "@/app/components/PageHead";
+import { RegionTabs } from "@/app/components/region/RegionTabs";
 import { Icon } from "@/app/components/Icon";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
 import { findCatalogRegionById } from "@/lib/region/catalog";
@@ -224,6 +225,9 @@ export default async function RentRegionPage({
         }
       />
 
+      {/* [1101 · 지역 화면 한 벌] 지역 탭 줄 — 머리 아래 같은 자리(개요 · 실거래 구간 · 전월세 · 시장 온도 · 동네 · 월간 리포트) */}
+      <RegionTabs id={id} current="rent" className="mt-3" />
+
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-5">
         <div className="min-w-0">
           <RentTypeAreaFilters regionId={id} params={p} counts={collected ? counts : null} />
@@ -323,26 +327,16 @@ export default async function RentRegionPage({
               </Link>
             </div>
           </section>
-          <section className="card p-[var(--pad-card)]">
-            {/* [1044] 제목 "동네이야기 · {동네}" → "{동네} 관련 화면" — 줄에 뉴스룸·시장 데이터가 같이 있어 동네이야기 묶음이 아니다(뉴스는 제 대분류) */}
-            <h2 className="t-section text-ink">{region.name} 관련 화면</h2>
-            <ul data-tone="plain" className="lq-panel mt-1 flex flex-col">
-              {[
-                { href: `/town/${id}`, label: "동네 홈" },
-                { href: `/town/news?region=${encodeURIComponent(region.name)}`, label: "뉴스룸" },
-                { href: `/region/${id}`, label: "시장 데이터" },
-              ].map((l) => (
-                <li key={l.href} className="border-b last:border-0">
-                  <Link href={l.href} className="flex min-h-10 items-center justify-between gap-3 py-2 t-body text-text-1 no-underline">
-                    {l.label}
-                    <span className="shrink-0 t-body font-bold text-text-3" aria-hidden="true">
-                      ›
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </section>
+          {/* [1102] "관련 화면" 세 줄 중 동네 홈 · 시장 데이터는 머리 아래 지역 탭(동네 · 개요)과 같은 링크라 뺐다 — 탭에 없는 뉴스룸만 */}
+          <Link
+            href={`/town/news?region=${encodeURIComponent(region.name)}`}
+            className="card flex min-h-10 items-center justify-between gap-3 px-4 py-3 t-body text-text-1 no-underline"
+          >
+            {region.name} 뉴스룸
+            <span className="shrink-0 t-body font-bold text-text-3" aria-hidden="true">
+              ›
+            </span>
+          </Link>
         </aside>
       </div>
     </>

@@ -32,6 +32,7 @@ import {
 import { ExpandableComplexRows } from "./ExpandableComplexRows";
 /* [1009 · H] 머리(결론·큰 숫자)·추세 카드·단지 목록 — 이 폴더의 새 조각(표는 /complex/browse 가 계속 쓴다) */
 import { RegionHero } from "./RegionHero";
+import { RegionTabs } from "@/app/components/region/RegionTabs";
 import { MarketFreshnessLine } from "@/app/components/MarketFreshnessLine";
 import { RegionTrendCard } from "./RegionTrendCard";
 import { buildRegionTrendDatasets } from "./region-trends";
@@ -777,6 +778,8 @@ export default async function RegionHubPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(regionJsonLd) }}
       />
+      {/* [1101 · 지역 화면 한 벌] 개요 · 실거래 구간 · 전월세 · 시장 온도 · 동네 · 월간 리포트 — 여섯 화면이 같은 탭 줄(lib/region/region-tabs) */}
+      <RegionTabs id={id} current="overview" txSlug={txBandRegion?.slug ?? null} className="rise-in mb-4 max-md:mb-3" />
       {/* [1009 · H] 예전 머리 줄("{기준월} 기준 · 출처 …")은 서울 구에서 기준월이 빈칸이었다 — 출처·기준일은 아래 머리 카드가 적는다 */}
       {/* [998] 폐지된 구 — 옛 통계는 그대로 두고, 지금의 구 페이지로 이어 준다 */}
       {retiredAt && successors.length > 0 && (
@@ -827,27 +830,6 @@ export default async function RegionHubPage({
         </div>
       )}
 
-      {/* G12 — 이 문단만 떼어 인용해도 뜻이 통해야 한다.
-          [1006 · E] data-ai-summary — 위 WebPage JSON-LD 의 speakable.cssSelector 가 이 블록을
-          가리킨다(문단은 그대로, 껍데기만 section 으로). 새 요약 블록을 따로 만들지 않는다.
-          [1009 · H] 결론·숫자는 위 카드가 먼저 말한다 — 이 문단은 그 아래 한 단계 옅게(요약 전문). */}
-      <section data-ai-summary="" id="ai-summary" aria-label={`${name} 시세 요약`} className="rise-in mb-5">
-        {/* [1074] 화면 폭 한 줄(89자/줄 실측) → 읽는 폭 */}
-        <p className="max-w-[72ch] t-sub text-text-2">{lead}</p>
-        {/* [1081 · #14] 데이터로만 쓴 서술 — 위 lead 가 이미 말한 수가 든 문장은 뺀다(같은 수 두 번 금지 · narrativeComplement).
-            남는 것은 lead 에 없는 사실(1년 전 대비 · 거래 전월 대비 · 집계 중인 달 건수 · 전세가율 %p)뿐이라 지역마다 다른 문장이 된다. */}
-        {(() => {
-          const rest = narrativeComplement(overview.narrative, lead);
-          return rest.length > 0 ? <p className="mt-2 max-w-[72ch] t-sub leading-[1.7] text-text-2">{rest.join(" ")}</p> : null;
-        })()}
-        {/* [1081 · #25] 인용 가능한 한 문장 — 출처·기준월·집계 주체가 든 사실 문장(AI 검색이 그대로 가져가도 출처가 남는다) */}
-        {overview.citeLine && (
-          <p data-cite="" className="mt-2 max-w-[72ch] t-caption text-text-3">
-            {overview.citeLine}
-          </p>
-        )}
-      </section>
-
       {/* [1015 · 규칙 F] 데스크톱 2단 — 본문(시세 흐름 ~ 정비사업) + 오른쪽 340px 레일(임장노트·면적대·Q&A·퍼가기·CTA·광고 1).
           DOM 순서는 예전 섹션 순서 그대로라 폰(한 열)에서는 바뀐 것이 없다. 새 부품 없음 — 기존 카드를 옮겨 놓았다. */}
       <div className="grid-cols-1 lg:grid lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-5">
@@ -859,7 +841,29 @@ export default async function RegionHubPage({
           heading={`${name} 시세 흐름`}
           datasets={trendDatasets}
           after={
-            tempRegion ? (
+            <>
+            {/* [1101] 예전 "시장 흐름 요약" 카드의 문장 — 그래프가 보여 주는 흐름을 글로(최고 · 최저 달 · 연속 · 거래 한산 · 입주 예정) */}
+            {marketRead.paragraphs.length > 0 && (
+              <div className="mt-3 flex flex-col gap-1.5 border-t border-line pt-3">
+                {marketRead.paragraphs.map((p, i) => (
+                  <p key={i} className="m-0 t-sub text-text-2">
+                    {p}
+                  </p>
+                ))}
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+                  {/* [개선 #13] 지역 이름 키워드로 뉴스·동네글 알림 원탭 구독 */}
+                  <KeywordAlertButton scope="news" query={name} label={`${name} 새 소식`} />
+                  {/* [#79] 월간 아카이브 진입 — "그때 얼마였지"를 월 고정 페이지로 */}
+                  <Link
+                    href={`/region/${id}/report`}
+                    className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
+                  >
+                    월간 리포트 아카이브 ›
+                  </Link>
+                </div>
+              </div>
+            )}
+            {tempRegion ? (
               <p className="mt-3 flex items-center gap-0.5 t-sub text-text-3">
                 <Link
                   href={`/analysis/temperature/${encodeURIComponent(id)}`}
@@ -878,7 +882,8 @@ export default async function RegionHubPage({
                   source="내집나우 주간 산출 · 한국부동산원 지수 · 국토교통부 실거래 신고"
                 />
               </p>
-            ) : null
+            ) : null}
+            </>
           }
         />
       ) : (
@@ -890,41 +895,30 @@ export default async function RegionHubPage({
             /* [1075] 해요체 → 빈 상태 꼴("○○ 없음") */
             <p className="py-6 text-center t-body text-text-3">매매가격지수·월별 거래량 두 달 치 이상 없음</p>
           )}
+          {/* [1101] 그래프가 없어도 흐름 문장(입주 예정 등)이 있으면 이 칸 아래에 — 예전 "시장 흐름 요약" 카드의 몫(알림 · 아카이브 링크 포함) */}
+          {marketRead.paragraphs.length > 0 && (
+            <div className="mt-2 flex flex-col gap-1.5 border-t border-line pt-3">
+              {marketRead.paragraphs.map((p, i) => (
+                <p key={i} className="m-0 t-sub text-text-2">
+                  {p}
+                </p>
+              ))}
+              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <KeywordAlertButton scope="news" query={name} label={`${name} 새 소식`} />
+                <Link
+                  href={`/region/${id}/report`}
+                  className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary"
+                >
+                  월간 리포트 아카이브 ›
+                </Link>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
-      {/* [개선 #7] 시장 흐름 읽기 — 위 표·차트의 숫자를 지역마다 다른 문장으로.
-          전 문장이 이 페이지가 이미 읽은 실데이터의 산술 서술이다(전망·권유 없음,
-          lib/region/market-read.ts). 값이 부족한 지역은 문단 수가 줄고, 아예
-          없으면 섹션 자체가 안 그려진다 — 빈 틀을 만들지 않는다. */}
-      {marketRead.paragraphs.length > 0 && (
-        <section className="rise-in-1 card mb-6 p-[var(--pad-card)]">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h2 className="t-section text-ink">
-              {name} 시장 흐름 요약
-            </h2>
-            {/* [개선 #13] 지역 이름 키워드로 뉴스·동네글 알림 원탭 구독 */}
-            <KeywordAlertButton scope="news" query={name} label={`${name} 새 소식`} />
-          </div>
-          <div className="mt-2 flex flex-col gap-2.5">
-            {marketRead.paragraphs.map((p, i) => (
-              <p key={i} className="t-body text-text-1">
-                {p}
-              </p>
-            ))}
-          </div>
-          {/* [#79] 월간 아카이브 진입 — "그때 얼마였지"를 월 고정 페이지로 */}
-          <div className="mt-3">
-            <Link
-              href={`/region/${id}/report`}
-              className="inline-flex min-h-[24px] items-center t-body font-bold text-primary"
-            >
-              월간 리포트 아카이브 ›
-            </Link>
-          </div>
-        </section>
-      )}
-
+      {/* [1101 · 같은 사실 한 번] "시장 흐름 요약" 카드(문장 넷 · 위 칸과 같은 수가 섞임)는 따로 칸을 두지 않고 바로 위 시세 흐름 카드의
+          그래프 아래 줄로 합쳤다(RegionTrendCard after). 알림 구독 · 월간 리포트 아카이브 링크도 함께 그 자리로. */}
       {/* 최근 실거래 5건 — [1009 · H] 한 건의 가격은 정밀 표기("12억 4,500만", 네이버 부동산 관례)
           [1063] id="recent-tx" — 머리 아래 보조 링크가 여기로 온다 */}
       <section id="recent-tx" className="rise-in-2 card mb-6 scroll-mt-[72px] p-[var(--pad-card)]">
@@ -1306,6 +1300,30 @@ export default async function RegionHubPage({
           <Fineprint className="mt-2">열린데이터광장 원문 · 참고용(법적 효력 없음)</Fineprint>
         </section>
       )}
+
+      {/* [1101 · 같은 사실 한 번] 요약 문단(인용 · speakable)은 첫 화면에서 본문 끝으로 내렸다 — 바로 위 칸 넷 · 시세 흐름이 같은 수를 먼저
+          말한다(운영 강남구: 지수 · 평균가 · 거래량이 첫 화면에 네 번). 글은 그대로 HTML 에 있고 speakable 셀렉터도 같은 자리를 가리킨다.
+          G12 — 이 문단만 떼어 인용해도 뜻이 통해야 한다.
+          [1006 · E] data-ai-summary — 위 WebPage JSON-LD 의 speakable.cssSelector 가 이 블록을
+          가리킨다(문단은 그대로, 껍데기만 section 으로). 새 요약 블록을 따로 만들지 않는다.
+          [1009 · H] 결론·숫자는 위 카드가 먼저 말한다 — 이 문단은 그 아래 한 단계 옅게(요약 전문). */}
+      <section data-ai-summary="" id="ai-summary" aria-labelledby="ai-summary-h" className="card mb-6 p-[var(--pad-card)] max-md:mb-3">
+        <h2 id="ai-summary-h" className="t-section text-ink">{name} 요약 문장</h2>
+        {/* [1074] 화면 폭 한 줄(89자/줄 실측) → 읽는 폭 */}
+        <p className="max-w-[72ch] t-sub text-text-2">{lead}</p>
+        {/* [1081 · #14] 데이터로만 쓴 서술 — 위 lead 가 이미 말한 수가 든 문장은 뺀다(같은 수 두 번 금지 · narrativeComplement).
+            남는 것은 lead 에 없는 사실(1년 전 대비 · 거래 전월 대비 · 집계 중인 달 건수 · 전세가율 %p)뿐이라 지역마다 다른 문장이 된다. */}
+        {(() => {
+          const rest = narrativeComplement(overview.narrative, lead);
+          return rest.length > 0 ? <p className="mt-2 max-w-[72ch] t-sub leading-[1.7] text-text-2">{rest.join(" ")}</p> : null;
+        })()}
+        {/* [1081 · #25] 인용 가능한 한 문장 — 출처·기준월·집계 주체가 든 사실 문장(AI 검색이 그대로 가져가도 출처가 남는다) */}
+        {overview.citeLine && (
+          <p data-cite="" className="mt-2 max-w-[72ch] t-caption text-text-3">
+            {overview.citeLine}
+          </p>
+        )}
+      </section>
 
       </div>
       {/* ── 오른쪽 레일(데스크톱) · 폰은 한 열 그대로 — 임장노트 · 면적대·가격대 · Q&A · 퍼가기 · CTA · 광고 */}

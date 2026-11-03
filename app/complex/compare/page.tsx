@@ -242,9 +242,11 @@ export default async function ComplexComparePage() {
               칩·순서·이동 대상은 그대로 */}
           {/* [1096 · 고도화] 칩이 가리키는 지역이 접혀 있으면 펼친다(주소 #region-… · 해시 변경마다) */}
           <OpenDetailsOnHash />
+          {/* [1101 · 조작 다이어트] PC 도 한 줄 가로 밀기 — 63개 칩이 PC 에서 일곱 줄(약 280px)로 쌓여 첫 화면을 덮었다. 폰은 1074 부터 한 줄.
+              PC 는 얇은 가로 막대를 보인다(마우스로 밀 수 있다는 표시 · 폰은 막대 없이 손가락으로) */}
           <nav
             aria-label="지역 바로가기"
-            className="scroll-x-hidden-bar flex gap-1.5 max-md:-mx-3.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3.5 md:flex-wrap"
+            className="-mx-3.5 flex flex-nowrap gap-1.5 overflow-x-auto px-3.5 pb-1.5 max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden md:mx-0 md:px-0 md:[scrollbar-width:thin]"
           >
             {groups.map((group) => (
               <a

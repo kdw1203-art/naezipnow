@@ -70,10 +70,11 @@ function shortcutActivity(cards: FeedCard[], name: string): number {
 }
 
 /* [970 · C-17] 시·도별 동네 홈 인덱스(서버 조각 — 상태 없음, details 는 브라우저가 연다) */
-function TownIndex() {
+function TownIndex({ first = false }: { first?: boolean }) {
   const groups = groupRegionsByCity();
   return (
-    <section id="town-index" className="mt-8 scroll-mt-24" aria-labelledby="town-index-title">
+    /* [1101] 맨 앞에 설 때(이웃 글 0건)는 위 카테고리 줄과 같은 간격 — 바로가기 칩 줄이 빠진 자리가 32px 빈 띠로 남지 않게 */
+    <section id="town-index" className={`${first ? "mt-0" : "mt-8"} scroll-mt-24`} aria-labelledby="town-index-title">
       <div className="mb-2 flex items-baseline justify-between px-1">
         <h2 id="town-index-title" className="t-section text-ink">
           동네 홈 전체
@@ -200,7 +201,10 @@ export default async function TownPage() {
 
       {/* [#64] 동네 홈 진입 — ?region= 필터 대신 지역별 정식 페이지로 */}
       {/* 지역 칩 — 줄바꿈으로 두 줄이 되면 카테고리 격자와 붙어 경계가 흐려진다.
-          한 줄 가로 레일(스냅)로 고정한다. */}
+          한 줄 가로 레일(스냅)로 고정한다.
+          [1101 · 조작 다이어트] 이웃 글이 0건이면 이 줄을 그리지 않는다 — 그때는 바로 아래 동네 홈 전체 인덱스(서울 펼침 · 25칩)가
+          먼저 서므로(1078 순서) 같은 동네 이름 칩이 한 화면에 두 벌(8 + 25)이었다. 글이 생기면 "최근 글 기준" 바로가기로 돌아온다. */}
+      {cards.length > 0 && (
       <div className="mb-4 flex items-center gap-2" data-reveal="">
         <span className="shrink-0">
           <span className="t-sub font-bold text-text-3">우리 동네 홈</span>
@@ -231,6 +235,7 @@ export default async function TownPage() {
           </a>
         </div>
       </div>
+      )}
 
       {/* [992 · A1] 오늘의 글감(TownPromptCard)·전문가 띠(TownExpertBand) 제거 — 글감 스레드와
           전문가는 보관(비노출) 영역이다(사람 글 0건·전문가 0명, lib/seo/archived-routes.ts).
@@ -259,7 +264,7 @@ export default async function TownPage() {
           고아 페이지였다. 피드 아래에 두어 첫 화면(LCP)에는 끼어들지 않는다. 서울만 기본
           펼침 — 노트·글이 가장 많은 곳이고, 전부 펼치면 100여 칩이 한 번에 쏟아진다. */}
       <div className={!loadFailed && firstPage.length === 0 ? "order-1" : ""}>
-      <TownIndex />
+      <TownIndex first={!loadFailed && firstPage.length === 0} />
       </div>
       </div>
 

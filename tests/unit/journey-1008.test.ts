@@ -539,7 +539,7 @@ test("[1020] /journey 뼈대 — 히어로 없음 · 3열 · 노선도 · 접힘
   assert.match(src, /buildContractTimeline\(dates, new Set\(plan\?\.checked \?\? \[\]\), today\)/);
   assert.match(src, /data-tone="plain"/);
   assert.equal((src.match(/\bbtn-primary\b/g) ?? []).length, 1);
-  assert.match(src, /`이 단계 완료 → 다음: \$\{nextStage\.short\}`/);
+  assert.match(src, /`이 단계 완료 · 다음 \$\{nextStage\.short\}`/); /* [1102] 화살표 기호 → 가운뎃점 */
   assert.match(src, /"이 단계 완료"/);
   /* 시안의 예시 숫자("1 / 3" 할 일 체크 수 · "내 기록")는 저장된 값이 없으니 그리지 않는다 */
   assert.doesNotMatch(src, /내 기록|게임 연속|관심 단지<\/div>/);

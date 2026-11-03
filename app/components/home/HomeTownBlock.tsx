@@ -44,8 +44,12 @@ export function HomeTownBlock({
       aria-label="동네이야기와 뉴스룸"
     >
       {/* ── 동네이야기 — 사람의 기록 ───────────────────────────────── */}
-      {/* [1078] 0건 띠는 뉴스룸(내용 있음) 아래로(order-2) — 빈 칸이 내용 있는 칸보다 먼저 서지 않게 */}
-      <div className={storiesEmpty ? "order-2 card flex flex-col gap-2 rounded-2xl px-4 py-3 md:col-span-2 md:flex-row md:items-center md:gap-3" : "card flex flex-col gap-2 rounded-2xl px-4 py-4"}>
+      {/* [1078] 0건 띠는 뉴스룸(내용 있음) 아래로(order-2) — 빈 칸이 내용 있는 칸보다 먼저 서지 않게.
+          [1101 · 빈 칸 접기] 0건이면 칸을 그리지 않는다 — 홈은 입구라 "이웃이 쓴 이야기 없음" 띠가 남는 것만으로 빈 동네처럼 읽혔다
+          (소유자 2026-11-02 검토 "빈 동네 칸 접기"). 글을 쓰는 입구는 헤더 · 탭바 "동네" · /town 머리의 "이야기 쓰기" 가 그대로 맡는다.
+          조회 실패는 실패로 말한다(아래 failed). 글이 생기면 예전 2칸 그대로. */}
+      {!storiesEmpty && (
+      <div className="card flex flex-col gap-2 rounded-2xl px-4 py-4">
         <div className="flex items-center justify-between gap-2">
           {/* [1015 · 규칙 C] 제목 옆 부연("사람의 기록") 삭제 — 소유자 지시 */}
           <h2 className="t-section text-ink">동네이야기</h2>
@@ -59,18 +63,6 @@ export function HomeTownBlock({
         </div>
         {failed ? (
           <p className="m-0 t-sub text-text-3">이웃 글 불러오기 실패 · 잠시 후 다시</p>
-        ) : stories.length === 0 ? (
-          /* 0건 — 빈 방을 뉴스로 채우지 않는다(뉴스는 옆 칸의 다른 재질). 첫 글로 안내한다. [1030] 한 줄 띠 */
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 md:ml-auto">
-            <p className="m-0 t-sub text-text-3">이웃이 쓴 이야기 없음</p>
-            <Link
-              href="/town/write"
-              className="btn-secondary inline-flex min-h-10 w-fit items-center gap-1.5 rounded-xl px-3.5 t-sub font-bold no-underline"
-            >
-              <Icon name="notebook-pen" size={13} />
-              이야기 쓰기
-            </Link>
-          </div>
         ) : (
           <div className="flex flex-col gap-2">
             {stories.map((p) => {
@@ -113,6 +105,7 @@ export function HomeTownBlock({
           </div>
         )}
       </div>
+      )}
 
       {/* ── 뉴스룸 — [1015 · 규칙 C·K] 한지 스트립(튀는 색면) → 이웃 글 칸과 같은 흰 카드. 제목 옆 부연("자동 수집 · 최신")
           삭제. 행 = 원문 사진(있을 때만, 없으면 사진 칸 없음) + 제목 두 줄 + 매체·날짜 — 소유자: 뉴스는 원문 사진 유지 */}

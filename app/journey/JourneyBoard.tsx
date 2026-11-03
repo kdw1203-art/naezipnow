@@ -548,7 +548,7 @@ export function JourneyBoard() {
                     className={`jr-done btn-md press gap-1.5 ${isDone ? "jr-done--on" : isCurrent ? "btn-primary" : "btn-soft"}`}
                   >
                     <Icon name="check" size={16} strokeWidth={2.4} />
-                    {isDone ? "완료" : nextStage ? `이 단계 완료 → 다음: ${nextStage.short}` : "이 단계 완료"}
+                    {isDone ? "완료" : nextStage ? `이 단계 완료 · 다음 ${nextStage.short}` : "이 단계 완료"}
                   </button>
                 </div>
               </li>

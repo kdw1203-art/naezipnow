@@ -183,11 +183,15 @@ test("[1024] /rent/[region] — revalidate 21600 · searchParams 는 서버 첫 
   assert.ok(scatter.includes("<svg") && scatter.includes("<circle"), "인라인 SVG");
 });
 
-test("[1024] 동네 홈 머리 — 원룸·오피스텔 실거래 월세 링크 1줄(수도권만) · 추가 조회 없음", () => {
+test("[1024 → 1101] 동네 홈 → 전월세 — 지역 탭 줄의 \"전월세\"(수도권만 · isSudogwonRegion) · 추가 조회 없음", () => {
   const c = code("app/town/[region]/page.tsx");
-  assert.ok(c.includes("원룸·오피스텔 실거래 월세 ›"), "링크 문구");
-  assert.match(c, /isSudogwonRegion\(region\) &&/, "수도권만");
-  assert.match(c, /href=\{`\/rent\/\$\{id\}`\}/);
+  /* [1101] 머리 부제의 링크 한 줄 → 지역 탭 줄(RegionTabs · 같은 판정 isSudogwonRegion · /rent/{id}) */
+  assert.match(c, /<RegionTabs id=\{id\} current="town"/);
+  const tabs = code("app/components/region/RegionTabs.tsx");
+  /* [1102] 수도권 + 비아파트 전월세 한 행 탐침(6시간 캐시) — 0행이면 탭 없음 */
+  assert.match(tabs, /const hasRent = isSudogwonRegion\(info\) && \(await hasAnyNonAptRent\(\)\);/);
+  assert.match(tabs, /hasRent,/);
+  assert.match(code("lib/region/region-tabs.ts"), /href: `\/rent\/\$\{enc\}`/);
   assert.ok(!c.includes("getNonAptRentSnapshot") && !c.includes("countNonAptRent"), "동네 홈은 조회를 늘리지 않는다");
 });
 
@@ -198,4 +202,6 @@ test("[1024] /rent 목록 — 수도권만 · ISR · 카탈로그 재사용 · �
   assert.ok(c.includes("REGION_CATALOG.filter(isSudogwonRegion)"));
   assert.ok(c.includes("groupRegionsByCity("), "기존 시·도 묶음 재사용");
   assert.ok(c.includes("n > 0 &&"), "0 은 적지 않는다");
+  /* [1102] 0행(수집 전)이면 칩 격자 대신 한 줄 · 조회 실패(null)는 격자 그대로 */
+  assert.ok(c.includes("counts !== null && total === 0 ?"));
 });

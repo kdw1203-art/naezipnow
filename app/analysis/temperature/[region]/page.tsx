@@ -4,6 +4,7 @@ import Link from "@/app/components/IntentLink";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { ShellBreadcrumb, ShellTitle } from "@/app/components/PageShell";
+import { RegionTabs } from "@/app/components/region/RegionTabs";
 import { HScroll } from "@/app/components/HScroll";
 import { QaBlock } from "@/app/components/QaBlock";
 import { CitationBlock } from "@/app/components/CitationBlock";
@@ -183,6 +184,7 @@ export default async function TemperatureRegionPage({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
         />
+        <RegionTabs id={region.id} current="temperature" className="rise-in mb-3" />
         <section className="rise-in card mb-6 p-[var(--pad-card)]">
           <p className="py-8 text-center t-body text-text-3">
             아직 이 지역의 저장된 주가 없습니다.
@@ -291,6 +293,8 @@ export default async function TemperatureRegionPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, datasetJsonLd]) }}
       />
+      {/* [1101 · 지역 화면 한 벌] 지역 탭 줄 */}
+      <RegionTabs id={region.id} current="temperature" className="rise-in mb-3" />
 
       <p className="rise-in mb-5 t-sub text-text-3 max-md:mb-3">
         {rangeLabel} · <strong className="text-ink">{history.length}주</strong> 기록 · 0~100 눈금(50 중립) · 매수·매도 권유 아님

@@ -109,7 +109,7 @@ test("[23] 매물 상세·출퇴근 필터 — 칩 문구와 같은 말", () => 
     parkingKey: "1",
     commuteKey: "30",
   });
-  assert.deepEqual(segs, ["월세", "오피스텔", "방 2개+", "욕실 1개+", "주차 1대+", "출퇴근 ≤30분"]);
+  assert.deepEqual(segs, ["월세", "오피스텔", "방 2개+", "욕실 1개+", "주차 1대+", "출퇴근 30분 이내"]);
 });
 
 test("[23] 토막 수 = 걸린 축 수 (map-client activeCount 와 같은 셈)", () => {

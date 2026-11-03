@@ -68,6 +68,16 @@ export default async function RentIndexPage() {
           </>
         }
       />
+      {/* [1102 · 빈 칸 접기] 자료 0행(수집 전)이면 시군구 칩 66개를 그리지 않는다 — 누르면 전부 "—" 화면이었다.
+          건수 조회가 실패(counts null)하면 모르는 것이라 목록은 그대로 그린다. */}
+      {counts !== null && total === 0 ? (
+        <p className="mt-4 rounded-2xl border border-line bg-surface px-4 py-3 t-sub text-text-2 max-md:mt-3">
+          시군구 목록 · 첫 신고 자료가 들어오면 열림 ·{" "}
+          <Link href="/tx" className="font-bold text-primary underline">
+            아파트 실거래 구간
+          </Link>
+        </p>
+      ) : (
       <div className="mt-4 flex flex-col gap-3 max-md:mt-3">
         {groups.map((g) => (
           <section key={g.key} className="card p-[var(--pad-card)]" aria-labelledby={`rent-city-${g.key}`}>
@@ -95,6 +105,7 @@ export default async function RentIndexPage() {
           </section>
         ))}
       </div>
+      )}
       <p className="mt-4 t-caption text-text-3">매물이 아니라 국토교통부에 신고된 실거래 · 계약 후 30일 안 신고 · 최근 1~2개월은 늘 수 있음</p>
     </PageShell>
   );

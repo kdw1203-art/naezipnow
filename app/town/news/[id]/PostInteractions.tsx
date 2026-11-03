@@ -136,7 +136,8 @@ export function PostActions({
           {saved && <span className="njn-burst" aria-hidden="true" />}
         </span>
         {saved ? "저장됨" : "저장"}
-        {saveCount !== null ? ` ${saveCount}` : ""}
+        {/* [1102 · 빈 칸 접기] 0 은 적지 않는다("저장 0") */}
+        {saveCount !== null && saveCount > 0 ? ` ${saveCount}` : ""}
       </button>
       <ShareLinkButton
         title={title}
@@ -244,7 +245,7 @@ export function LikeButton({
         liked ? "text-primary underline underline-offset-2" : "text-primary"
       }`}
     >
-      도움돼요 {count}
+      도움돼요{count > 0 ? ` ${count}` : ""}
     </button>
   );
 }

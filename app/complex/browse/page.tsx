@@ -105,8 +105,9 @@ export default async function ComplexBrowsePage({
         </Link>
       </p>
 
-      {/* 구 선택 칩 — 강남4구 우선 */}
-      <div className="rise-in-1 mb-5 flex flex-wrap gap-1.5 max-md:mb-3">
+      {/* 구 선택 칩 — 강남4구 우선
+          [1102 · 조작 다이어트] 폰은 한 줄 가로 밀기(25칸이 다섯 줄로 접혀 목록이 첫 화면 밖이었다) · 고른 구는 줄 맨 앞(폰) */}
+      <div className="scroll-x-hidden-bar rise-in-1 mb-5 flex gap-1.5 max-md:-mx-3.5 max-md:mb-3 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3.5 md:flex-wrap [&>*]:shrink-0">
         {SEOUL_BROWSE_REGIONS.map((r) => {
           const active = r.id === region.id;
           return (
@@ -117,7 +118,7 @@ export default async function ComplexBrowsePage({
               className={`inline-flex min-h-[40px] items-center rounded-full px-3 py-1.5 t-sub font-bold transition md:min-h-0 ${
                 /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
                 active
-                  ? "bg-brand-navy text-on-dark"
+                  ? "bg-brand-navy text-on-dark max-md:order-first"
                   : "card tile text-text-2"
               }`}
             >
@@ -153,20 +154,12 @@ export default async function ComplexBrowsePage({
         >
           {region.name} 지역 허브 보기
         </Link>
-        <Link href="/map" className="card tile px-5 py-3 t-body font-bold text-ink">
-          지도에서 보기
-        </Link>
+        {/* [1102] "지도에서 보기" · "임장노트 쓰기"는 아래 탭바(지도 · 기록)와 같은 길이라 뺐다 */}
         <Link
           href="/complex/compare"
           className="card tile px-5 py-3 t-body font-bold text-ink"
         >
           단지끼리 비교하기
-        </Link>
-        <Link
-          href="/notes/new"
-          className="card tile px-5 py-3 t-body font-bold text-ink"
-        >
-          임장노트 쓰기
         </Link>
       </section>
     </PageShell>

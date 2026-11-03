@@ -161,6 +161,15 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
 
       <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
         <div className="min-w-0">
+          {/* 단지 표 — 거래 많은 순 · 30곳 + 접힌 나머지(네이티브 details · JS 0) */}
+          {/* [1102 · 첫 화면] 제목이 약속한 단지별 거래를 맨 위로 — 폰 첫 화면이 월별 막대 12줄("집계 중 0건" 포함)이었다 */}
+          <section className="rise-in-2 card mb-4 p-[var(--pad-card)] max-md:mb-3">
+            <h2 className="t-section text-ink">단지별 거래</h2>
+            <p className="mt-0.5 t-caption text-text-3">최근 6개월 거래 많은 순 · 거래 평균은 전 기간 매매 평균</p>
+            {/* [1092 · 비용] 표는 클라이언트 조각이 압축 행으로 그린다(DongComplexTable 머리 주석) — RSC 가 줄당 1.4KB → 100B 안팎 */}
+            <DongComplexTable region={region} rows={shown.map(toWire(region))} rest={rest.map(toWire(region))} />
+          </section>
+
           {/* 월별 추이 — 신고가 끝난 달과 들어오는 중인 달을 가른다(reporting-window). 서비스 키 없음 · 실패면 그 조각을 뺀다 */}
           {last12.length > 0 && (
             <section className="rise-in-1 card mb-4 p-[var(--pad-card)] max-md:mb-3">
@@ -172,7 +181,8 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
                 className="mt-3"
                 label="월별 매매 신고 건수"
                 unit="건"
-                rows={last12.map((m) => ({
+                /* [1102 · 빈 칸 접기] 집계 중인 달이 아직 0건이면 줄을 그리지 않는다(신고가 들어오는 중 — 0 은 사실이 아니다) */
+                rows={last12.filter((m) => !(m.open && m.count === 0)).map((m) => ({
                   label: `${ymDot(m.ym)}${m.open ? " 집계 중" : ""}`,
                   value: m.count,
                   note: m.medianKrw ? `중앙값 ${formatKrwShort(m.medianKrw)}` : undefined,
@@ -226,14 +236,6 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
               </div>
             </section>
           )}
-
-          {/* 단지 표 — 거래 많은 순 · 30곳 + 접힌 나머지(네이티브 details · JS 0) */}
-          <section className="rise-in-2 card mb-4 p-[var(--pad-card)] max-md:mb-3">
-            <h2 className="t-section text-ink">단지별 거래</h2>
-            <p className="mt-0.5 t-caption text-text-3">최근 6개월 거래 많은 순 · 거래 평균은 전 기간 매매 평균</p>
-            {/* [1092 · 비용] 표는 클라이언트 조각이 압축 행으로 그린다(DongComplexTable 머리 주석) — RSC 가 줄당 1.4KB → 100B 안팎 */}
-            <DongComplexTable region={region} rows={shown.map(toWire(region))} rest={rest.map(toWire(region))} />
-          </section>
 
           {/* 최근 실거래 — 계약일 순 20건 */}
           {deals.length > 0 && (

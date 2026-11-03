@@ -7,6 +7,7 @@ import { ACTIVE_REGION_CATALOG, findCatalogRegionById } from "@/lib/region/catal
 import { sameSidoFirst } from "@/lib/market/sido-group";
 import { recentReportSlugs } from "@/lib/region/monthly-report";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { RegionTabs } from "@/app/components/region/RegionTabs";
 
 /* [#79] 월간 리포트 아카이브 인덱스 — /region/[id]/report
    최근 완결 월 목록으로 월 페이지에 링크한다. 목록 자체는 데이터 조회가 없어
@@ -55,6 +56,8 @@ export default async function RegionReportIndexPage({
       <h1 className="rise-in t-title tracking-tight text-ink">
         {region.name} 월간 리포트 아카이브
       </h1>
+      {/* [1101 · 지역 화면 한 벌] 지역 탭 줄 */}
+      <RegionTabs id={id} current="report" className="rise-in mt-2" />
       {/* [1015 · 규칙 B·D] 기능 설명 문단 → 사실 한 줄 */}
       <p className="rise-in-1 mt-1.5 max-w-[640px] t-sub text-text-3">
         매월 1일 이후 직전 달 스냅샷 고정 · 거래량·평균가·중앙값·상위 실거래·가격지수

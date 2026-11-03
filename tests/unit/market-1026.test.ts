@@ -273,7 +273,8 @@ test("[1026] 시세·타이밍 — 불러오는 동안 결론 자리만 · 폰�
 test("[1026] 시장 온도 — 결론은 주·시도를 따른다 · 폰은 가장 뜨거운·차가운 칸 숨김 · Q&A·인용은 폰 <details>(데스크톱 펼침) · JSON-LD 그대로", () => {
   const c = code("app/analysis/temperature/TempMapClient.tsx");
   assert.ok(c.includes("temperatureConclusion({") && c.includes("weekWord: chipLabel") && c.includes("sido,"), "주 칩·시도가 결론을 바꾼다");
-  assert.equal(count(c, 'className="min-w-0 max-md:hidden"'), 2, "폰에서 숨기는 칸 둘");
+  /* [1102] 결론과 겹치는 칸은 폰만 숨기던 것을 모든 폭에서 걷었다(review-1075 · 내 관심 지역 칸만) */
+  assert.equal(count(c, 'className="min-w-0 max-md:hidden"'), 0, "결론과 겹치는 칸 없음");
   const page = code("app/analysis/temperature/page.tsx");
   const od = page.indexOf("<OpenOnDesktop");
   assert.ok(od > 0 && od < page.indexOf("<CitationBlock") && od < page.indexOf("<QaBlock"), "인용·Q&A 는 접힘 안");

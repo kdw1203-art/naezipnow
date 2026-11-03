@@ -18,11 +18,9 @@ function ReviewsPlaceholder() {
   return (
     <div className="card rounded-2xl px-[18px] py-4">
       <h2 className="t-section text-ink">거주민 후기</h2>
-      <p className="mt-1 t-sub text-text-3">
-        {/* [1084] 해요체 안내 → 사실 낱말(1029 규칙) */}
-        직접 거주·임장 확인 내용만 · 같은 단지 재작성 시 기존 후기 갱신 · 실거주·방문 후기 우선 표시
-      </p>
-      <div className="mt-3 py-6 text-center t-sub text-text-3" role="status">
+      {/* [1101] 안내 문장(직접 거주·임장 확인 · 재작성 갱신 · 실거주 우선)은 받은 카드의 쓰기 폼 안에 있다 — 자리 표시는 제목 + 한 줄 */}
+      {/* [1101] 자리 표시도 한 줄 — 0건이면 받은 뒤의 카드가 제목 줄 하나라 큰 자리를 잡아 두면 줄어들며 아래가 당겨 올라왔다 */}
+      <div className="mt-2 t-sub text-text-3" role="status">
         후기를 불러오는 중…
       </div>
     </div>

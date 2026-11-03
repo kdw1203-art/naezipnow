@@ -54,7 +54,7 @@ import { JeonseGapCards } from "./JeonseGapCards";
 import { MgmtFeeCard } from "./MgmtFeeCard";
 import { ComplexRail, type RailStat } from "./ComplexRail";
 import { buildTxTrendData, recentDealRows, recentMedian, ymDash } from "./complex-v2-model";
-import { dealDateLabel, floorLabel } from "@/lib/complex/deal-format";
+import { dealDateLabel } from "@/lib/complex/deal-format";
 /* [995] 읍면동 파싱·평형 요약·최근 12개월 건수 — 순수 함수(단위테스트 complex-seo-995) */
 import {
   parseDong,
@@ -1502,16 +1502,8 @@ export default async function ComplexHubPage({
   const dealsThisYear = thisYear ? dealsForV2.filter((d) => d.ym.startsWith(thisYear)).length : 0;
   const median3 = repType && nowYmV2 ? recentMedian(dealsForV2, nowYmV2, 3, repType.key) : null;
   const railStats: RailStat[] = [];
-  if (repType?.latest) {
-    railStats.push({
-      key: "latest",
-      label: `최근 실거래 · ${repType.areaM2}㎡`,
-      value: formatEokMan(repType.latest.man),
-      sub: [dealDateLabel(repType.latest.ym, repType.latest.day), repType.latest.floor != null ? floorLabel(repType.latest.floor) : null]
-        .filter(Boolean)
-        .join(" · "),
-    });
-  }
+  /* [1101 · 같은 사실 한 번] 레일 첫 칸 "최근 실거래 · ㎡ / 값 / 날짜 · 층"은 뺐다 — 바로 옆 그래프 머리(최근 실거래 · 날짜 · 층 · 값)와
+     그 아래 표 첫 줄이 같은 한 건을 이미 말한다(운영 고덕국제신도시금호어울림 3억 9,900만이 한 화면에 세 번). 레일은 그래프에 없는 값만. */
   if (median3?.medianMan != null && repType) {
     railStats.push({
       key: "median3",
@@ -1695,25 +1687,8 @@ export default async function ComplexHubPage({
           nowYear={nowKst?.year}
         />
 
-        {/* [1006 · E] 인용 가능한 요약(GEO) — 서버 HTML 에 "어디의 무엇이 언제 기준 얼마"가 완결 문장으로 있어야 AI 검색이
-            이 페이지를 출처로 댈 수 있다. data-ai-summary 는 위 WebPage JSON-LD 의 speakable.cssSelector 가 가리키는 자리.
-            실거래가 없거나 조회 실패면 섹션 자체가 없다(껍데기 금지). */}
-        {citable && (
-          <section
-            data-ai-summary=""
-            id="ai-summary"
-            aria-label={`${v.name} 실거래 요약`}
-            className="rise-in-1 card mt-3 rounded-2xl px-4 py-3 max-md:px-3.5 max-md:py-2.5"
-          >
-            {/* [1036 · 밀도] 첫 문장(인용 문장)만 본문으로 — 2~4번째 사실 낱말·기준은 Fineprint 로 접는다.
-                글은 전부 DOM 에 남아 speakable·JSON-LD description(citable.text)과 같은 내용이다. */}
-            <p className="fold-lead t-body text-text-1">{citable.sentences[0]}</p>
-            <Fineprint className="mt-1" label="기준 · 출처">
-              {citable.sentences.slice(1).join(" ")}
-              {citable.sentences.length > 1 ? " · " : ""}국토교통부 실거래 단순 평균 · 매물 호가 아님 · 집계 내집나우(naezipnow.com)
-            </Fineprint>
-          </section>
-        )}
+        {/* [1101 · 첫 화면] 인용 요약 카드는 최근 실거래 표 아래로 내렸다 — 폰 첫 화면에서 가격(그래프 머리)보다 먼저 서서 대표가를
+            한 화면 아래로 밀었고, 그래프 머리 · 표가 같은 달 숫자를 다시 말했다(운영 폰 캡처 2026-11-02). 글 · speakable 은 그대로. */}
       </div>
       {/* [968 · 2] fold 끝 */}
 
@@ -1733,6 +1708,26 @@ export default async function ComplexHubPage({
             allHref={`${rowForFacts ? complexCanonicalPath(rowForFacts) : `/complex/${encodeURIComponent(complexId)}`}?tab=price`}
             failed={txFailed}
           />
+
+          {/* [1006 · E] 인용 가능한 요약(GEO) — 서버 HTML 에 "어디의 무엇이 언제 기준 얼마"가 완결 문장으로 있어야 AI 검색이
+              이 페이지를 출처로 댈 수 있다. data-ai-summary 는 위 WebPage JSON-LD 의 speakable.cssSelector 가 가리키는 자리.
+              실거래가 없거나 조회 실패면 섹션 자체가 없다(껍데기 금지). */}
+          {citable && (
+            <section
+              data-ai-summary=""
+              id="ai-summary"
+              aria-label={`${v.name} 실거래 요약`}
+              className="card mt-3 rounded-2xl px-4 py-3 max-md:px-3.5 max-md:py-2.5"
+            >
+              {/* [1036 · 밀도] 첫 문장(인용 문장)만 본문으로 — 2~4번째 사실 낱말·기준은 Fineprint 로 접는다.
+                  글은 전부 DOM 에 남아 speakable·JSON-LD description(citable.text)과 같은 내용이다. */}
+              <p className="fold-lead t-body text-text-1">{citable.sentences[0]}</p>
+              <Fineprint className="mt-1" label="기준 · 출처">
+                {citable.sentences.slice(1).join(" ")}
+                {citable.sentences.length > 1 ? " · " : ""}국토교통부 실거래 단순 평균 · 매물 호가 아님 · 집계 내집나우(naezipnow.com)
+              </Fineprint>
+            </section>
+          )}
 
           {/* [1024] 전세가율 · 갭 — 같은 재료(complex-facts 6개월 중앙값, 전 타입) */}
           <JeonseGapCards jeonse={facts.jeonseRatio} reason={facts.jeonseRatioReason} />

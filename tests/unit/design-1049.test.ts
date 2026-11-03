@@ -54,7 +54,9 @@ test("임장노트 목록 — 표(데스크톱 기본) · 피드는 전환 · �
   const f = code("app/notes/notes-feed-client.tsx");
   assert.match(f, /type ViewMode = "grid" \| "feed" \| "table"/);
   assert.match(f, /useState<DeskView>\("table"\)/);
-  assert.match(f, /useState<ViewMode>\("grid"\)/, "폰 기본은 격자 그대로");
+  /* [1101 · 첫 화면] 폰 기본 = 목록(표) — 격자의 Lab 커버는 2열에서 제목·숫자가 읽히지 않았다(운영 캡처 2026-11-02). 격자는 전환으로 남는다 */
+  assert.match(f, /useState<ViewMode>\("table"\)/, "폰 기본은 목록");
+  assert.match(f, /aria-label="그리드 보기"/, "격자는 전환으로");
   /* [1052] 점수 머리 정렬 props 가 붙었다 */
   assert.match(f, /<NotesTable\s+notes=\{visible\}/);
   assert.match(f, /deskView === "feed" \? "md:flex" : "md:hidden"/, "피드 카드는 전환으로 남는다");

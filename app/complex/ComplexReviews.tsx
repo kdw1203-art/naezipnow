@@ -336,7 +336,13 @@ export function ComplexReviews({
   return (
     <div ref={rootRef} className="card rounded-2xl px-[18px] py-4 max-md:px-3.5 max-md:py-3">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="t-section text-ink">거주민 후기</h2>
+        <h2 className="t-section text-ink">
+          거주민 후기
+          {/* [1101 · 빈 칸 접기] 0건이면 큰 빈 칸 대신 제목 옆 "0건" 한 낱말 — 쓰기 단추는 그대로 오른쪽 */}
+          {loadState === "ready" && reviews.length === 0 && !formOpen && (
+            <span className="ml-1.5 t-sub font-medium text-text-3">0건</span>
+          )}
+        </h2>
         {!formOpen && (
           <button
             type="button"
@@ -467,7 +473,7 @@ export function ComplexReviews({
 
       {/* 목록 */}
       {loadState === "loading" && (
-        <div className="mt-3 py-6 text-center t-sub text-text-3">
+        <div className="mt-2 t-sub text-text-3" role="status">
           후기를 불러오는 중…
         </div>
       )}
@@ -479,17 +485,9 @@ export function ComplexReviews({
           </button>
         </div>
       )}
-      {loadState === "ready" && reviews.length === 0 && (
-        <div className="mt-3 flex flex-col items-center gap-1 py-6 text-center">
-          {/* [1012 · 규칙 6] 권유 → 어디서(단지명)·무엇이 없는지 사실만 — 쓰기 입구는 위 버튼 */}
-          <div className="t-body font-bold text-ink">
-{complexName} 거주민 후기 없음
-          </div>
-          <div className="t-sub text-text-3">
-            직접 살아봤거나 임장에서 확인한 내용만
-          </div>
-        </div>
-      )}
+      {/* [1101 · 빈 칸 접기] 0건 빈 칸(가운데 두 줄 · 높이 100px 안팎)은 그리지 않는다 — 제목 옆 "0건" 이 같은 사실이다.
+          빈 칸이 단지 화면 아래쪽에 서너 개(후기 · 토론 · 노트) 이어지며 "아무도 안 쓰는 곳"처럼 읽혔다(소유자 2026-11-02 검토).
+          (예전 문장 "{complexName} 거주민 후기 없음" 은 제목 줄의 0건으로) */}
       {loadState === "ready" && reviews.length > 0 && (
         <ul className="lq-panel mt-3 flex flex-col divide-y" data-tone="hanji">
           {reviews.map((r) => {

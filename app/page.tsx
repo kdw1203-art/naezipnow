@@ -293,16 +293,15 @@ export default async function Home() {
             />
           </div>
 
-          {/* 본문 | 사이드바 — 모바일은 사이드바(내 관심·AI 입구)가 먼저 온다.
-              DOM 순서가 곧 모바일 순서고, lg 에서는 order 로 오른쪽에 붙인다.
-              두 벌을 그리지 않고 한 벌을 재배치하는 것이 이 파일의 전부다. */}
+          {/* 본문 | 사이드바 — 두 벌을 그리지 않고 한 벌을 재배치하는 것이 이 파일의 전부다.
+              [1101 · 첫 화면] 폰은 본문(공개 임장노트 · 지역 동향 …)이 먼저, AI 입구(네이비 판)는 그 뒤다(order).
+              예전엔 사이드바가 DOM 먼저라 폰 첫 화면이 검색 · 오늘의 시장 띠 · AI 판으로 끝나 숫자 · 목록이 0줄이었다
+              (운영 캡처 2026-11-02 · 소유자 "기능적 디자인적 복합적으로 검토"). lg 는 그대로 왼쪽 본문 | 오른쪽 340px. */}
           <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4">
             <aside
               data-autotrim=""
-              className="flex flex-col gap-3 lg:order-2 lg:sticky lg:top-[76px] lg:self-start"
+              className="order-2 flex flex-col gap-3 lg:sticky lg:top-[76px] lg:self-start"
             >
-              {/* ⑥ 내 관심 — 로그인만, 클라이언트 섬. 서버 HTML(공유 캐시)에는 없다. */}
-              <HomeMyRail />
               {/* ④ AI 입구 — 예시 두 칸으로 결과의 모양을 먼저 보인다 */}
               <HomeAiGateway briefing={data.briefing} exampleNoteId={notes[0]?.id ?? null} />
               {/* 배너/하우스 광고 — 없으면 아무것도 그리지 않는다. plan={null}: 공유 캐시라
@@ -311,7 +310,10 @@ export default async function Home() {
               <AdSenseUnit />
             </aside>
 
-            <div data-autotrim="" className="flex flex-col gap-3 lg:order-1 lg:gap-4">
+            <div data-autotrim="" className="order-1 flex flex-col gap-3 lg:gap-4">
+              {/* ⑥ 내 관심 — 로그인만, 클라이언트 섬. 서버 HTML(공유 캐시)에는 없다.
+                  [1101] 사이드바 → 본문 맨 위 — 로그인한 사람에게는 자기 관심 단지가 첫 내용이다(폰 · 데스크톱 같은 자리) */}
+              <HomeMyRail />
               {/* ③ 공개 임장노트 — 증거. 누가 쓴 노트인지(Lab/이웃)를 숨기지 않는다. */}
               <section className="card flex flex-col gap-2 rounded-2xl px-4 py-4">
                 <div className="flex items-center justify-between gap-2">
@@ -401,8 +403,6 @@ export default async function Home() {
                 {allLabNotes && <Fineprint label="표시 기준">{LAB_NOTES_CAPTION}</Fineprint>}
               </section>
 
-              {/* [1015 · 규칙 G] 폰 광고 자리 = 첫 본문 섹션(공개 임장노트) 뒤 1곳(데스크톱은 오른쪽 레일) */}
-              <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
 
               {/* ⑤ 지역 동향 — 4장(모바일 2열·xl 4열). 스파크라인·딥링크는 카드 안.
                   [1009 · H 리뷰] 제목 "지역 시세" → "지역 동향": 카드 4장 중 서울 3장의 가격은 국토부 신고 실거래 평균이라
@@ -460,6 +460,10 @@ export default async function Home() {
                   </>
                 )}
               </section>
+
+              {/* [1015 · 규칙 G → 1101] 폰 광고 자리 1곳(데스크톱은 오른쪽 레일) — 첫 본문 섹션 뒤에서 둘째(지역 동향) 뒤로.
+                  첫 섹션 뒤에 서면 폰 첫 화면의 공개 임장노트와 지역 동향 사이를 자사 안내 카드가 갈랐다(1101 첫 화면 재구성) */}
+              <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
 
               {/* ⑦ [1007 · P2] 동네이야기(사람의 기록) · 뉴스룸(자동수집) — 1006 의 .story-* / .news-*
                   재질 규칙을 홈에서도 쓴다. 두 칸은 같은 조회(readRelatedTownPosts, 5분 캐시)에서

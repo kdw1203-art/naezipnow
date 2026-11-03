@@ -65,7 +65,8 @@ test("B2 저장 수 — 상세 두 화면이 bookmarks 를 직접 세고, 못 �
   assert.match(store, /Promise<number \| null>/, "못 센 것은 null");
   const ui = strip(read("app/town/news/[id]/PostInteractions.tsx"));
   assert.match(ui, /saveCount: number \| null;/);
-  assert.match(ui, /saveCount !== null \? ` \$\{saveCount\}` : ""/);
+  /* [1102] 0 은 적지 않는다 */
+  assert.match(ui, /saveCount !== null && saveCount > 0 \? ` \$\{saveCount\}` : ""/);
 });
 
 /* ---------- B3 댓글 ---------- */

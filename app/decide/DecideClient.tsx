@@ -771,12 +771,12 @@ export function DecideClient({ signedIn, initialWeights }: { signedIn: boolean; 
       {selected.length === 0 && <RadarGhost />}
       <p className="t-body font-bold text-ink">
         {selected.length === 0
-          ? "후보를 담으면 내 기준으로 순위가 나와요"
+          ? "후보를 담으면 내 기준 순위 표시"
           : selected.length === 1
             ? "한 곳 더 담으면 비교"
             : `후보 ${selected.length}곳 · 최대 ${DECIDE_MAX_CANDIDATES}곳`}
       </p>
-      {selected.length === 0 && <p className="mt-0.5 t-caption text-text-3">후보 3곳의 가격·전세가율·거래량을 이 자리에 겹쳐 그려요</p>}
+      {selected.length === 0 && <p className="mt-0.5 t-caption text-text-3">후보 3곳의 가격·전세가율·거래량 · 이 자리에 겹쳐 표시</p>}
       <div className="mt-2">
         <ComplexPicker label="단지 검색" placeholder="단지명 검색" clearOnSelect showChip={false} onSelect={addPicked} onMapClick={null} />
       </div>

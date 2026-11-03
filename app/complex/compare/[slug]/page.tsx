@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { HScroll } from "@/app/components/HScroll";
 import Link from "@/app/components/IntentLink";
-import { cache } from "react";
+import { cache, Fragment } from "react";
 import { notFound, permanentRedirect, redirect } from "next/navigation";
 import { PageShell } from "@/app/components/PageShell";
 import { QaBlock } from "@/app/components/QaBlock";
@@ -307,15 +307,25 @@ function Metric({
   valueB: string;
   note?: string;
 }) {
+  /* [1102] 폰은 항목 이름을 값 위 한 줄로 — 세 칸(항목 · A · B)이 420px 하한이라 390 폰에서 두 번째 단지 값이
+     옆으로 밀어야 보였다(비교 화면인데 첫 화면에 한쪽만). md 이상은 그대로 세 칸. */
   return (
-    <tr className="border-b border-border last:border-b-0 align-top">
-      <th scope="row" className="py-2.5 pr-2 text-left t-sub font-medium text-text-3">
-        {label}
-        {note ? <span className="block t-caption text-text-3">{note}</span> : null}
-      </th>
-      <td className="py-2.5 text-right t-body font-bold text-ink">{valueA}</td>
-      <td className="py-2.5 text-right t-body font-bold text-ink">{valueB}</td>
-    </tr>
+    <>
+      <tr className="md:hidden">
+        <th scope="colgroup" colSpan={2} className="pt-2.5 text-left t-caption font-medium text-text-3">
+          {label}
+          {note ? ` · ${note}` : ""}
+        </th>
+      </tr>
+      <tr className="border-b border-border last:border-b-0 align-top">
+        <th scope="row" className="py-2.5 pr-2 text-left t-sub font-medium text-text-3 max-md:hidden">
+          {label}
+          {note ? <span className="block t-caption text-text-3">{note}</span> : null}
+        </th>
+        <td className="py-2.5 text-right t-body font-bold text-ink max-md:w-1/2 max-md:pt-0.5 max-md:pr-2 max-md:text-left">{valueA}</td>
+        <td className="py-2.5 text-right t-body font-bold text-ink max-md:w-1/2 max-md:pt-0.5 max-md:text-left">{valueB}</td>
+      </tr>
+    </>
   );
 }
 
@@ -481,16 +491,16 @@ export default async function ComplexComparePage({
         <h2 className="t-section text-ink">요약 비교</h2>
         <div className="lq-panel mt-3 py-1" data-tone="blue">
         <HScroll>
-          <table className="w-full min-w-[420px] t-body">
+          <table className="w-full t-body md:min-w-[420px]">
             <thead>
               <tr className="border-b border-border t-sub text-text-3">
-                <th className="py-2 text-left font-medium">항목</th>
-                <th className="py-2 text-right font-medium">
+                <th className="py-2 text-left font-medium max-md:hidden">항목</th>
+                <th className="py-2 text-right font-medium max-md:pr-2 max-md:text-left">
                   <Link href={pathA} className="text-primary underline">
                     {a.name}
                   </Link>
                 </th>
-                <th className="py-2 text-right font-medium">
+                <th className="py-2 text-right font-medium max-md:text-left">
                   <Link href={pathB} className="text-primary underline">
                     {b.name}
                   </Link>
@@ -561,13 +571,14 @@ export default async function ComplexComparePage({
             </span>
           </h2>
           <HScroll className="mt-3">
-            <table className="w-full min-w-[460px] text-left t-body">
+            {/* [1102] 폰 — 면적 · 차이는 값 위 한 줄, 값은 두 칸(460px 하한 · 옆 밀기 없이) */}
+            <table className="w-full text-left t-body md:min-w-[460px]">
               <thead>
                 <tr className="border-b border-border t-sub text-text-3">
-                  <th className="py-2 font-medium">전용면적</th>
-                  <th className="py-2 text-right font-medium">{a.name}</th>
-                  <th className="py-2 text-right font-medium">{b.name}</th>
-                  <th className="py-2 text-right font-medium">차이</th>
+                  <th className="py-2 font-medium max-md:hidden">전용면적</th>
+                  <th className="py-2 text-right font-medium max-md:w-1/2 max-md:pr-2 max-md:text-left">{a.name}</th>
+                  <th className="py-2 text-right font-medium max-md:w-1/2 max-md:text-left">{b.name}</th>
+                  <th className="py-2 text-right font-medium max-md:hidden">차이</th>
                 </tr>
               </thead>
               <tbody>
@@ -579,9 +590,20 @@ export default async function ComplexComparePage({
                   const higher =
                     cellA && cellB ? (cellA.avgKrw > cellB.avgKrw ? a.name : b.name) : null;
                   return (
-                    <tr key={band.slug} className="border-b border-border last:border-b-0">
-                      <td className="py-2.5 font-bold text-ink">{band.label}</td>
-                      <td className="py-2.5 text-right">
+                    <Fragment key={band.slug}>
+                    <tr className="md:hidden">
+                      <th scope="colgroup" colSpan={2} className="pt-2.5 text-left t-sub font-bold text-ink">
+                        {band.label}
+                        {diff !== null && higher ? (
+                          <span className="ml-1.5 t-caption font-medium text-text-3">
+                            차이 {formatKrwShort(diff)} · {higher} 높음
+                          </span>
+                        ) : null}
+                      </th>
+                    </tr>
+                    <tr className="border-b border-border last:border-b-0">
+                      <td className="py-2.5 font-bold text-ink max-md:hidden">{band.label}</td>
+                      <td className="py-2.5 text-right max-md:pr-2 max-md:pt-0.5 max-md:text-left">
                         {cellA ? (
                           <>
                             <span className="font-bold text-ink">
@@ -595,7 +617,7 @@ export default async function ComplexComparePage({
                           <span className="text-text-3">거래 없음</span>
                         )}
                       </td>
-                      <td className="py-2.5 text-right">
+                      <td className="py-2.5 text-right max-md:pt-0.5 max-md:text-left">
                         {cellB ? (
                           <>
                             <span className="font-bold text-ink">
@@ -609,17 +631,18 @@ export default async function ComplexComparePage({
                           <span className="text-text-3">거래 없음</span>
                         )}
                       </td>
-                      <td className="py-2.5 text-right t-sub text-text-2">
+                      <td className="py-2.5 text-right t-sub text-text-2 max-md:hidden">
                         {diff !== null && higher ? (
                           <>
                             {formatKrwShort(diff)}
-                            <span className="ml-1 t-caption text-text-3">{higher}↑</span>
+                            <span className="ml-1 t-caption text-text-3">{higher} 높음</span>
                           </>
                         ) : (
                           <span className="text-text-3">—</span>
                         )}
                       </td>
                     </tr>
+                    </Fragment>
                   );
                 })}
               </tbody>

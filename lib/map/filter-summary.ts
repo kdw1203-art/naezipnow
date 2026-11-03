@@ -116,7 +116,8 @@ export function summarizeMapFilters(s: MapFilterSummaryInput): string[] {
   if (s.roomsKey !== "all") out.push(`방 ${s.roomsKey}개+`);
   if (s.bathroomsKey !== "all") out.push(`욕실 ${s.bathroomsKey}개+`);
   if (s.parkingKey !== "all") out.push(`주차 ${s.parkingKey}대+`);
-  if (s.commuteKey !== "off") out.push(`출퇴근 ≤${s.commuteKey}분`);
+  /* [1102] 칩 문구("30분 이내")와 같은 말 — 기호(≤) 대신 낱말 */
+  if (s.commuteKey !== "off") out.push(`출퇴근 ${s.commuteKey}분 이내`);
 
   return out;
 }

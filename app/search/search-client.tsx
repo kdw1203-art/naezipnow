@@ -582,9 +582,7 @@ export function SearchClient() {
     <div className="flex min-h-[100dvh] flex-col gap-4">
       {/* 큰 검색 입력 */}
       <div className="rise-in flex w-full max-w-[560px] items-center gap-2.5 rounded-2xl border-[1.5px] border-primary bg-surface px-4 py-3 text-ink shadow-[0_8px_28px_rgba(16,28,54,.08)]">
-        <span aria-hidden className="text-[19px] text-text-3">
-          ⌕
-        </span>
+        <Icon name="search" size={19} className="shrink-0 text-text-3" />
         <span className="relative min-w-0 flex-1">
         <input
           ref={inputRef}
@@ -642,7 +640,7 @@ export function SearchClient() {
             className="-my-2 -mr-2 inline-flex h-[40px] w-[40px] shrink-0 items-center justify-center t-sub text-text-3"
             aria-label="검색어 지우기"
           >
-            ✕
+            <Icon name="x" size={16} />
           </button>
         )}
       </div>
@@ -650,8 +648,9 @@ export function SearchClient() {
         위·아래 화살표로 결과를 옮기고 Enter 로 연다
       </span>
 
-      {/* 검색↔지도 연동 (#9b) — 현재 검색어로 지도 이동 */}
-      {hasQuery && (
+      {/* 검색↔지도 연동 (#9b) — 현재 검색어로 지도 이동
+          [1102] 단지 결과가 있으면 그 묶음 머리의 "지도 ›"가 같은 주소라 큰 알약은 그리지 않는다(첫 화면에 같은 링크 두 개) */}
+      {hasQuery && results.complexes.length === 0 && (
         <Link
           href={`/map?q=${encodeURIComponent(q.trim())}`}
           onClick={() => saveRecent(q)}

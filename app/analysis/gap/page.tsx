@@ -138,12 +138,10 @@ export default async function GapScreenerPage() {
         subOnPhone
         actions={
           rows.length > 0 ? (
-            <>
-              <span className="chip chip-soft chip-pad t-sub">{rows.length}곳</span>
-              {measured > 0 && (
-                <span className="chip chip-pad t-sub border border-line text-text-2">실측 갭 {measured}곳</span>
-              )}
-            </>
+            /* [1102] "{N}곳" 칩은 뺐다 — 결론 줄 · 조건 단추 · 결과 머리가 같은 수를 말한다. 실측 갭 수는 여기만 */
+            measured > 0 ? (
+              <span className="chip chip-pad t-sub border border-line text-text-2">실측 갭 {measured}곳</span>
+            ) : undefined
           ) : undefined
         }
       />
@@ -168,7 +166,7 @@ export default async function GapScreenerPage() {
           {yieldFailed && (
             <div className="mb-3 rounded-lg border border-line bg-warning-soft px-3.5 py-2.5">
               <p className="t-sub text-ink">
-월세 환산 수익률·실측 갭 열 불러오기 실패 · 전세가율 열은 그대로 볼 수 있어요.
+월세 환산 수익률·실측 갭 열 불러오기 실패 · 전세가율 열은 그대로
               </p>
             </div>
           )}

@@ -141,11 +141,13 @@ test("③ 지도 조작 폰 40px — 줌 ＋/－ · 매물 고지 버튼 · 거�
   };
   for (const label of [
     "중심 삭제", "화면 중앙으로", "수정", "삭제", "되돌리기", "전체 삭제", "거리 복사", "차량 길찾기",
-    "도보 길찾기", "시작점 수정", "끝내기", "필터 초기화", "매물 등록하기", "초기화", "중심 해제",
+    "도보 길찾기", "시작점 수정", "끝내기", "필터 초기화", "매물 등록하기", "초기화",
   ]) {
     const cls = buttonClassFor(label);
     assert.ok(cls.includes("min-h-[40px]") && cls.includes("md:min-h-6"), `${label} 40px`);
   }
+  /* [1102] 칩 줄의 "중심 해제"는 반경 카드의 "중심 삭제"와 같은 일 — 카드 하나로 */
+  assert.ok(!/>\s*\n\s*중심 해제\s*\n\s*<\/button>/.test(mapClient), "칩 줄 중심 해제 잔존");
   assert.ok(!/className="(?:[^"]*\s)?min-h-10 md:min-h-6/.test(mapClient), "min-h-10 은 globals.css 가 40px 로 고정 — md: 가 안 먹는다");
 });
 

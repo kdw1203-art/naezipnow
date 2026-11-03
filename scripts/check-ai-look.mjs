@@ -83,7 +83,7 @@ const PRIMARY_ALLOW = [
   ["app/dev-deals/new/DealForm.tsx", 2, "상태 분기 — 완료 화면 링크 / 제출"],
   ["app/dev-deals/partners/new/PartnerForm.tsx", 2, "상태 분기 — 완료 화면 링크 / 제출"],
   ["app/listings/new/ListingForm.tsx", 3, "상태 분기(완료 링크) + 지도 위치 확정 오버레이 + 제출 — 오버레이·제출은 동시 가능(담당: listings)"],
-  ["app/map/map-client.tsx", 7, "동시 렌더 가능 — 지도 위 패널·시트·모바일/데스크탑 분기(hidden md:inline-flex)마다 1개(담당: map) · [1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
+  ["app/map/map-client.tsx", 2, "[1102] 필터 칩 · 출퇴근 칩의 진한 채움을 옅은 채움으로(7 → 2) · 동시 렌더 가능 — 지도 위 패널·시트·모바일/데스크탑 분기(hidden md:inline-flex)마다 1개(담당: map) · [1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
   ["app/my/MyHubView.tsx", 3, "동시 렌더 — 다음 단계·매물 등록·카드 재등록/플랜·포인트 상점 섹션마다 1개(담당: my) · [1014] 개편(v4) 전 구조 복원 — 주인님 지시(원래 디자인 컨셉 유지). 보조 버튼을 outline 으로 내리는 일은 다음 판"],
   ["app/my/consultations/ConsultReply.tsx", 2, "트리거(삼항: 답변 있으면 outline)+모달 제출"],
   ["app/my/consultations/ProposeQuote.tsx", 2, "트리거+모달 — 견적 제안 → 제출"],

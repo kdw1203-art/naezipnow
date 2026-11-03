@@ -64,7 +64,8 @@ export default async function ListingsPage() {
           {/* [1015 · 규칙 B] 괄호 부연("전국 등록은 가능, 목록 필터는 서울 중심") → 사실 한 줄(건수는 실데이터) */}
           {/* [1084 · D-065] "서울 구 단위 필터"는 구 칩이 보일 때(매물 1건 이상)만 — 0건이면 칩 줄을 숨기는데 부제만 남았다 */}
           <p className="mt-1 t-body text-text-3">
-            {items === null ? "검수 통과 매물만 노출" : `검수 통과 매물 ${items.length.toLocaleString("ko-KR")}건`}
+            {/* [1102] 0건이면 수를 적지 않는다 — 아래 빈 화면("검수를 통과한 매물 없음")이 같은 말 */}
+            {items === null || items.length === 0 ? "검수 통과 매물만 노출" : `검수 통과 매물 ${items.length.toLocaleString("ko-KR")}건`}
             {items !== null && items.length > 0 ? " · 서울 구 단위 필터" : ""}
           </p>
         </div>
