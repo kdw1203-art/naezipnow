@@ -23,7 +23,7 @@ import { StepLine } from "@/app/components/StepLine";
 import { Icon } from "@/app/components/Icon";
 import { MobilePrimaryBar } from "@/app/components/MobilePrimaryBar";
 import { ComplexPicker, type PickedComplex } from "@/app/analysis/ComplexPicker";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import {
   addToCompareTray,
   fetchServerCompareList,

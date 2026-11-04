@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { hasSession } from "@/lib/client/has-session";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 /* [1058 · B8] 글쓴이의 수정·삭제.
  *

@@ -149,7 +149,8 @@ test("[1024 · Q1·Q2] molit-transactions — house 그룹(sh-sale·sh-rent) · 
   assert.doesNotMatch(read("lib/market/molit-transactions.ts"), /^const RECENT_MONTHS = 3;/m);
   assert.match(src, /isRecentMonth\(yyyymm, now\)/);
   /* codes + gapsFirst → 그 코드들 안에서 빈 곳(수도권 백필) */
-  assert.match(src, /if \(opts\.gapsFirst\) \{[\s\S]*?findCoverageGaps\(sb, yyyymm, infos, sliceSize, propertyTypes\)/);
+  /* [1105] 빈 곳 찾기가 최근 정상 0건을 확인한 코드(knownEmptyCodes)를 상한 채우기 전에 거른다 — 인자 둘이 늘었다(ingest-1105) */
+  assert.match(src, /if \(opts\.gapsFirst\) \{[\s\S]*?findCoverageGaps\(sb, yyyymm, infos, sliceSize, propertyTypes, knownEmptyCodes, gapStats\)/);
   /* "키 없음" · "응답 실패" · "정상 0건" 을 가른다 — 백필 커서가 진짜 빈 구를 키 없음으로 읽고 멈추지 않게,
      네트워크 실패를 0건으로 읽고 넘기지 않게 */
   assert.match(src, /res\.reason === "not-configured"\) notConfigured = true/);

@@ -165,10 +165,11 @@ export function HistogramRangeSlider({
           const binHi = lo + ((hi - lo) * (i + 1)) / bins.length;
           const inSel = binHi >= vMin && binLo <= vMax;
           return (
+            /* [1104] 범위 밖 막대 = border-strong 토큰 — 남색 12% 고정값은 다크 패널에서 거의 사라져 "자르면 뭐가 빠지는지"가 안 보였다 */
             <div
               key={i}
               className={`flex-1 rounded-t-sm transition-colors ${
-                inSel ? "bg-primary" : "bg-[rgba(16,28,54,.12)]"
+                inSel ? "bg-primary" : "bg-line-strong"
               }`}
               style={{ height: `${Math.max(2, (c / maxBin) * 100)}%`, opacity: inSel ? 0.85 : 1 }}
             />
@@ -184,7 +185,8 @@ export function HistogramRangeSlider({
         onPointerUp={endDrag}
         onPointerCancel={endDrag}
       >
-        <div className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-[rgba(16,28,54,.12)]" />
+        {/* [1104] 바탕 트랙도 같은 토큰 — 다크에서 트랙이 사라져 손잡이 두 개만 떠 있었다 */}
+        <div className="absolute inset-x-0 top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-line-strong" />
         <div
           className="absolute top-1/2 h-[3px] -translate-y-1/2 rounded-full bg-primary"
           style={{ left: `${leftPct}%`, right: `${100 - rightPct}%` }}
@@ -206,8 +208,9 @@ export function HistogramRangeSlider({
             aria-valuetext={format(v)}
             onPointerDown={onPointerDown(which)}
             onKeyDown={onKey(which)}
-            /* [1055] 손잡이 그림은 16px 그대로, 히트는 가짜 요소로 28×28(폰에서 잡기 쉽게 · 두 손잡이가 가까워도 겹침은 6px 뿐) */
-            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-[1.5px] border-primary bg-surface shadow-[0_2px_6px_rgba(16,28,54,.25)] after:absolute after:-inset-[6px] after:content-[''] focus:outline-none focus:ring-2 focus:ring-primary/40 active:cursor-grabbing"
+            /* [1055] 손잡이 그림은 16px 그대로, 히트는 가짜 요소로 28×28(폰에서 잡기 쉽게 · 두 손잡이가 가까워도 겹침은 6px 뿐)
+               [1104] 포커스 = 전역 :focus-visible 링(2px primary) — 예전 ring-primary/40 은 바탕과 2:1 남짓(라이트 2.0 · 다크 1.9)이라 키보드로 어느 손잡이에 있는지 안 보였다 */
+            className="absolute top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 cursor-grab rounded-full border-[1.5px] border-primary bg-surface shadow-[0_2px_6px_rgba(16,28,54,.25)] after:absolute after:-inset-[6px] after:content-[''] active:cursor-grabbing"
             style={{ left: `${pct}%` }}
           />
         ))}

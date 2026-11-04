@@ -296,12 +296,19 @@ export async function generateMetadata({
 
 /* ---------- 작은 표시 조각 ---------- */
 
+/** [1105] 비교 표의 머리 칸 id — 값 칸 headers 가 가리킨다(요약 · 면적대 두 표 · 한 쪽에 하나씩) */
+const SUM_HEAD = { a: "cmp-sum-a", b: "cmp-sum-b" } as const;
+const BAND_HEAD = { a: "cmp-band-a", b: "cmp-band-b", diff: "cmp-band-diff" } as const;
+
 function Metric({
+  id,
   label,
   valueA,
   valueB,
   note,
 }: {
+  /** [1105] 행 머리 id(cmp-sum-{id}) */
+  id: string;
   label: string;
   valueA: string;
   valueB: string;
@@ -309,21 +316,27 @@ function Metric({
 }) {
   /* [1102] 폰은 항목 이름을 값 위 한 줄로 — 세 칸(항목 · A · B)이 420px 하한이라 390 폰에서 두 번째 단지 값이
      옆으로 밀어야 보였다(비교 화면인데 첫 화면에 한쪽만). md 이상은 그대로 세 칸. */
+  /* [1105 · 접근성] 폰 항목 줄은 보이는 글일 뿐(aria-hidden · td) — 예전 th scope=colgroup 은 아래 모든 값의 열 머리로 읽혔고
+     값 줄에는 행 머리가 없었다(폰은 행 머리 display:none). 이제 행 머리 th 는 폰에서도 남기고 글만 화면 밖(sr-only · 칸 폭 0),
+     값 칸은 headers 로 열 머리 · 행 머리를 직접 가리킨다. 폰 · PC 접근성 표가 같은 3열이 된다(colSpan 3 = 폭 0 칸 포함 전체). */
+  const rowId = `cmp-sum-${id}`;
   return (
     <>
-      <tr className="md:hidden">
-        <th scope="colgroup" colSpan={2} className="pt-2.5 text-left t-caption font-medium text-text-3">
+      <tr className="md:hidden" aria-hidden="true">
+        <td colSpan={3} className="pt-2.5 text-left t-caption font-medium text-text-3">
           {label}
           {note ? ` · ${note}` : ""}
-        </th>
+        </td>
       </tr>
       <tr className="border-b border-border last:border-b-0 align-top">
-        <th scope="row" className="py-2.5 pr-2 text-left t-sub font-medium text-text-3 max-md:hidden">
-          {label}
-          {note ? <span className="block t-caption text-text-3">{note}</span> : null}
+        <th id={rowId} scope="row" className="py-2.5 pr-2 text-left t-sub font-medium text-text-3 max-md:p-0">
+          <span className="block max-md:sr-only">
+            {label}
+            {note ? <span className="block t-caption text-text-3">{note}</span> : null}
+          </span>
         </th>
-        <td className="py-2.5 text-right t-body font-bold text-ink max-md:w-1/2 max-md:pt-0.5 max-md:pr-2 max-md:text-left">{valueA}</td>
-        <td className="py-2.5 text-right t-body font-bold text-ink max-md:w-1/2 max-md:pt-0.5 max-md:text-left">{valueB}</td>
+        <td headers={`${SUM_HEAD.a} ${rowId}`} className="py-2.5 text-right t-body font-bold text-ink max-md:w-1/2 max-md:pt-0.5 max-md:pr-2 max-md:text-left">{valueA}</td>
+        <td headers={`${SUM_HEAD.b} ${rowId}`} className="py-2.5 text-right t-body font-bold text-ink max-md:w-1/2 max-md:pt-0.5 max-md:text-left">{valueB}</td>
       </tr>
     </>
   );
@@ -494,13 +507,16 @@ export default async function ComplexComparePage({
           <table className="w-full t-body md:min-w-[420px]">
             <thead>
               <tr className="border-b border-border t-sub text-text-3">
-                <th className="py-2 text-left font-medium max-md:hidden">항목</th>
-                <th className="py-2 text-right font-medium max-md:pr-2 max-md:text-left">
+                {/* [1105] 폰도 첫 칸을 남긴다(폭 0 · 글은 sr-only) — 값 줄의 행 머리와 열 수를 맞춘다(Metric 주석) */}
+                <th className="py-2 text-left font-medium max-md:p-0">
+                  <span className="max-md:sr-only">항목</span>
+                </th>
+                <th id={SUM_HEAD.a} className="py-2 text-right font-medium max-md:pr-2 max-md:text-left">
                   <Link href={pathA} className="text-primary underline">
                     {a.name}
                   </Link>
                 </th>
-                <th className="py-2 text-right font-medium max-md:text-left">
+                <th id={SUM_HEAD.b} className="py-2 text-right font-medium max-md:text-left">
                   <Link href={pathB} className="text-primary underline">
                     {b.name}
                   </Link>
@@ -509,24 +525,28 @@ export default async function ComplexComparePage({
             </thead>
             <tbody>
               <Metric
+                id="count"
                 label="12개월 매매"
                 note={windowLabel}
                 valueA={`${a.count}${countSuffix}`}
                 valueB={`${b.count}${countSuffix}`}
               />
               <Metric
+                id="avg"
                 label="평균 거래가"
                 note="면적 혼합"
                 valueA={formatKrwShort(a.avgAmountKrw)}
                 valueB={formatKrwShort(b.avgAmountKrw)}
               />
               <Metric
+                id="ppp"
                 label="평균 평당가"
                 note="전용면적 기준"
                 valueA={formatKrwShort(a.avgPerPyeongKrw)}
                 valueB={formatKrwShort(b.avgPerPyeongKrw)}
               />
               <Metric
+                id="latest"
                 label="최근 거래"
                 valueA={
                   a.latest
@@ -540,12 +560,14 @@ export default async function ComplexComparePage({
                 }
               />
               <Metric
+                id="area"
                 label="거래 중앙 면적"
                 note="전용"
                 valueA={a.medianAreaM2 !== null ? `${a.medianAreaM2.toFixed(1)}㎡` : "—"}
                 valueB={b.medianAreaM2 !== null ? `${b.medianAreaM2.toFixed(1)}㎡` : "—"}
               />
               <Metric
+                id="year"
                 label="준공"
                 valueA={a.buildYear ? `${a.buildYear}년` : "—"}
                 valueB={b.buildYear ? `${b.buildYear}년` : "—"}
@@ -574,11 +596,16 @@ export default async function ComplexComparePage({
             {/* [1102] 폰 — 면적 · 차이는 값 위 한 줄, 값은 두 칸(460px 하한 · 옆 밀기 없이) */}
             <table className="w-full text-left t-body md:min-w-[460px]">
               <thead>
+                {/* [1105] 첫 칸 · 차이 칸도 폰에 남긴다(폭 0 · 글은 sr-only) — 값 줄과 같은 4열(Metric 주석) */}
                 <tr className="border-b border-border t-sub text-text-3">
-                  <th className="py-2 font-medium max-md:hidden">전용면적</th>
-                  <th className="py-2 text-right font-medium max-md:w-1/2 max-md:pr-2 max-md:text-left">{a.name}</th>
-                  <th className="py-2 text-right font-medium max-md:w-1/2 max-md:text-left">{b.name}</th>
-                  <th className="py-2 text-right font-medium max-md:hidden">차이</th>
+                  <th className="py-2 font-medium max-md:p-0">
+                    <span className="max-md:sr-only">전용면적</span>
+                  </th>
+                  <th id={BAND_HEAD.a} className="py-2 text-right font-medium max-md:w-1/2 max-md:pr-2 max-md:text-left">{a.name}</th>
+                  <th id={BAND_HEAD.b} className="py-2 text-right font-medium max-md:w-1/2 max-md:text-left">{b.name}</th>
+                  <th id={BAND_HEAD.diff} className="py-2 text-right font-medium max-md:p-0">
+                    <span className="max-md:sr-only">차이</span>
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -589,21 +616,25 @@ export default async function ComplexComparePage({
                     cellA && cellB ? Math.abs(cellA.avgKrw - cellB.avgKrw) : null;
                   const higher =
                     cellA && cellB ? (cellA.avgKrw > cellB.avgKrw ? a.name : b.name) : null;
+                  /* [1105] 행 머리 id — 값 칸 headers 가 가리킨다(폰 면적 줄은 보이는 글일 뿐 · Metric 주석) */
+                  const rowId = `cmp-band-${band.slug}`;
                   return (
                     <Fragment key={band.slug}>
-                    <tr className="md:hidden">
-                      <th scope="colgroup" colSpan={2} className="pt-2.5 text-left t-sub font-bold text-ink">
+                    <tr className="md:hidden" aria-hidden="true">
+                      <td colSpan={4} className="pt-2.5 text-left t-sub font-bold text-ink">
                         {band.label}
                         {diff !== null && higher ? (
                           <span className="ml-1.5 t-caption font-medium text-text-3">
                             차이 {formatKrwShort(diff)} · {higher} 높음
                           </span>
                         ) : null}
-                      </th>
+                      </td>
                     </tr>
                     <tr className="border-b border-border last:border-b-0">
-                      <td className="py-2.5 font-bold text-ink max-md:hidden">{band.label}</td>
-                      <td className="py-2.5 text-right max-md:pr-2 max-md:pt-0.5 max-md:text-left">
+                      <th id={rowId} scope="row" className="py-2.5 text-left font-bold text-ink max-md:p-0">
+                        <span className="max-md:sr-only">{band.label}</span>
+                      </th>
+                      <td headers={`${BAND_HEAD.a} ${rowId}`} className="py-2.5 text-right max-md:pr-2 max-md:pt-0.5 max-md:text-left">
                         {cellA ? (
                           <>
                             <span className="font-bold text-ink">
@@ -617,7 +648,7 @@ export default async function ComplexComparePage({
                           <span className="text-text-3">거래 없음</span>
                         )}
                       </td>
-                      <td className="py-2.5 text-right max-md:pt-0.5 max-md:text-left">
+                      <td headers={`${BAND_HEAD.b} ${rowId}`} className="py-2.5 text-right max-md:pt-0.5 max-md:text-left">
                         {cellB ? (
                           <>
                             <span className="font-bold text-ink">
@@ -631,15 +662,17 @@ export default async function ComplexComparePage({
                           <span className="text-text-3">거래 없음</span>
                         )}
                       </td>
-                      <td className="py-2.5 text-right t-sub text-text-2 max-md:hidden">
-                        {diff !== null && higher ? (
-                          <>
-                            {formatKrwShort(diff)}
-                            <span className="ml-1 t-caption text-text-3">{higher} 높음</span>
-                          </>
-                        ) : (
-                          <span className="text-text-3">—</span>
-                        )}
+                      <td headers={`${BAND_HEAD.diff} ${rowId}`} className="py-2.5 text-right t-sub text-text-2 max-md:p-0">
+                        <span className="max-md:sr-only">
+                          {diff !== null && higher ? (
+                            <>
+                              {formatKrwShort(diff)}
+                              <span className="ml-1 t-caption text-text-3">{higher} 높음</span>
+                            </>
+                          ) : (
+                            <span className="text-text-3">—</span>
+                          )}
+                        </span>
                       </td>
                     </tr>
                     </Fragment>
@@ -673,9 +706,10 @@ export default async function ComplexComparePage({
             {a.name}
           </span>
           <span className="flex items-center gap-1">
+            {/* [1104] 두 번째 단지 = 옅은 면 + primary 테두리(속 빈 막대). 예전 primary 35% 는 카드 바탕과 라이트 1.9 · 다크 1.7:1 로
+                막대가 바탕에 묻혔다(그래픽 최소 3:1). 테두리는 바탕과 5:1 이상 · 꽉 찬 막대와 모양으로도 갈린다 */}
             <span
-              className="inline-block h-2 w-3 rounded-sm"
-              style={{ background: "var(--primary)", opacity: 0.35 }}
+              className="inline-block h-2 w-3 rounded-sm border border-primary bg-primary-soft"
             />
             {b.name}
           </span>
@@ -701,11 +735,9 @@ export default async function ComplexComparePage({
                     }}
                   />
                   <div
-                    className="w-1/2 rounded-t-sm"
+                    className={`w-1/2 rounded-t-sm ${cb > 0 ? "border border-b-0 border-primary bg-primary-soft" : "bg-line"}`}
                     style={{
                       height: `${cb > 0 ? 6 + Math.round((cb / maxMonthly) * 88) : 2}px`,
-                      background: cb > 0 ? "var(--primary)" : "var(--border)",
-                      opacity: cb > 0 ? 0.35 : 1,
                     }}
                   />
                 </div>

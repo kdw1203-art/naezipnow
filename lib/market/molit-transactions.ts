@@ -35,20 +35,25 @@ export { createTouchedComplexSink, TOUCHED_COMPLEX_CAP };
 export type { TouchedComplexSink } from "@/lib/market/touched-complexes";
 /* [1024] 순수 도우미는 molit-core.ts 에 둔다(server-only 사슬 밖 → node:test 가 직접 부른다). 여기서 다시 내보낸다. */
 import {
+  canRecordEmpty,
   chunkRows,
   compactRaw,
+  freshEmptyCodes,
   isCapitalAreaCode,
   isRecentMonth,
   isStatementTimeout,
+  mergeEmptyChecks,
   mergeRedo,
   molitDatasetLabel,
   molitRegionLabel,
+  MOLIT_EMPTY_KEY,
   MOLIT_REDO_KEY,
   pickChangedRows,
   redoCodesFor,
   redoTypesKey,
   UPSERT_CHUNK_ROWS,
   UPSERT_MIN_CHUNK_ROWS,
+  type EmptyCheckEntry,
   type RedoEntry,
 } from "@/lib/market/molit-core";
 import { readCursor, writeCursor } from "@/lib/market/molit-cursor";
@@ -280,16 +285,27 @@ export async function readExistingKeys(
   return null;
 }
 
+/**
+ * @param skip [1105] 정상 0건 응답을 최근에 확인한 코드(freshEmptyCodes) — 빈 곳으로 세지 않고 HEAD 카운트도 하지 않는다.
+ *   상한(limit)을 채우기 **전에** 거른다 — 뒤에서 거르면 상한만큼 못 채워 이력 백필 · 비아파트 커서가 남은 빈 곳을 두고 달을 넘긴다.
+ * @param stats [1105] 건너뛴 수(로그 "빈곳기록=")
+ */
 export async function findCoverageGaps(
   sb: SupabaseClient,
   yyyymm: string,
   candidates: SigunguInfo[],
   limit: number,
   propertyTypes?: readonly string[],
+  skip?: ReadonlySet<string>,
+  stats?: { skipped: number },
 ): Promise<SigunguInfo[]> {
   const out: SigunguInfo[] = [];
   for (const info of candidates) {
     if (out.length >= limit) break;
+    if (skip?.has(info.sigunguCd)) {
+      if (stats) stats.skipped += 1;
+      continue;
+    }
     let q = sb
       .from("market_transactions")
       .select("id", { count: "exact", head: true })
@@ -429,6 +445,8 @@ export interface MolitIngestResult {
   unchanged: number;
   /** API 가 0건을 반환한 시군구 수 */
   empty: number;
+  /** [1105] 빈 곳 메우기에서 다시 묻지 않은 시군구 수 — 최근 정상 0건 응답 기록이 있다(molit-core MOLIT_EMPTY_KEY) */
+  knownEmpty: number;
   errors: number;
   /**
    * DB 연속 오류로 남은 시군구를 처리하지 못하고 중단했는가.
@@ -548,6 +566,7 @@ export async function ingestMolitTransactions(opts: {
     inserted: 0,
     unchanged: 0,
     empty: 0,
+    knownEmpty: 0,
     errors: 0,
     aborted: false,
     regions: [],
@@ -575,6 +594,20 @@ export async function ingestMolitTransactions(opts: {
     return [...first, ...rest].slice(0, Math.max(sliceSize, first.length));
   };
 
+  /* [1105] 빈 응답 확인 명단 — 빈 곳 메우기는 최근에 "정상 0건"을 확인한 (구, 월, 유형)을 다시 묻지 않는다(molit-core MOLIT_EMPTY_KEY).
+     슬라이스 회전 · 수동 codes 는 건너뛰지 않는다(그 길이 신고 창 안 지연 신고를 따로 줍는다) — 적기만 한다. 못 읽으면 빈 명단(예전처럼 묻는다). */
+  const emptyStore: { list: unknown[] | null } = { list: null };
+  const loadEmptyList = async (): Promise<unknown[]> => {
+    if (emptyStore.list) return emptyStore.list;
+    const store = await readCursor<{ items?: unknown[] }>(MOLIT_EMPTY_KEY);
+    emptyStore.list = Array.isArray(store?.items) ? store.items : [];
+    return emptyStore.list;
+  };
+  const emptyAdd: EmptyCheckEntry[] = [];
+  const emptyDone: Pick<EmptyCheckEntry, "code" | "ym" | "types">[] = [];
+  const gapStats = { skipped: 0 };
+  const knownEmptyCodes = opts.gapsFirst ? freshEmptyCodes(await loadEmptyList(), yyyymm, typesKey, now) : new Set<string>();
+
   let targets: SigunguInfo[];
   let sliceIdx = 0;
   if (opts.codes?.length) {
@@ -583,7 +616,7 @@ export async function ingestMolitTransactions(opts: {
       .filter((i): i is SigunguInfo => Boolean(i));
     if (opts.gapsFirst) {
       /* [1024] 주어진 코드 집합 안에서 빈 (시군구, 계약월, 유형)만 — 수도권 이력 백필이 쓴다. 상한은 sliceSize. */
-      targets = withRedoFirst(infos, await findCoverageGaps(sb, yyyymm, infos, sliceSize, propertyTypes));
+      targets = withRedoFirst(infos, await findCoverageGaps(sb, yyyymm, infos, sliceSize, propertyTypes, knownEmptyCodes, gapStats));
       sliceIdx = -1;
     } else {
       targets = infos.slice(0, 60);
@@ -591,7 +624,7 @@ export async function ingestMolitTransactions(opts: {
   } else if (opts.gapsFirst) {
     /* [997] 빈 (시군구, 계약월) 먼저 — (region_code, contract_ym) 인덱스로 HEAD 카운트만 돈다(코드당 1왕복,
        전국 ~260개 ≈ 수 초). 빈 곳이 없으면 targets 가 비어 루프가 바로 끝난다(= 로그 "시도=0"). */
-    targets = withRedoFirst(all, await findCoverageGaps(sb, yyyymm, all, sliceSize, propertyTypes));
+    targets = withRedoFirst(all, await findCoverageGaps(sb, yyyymm, all, sliceSize, propertyTypes, knownEmptyCodes, gapStats));
     sliceIdx = -1;
   } else {
     const windows = Math.max(1, Math.ceil(all.length / sliceSize));
@@ -599,7 +632,7 @@ export async function ingestMolitTransactions(opts: {
     targets = all.slice(sliceIdx * sliceSize, sliceIdx * sliceSize + sliceSize);
   }
 
-  const result: MolitIngestResult = { ...base, ok: true, slice: sliceIdx };
+  const result: MolitIngestResult = { ...base, ok: true, slice: sliceIdx, knownEmpty: gapStats.skipped };
 
   /* 첫 오류의 실제 메시지. 2026-07-25 장애 때 적재 로그에는 "오류=13"이라는 숫자만
      남아 있어서, 원인(legal_regions FK 위반)을 찾으려면 Postgres 로그를 뒤져야 했다 —
@@ -685,6 +718,8 @@ export async function ingestMolitTransactions(opts: {
       /* [1025] 첫 실패의 사유(molit-api detail — "RTMSDataSvcOffiRent 30 SERVICE_KEY_IS_NOT_REGISTERED_ERROR" 등).
          2026-09-29 비아파트 42건이 "응답 실패(네트워크·5xx·오류 XML)" 로만 남아 원인을 못 짚었다. */
       let fetchDetail: string | null = null;
+      /* [1105] 유형마다 "정상 응답 · 0건"(reason=empty 또는 live 0건)이었나 — 하나라도 거래가 오거나 실패하면 빈 응답으로 적지 않는다 */
+      let allTypesEmpty = true;
       for (const t of targetTypes) {
         const res = await fetchMolitDeals(t.type, {
           lawdCd: info.sigunguCd, // 이름 매칭 금지 — 동명이구 오적재 방지 (아래 커밋 메시지 참고)
@@ -693,6 +728,7 @@ export async function ingestMolitTransactions(opts: {
           numOfRows: 1000,
           maxPages,
         });
+        if (!(res.deals.length === 0 && (res.reason === "empty" || (res.mode === "live" && !res.reason)))) allTypesEmpty = false;
         if (res.mode === "live") mode = "live";
         else if (res.reason === "not-configured") notConfigured = true;
         else if (res.reason === "fetch-failed") fetchFailed = true;
@@ -738,6 +774,11 @@ export async function ingestMolitTransactions(opts: {
       if (mode !== "live" || rows.length === 0) {
         /* 정상 응답인데 0건 — 그 달 그 구에 신고된 거래가 없다(사실) */
         if (redoCodes.has(info.sigunguCd)) redoDone.push({ code: info.sigunguCd, ym: yyyymm, types: typesKey });
+        /* [1105] DB 에도 0행이고 모든 유형이 정상 0건이면 확인 시각만 적는다(행은 만들지 않는다) — 빈 곳 메우기가 매일 같은 구를 다시 묻지 않게.
+           거래는 왔는데 행으로 못 바꾼 경우(rows 0 · deals > 0)는 적지 않는다 — 이상 신호를 기록으로 덮지 않는다 */
+        if (allTypesEmpty && (count ?? 0) === 0 && canRecordEmpty(yyyymm, now)) {
+          emptyAdd.push({ code: info.sigunguCd, ym: yyyymm, types: typesKey, checkedAt: now.toISOString() });
+        }
         result.empty += 1;
         result.regions.push({ code: info.sigunguCd, name: regionName, rows: 0, status: "empty" });
         continue;
@@ -757,6 +798,7 @@ export async function ingestMolitTransactions(opts: {
       if (payload.length === 0) {
         /* 받은 행이 전부 DB 와 같다 — 적재도 비움도 없다(사실). 다시 받기 명단은 "채워졌다"로 닫는다 */
         if (redoCodes.has(info.sigunguCd)) redoDone.push(redoEntry);
+        emptyDone.push(redoEntry); // [1105] 행이 있다 — 빈 응답 기록이 있으면 닫는다
         consecutiveDbErrors = 0;
         result.regions.push({ code: info.sigunguCd, name: regionName, rows: fetched.length, status: "unchanged" });
         continue;
@@ -778,6 +820,7 @@ export async function ingestMolitTransactions(opts: {
         continue;
       }
       if (redoCodes.has(info.sigunguCd)) redoDone.push(redoEntry);
+      emptyDone.push(redoEntry); // [1105] 행이 생겼다 — 빈 응답 기록이 있으면 닫는다
       consecutiveDbErrors = 0;
       result.inserted += payload.length;
       /* [1010] upsert 가 성공한 뒤에만 센다 — 실패한 구의 단지를 비우면 "바뀌었다"는 거짓말이다. [1091] 바뀐 행의 단지만 */
@@ -798,6 +841,15 @@ export async function ingestMolitTransactions(opts: {
   /* [1040] 다시 받기 명단 갱신 — 바뀐 게 있을 때만 쓴다. 쓰기 실패는 경고뿐(writeCursor) — 적재 결과는 사실이다. */
   if (redoAdd.length > 0 || redoDone.length > 0) {
     await writeCursor(MOLIT_REDO_KEY, { items: mergeRedo(redoList, redoAdd, redoDone), updatedAt: now.toISOString() });
+  }
+  /* [1105] 빈 응답 명단 — 새로 확인한 빈 곳이 있거나(읽어서 더한다), 이미 읽은 명단(빈 곳 메우기)에서 닫히거나 낡은 줄이 빠질 때만 쓴다.
+     슬라이스 회전은 빈 곳을 새로 확인했을 때만 읽고 쓴다(매 실행 읽기 · 쓰기를 늘리지 않는다). 쓰기 실패는 경고뿐 — 다음 실행이 다시 물을 뿐이다 */
+  if (emptyAdd.length > 0 || emptyStore.list) {
+    const before = await loadEmptyList();
+    const merged = mergeEmptyChecks(before, emptyAdd, emptyDone, now);
+    if (emptyAdd.length > 0 || merged.length !== before.length) {
+      await writeCursor(MOLIT_EMPTY_KEY, { items: merged, updatedAt: now.toISOString() });
+    }
   }
 
   result.aborted = aborted;
@@ -856,6 +908,8 @@ export async function ingestMolitTransactions(opts: {
             : "skipped",
     message:
       `slice=${result.slice} 시도=${result.attempted} 기존커버=${result.alreadyCovered} 빈응답=${result.empty} 오류=${result.errors} 같음=${result.unchanged}행` +
+      /* [1105] 다시 묻지 않은 빈 곳(최근 정상 0건 확인) — 0 이면 적지 않는다(예전 문구 그대로) */
+      (result.knownEmpty > 0 ? ` 빈곳기록=${result.knownEmpty}` : "") +
       (keepRaw ? "" : " raw=미저장") +
       /* [1040] 중단 사유를 가른다 — 활용신청 중단에도 "DB오류 5회 연속"이라고 적혀 원인을 잘못 짚게 했다 */
       (aborted

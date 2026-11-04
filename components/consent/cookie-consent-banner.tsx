@@ -26,12 +26,19 @@ export function CookieConsentBanner() {
      .nz-consent-open 으로 "맨 위로" FAB 를 숨기고(배너 밑에 깔려 눌리지 않았다),
      .nz-consent-pad 로 md+ body 아래 여백을 줘 코너 카드가 화면 우하단 CTA 를 덮어도
      스크롤로 빠져나가게 한다(/map 은 pad 없음 — 판정은 shell-gates consentBodyClasses). */
+  /* [1104 · 속도] 첫 문서에서는 app/layout.tsx 의 CONSENT_BODY_SCRIPT 가 같은 조건으로 그리기 전에 이미 달아 둔다 — 여기 add 는
+     이미 있는 class 라 바뀌는 게 없고(스타일 재계산 없음), 결정 · 경로 이동 때 걷고 다시 다는 일은 종전대로 이 효과가 한다.
+     loading 동안은 건드리지 않는다. 스크립트와 훅 사이에 다른 탭이 결정한 드문 경우만 decided 에서 걷는다(없는 class 면 그대로). */
+  const decided = state.status === "decided";
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      if (decided) document.body.classList.remove(...consentBodyClasses("/"));
+      return;
+    }
     const classes = consentBodyClasses(pathname);
     document.body.classList.add(...classes);
     return () => document.body.classList.remove(...classes);
-  }, [open, pathname]);
+  }, [open, pathname, decided]);
 
   if (!visible) return null;
 

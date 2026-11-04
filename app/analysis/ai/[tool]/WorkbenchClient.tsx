@@ -32,7 +32,7 @@ import { hasSession } from "@/lib/client/has-session";
 import { useHumanGate } from "@/lib/client/human-gate";
 import { isBotBrowser } from "@/lib/client/is-bot-ua";
 import { SkBlock, SkLine } from "@/app/components/ui/Skeleton";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import type { AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import type { ToolPersona } from "@/lib/ai/tool-persona";
 import { buildTuningInput, type TuningField } from "@/lib/ai/tool-tuning";

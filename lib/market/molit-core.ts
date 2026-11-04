@@ -290,3 +290,106 @@ export function mergeRedo(
 export function redoCodesFor(list: readonly RedoEntry[], ym: string, types: string): string[] {
   return list.filter((e) => e.ym === ym && e.types === types).map((e) => e.code);
 }
+
+/* ── [1105] 빈 응답 확인 기록 ─────────────────────────────────────────────── */
+
+/**
+ * [1105] 정상 응답인데 0건이었던 (구, 월, 유형) 명단 — public_data_cache.cache_key.
+ *
+ * 왜: 빈 곳 메우기(gapsFirst · GH ETL 이 매일 지난 1~6개월 · 이력 백필 · 비아파트 빈 달)는 "행이 0인 구"를 빈 곳으로 고른다.
+ * 정상 0건 응답은 행을 남기지 않으니 다음 실행이 같은 구를 또 빈 곳으로 고른다 — 운영 기록(market_ingest_log 2026-10-01~11-03):
+ * 아파트 202604~202608 이 달마다 같은 2~6곳(옹진군 · 울릉군 · 신안군 · 영양군 · 봉화군 · 화천군)을 22~25회 다시 물었고
+ * 매번 "빈응답=시도 · 오류=0 · 적재 0" 이었다. 행은 지어내지 않는다(빈 달은 빈 채로) — "언제 비어 있음을 확인했나"만 적는다.
+ */
+export const MOLIT_EMPTY_KEY = "molit-ingest:empty-checked";
+/** 명단 상한(최근 것부터 남긴다) — 아파트 6개월 × 수 곳 · 비아파트 12개월 × 수도권 몇 곳이면 수백 줄 */
+export const MOLIT_EMPTY_CAP = 2_000;
+/** 신고 창(RECENT_MONTHS) 안에서 확인한 빈 달은 이 간격이 지나야 다시 묻는다 — 지연 신고(계약 후 30일)가 들어올 수 있다 */
+export const EMPTY_RECHECK_MS = 7 * 86_400_000;
+
+export interface EmptyCheckEntry {
+  code: string;
+  ym: string;
+  /** redoTypesKey 와 같은 유형 묶음 키 */
+  types: string;
+  /** 정상 0건 응답을 받은 시각(ISO) */
+  checkedAt: string;
+}
+
+/** now(UTC) 기준 ym 이 몇 달 전인가 — 당월 0 · 전월 1 · 미래는 음수. 형식이 틀리면 null */
+export function monthsBefore(ym: string, now: Date): number | null {
+  if (!isYm(ym)) return null;
+  const nowYm = now.getUTCFullYear() * 12 + now.getUTCMonth();
+  const y = Number(ym.slice(0, 4)) * 12 + (Number(ym.slice(4, 6)) - 1);
+  return nowYm - y;
+}
+
+/** 이 달의 빈 응답을 적어 둘 수 있나 — 당월 · 미래 달은 날마다 신고가 쌓이는 중이라 적지 않는다(매번 다시 묻는다) */
+export function canRecordEmpty(ym: string, now: Date): boolean {
+  const m = monthsBefore(ym, now);
+  return m !== null && m >= 1;
+}
+
+/**
+ * 이 기록을 믿고 다시 묻지 않아도 되나.
+ *  · 확인 시점에 그 달이 이미 신고 창 밖이었다(!isRecentMonth(ym, checkedAt)) → 더 올 신고가 없다 → 계속 믿는다.
+ *  · 신고 창 안에서 확인했다 → recheckMs(7일) 동안만 믿는다. 창이 닫힌 뒤 한 번 더 확인하면 그때부터 계속 믿는다.
+ *  · 당월 · 미래 달 · 깨진 시각 · 미래 시각은 믿지 않는다(다시 묻는다 — 잘못 건너뛰는 쪽보다 한 번 더 묻는 쪽이 안전).
+ */
+export function isEmptyCheckFresh(e: EmptyCheckEntry, now: Date, recheckMs: number = EMPTY_RECHECK_MS): boolean {
+  if (!canRecordEmpty(e.ym, now)) return false;
+  const at = Date.parse(e.checkedAt);
+  if (!Number.isFinite(at) || at > now.getTime() + 60_000) return false;
+  if (!isRecentMonth(e.ym, new Date(at))) return true;
+  return now.getTime() - at < recheckMs;
+}
+
+function sameEmpty(a: Pick<EmptyCheckEntry, "code" | "ym" | "types">, b: Pick<EmptyCheckEntry, "code" | "ym" | "types">): boolean {
+  return a.code === b.code && a.ym === b.ym && a.types === b.types;
+}
+
+function validEmpty(e: unknown): e is EmptyCheckEntry {
+  const x = e as Partial<EmptyCheckEntry> | null;
+  return (
+    !!x &&
+    typeof x.code === "string" && /^\d{5}$/.test(x.code) &&
+    isYm(x.ym) &&
+    typeof x.types === "string" && x.types.length > 0 &&
+    typeof x.checkedAt === "string" && Number.isFinite(Date.parse(x.checkedAt))
+  );
+}
+
+/** 이번 실행(월 · 유형)에서 다시 묻지 않을 코드 — 믿을 수 있는 빈 응답 기록이 있는 곳 */
+export function freshEmptyCodes(list: readonly unknown[], ym: string, types: string, now: Date): Set<string> {
+  const out = new Set<string>();
+  for (const e of list) {
+    if (validEmpty(e) && e.ym === ym && e.types === types && isEmptyCheckFresh(e, now)) out.add(e.code);
+  }
+  return out;
+}
+
+/**
+ * 명단에서 remove(그 뒤 행이 생긴 곳)를 빼고 add(이번에 확인한 빈 응답)를 더한다. 같은 (구, 월, 유형)은 새 기록 하나만.
+ * 믿을 수 없게 된 기록(신고 창 안 7일 경과 · 당월 · 깨진 값)은 버린다 — 다음 실행이 다시 묻고, 여전히 비면 새로 적는다.
+ */
+export function mergeEmptyChecks(
+  list: readonly unknown[],
+  add: readonly EmptyCheckEntry[],
+  remove: readonly Pick<EmptyCheckEntry, "code" | "ym" | "types">[],
+  now: Date,
+  cap: number = MOLIT_EMPTY_CAP,
+): EmptyCheckEntry[] {
+  const out: EmptyCheckEntry[] = [];
+  const keep = (e: EmptyCheckEntry) => {
+    const i = out.findIndex((o) => sameEmpty(o, e));
+    if (i >= 0) out.splice(i, 1);
+    out.push({ code: e.code, ym: e.ym, types: e.types, checkedAt: e.checkedAt });
+  };
+  for (const e of list) {
+    if (!validEmpty(e) || !isEmptyCheckFresh(e, now)) continue;
+    if (remove.some((r) => sameEmpty(r, e)) || add.some((a) => sameEmpty(a, e))) continue;
+    keep(e);
+  }
+  for (const e of add) if (validEmpty(e) && canRecordEmpty(e.ym, now)) keep(e);
+  return out.slice(-Math.max(1, cap));
+}

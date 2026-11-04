@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 /* [1027] 지역 알림 구독 버튼 — 한 번 누르면 그 지역이 구독된다.
  *

@@ -3,7 +3,7 @@
 import Link from "@/app/components/IntentLink";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { Icon } from "@/app/components/Icon";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { listingPriceLine } from "@/app/listings/price-text";
 import { restoreListingAt } from "@/app/listings/compare-restore";
 import {

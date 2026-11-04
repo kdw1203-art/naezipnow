@@ -60,7 +60,9 @@ test("남은 화면 — 공매 폰 줄 목록 · 중복 묶음 없음 · 뉴스 
   assert.match(auc, /\{cards\.slice\(0, rowCap\)\.map\(\(c\) => \(\s*<AuctionLine key=\{c\.key\} c=\{c\} \/>/);
   assert.match(auc, /<div data-tone="sand" className="max-md:hidden"><HScroll/);
   const news = strip(read("app/town/news/[id]/page.tsx"));
-  assert.match(news, /<details aria-label="자주 묻는 질문" className="group flex flex-col gap-3 border-t border-divider pt-4">/);
+  /* [1104] 접기는 그대로 — details 의 aria-label 을 걷고 summary 안 h2 → span(요약 글자가 펼침 단추 이름) */
+  assert.match(news, /<details className="group flex flex-col gap-3 border-t border-divider pt-4">\s*<summary[^>]*>\s*<span className="t-section font-bold text-ink">\s*자주 묻는 질문/);
+  assert.doesNotMatch(news, /<summary[^>]*>\s*<h2/);
   assert.ok(!strip(read("app/apply/ApplyDailyStrip.tsx")).includes("날짜별 캘린더 ›"));
   for (const [p, s] of [
     ["app/api/cron/economy-alerts/route.ts", "계산해 보세요"],

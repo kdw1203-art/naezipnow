@@ -2,12 +2,13 @@
 
 import { Switch } from "@/app/components/ui/Switch";
 import { useTheme } from "next-themes";
+import { suppressThemeTransitions } from "@/app/components/theme-transition";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "@/app/components/IntentLink";
 /* [1103 · 번들] signOut(next-auth/react · 5.5KB 조각)은 탈퇴 접수 뒤 한 번만 부른다 — 그때 받는다(DeleteAccountSection).
    PageShell 은 서버 page.tsx 가 감싼다 — 여기서 import 하면 서버 조각인 푸터(사업자 고지 · 링크 목록 7.8KB)까지 클라이언트 번들에 실렸다. */
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { DELETE_CONFIRM_WORD, DELETE_GRACE_DAYS } from "@/lib/account/deletion";
 import { useUnsavedGuard } from "@/lib/client/use-unsaved-guard";
 import { hasSession } from "@/lib/client/has-session";
@@ -690,7 +691,11 @@ function ThemeRow() {
               key={o.value}
               type="button"
               aria-pressed={current === o.value}
-              onClick={() => setTheme(o.value)}
+              onClick={() => {
+                /* [1104] 전환 끄기는 실제로 바꿀 때만(같은 칸을 다시 누르면 next-themes 도 아무것도 안 한다) — ThemeProvider 주석 */
+                if (o.value !== theme) suppressThemeTransitions();
+                setTheme(o.value);
+              }}
             >
               {o.label}
             </button>

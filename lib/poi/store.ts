@@ -9,6 +9,9 @@ import {
   parsePoiPayload,
   poiPageUrl,
   poiSourceBase,
+  poiSourceErrorHint,
+  poiUnconfiguredMessage,
+  resolvePoiApiPath,
   rowSignature,
   type PoiFlavor,
   type PoiKind,
@@ -29,6 +32,7 @@ import {
      (전체 주소 https://api.odcloud.kr/… · https://api.data.go.kr/openapi/… 도 된다)
    serviceKey 는 청약 인제스트와 같은 DATA_GO_KR_SERVICE_KEY(디코딩 키)를 재사용한다 —
    인코딩 키를 넣어도 한 번 풀어서 쓴다.
+   [1104] 학교는 오픈API 요청주소가 고정(tn_pubr_public_elesch_mskul_lc_api)이라 env 가 없으면 그 기본값으로 돈다.
    ============================================================ */
 
 export type NearbySchool = {
@@ -120,6 +124,10 @@ export type PoiIngestResult = {
   reason?: string;
   /** 원천 모양 — odcloud(api.odcloud.kr) · openapi(api.data.go.kr/openapi/tn_pubr_*) */
   source?: PoiFlavor;
+  /** [1104] 요청주소 출처 — env(POI_*_API_PATH) · default(고정 요청주소 기본값) */
+  pathFrom?: "env" | "default";
+  /** [1104] 종류 — 미구성 문구(어느 env 를 넣어야 하는지)에 쓴다 */
+  kind?: PoiKind;
   /** 원천에서 받은 줄 수 */
   fetched: number;
   /** 저장하지 않은 줄 수(아래 이유별 합) */
@@ -158,8 +166,8 @@ function blankCounts(): Omit<PoiIngestResult, "configured" | "reason" | "source"
   };
 }
 
-function emptyResult(reason: string): PoiIngestResult {
-  return { configured: false, reason, ...blankCounts() };
+function emptyResult(reason: string, kind: PoiKind): PoiIngestResult {
+  return { configured: false, reason, kind, ...blankCounts() };
 }
 
 /** 한 쪽 받기 — 시간 상한 · 일시 장애(네트워크 · 5xx · 429)는 한 번 더 */
@@ -194,21 +202,23 @@ async function fetchPoiPage(url: string): Promise<PoiPage> {
 export async function ingestPoi(kind: PoiKind): Promise<PoiIngestResult> {
   const sb = getServiceSupabase();
   const serviceKey = process.env.DATA_GO_KR_SERVICE_KEY?.trim();
-  const apiPath =
-    kind === "schools"
-      ? process.env.POI_SCHOOLS_API_PATH?.trim()
-      : process.env.POI_STATIONS_API_PATH?.trim();
-  if (!sb) return emptyResult("no-db");
-  if (!serviceKey) return emptyResult("no-key");
-  if (!apiPath) {
-    // 오너 패킷 ⑧ — 표준데이터 "오픈API 상세"의 요청 주소(odcloud /api/… 또는 /openapi/tn_pubr_…)를 env 로 등록해야 켜진다
-    return emptyResult("no-path");
+  /* [1104] env 가 없으면 고정 요청주소 기본값(학교만 — lib/poi/parse.ts POI_DEFAULT_API_PATH).
+     운영은 10-10 학교 활용신청을 마쳤는데 env 를 넣지 않아 9~11월 매회 "no-path" 였다. */
+  const resolved = resolvePoiApiPath(
+    kind,
+    kind === "schools" ? process.env.POI_SCHOOLS_API_PATH : process.env.POI_STATIONS_API_PATH,
+  );
+  if (!sb) return emptyResult("no-db", kind);
+  if (!serviceKey) return emptyResult("no-key", kind);
+  if (!resolved) {
+    // 역: 표준데이터(15013205)에 오픈API 요청주소가 없다 — 승인받은 역 위치 오픈API 주소를 env 로 등록해야 켜진다
+    return emptyResult("no-path", kind);
   }
-  const base = poiSourceBase(apiPath);
-  if (!base) return emptyResult("bad-path");
+  const base = poiSourceBase(resolved.path);
+  if (!base) return emptyResult("bad-path", kind);
 
   const table = kind === "schools" ? "poi_schools" : "poi_stations";
-  const out: PoiIngestResult = { configured: true, source: base.flavor, ...blankCounts() };
+  const out: PoiIngestResult = { configured: true, source: base.flavor, pathFrom: resolved.from, kind, ...blankCounts() };
   const seen = new Set<string>();
   const startedAt = Date.now();
   let prevSig: string | null = null;
@@ -224,9 +234,10 @@ export async function ingestPoi(kind: PoiKind): Promise<PoiIngestResult> {
       got = await fetchPoiPage(url);
     } catch (e) {
       /* 주소에 serviceKey 가 들어 있다 — 메시지에 주소를 싣지 않는다 */
-      throw new Error(`${table} ${base.flavor} ${page}쪽 받기 실패: ${e instanceof Error ? e.message : String(e)}`);
+      throw new Error(`${table} ${base.flavor} ${page}쪽 받기 실패: ${poiSourceErrorHint(kind, e instanceof Error ? e.message : String(e))}`);
     }
-    if (got.error) throw new Error(`${table} ${base.flavor} ${page}쪽: ${got.error}`);
+    // [1104] 활용신청 안 된 키(30 SERVICE_KEY_IS_NOT_REGISTERED)면 무엇을 신청해야 하는지 붙인다
+    if (got.error) throw new Error(`${table} ${base.flavor} ${page}쪽: ${poiSourceErrorHint(kind, got.error)}`);
     out.pages = page;
     if (got.totalCount !== null) out.totalCount = got.totalCount;
     if (page === 1 && got.rows[0]) out.columns = Object.keys(got.rows[0]).slice(0, 20);
@@ -282,13 +293,14 @@ export async function ingestPoi(kind: PoiKind): Promise<PoiIngestResult> {
 
 /** 크론 기록 한 줄 — 받은 수 · 뺀 수(이유별) · 저장 수 · 쪽 · 끊긴 이유 */
 export function poiIngestSummary(r: PoiIngestResult): string {
-  if (!r.configured) return r.reason ?? "미구성";
+  /* [1104] "no-path" 한 단어로는 무엇을 넣어야 하는지 알 수 없었다 — env 이름 · 데이터셋 번호까지 */
+  if (!r.configured) return r.kind ? poiUnconfiguredMessage(r.kind, r.reason) : r.reason ?? "미구성";
   const by = r.skippedBy;
   const skippedDetail = r.skipped
     ? ` (좌표없음 ${by["no-coord"]} · 범위밖 ${by["out-of-range"]} · 이름없음 ${by["no-name"]} · 중복 ${by.duplicate})`
     : "";
   return [
-    `원천=${r.source ?? "?"}`,
+    `원천=${r.source ?? "?"}${r.pathFrom === "default" ? "(기본 요청주소)" : ""}`,
     `조회=${r.fetched}${r.totalCount !== null ? `/${r.totalCount}` : ""}`,
     `제외=${r.skipped}${skippedDetail}`,
     `업서트=${r.upserted}`,

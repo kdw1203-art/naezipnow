@@ -11,7 +11,7 @@ import { ActionButton } from "@/app/components/ui/ActionButton";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 const COMMENT_MAX = 300;
 const RATING_LABEL = ["", "아쉬워요", "그저 그래요", "괜찮아요", "좋아요", "아주 좋아요"] as const;

@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import Link from "@/app/components/IntentLink";
 import { getSessionLite } from "@/lib/client/session-lite";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { Icon } from "@/app/components/Icon";
 import {
   TALK_LAST_REGION_KEY,

@@ -5,7 +5,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { CardFrameView } from "./CardFrameView";
 import { KAKAO_JS_KEY, loadKakaoSdk } from "./kakao-sdk";
 import { Icon } from "@/app/components/Icon";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { useCopy } from "@/lib/ui/use-copy";
 import { trackPlatformEvent } from "@/lib/platform-events-client";
 import { buildKakaoFeedShare } from "@/lib/kakao/share-template";

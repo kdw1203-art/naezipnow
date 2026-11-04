@@ -72,7 +72,8 @@ const SCHOOL_KEYS = {
   name: ["학교명", "schoolnm", "schulnm", "schoolname"],
   id: ["학교id", "학교아이디", "학교코드", "표준학교코드", "schoolid", "schoolcode", "sdschulcode", "schulcode"],
   category: ["학교급구분", "학교급", "학교종류명", "schoolse", "schoolkind", "schoollevel", "schulkndscnm"],
-  sido: ["시도교육청명", "시도명", "edcsportnm", "atptofcdcscnm", "ctprvnnm", "sido"],
+  /* [1104] 오픈API(tn_pubr_public_elesch_mskul_lc_api) 의 시도교육청명은 cddcNm — edcSportNm 은 교육지원청명이라 뒤로 */
+  sido: ["시도교육청명", "시도명", "cddcnm", "atptofcdcscnm", "ctprvnnm", "sido", "edcsportnm"],
   address: ["소재지도로명주소", "도로명주소", "rdnmadr", "roadaddress", "소재지지번주소", "lnmadr"],
 } as const;
 
@@ -274,6 +275,63 @@ export function poiSourceBase(apiPath: string): { url: URL; flavor: PoiFlavor } 
   url.protocol = "https:";
   const flavor: PoiFlavor = url.hostname === "api.odcloud.kr" ? "odcloud" : "openapi";
   return { url, flavor };
+}
+
+/**
+ * [1104] 경로 기본값 — 운영 실측(market_ingest_log source='poi' 2026-09-01 ~ 11-01): 두 표 모두 "no-path"(env 없음) ·
+ * poi_schools / poi_stations 0행. 학교 표준데이터(data.go.kr 15021148)는 오픈API 요청주소가 고정(tn_pubr_* · 자동승인)이라
+ * env 없이도 켠다. 도시철도역사 표준데이터(15013205)는 지금 파일(XLSX · 국가철도공단 외부 내려받기)만 있고
+ * 오픈API 요청주소가 없다 — 기본값을 지어내지 않고 env 를 요구한다.
+ */
+export const POI_DEFAULT_API_PATH: Readonly<Partial<Record<PoiKind, string>>> = {
+  schools: "tn_pubr_public_elesch_mskul_lc_api",
+};
+
+export const POI_PATH_ENV: Readonly<Record<PoiKind, string>> = {
+  schools: "POI_SCHOOLS_API_PATH",
+  stations: "POI_STATIONS_API_PATH",
+};
+
+/** env 값이 있으면 그것, 없으면 기본값(있을 때만). 둘 다 없으면 null */
+export function resolvePoiApiPath(kind: PoiKind, envValue: string | undefined): { path: string; from: "env" | "default" } | null {
+  const v = envValue?.trim();
+  if (v) return { path: v, from: "env" };
+  const d = POI_DEFAULT_API_PATH[kind];
+  return d ? { path: d, from: "default" } : null;
+}
+
+/** [1104] 미구성 사유 → 기록 문구(무엇을 어디에 넣어야 하는지 · 값은 싣지 않는다) */
+export function poiUnconfiguredMessage(kind: PoiKind, reason: string | undefined): string {
+  const env = POI_PATH_ENV[kind];
+  switch (reason) {
+    case "no-db":
+      return "DB 연결 없음(Supabase 서비스 키 미설정) · 수집 건너뜀";
+    case "no-key":
+      return "DATA_GO_KR_SERVICE_KEY 미설정 · 공공데이터포털 인증키(디코딩)를 Vercel env 에 등록";
+    case "no-path":
+      return kind === "stations"
+        ? `${env} 미설정 · 전국도시철도역사정보표준데이터(data.go.kr 15013205)는 지금 파일(XLSX)만 있고 오픈API 요청주소가 없다 · ` +
+            "활용승인 받은 역 위치 오픈API 의 요청주소(tn_pubr_…_api 또는 odcloud /api/…/v1/uddi:…)를 Vercel env 에 등록"
+        : `${env} 미설정 · 전국초중등학교위치표준데이터(data.go.kr 15021148) 오픈API 요청주소를 Vercel env 에 등록`;
+    case "bad-path":
+      return `${env} 형식 오류 · odcloud /api/… · /openapi/tn_pubr_… · tn_pubr_… · api.odcloud.kr/api.data.go.kr 전체 주소만`;
+    default:
+      return reason ?? "미구성";
+  }
+}
+
+/**
+ * [1104] 원천 실패 문구에 할 일을 붙인다 — data.go.kr 은 활용신청이 안 된 키에 30 SERVICE_KEY_IS_NOT_REGISTERED_ERROR
+ * (오픈API 는 type=json 이어도 XML returnAuthMsg)로 답한다. 그건 코드가 아니라 소유자 신청 문제다.
+ */
+export function poiSourceErrorHint(kind: PoiKind, error: string): string {
+  const notRegistered =
+    /SERVICE_KEY_IS_NOT_REGISTERED|등록되지 ?않은 ?(서비스|인증) ?키|openapi 30\b|odcloud -4\b|"code"\s*:\s*-4\b|HTTP 40[13]\b/i.test(error);
+  const expired = /DEADLINE_HAS_EXPIRED|기한만료/i.test(error);
+  if (!notRegistered && !expired) return error;
+  const what =
+    kind === "schools" ? "전국초중등학교위치표준데이터 오픈API(data.go.kr 15021148)" : "역 위치 오픈API(POI_STATIONS_API_PATH 의 서비스)";
+  return `${error} · DATA_GO_KR_SERVICE_KEY 계정으로 ${what} 활용신청${expired ? " 연장" : ""} 필요`;
 }
 
 export function poiPageUrl(base: { url: URL; flavor: PoiFlavor }, serviceKey: string, page: number, perPage: number): string {

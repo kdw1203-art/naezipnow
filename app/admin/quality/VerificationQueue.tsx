@@ -6,7 +6,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { docKindLabel, findBusinessForm } from "@/lib/experts/taxonomy";
 import { formatDocSize } from "@/lib/experts/doc-limits";
 

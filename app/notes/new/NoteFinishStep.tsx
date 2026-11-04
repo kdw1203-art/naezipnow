@@ -17,7 +17,7 @@ import { finishSummaryRows, type FinishSummaryInput } from "@/lib/notes/finish-s
 import { decisionLabel, type DecisionChoice } from "@/lib/inspection/decision";
 import type { ChecklistGroupDef } from "@/lib/inspection/checklist";
 import { memoHintsFor } from "@/lib/notes/form-extras";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 /* [1006] 3단계 "무엇을 남길까"의 본문 — 메모 · 사진 줄 · 사진 추가/촬영 · 공개 스위치 ·
    소셜 소재 동의. NoteForm 에서 분리해 next/dynamic 으로 받는다(DecisionStep·NoteDetailFields

@@ -43,7 +43,7 @@ import { PriceHistoryChart } from "@/app/components/viz/PriceHistoryChart";
 import { Icon } from "@/app/components/Icon";
 import { Explain } from "@/app/components/explain/Explain";
 import { Delta } from "@/app/components/num/Delta";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { VerdictTiles, ymLabel } from "./VerdictCard";
 import { MyNotesChip, VerdictChips } from "./VerdictBoard";
 import { tileDisplay, tilesBesideMetric, verdictSources } from "./verdict-display";

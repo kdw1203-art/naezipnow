@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { Switch } from "@/app/components/ui/Switch";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { DEFAULT_UI_PREFS, type UiPrefs } from "@/lib/prefs/ui-prefs";
 import { readAreaUnitCookie, writeAreaUnitCookie } from "@/lib/prefs/area-unit";
 import {

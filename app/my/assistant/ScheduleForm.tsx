@@ -7,7 +7,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ComplexPicker, type PickedComplex } from "@/app/analysis/ComplexPicker";
 import { Icon } from "@/app/components/Icon";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { kstParts } from "@/lib/format/kst";
 
 /** 오늘(KST) YYYY-MM-DD — 날짜 입력의 min. 서버 렌더와 어긋나지 않게 마운트 뒤에만 계산한다 */

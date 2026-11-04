@@ -4,7 +4,7 @@
    오클릭 방지 2단계 확인. 401→SoftSignup, 402→포인트 상점 페이월. */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { useUpgradePaywall } from "@/app/components/upgrade-paywall-context";
 

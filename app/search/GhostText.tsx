@@ -43,8 +43,9 @@ export default function GhostText({
       style={style}
     >
       <span className="invisible">{value}</span>
+      {/* [1104] opacity-75 제거 — text-3 에 75% 를 더 걸어 라이트 3.26 · 다크 3.95(실측 · 본문 4.5 미달). 친 글자(text-ink)와는 text-3 만으로 구별된다 */}
       <span
-        className="pointer-events-auto cursor-pointer text-text-3 opacity-75"
+        className="pointer-events-auto cursor-pointer text-text-3"
         onMouseDown={(e) => {
           e.preventDefault();
           onAccept();

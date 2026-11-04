@@ -2256,9 +2256,10 @@ export function MapClient({
 
       {/* ===== 지도 레이어 — 정비사업(실적재 공개 자료) ===== */}
       {/* [968 · 24] id — 접힌 칩 행의 "레이어 N" 이 패널을 열고 여기로 스크롤한다 */}
+      {/* [1104] 절 구분선 rgba(남색 8%) → border-line — 다크 패널에서 선이 사라져 위 "등록 매물 조건"과 붙어 보였다(위 두 절은 이미 border-line) */}
       <div
         id="map-layer-section"
-        className="flex flex-col gap-1.5 border-t border-[rgba(16,28,54,.08)] pt-2.5"
+        className="flex flex-col gap-1.5 border-t border-line pt-2.5"
       >
         <div className="t-sub font-bold text-text-3">지도 레이어</div>
         {/* [1027] 바탕 지도 — 일반/위성은 둘 중 하나, 지적편집도는 그 위에 얹는 선(따로 켜고 끈다).
@@ -2445,7 +2446,8 @@ export function MapClient({
         {/* [1027] 정비사업 걸러 보기 — 레이어가 켜져 있을 때만. 칩의 수는 "눌렀을 때 보이는 수"
             (다른 축 조건을 건 뒤 센다 — lib/redevelopment/map-layer). 0곳인 칩은 고를 게 없어 비활성. */}
         {showRedevelopment && (
-          <div className="flex flex-col gap-1.5 rounded-xl bg-[rgba(16,28,54,.04)] px-2.5 py-2">
+          /* [1104] 하위 판 바탕 = 잉크 5% — 남색 4% 고정값은 다크에서 판과 그 안 칩 알약이 통째로 사라졌다(잉크는 다크에서 밝은 색이라 판이 살짝 떠오른다) */
+          <div className="flex flex-col gap-1.5 rounded-xl bg-[color-mix(in_srgb,var(--ink)_5%,transparent)] px-2.5 py-2">
             <div className="flex items-baseline justify-between gap-2">
               <span className="t-caption font-bold text-text-2">정비사업</span>
               {/* 받아 오기 전·실패는 숫자로 말하지 않는다 — "0곳"은 다 받은 뒤에만 사실이다 */}
@@ -2605,7 +2607,8 @@ export function MapClient({
       </div>
 
       {/* ===== 출퇴근 필터 (#10) — 회사 주소 + 임계 소요시간 ===== */}
-      <div className="flex flex-col gap-1.5 border-t border-[rgba(16,28,54,.08)] pt-2.5">
+      {/* [1104] 구분선 border-line(다크에서 보이게 · 위 절과 같은 값) */}
+      <div className="flex flex-col gap-1.5 border-t border-line pt-2.5">
         <div className="t-sub font-bold text-text-3">출퇴근 (회사 위치)</div>
         <div className="flex items-center gap-1.5">
         <input
@@ -2670,7 +2673,7 @@ export function MapClient({
         )}
       </div>
 
-      <div className="flex items-center justify-between border-t border-[rgba(16,28,54,.08)] pt-2.5">
+      <div className="flex items-center justify-between border-t border-line pt-2.5">
         <button type="button" onClick={resetFilters} className="inline-flex min-h-[40px] items-center t-sub font-bold text-text-3 underline md:min-h-6">
           전체 초기화
         </button>
@@ -4651,8 +4654,9 @@ export function MapClient({
             1024~1279 는 filterBar 까지 넣으면 1180 폭이 모자라 플로팅 판을 유지.
             줌 레벨 설명(zoomCaption)은 title 로 남긴다 — 캡션 상자까지 올리면
             헤더가 두 줄이 된다. */}
+        {/* [1104] 판 바탕 잉크 5% — 남색 5% 고정값은 다크 머리줄에서 판이 사라져 줌 탭 셋이 맨글자로 떠 있었다 */}
         <div
-          className="hidden shrink-0 items-center gap-0.5 rounded-full bg-[rgba(16,28,54,.05)] p-1 xl:flex"
+          className="hidden shrink-0 items-center gap-0.5 rounded-full bg-[color-mix(in_srgb,var(--ink)_5%,transparent)] p-1 xl:flex"
           title={zoomCaption(zoom, level)}
         >
           <ZoomTabButtons zoom={zoom} onSelect={handleZoomTab} />
@@ -4895,6 +4899,8 @@ export function MapClient({
                   {routeResult?.driving && (
                     <button
                       type="button"
+                      /* [1104] 켜고 끄는 단추 — 상태를 보조기기에도(글자 "표시/숨김"은 눈으로만 읽혔다) */
+                      aria-pressed={showDrivingRoute}
                       onClick={() => setShowDrivingRoute((v) => !v)}
                       className={`rounded-lg px-2.5 py-2 text-left ${
                         showDrivingRoute
@@ -4920,6 +4926,7 @@ export function MapClient({
                   {routeResult?.walking && (
                     <button
                       type="button"
+                      aria-pressed={showWalkingRoute}
                       onClick={() => setShowWalkingRoute((v) => !v)}
                       className={`rounded-lg px-2.5 py-2 text-left ${
                         showWalkingRoute
@@ -4956,7 +4963,7 @@ export function MapClient({
                           </span>
                         </div>
                       ))}
-                      <div className="mt-0.5 flex items-center justify-between border-t border-[rgba(16,28,54,.08)] pt-1 t-sub">
+                      <div className="mt-0.5 flex items-center justify-between border-t border-line pt-1 t-sub">
                         <span className="text-text-3">이어 잰 합계</span>
                         <span className="font-bold text-ink">
                           {formatDistanceM(measureTotalM)}
@@ -5020,7 +5027,7 @@ export function MapClient({
               </div>
 
               {measurePoints.length >= 2 && (
-                <div className="flex flex-col gap-1.5 border-t border-[rgba(16,28,54,.08)] pt-2">
+                <div className="flex flex-col gap-1.5 border-t border-line pt-2">
                   <div className="t-caption font-bold text-text-3">액션</div>
                   <div className="grid grid-cols-2 gap-1.5">
                     <button
@@ -5070,7 +5077,8 @@ export function MapClient({
               setMeasureRelocate(false);
               setRouteResult(null);
             }}
-            className="rounded-lg bg-[rgba(16,28,54,.06)] min-h-[40px] px-2 py-1.5 t-sub font-bold text-text-2 md:min-h-6"
+            /* [1104] 바탕 잉크 7% — 남색 6% 고정값은 다크 카드에서 단추 면이 안 보여 글자만 떠 있었다 */
+            className="rounded-lg bg-[color-mix(in_srgb,var(--ink)_7%,transparent)] min-h-[40px] px-2 py-1.5 t-sub font-bold text-text-2 md:min-h-6"
           >
             끝내기
           </button>

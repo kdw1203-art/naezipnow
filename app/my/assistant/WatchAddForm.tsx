@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ComplexPicker, type PickedComplex } from "@/app/analysis/ComplexPicker";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 export function WatchAddForm({ count, max }: { count: number; max: number }) {
   const router = useRouter();

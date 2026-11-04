@@ -5,7 +5,7 @@
 import { useMemo, useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { ActionButton, type ActionState } from "@/app/components/ui/ActionButton";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { Icon } from "@/app/components/Icon";
 import { RESPONSE_TIME_OPTIONS, SPECIALTIES } from "@/lib/experts/taxonomy";
 import { CITY_OPTIONS, DISTRICTS } from "@/lib/regions";

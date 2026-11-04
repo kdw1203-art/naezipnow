@@ -4,7 +4,7 @@ import { useEffect, useId, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Modal, ModalHeader } from "@/app/components/ui/Modal";
 import { Icon } from "@/app/components/Icon";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { ACTIVE_REGION_CATALOG } from "@/lib/region/catalog";
 import {
   PROFILE_NAME_MAX,

@@ -5,6 +5,9 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { getAdSenseClient, isAdsExcludedPath } from "@/lib/ads/adsense-policy";
 import { getSessionLite } from "@/lib/client/session-lite";
+import { adSenseAdFree } from "@/lib/ads/ad-free";
+import { readAuthedHint } from "@/lib/auth/authed-hint";
+import { whenBoxVisible } from "@/lib/ads/push-when-visible";
 
 /**
  * AdSense 수동 디스플레이 유닛 — **데스크탑 전용** (소유자 요청 2026-08-03:
@@ -42,21 +45,18 @@ export function AdSenseUnit({ className }: { className?: string }) {
   /** null = 판정 전(미렌더), false = 광고 대상 */
   const [adFree, setAdFree] = useState<boolean | null>(null);
   const pushedRef = useRef(false);
+  const boxRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
     let alive = true;
     (async () => {
-      // 최적화 26 — 공유 세션 조회로 수렴. null(조회 실패)이면 종전과 같이
+      // 최적화 26 — 공유 세션 조회로 수렴. 조회 실패면 종전과 같이
       // "모르면 안 띄운다"(adFree=true) — 결제자에게 광고가 나가는 쪽이 더 나쁘다.
       const s = await getSessionLite();
       if (!alive) return;
-      if (s === null) {
-        setAdFree(true);
-        return;
-      }
-      const plan = String(s.user?.plan ?? "free").toLowerCase();
-      setAdFree(plan === "pro" || plan === "expert" || plan === "enterprise");
+      /* [1105] null = 힌트 없으면 비회원(광고 대상) · 힌트 있으면 조회 실패(안 띄운다) — 예전엔 비회원에게도 안 그렸다 */
+      setAdFree(adSenseAdFree(s, readAuthedHint()));
     })();
     return () => {
       alive = false;
@@ -65,23 +65,31 @@ export function AdSenseUnit({ className }: { className?: string }) {
 
   const show = enabled && adFree === false;
 
+  /* [1105] 칸 상자가 보일 때만 <ins> 를 그리고 push(lib/ads/push-when-visible 머리 주석) */
+  const [boxVisible, setBoxVisible] = useState(false);
   useEffect(() => {
-    if (!show || pushedRef.current) return;
+    if (!show) return;
+    return whenBoxVisible(boxRef.current, () => setBoxVisible(true));
+  }, [show]);
+
+  useEffect(() => {
+    if (!show || !boxVisible || pushedRef.current) return;
     pushedRef.current = true;
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch {
       // 스크립트 차단(광고 차단기 등) — 빈 영역 없이 조용히 무시
     }
-  }, [show]);
+  }, [show, boxVisible]);
 
   if (!show) return null;
 
   return (
     /* hidden lg:block — 모바일·태블릿 제외는 CSS 로도 이중 보장.
        라벨을 붙여 광고임을 명시한다(콘텐츠로 위장 금지). */
-    <div className={`hidden lg:block ${className ?? ""}`}>
+    <div ref={boxRef} className={`hidden lg:block ${className ?? ""}`}>
       <div className="mb-1 t-caption font-semibold tracking-wide text-text-3">광고</div>
+      {boxVisible && (
       <ins
         className="adsbygoogle"
         style={{ display: "block" }}
@@ -90,6 +98,7 @@ export function AdSenseUnit({ className }: { className?: string }) {
         data-ad-format="auto"
         data-full-width-responsive="false"
       />
+      )}
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { Icon } from "@/app/components/Icon";
 import { Delta } from "@/app/components/num/Delta";
 import { Explain } from "@/app/components/explain/Explain";
 import { EmptyState } from "@/app/components/ui/EmptyState";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { createDeferredRemover, type DeferredRemover } from "./deferred-remove";
 import { AlertRangeEditor } from "./AlertRangeEditor";
 import { alertRangeLabel } from "@/lib/watchlist/alert-range";

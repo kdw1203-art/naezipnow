@@ -110,14 +110,8 @@ export function priceConclusion(regionName: string, band: PriceBandInput, busies
       : busiest
         ? { label: "거래 최다", tone: "neutral" }
         : null;
-  const sub = [
-    band.perText ? `평당 ${band.perText.replace("/평", "")}` : null,
-    `${n(band.complexCount)}개 단지`,
-    `실거래 ${band.minText}~${band.maxText}`,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  return { title, chip, sub };
+  /* [1104] 소유자 시안 승인 — 근거 줄(평당 · 단지 수 · 실거래 최저~최고)은 바로 아래 고른 면적대 칸 · 실거래 범위 카드와 같은 수라 뺐다 */
+  return { title, chip, sub: null };
 }
 
 /* ── ② 시세·타이밍 ───────────────────────────────────────────────────── */
@@ -174,7 +168,7 @@ export function timingConclusion(i: TimingInput): Conclusion | null {
       : null;
   const sub = [
     i.latestIndex !== null ? `매매가격지수 ${i.latestIndex.toLocaleString("ko-KR")}pt` : null,
-    i.latestChangePct !== null ? `${i.weekly ? "지난주" : "지난달"} 대비 ${signedOrFlat(i.latestChangePct, 2)}` : null,
+    /* [1104] 소유자 시안 승인 — "지난달(주) 대비 ±x%"는 제목의 "지수 ±x%"와 같은 수라 근거 줄에서 뺐다 */
     i.cumulativePct !== null ? `기간 누적 ${signedOrFlat(i.cumulativePct, 1)}` : null,
     i.verdict && i.tempHeadline ? `추세 ${i.verdict}` : null,
   ]

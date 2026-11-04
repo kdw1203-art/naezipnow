@@ -3,7 +3,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "../../components/toast/ToastProvider";
+import { useToast } from "../../components/toast/use-toast";
 import { useUpgradePaywall } from "@/app/components/upgrade-paywall-context";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 

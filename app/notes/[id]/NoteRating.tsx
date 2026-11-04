@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import {
   applyMyRating,
   filledWidthPx,

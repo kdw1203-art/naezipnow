@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { loginHrefWithNext } from "@/lib/auth/auth-ux";
-import { useToast } from "../../components/toast/ToastProvider";
+import { useToast } from "../../components/toast/use-toast";
 import { ShareLinkButton } from "../../components/ShareLinkButton";
 import { NoteSaveButton } from "./NoteSaveButton";
 

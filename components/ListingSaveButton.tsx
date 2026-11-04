@@ -14,7 +14,7 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 export function ListingSaveButton({
   listingId,

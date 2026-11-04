@@ -12,7 +12,7 @@ import { useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { addToCompareTray, COMPARE_TRAY_MAX } from "@/lib/newui/compare-tray";
 
 type Tone = "good" | "normal" | "caution";

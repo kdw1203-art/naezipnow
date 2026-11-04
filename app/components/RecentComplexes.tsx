@@ -8,7 +8,7 @@ import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
 import { dedupeRecents } from "@/lib/recent-complexes/dedupe";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { readRecents, writeRecents, RECENT_MAX as MAX, type RecentComplex } from "@/lib/recent-complexes/storage";
 
 /* ============================================================

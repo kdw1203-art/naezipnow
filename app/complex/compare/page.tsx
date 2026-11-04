@@ -18,7 +18,7 @@ import {
   LOAD_FAILED_LINE,
   loadWithinPrerenderBudget,
 } from "@/lib/data/prerender-budget";
-import { cache } from "react";
+import { cache, Fragment } from "react";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
 
 /* ============================================================
@@ -244,9 +244,11 @@ export default async function ComplexComparePage() {
           <OpenDetailsOnHash />
           {/* [1101 · 조작 다이어트] PC 도 한 줄 가로 밀기 — 63개 칩이 PC 에서 일곱 줄(약 280px)로 쌓여 첫 화면을 덮었다. 폰은 1074 부터 한 줄.
               PC 는 얇은 가로 막대를 보인다(마우스로 밀 수 있다는 표시 · 폰은 막대 없이 손가락으로) */}
+          {/* [1105] data-hscroll — 칩 포커스 링을 안쪽으로(가로 밀기 틀이 바깥 링 위 · 아래를 잘랐다 · globals.css 끝) */}
           <nav
             aria-label="지역 바로가기"
             className="-mx-3.5 flex flex-nowrap gap-1.5 overflow-x-auto px-3.5 pb-1.5 max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden md:mx-0 md:px-0 md:[scrollbar-width:thin]"
+            data-hscroll=""
           >
             {groups.map((group) => (
               <a
@@ -258,15 +260,20 @@ export default async function ComplexComparePage() {
               </a>
             ))}
           </nav>
+          {/* [1105 · 접근성] <summary> 안 <h2> 는 대화형 요소 안 제목이라(버튼 역할 · 자식 의미가 지워지는 보조기기가 있다) 걷는다 —
+              summary 에는 글(span · 같은 모양), 제목은 summary 밖 낭독기 전용 h2(지역마다 제목 이동 그대로) · details 이름은 그 제목.
+              span 의 [html[data-mscale]_&]:truncate 는 예전 h2 가 받던 폰 배율 한 줄 규칙(globals html[data-mscale] :is(h2,h3,h4))과 같다 */}
           {groups.map((group, gi) => (
+            <Fragment key={group.regionId}>
+            <h2 id={`region-h-${group.regionId}`} className="sr-only">{group.label}</h2>
             <details
-              key={group.regionId}
               id={`region-${group.regionId}`}
               open={gi === 0}
+              aria-labelledby={`region-h-${group.regionId}`}
               className="group card p-[var(--pad-card)] max-md:p-3.5"
             >
               <summary className="flex min-h-10 cursor-pointer list-none items-baseline justify-between gap-3 t-section text-ink [&::-webkit-details-marker]:hidden">
-                <h2 className="t-section text-ink">{group.label}</h2>
+                <span className="t-section text-ink [html[data-mscale]_&]:truncate">{group.label}</span>
                 <span className="shrink-0 t-sub font-medium text-text-3">
                   조합 {group.pairs.length}개 · <span className="group-open:hidden">열기</span>
                   <span className="hidden group-open:inline">닫기</span>
@@ -281,6 +288,7 @@ export default async function ComplexComparePage() {
                 pairs={group.pairs.map((pair): ComparePairWire => [pair.complexA, pair.complexB, pair.dong, pair.tradeCountA, pair.tradeCountB])}
               />
             </details>
+            </Fragment>
           ))}
         </div>
       )}

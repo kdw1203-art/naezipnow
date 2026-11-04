@@ -34,7 +34,7 @@ import { PageHead } from "@/app/components/PageHead";
 import { Icon } from "@/app/components/Icon";
 import { MobilePrimaryBar } from "@/app/components/MobilePrimaryBar";
 import { SkBlock } from "@/app/components/ui/Skeleton";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import {
   COMPARE_DECIDE_HREF,
   compareActionLinks,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { INLINE_CONFIRM_MS } from "@/lib/ui/feedback-timing";
 import { COPY_FAIL_MESSAGE, copyText } from "@/lib/ui/copy";
 

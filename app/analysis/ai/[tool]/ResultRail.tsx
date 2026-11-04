@@ -34,7 +34,7 @@ import { useCopy } from "@/lib/ui/use-copy";
 import { Icon } from "@/app/components/Icon";
 import { MobilePrimaryBar } from "@/app/components/MobilePrimaryBar";
 import { RegionAlertButton } from "@/app/components/RegionAlertButton";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { checklistKey, useWatchAdd } from "./ResultView";
 import { EconomyWatch } from "./EconomyWatch";
 import type { PickedLite, RunResult } from "./workbench-types";

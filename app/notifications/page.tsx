@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { PageShell } from "../components/PageShell";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { GuestGate } from "@/app/components/GuestGate";
 import { PushStatusRow } from "@/components/PushStatusRow";
 import { hasSession } from "@/lib/client/has-session";

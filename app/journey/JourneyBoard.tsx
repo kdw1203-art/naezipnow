@@ -4,7 +4,7 @@ import Link from "@/app/components/IntentLink";
 import { useEffect, useState } from "react";
 import { Icon } from "@/app/components/Icon";
 import { useMoment } from "@/app/components/motion/moment-context";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { budgetMapHref, JOURNEY_STAGES, type JourneyStage } from "@/lib/journey/stages";
 import {
   countDone,
@@ -426,7 +426,8 @@ export function JourneyBoard() {
         </div>
 
         {/* 단계 칩 가로 레일 — 폰·태블릿 */}
-        <nav aria-label="여정 단계 바로가기" className="jr-steps--light flex gap-1.5 overflow-x-auto lg:hidden">
+        {/* [1104] 소유자 시안 승인 — 폰은 칩 줄을 숨긴다(바로 아래 펼침 목록이 같은 여섯 단계 · 폰에선 두 번이었다). 태블릿(md~lg)은 그대로 */}
+        <nav aria-label="여정 단계 바로가기" className="jr-steps--light flex gap-1.5 overflow-x-auto max-md:hidden lg:hidden">
           {JOURNEY_STAGES.map((s) => {
             const st = stageState(s.id);
             return (

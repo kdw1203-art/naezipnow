@@ -97,11 +97,37 @@ export const viewport: Viewport = {
 /* [1054] 결정한 동의가 있으면 그리기 전에 표식 — CookieConsentBanner 주석 */
 const CONSENT_SCRIPT =
   "(function(){try{if(localStorage.getItem('nz_cookie_consent'))document.documentElement.setAttribute('data-cc','1')}catch(e){}})();";
+/* [1104 · 속도] 쿠키 배너가 떠 있는 동안의 body 표식(nz-consent-open · nz-consent-pad)도 그리기 전에 단다 — 예전엔 배너가
+   하이드레이션 뒤 효과에서 달았고, body class 가 바뀌면 문서 전체 스타일을 다시 계산한다(globals.css 의
+   `[class~="divide-y"] > *` 처럼 class 속성을 보는 규칙 탓 — 1103 빌드 실측 · 폰 390 · CPU 4배 · 홈 859개 요소 73~91ms).
+   조건은 use-cookie-consent 의 readStored 와 같다(저장값이 analytics 불리언을 가진 JSON 이면 "결정함" → 안 단다 · 저장소가
+   막혀도 "결정 전"), 클래스는 lib/client/shell-gates consentBodyClasses 와 같다(/map 은 pad 없음 — tests/unit/perf-1104 가 맞춰 본다).
+   body 가 있어야 해서 <head> 의 CONSENT_SCRIPT 와 따로 <body> 맨 앞에 둔다. 결정 뒤 걷는 일은 배너가 종전대로 한다. */
+const CONSENT_BODY_SCRIPT =
+  "(function(){try{var v=null,ok=false;try{v=localStorage.getItem('nz_cookie_consent')}catch(e){}if(v){try{ok=typeof JSON.parse(v).analytics==='boolean'}catch(e){}}if(ok)return;var p=location.pathname,b=document.body.classList;b.add('nz-consent-open');if(!(p==='/map'||p.indexOf('/map/')===0))b.add('nz-consent-pad')}catch(e){}})();";
+/* [1104 · 속도] 입력 중(키보드 열림) 표식 — 하단 탭바·저장 바·단지 액션 바를 숨기던 `body:has(input:focus-visible)` 규칙을
+   html[data-nz-typing] 으로 바꿨다(globals.css). body 를 :has() 앵커로 두면 body 아래 DOM 이 바뀔 때마다 브라우저가 그 :has 를
+   다시 판정해 body 밑 전체를 훑는다(1103 빌드 실측: 노드 넣고 빼기 300번 데스크톱 92~122ms → 규칙을 걷으면 20~27ms · 폰 CPU 4배
+   637~745ms → 77~119ms). 판정은 예전과 같다 — 지금 포커스가 `input:focus-visible, textarea:focus-visible` 에 맞는가.
+     · focusin 에서 바로, focusout 은 다음 틱에(칸 → 칸 이동 사이에 탭바가 한 번 깜박이지 않게), keydown 에서도(마우스로 누른
+       체크박스에 키를 치면 크롬이 그때 focus-visible 로 바꾼다 — :has 는 그것도 따라갔다).
+     · 포커스된 칸이 DOM 에서 빠지면 사파리는 focusout 을 안 쏜다 — 켜져 있는 동안만 body 를 MutationObserver 로 지켜 다시 판정한다.
+     · :has 를 모르는 브라우저(크롬 105·사파리 15.4·파이어폭스 121 미만)에서는 예전 규칙도 안 먹었으므로 달지 않는다.
+   class 가 아니라 data 속성인 이유: html/body 의 class 가 바뀌면 위 CONSENT_BODY_SCRIPT 주석의 규칙 탓에 문서 전체를 다시 계산한다. */
+const TYPING_SCRIPT =
+  "(function(){try{if(!(window.CSS&&CSS.supports&&CSS.supports('selector(:has(a))')))return;var d=document,r=d.documentElement,S='input:focus-visible,textarea:focus-visible',on=false,mo=null;function sync(){var a=d.activeElement,v=false;try{v=!!(a&&a.matches&&a.matches(S))}catch(e){}if(v===on)return;on=v;if(v){r.setAttribute('data-nz-typing','');if(window.MutationObserver&&d.body){mo=mo||new MutationObserver(sync);mo.observe(d.body,{childList:true,subtree:true})}}else{r.removeAttribute('data-nz-typing');if(mo)mo.disconnect()}}d.addEventListener('focusin',sync,true);d.addEventListener('focusout',function(){setTimeout(sync,0)},true);d.addEventListener('keydown',sync,true)}catch(e){}})();";
 /* [1098 · 깜박임] 광고 제거 판정(lib/client/ad-free-flag)이 기억돼 있으면 그리기 전에 광고 자리를 숨긴다(globals.css html[data-ad-free="1"]) */
 const AD_FREE_SCRIPT =
   "(function(){try{if(localStorage.getItem('nz_ad_free')==='1')document.documentElement.setAttribute('data-ad-free','1')}catch(e){}})();";
 const LOWEND_SCRIPT =
   "(function(){try{var m=navigator.deviceMemory;if(typeof m==='number'&&m<=4)document.documentElement.setAttribute('data-lowend','1');}catch(e){}})();";
+/* [1105 · 속도] <html> 테마 class(light/dark)를 그리기 전에 — 예전엔 next-themes 의 인라인 스크립트가 달았고, 이제 next-themes 는
+   class 를 맡지 않는다(attribute=[] · 사유는 app/components/ThemeProviderClass.ts). 규칙은 그 스크립트(attribute="class" ·
+   storageKey "theme" · defaultTheme "light" · enableSystem)와 같다: 저장값(없으면 light) · system 이면 OS 를 보고 · 둘 다 떼고 붙이기 ·
+   저장소가 막히면 아무것도 안 단다(tests/unit/perf-1105 가 next-themes 스크립트와 나란히 실행해 맞춰 본다). color-scheme 은
+   next-themes 스크립트가 종전대로 쓴다. 바뀔 때는 ThemeProvider 가 단다. */
+const THEME_CLASS_SCRIPT =
+  "(function(){try{var d=document.documentElement,t=localStorage.getItem('theme')||'light';if(t==='system')t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';d.classList.remove('light','dark');d.classList.add(t)}catch(e){}})();";
 
 /* [1012 · 모바일 60%] 소유자(2026-09-27): 모바일 화면을 "지금의 60~70% 수준으로" → 실측 시안(지금·80·70·60%)을
    보고 **60%** 를 골랐다(본문 13px 이 폰에서 약 8px 로 보인다는 점, 버튼 40px 이 24px 로 준다는 점을 알리고 받은 답).
@@ -163,6 +189,8 @@ export default function RootLayout({
   return (
     <html lang="ko" className="h-full antialiased" suppressHydrationWarning>
       <head>
+        {/* [1105 · 속도] 테마 class — 위 THEME_CLASS_SCRIPT 주석. <html> 의 suppressHydrationWarning 이 이 class 때문이다(종전 next-themes 스크립트와 같은 이유) */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_CLASS_SCRIPT }} />
         {/* [968 · 13] 저사양(deviceMemory ≤ 4GB) 표식 — 위 LOWEND_SCRIPT 주석 참고.
             <html> 은 suppressHydrationWarning 이라(테마 class 와 같은 이유) 속성이 붙어도
             하이드레이션 경고가 없다. */}
@@ -175,6 +203,8 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: CONSENT_SCRIPT }} />
         {/* [1098 · 깜박임] 유료 플랜의 광고 자리 — 공유 캐시 화면도 첫 그림부터 비워 둔다 */}
         <script dangerouslySetInnerHTML={{ __html: AD_FREE_SCRIPT }} />
+        {/* [1104 · 속도] 입력 중 표식(html[data-nz-typing]) — 위 TYPING_SCRIPT 주석. 첫 포커스보다 먼저 리스너가 있어야 해서 head 에 둔다 */}
+        <script dangerouslySetInnerHTML={{ __html: TYPING_SCRIPT }} />
         {/* [969 · 16] 폰트 원점 3 → 0. 여기 있던 G7 preconnect/dns-prefetch(cdn.jsdelivr.net)
             와 아래 [949] preconnect(fonts.gstatic.com)를 지웠다 — 폰트 CSS·woff2 가 전부
             same-origin(/fonts/) 이 되어 미리 열 연결이 없다. 예전에는 폰트 때문에
@@ -270,7 +300,10 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="내집나우" />
         {BUILD_MARK ? <meta name="nz-build" content={BUILD_MARK} /> : null}
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col" suppressHydrationWarning>
+        {/* [1104 · 속도] 쿠키 배너 body 표식을 그리기 전에 — 위 CONSENT_BODY_SCRIPT 주석. body 맨 앞이어야 document.body 가 있다.
+            body 의 suppressHydrationWarning 은 이 스크립트가 하이드레이션 전에 class 를 더하기 때문(<html> 의 테마 class 와 같은 이유 · 이 요소 하나만) */}
+        <script dangerouslySetInnerHTML={{ __html: CONSENT_BODY_SCRIPT }} />
         {/* #18 a11y — 본문 바로가기 (키보드 첫 Tab). sr-only 로만 두면 포커스가
             와도 안 보여서 반쪽짜리다 — 포커스 시 화면에 나타나야 한다(고도화 47). */}
         <a

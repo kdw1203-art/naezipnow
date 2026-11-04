@@ -4,6 +4,7 @@
 import { useEffect, useState } from "react";
 import { useTheme } from "next-themes";
 import { Icon } from "./Icon";
+import { suppressThemeTransitions } from "./theme-transition";
 
 /** #16 다크 모드 토글 — 전체 메뉴·설정에서 사용.
  *  hydration 안전: mounted 전에는 라이트 기준 라벨. */
@@ -17,7 +18,11 @@ export function ThemeToggle({ className }: { className?: string }) {
   return (
     <button
       type="button"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={() => {
+        /* [1104] 전환 끄기는 바꾸는 이 순간에만 — 예전엔 next-themes 가 첫 로드 마운트에서도 했다(ThemeProvider 주석) */
+        suppressThemeTransitions();
+        setTheme(isDark ? "light" : "dark");
+      }}
       aria-label={isDark ? "라이트 모드로 전환" : "다크 모드로 전환"}
       className={
         className ??

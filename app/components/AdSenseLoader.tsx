@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { getAdSenseClient, isAdsExcludedPath } from "@/lib/ads/adsense-policy";
 import { ensureAdSenseScript } from "@/lib/ads/adsense-boot";
+import { adSenseAdFree } from "@/lib/ads/ad-free";
+import { readAuthedHint } from "@/lib/auth/authed-hint";
 
 /**
  * Google AdSense — 광고 요청 게이트 (960 에서 역할이 바뀌었다).
@@ -29,6 +31,9 @@ import { ensureAdSenseScript } from "@/lib/ads/adsense-boot";
  * 판정이 끝나기 전에는 풀지 않는다(모르면 안 띄운다). 세션 조회 실패도 "광고 없음"
  * 쪽으로 둔다 — 결제한 사람에게 광고가 나가는 것이 반대 실수보다 나쁘다.
  * 비로그인은 세션 응답이 비어 있어 곧바로 광고 대상으로 확정된다.
+ * [1105] "비어 있음"(null)은 비회원과 조회 실패 둘 다다 — 로그인 힌트(nz_authed)로 가른다(lib/ads/ad-free adSenseAdFree).
+ *  예전엔 null 을 전부 실패로 읽어 비회원에게 잠금이 한 번도 풀리지 않았다(운영 1097 · 로컬 1104 실측 · 홈·노트·뉴스 폰·데스크톱).
+ *  제외 경로(/login 등)에 들어가면 판정을 잊는다 — 로그인 뒤 돌아온 화면에서 비회원 때 판정으로 잠금이 풀리지 않게.
  *
  * 비용: 세션 조회는 클라이언트 ID 가 있고 제외 경로가 아닐 때만 나간다(공유 캐시).
  */
@@ -52,23 +57,18 @@ export function AdSenseLoader() {
   const [adFree, setAdFree] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!shouldCheckPlan) return;
+    /* [1105] 제외 경로에서는 판정을 비운다 — 다시 일반 경로로 오면 새로 판정할 때까지 잠금 */
+    if (!shouldCheckPlan) {
+      setAdFree(null);
+      return;
+    }
     let alive = true;
     (async () => {
       try {
         // 최적화 26 — 공유 세션 조회로 수렴
         const data = await getSessionLite();
-        if (data === null) {
-          if (alive) setAdFree(true);
-          return;
-        }
-        const plan =
-          typeof data === "object" && data !== null
-            ? String(
-                (data as { user?: { plan?: unknown } }).user?.plan ?? "free",
-              ).toLowerCase()
-            : "free";
-        if (alive) setAdFree(plan === "pro" || plan === "expert" || plan === "enterprise");
+        /* [1105] null = 힌트 없으면 비회원(광고 대상) · 힌트 있으면 조회 실패(광고 없음) */
+        if (alive) setAdFree(adSenseAdFree(data, readAuthedHint()));
       } catch {
         if (alive) setAdFree(true);
       }

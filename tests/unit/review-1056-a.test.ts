@@ -260,7 +260,7 @@ test("A8 referral redeem — 추천인 수신함 알림(원장 행 확인 뒤) �
   assert.ok(route.includes('.eq("ref_id", `referee:${refereeEmail}`)'), "추천인 적립 행이 있을 때만");
   assert.ok(route.includes("if (result.ok) await notifyReferrer(code, email);"));
   const comp = strip(read("components/ReferralRedeem.tsx"));
-  assert.ok(comp.includes('useToast } from "@/app/components/toast/ToastProvider"'));
+  assert.ok(comp.includes('useToast } from "@/app/components/toast/use-toast"')); // [1104] 훅 모듈로 옮김(perf-1104) — 공급자는 그대로 레이아웃
   assert.ok(comp.includes("`초대 코드 적용 · +${pts}P`"));
   const layout = read("app/layout.tsx");
   assert.ok(layout.indexOf("<ToastProvider>") < layout.indexOf("<ReferralRedeem />"), "Provider 안쪽에 마운트");

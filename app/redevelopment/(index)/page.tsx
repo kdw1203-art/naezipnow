@@ -208,10 +208,12 @@ export default async function RedevelopmentPage() {
           </Fineprint>
         </section>
 
-        {/* ===== 정비사업 지도 히어로 ===== */}
+        {/* ===== 정비사업 지도 히어로 =====
+            [1104] 소유자 시안 승인(2026-11-03 "시안 4장 반영") — 폰은 지도 · 필터가 요약 판보다 먼저(-order-1).
+            요약 판이 495px 라 지도가 두 번째 화면 아래에서 시작했다. PC 는 그대로(요약 → 지도). */}
         {/* [1015] 지도 위 사용법 문장("…걸러 원하는 구역만 골라보세요. 마커·목록을 누르면 …이동해요")은 걷었다
             (브리프 규칙 B) — 필터·마커는 화면이 스스로 말한다. */}
-        <section className="rise-in flex flex-col gap-3">
+        <section className="rise-in flex flex-col gap-3 max-md:-order-1">
           {loadError ? (
             /* 실패를 "구역 없음"으로 바꿔 그리지 않는다 — 둘은 다른 사실이다.
                원인 원문(cause)도 감추지 않고 그대로 보여 준다. */

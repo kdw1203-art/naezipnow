@@ -12,7 +12,7 @@
    마감은 되돌릴 수 없으므로(마감 매물은 수정도 안 된다) 삭제와 같은 2단계 확인을 쓴다. */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import type { ListingType, ListingStatus } from "@/lib/listings/store-db";
 
 const TYPES: { key: ListingType; label: string }[] = [

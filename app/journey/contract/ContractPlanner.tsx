@@ -3,7 +3,7 @@
 import Link from "@/app/components/IntentLink";
 import { useEffect, useState, type ReactNode } from "react";
 import { Icon } from "@/app/components/Icon";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { Won } from "@/app/components/num/Won";
 import { TweenMoney } from "@/app/calculator/TweenMoney";
 import { manwonText, shareText, shareTexts } from "@/lib/finance/money";

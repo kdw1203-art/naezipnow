@@ -25,7 +25,6 @@ import {
   type IdleViewport,
   type ViewportSnapshot,
 } from "@/lib/map/viewport-sync";
-import { cn } from "@/lib/utils";
 import { Icon } from "@/app/components/Icon";
 /* [1009 · C] 마커 말풍선 등락 — 사이트 공통 규칙(상승 ▲ 빨강 · 하락 ▼ 파랑 · ±0.05% 미만 보합) */
 import { deltaDir, deltaText } from "@/lib/format/delta";
@@ -246,6 +245,18 @@ type NaverCircle = {
   setCenter: (c: unknown) => void;
   setRadius: (r: number) => void;
 };
+
+/* [1104 · 번들] tailwind-merge(cn) 대신 단순 잇기 — 이 파일이 cn 을 쓴 곳은 바깥·안쪽 상자 둘뿐인데, 그 때문에 tailwind-merge
+   통째(1103 빌드 별도 청크 20,150B · gzip 6.8KB)가 /map 지도 조각 묶음과 단지·정비사업·노트·매물 지도 조각에 실렸다.
+   호출부 className 이 기본값과 실제로 겹치던 곳은 둘이었다(tests/unit/perf-1104 가 호출부를 훑어 지킨다):
+     · /map(map-client)의 `absolute inset-0 z-0` — 합치기가 기본 `relative` 를 지웠다 → 아래 POSITION_CLASS 로 같은 결과.
+     · 정비사업 지도의 `h-[440px] md:h-[560px]` — 합치기가 기본 `h-full` 을 지웠다 → 높이를 감싸는 상자로 옮겼다(RedevelopmentMap).
+   그 밖의 호출부는 `h-full w-full` 처럼 기본값과 같은 값이라 겹쳐도 결과가 같다. 높이·위치를 바꾸려면 감싸는 상자에 준다. */
+function joinClasses(...parts: Array<string | false | null | undefined>): string {
+  return parts.filter(Boolean).join(" ");
+}
+/** 호출부가 위치 유틸을 주면 기본 `relative` 를 뺀다 — 둘 다 있으면 CSS 순서로 갈려 지도가 0 높이로 접힐 수 있다(아래 컨테이너 주석) */
+const POSITION_CLASS = /(?:^|\s)(?:absolute|fixed|sticky|static)(?:\s|$)/;
 
 export function NaverMap({
   markers = [],
@@ -1165,8 +1176,9 @@ export function NaverMap({
       /* [968 · 27] 지도 위의 끌기는 지도 것 — 설치 앱의 당겨서 새로고침(PullToRefresh)이
          홈 미니맵·정비사업 등 문서 맨 위(scrollY 0)에 놓인 지도에서 발동하지 않게. */
       data-ptr-ignore=""
-      className={cn(
-        "relative h-full w-full min-h-[200px] overflow-hidden",
+      className={joinClasses(
+        !POSITION_CLASS.test(className) && "relative",
+        "h-full w-full min-h-[200px] overflow-hidden",
         rounded && "rounded-2xl",
         className,
       )}
@@ -1205,7 +1217,7 @@ export function NaverMap({
           자기 커서를 따로 갖고 있어서 컨테이너에만 주면 되돌아간다. */}
       <div
         ref={containerRef}
-        className={cn(
+        className={joinClasses(
           "h-full w-full min-h-[200px]",
           crosshair && "cursor-crosshair [&_*]:cursor-crosshair",
         )}

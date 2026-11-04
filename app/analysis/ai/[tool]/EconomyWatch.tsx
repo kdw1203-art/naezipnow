@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { Icon } from "@/app/components/Icon";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 export function EconomyWatch({ currentRate }: { currentRate: number }) {
   const [threshold, setThreshold] = useState(String(Math.round((currentRate + 0.25) * 100) / 100));

@@ -3,7 +3,7 @@
 /* 의뢰자 마감 (953) — 답변 없는 내 상담을 접는다. PATCH { action: "close" } */
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 export function CloseConsult({ expertId, consultationId }: { expertId: string; consultationId: string }) {
   const router = useRouter();

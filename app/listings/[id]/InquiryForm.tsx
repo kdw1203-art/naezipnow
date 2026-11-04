@@ -7,7 +7,7 @@
  */
 import { useState } from "react";
 import Link from "@/app/components/IntentLink";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 const MESSAGE_MAX = 1000;
 

@@ -210,10 +210,11 @@ function AuctionLine({ c }: { c: AuctionCardData }) {
       <span className="flex min-w-0 flex-col gap-0.5">
         <span className="flex min-w-0 items-center gap-1.5">
           {c.dday && (
-            /* [970 · B-35] 좁은 카드에서 "D-17"이 두 줄로 꺾였다 — 줄바꿈·수축 금지 */
+            /* [970 · B-35] 좁은 카드에서 "D-17"이 두 줄로 꺾였다 — 줄바꿈·수축 금지
+               [1104] 임박 = bg-danger-fill(테마 고정) — bg-danger 는 다크에서 #ff6b6b 로 밝아져 흰 "D-DAY" 가 2.77:1(실측 · 폰 목록 전 줄) */
             <span
               className={`shrink-0 whitespace-nowrap rounded-md chip-pad t-caption font-bold text-white ${
-                c.dday.urgent ? "bg-danger" : "bg-primary"
+                c.dday.urgent ? "bg-danger-fill" : "bg-primary"
               }`}
             >
               {c.dday.label}
@@ -233,8 +234,9 @@ function AuctionLine({ c }: { c: AuctionCardData }) {
           {c.bidRatio != null && (
             <>
               {" · 감정가 대비 "}
+              {/* [1104] t-num → tabular-nums — 목록 판(divide-y)의 `.t-num { color: var(--lq-ink) }` 가 빨강·노랑을 덮어 전부 잉크로 그려졌다(실측) */}
               <b
-                className={`t-num ${
+                className={`tabular-nums ${
                   c.bidRatio < 70 ? "text-danger" : c.bidRatio < 90 ? "text-warning" : "text-text-2"
                 }`}
               >
@@ -666,7 +668,8 @@ export function AuctionsClient({
                             <span className="relative h-1.5 flex-1 rounded bg-bg">
                               <span className={`absolute left-0 h-1.5 rounded ${c.bidRatio < 70 ? "bg-danger" : c.bidRatio < 90 ? "bg-warning" : "bg-primary"}`} style={{ width: `${Math.min(100, c.bidRatio)}%` }} />
                             </span>
-                            <span className={`t-caption t-num font-medium ${c.bidRatio < 70 ? "text-danger" : c.bidRatio < 90 ? "text-warning" : "text-text-3"}`}>{c.bidRatio}%</span>
+                            {/* [1104] t-num → tabular-nums — 판 톤의 .t-num 색 규칙이 빨강·노랑을 남색으로 덮었다(실측 · 폰 목록과 같은 원인) */}
+                            <span className={`t-caption tabular-nums font-medium ${c.bidRatio < 70 ? "text-danger" : c.bidRatio < 90 ? "text-warning" : "text-text-3"}`}>{c.bidRatio}%</span>
                           </span>
                         )}
                       </span>

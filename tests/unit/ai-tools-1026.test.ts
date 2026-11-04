@@ -259,7 +259,7 @@ test("[1026→1026b] 번들 — WorkbenchClient 정적 import: StepLine · [1026
     "@/app/analysis/use-map-pick",
     "@/app/components/IntentLink", // [1088] next/link → 손이 닿을 때만 미리 받는 같은 링크
     "@/app/components/StepLine",
-    "@/app/components/toast/ToastProvider",
+    "@/app/components/toast/use-toast", // [1104] 훅만 — 공급자 본체(ToastProvider)는 레이아웃만 싣는다(perf-1104)
     "@/app/components/ui/Skeleton",
     "@/lib/ai/ai-tools",
     "@/lib/ai/tool-persona",

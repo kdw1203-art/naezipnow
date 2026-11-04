@@ -676,9 +676,9 @@ html.dark {
   --lq-sand-ink: #e5b56a;
   --lq-edge: rgba(255, 255, 255, 0.07);
 }
-main :where(ul, ol, dl, div, nav)[class~="divide-y"],
+main :where(ul, ol, dl, div, nav).divide-y,
 main .lq-panel,
-.lq-scope :where(ul, ol, dl, div, nav)[class~="divide-y"],
+.lq-scope :where(ul, ol, dl, div, nav).divide-y,
 .lq-scope .lq-panel {
   --lq-tint: var(--lq-blue);
   --lq-ink: var(--lq-blue-ink);
@@ -695,15 +695,15 @@ main .lq-panel,
 }
 /* 톤 — `data-tone` 이 우선(specificity 를 :where 로 0 으로 눌러 자동 순환이 절대 이기지 못하게).
    data-tone 이 없는 묶음만 섹션 순서로 순환한다. */
-main :where(:is(section, article):nth-of-type(4n + 2)) :where([class~="divide-y"], .lq-panel):not([data-tone]) {
+main :where(:is(section, article):nth-of-type(4n + 2)) :where(.divide-y, .lq-panel):not([data-tone]) {
   --lq-tint: var(--lq-hanji);
   --lq-ink: var(--lq-hanji-ink);
 }
-main :where(:is(section, article):nth-of-type(4n + 3)) :where([class~="divide-y"], .lq-panel):not([data-tone]) {
+main :where(:is(section, article):nth-of-type(4n + 3)) :where(.divide-y, .lq-panel):not([data-tone]) {
   --lq-tint: var(--lq-mint);
   --lq-ink: var(--lq-mint-ink);
 }
-main :where(:is(section, article):nth-of-type(4n + 4)) :where([class~="divide-y"], .lq-panel):not([data-tone]) {
+main :where(:is(section, article):nth-of-type(4n + 4)) :where(.divide-y, .lq-panel):not([data-tone]) {
   --lq-tint: var(--lq-sand);
   --lq-ink: var(--lq-sand-ink);
 }
@@ -725,8 +725,8 @@ main :where(:is(section, article):nth-of-type(4n + 4)) :where([class~="divide-y"
 }
 /* [1018] 소유자(청약 센터 캡처): "노란색으로 되어 있는 걸 다시 다른 색상처럼 흰색으로" — 한지·모래 톤 판은 색면이 노랗게 읽혔다.
    두 톤은 판 채움을 흰색으로(테두리·행 선·숫자색·온점은 톤 그대로). 파랑·민트는 9% 채움이 거의 흰색이라 그대로. */
-main :where(:is(section, article):nth-of-type(4n + 2)) :where([class~="divide-y"], .lq-panel):not([data-tone]),
-main :where(:is(section, article):nth-of-type(4n + 4)) :where([class~="divide-y"], .lq-panel):not([data-tone]),
+main :where(:is(section, article):nth-of-type(4n + 2)) :where(.divide-y, .lq-panel):not([data-tone]),
+main :where(:is(section, article):nth-of-type(4n + 4)) :where(.divide-y, .lq-panel):not([data-tone]),
 :is(main, .lq-scope) [data-tone="hanji"],
 :is(main, .lq-scope) [data-tone="sand"] {
   --lq-fill: var(--surface);
@@ -746,15 +746,15 @@ main :where(:is(section, article):nth-of-type(4n + 4)) :where([class~="divide-y"
   border-color: var(--border);
 }
 /* 행 사이 선도 같은 톤으로 옅게 · 누르면 그 톤이 살짝 짙어진다 */
-:is(main, .lq-scope) :is([class~="divide-y"], .lq-panel) > * {
+:is(main, .lq-scope) :is(.divide-y, .lq-panel) > * {
   border-color: color-mix(in srgb, var(--lq-tint) 18%, var(--border));
 }
-:is(main, .lq-scope) :is([class~="divide-y"], .lq-panel) > :is(a, button, li:has(> a), li:has(> button)):hover {
+:is(main, .lq-scope) :is(.divide-y, .lq-panel) > :is(a, button, li:has(> a), li:has(> button)):hover {
   background: color-mix(in srgb, var(--lq-tint) 7%, transparent);
   margin-inline: -14px;
   padding-inline: 14px;
 }
-:is(main, .lq-scope) :is([class~="divide-y"], .lq-panel) .t-num {
+:is(main, .lq-scope) :is(.divide-y, .lq-panel) .t-num {
   color: var(--lq-ink);
 }
 /* 섹션 제목 앞 톤 온점 — 그 섹션 첫 목록의 data-tone 을 따르고, 없으면 섹션 순서 순환 */
@@ -777,7 +777,7 @@ main :is(section, article):has([data-tone="hanji"]) { --lq-dot: var(--lq-hanji);
 main :is(section, article):has([data-tone="mint"]) { --lq-dot: var(--lq-mint); }
 main :is(section, article):has([data-tone="sand"]) { --lq-dot: var(--lq-sand); }
 /* 가로 스크롤 상자 안의 판은 잘리지 않게 */
-:is(main, .lq-scope) :is([class~="divide-y"], .lq-panel):is([class~="overflow-x-auto"], [class~="overflow-y-auto"]) {
+:is(main, .lq-scope) :is(.divide-y, .lq-panel):is([class~="overflow-x-auto"], [class~="overflow-y-auto"]) {
   overflow: auto;
 }
 /* 크롬(헤더·탭바·붙는 탭 줄)은 반투명 유리 — 본문이 아래로 비쳐 지나간다 */
@@ -794,8 +794,10 @@ main :is(section, article):has([data-tone="sand"]) { --lq-dot: var(--lq-sand); }
 }
 
 /* 키보드 열림(입력 포커스) 시 하단 탭바 자동 숨김 — TabBar nav에 .tabbar-autohide 부여 */
-body:has(input:focus-visible) .tabbar-autohide,
-body:has(textarea:focus-visible) .tabbar-autohide {
+/* [1104 · 속도] `body:has(input:focus-visible)` → html[data-nz-typing]. 판정(지금 포커스가 input/textarea:focus-visible 인가)은
+   app/layout.tsx TYPING_SCRIPT 가 포커스 이벤트로 그대로 한다. body 를 :has() 앵커로 두면 body 아래 DOM 이 바뀔 때마다
+   그 :has 를 다시 판정해 body 밑 전체를 훑었다(사유·실측은 그 주석). 사이의 `body` 는 특이성을 예전(0,2,2)과 맞추려는 것. */
+html[data-nz-typing] body .tabbar-autohide {
   display: none;
 }
 
@@ -2175,7 +2177,7 @@ body:has(textarea:focus-visible) .tabbar-autohide {
    저장·로그인이 성사되는 순간.
 
    ── transform 금지 구역 ────────────────────────────────────
-   페이지 전환은 `<body>` 에 클래스를 붙여 재생하는데, 여기서 transform/filter 를
+   페이지 전환은 `<body>` 에 애니메이션을 걸어 재생하는데([1105] class 대신 body.animate()), 여기서 transform/filter 를
    쓰면 안 된다. 그 둘은 자손 `position: fixed` 의 컨테이닝 블록을 만들어서,
    애니메이션이 도는 동안 하단 탭바(.tabbar-autohide 는 fixed)가 뷰포트가 아니라
    문서 박스를 기준으로 잡힌다 — 긴 페이지에서는 탭바가 화면 밖으로 날아간다.
@@ -2185,19 +2187,10 @@ body:has(textarea:focus-visible) .tabbar-autohide {
    ============================================================ */
 
 /* ---------- 1. 페이지 전환 ---------- */
-@keyframes pageFade {
-  from {
-    opacity: 0.45;
-  }
-  to {
-    opacity: 1;
-  }
-}
 /* 0 이 아니라 0.45 에서 시작한다. 0 이면 전환마다 흰 화면이 한 번 번쩍이고,
-   그건 "부드럽다"가 아니라 "깜빡인다"로 읽힌다. */
-.page-enter {
-  animation: pageFade var(--dur-page) var(--ease-out) both;
-}
+   그건 "부드럽다"가 아니라 "깜빡인다"로 읽힌다.
+   [1105 · 속도] 키프레임(0.45 → 1) · --dur-page · --ease-out 페이드는 PageTransition 이 body.animate() 로 건다 —
+   예전 .page-enter class(붙였다 떼기 · 강제 리플로우)를 걷었다. 값은 이 토큰과 같다(tests/unit/perf-1105 가 맞춰 본다). */
 
 /* ---------- 2. 상단 네비게이션 진행바 ---------- */
 /* 링크를 누른 순간부터 새 화면이 그려질 때까지의 공백을 메운다. 이 구간이
@@ -2540,8 +2533,8 @@ body:has(textarea:focus-visible) .tabbar-autohide {
 /* ---------- 7. 접근성: 모션 최소화 ---------- */
 /* 여기 빠뜨린 클래스는 그대로 움직인다. 새 모션을 더할 때는 반드시 이 목록에
    같이 적는다 — 이 블록이 비어 가는 순간 위 규칙은 문서상의 약속만 남는다. */
+/* [1105] 페이지 전환은 여기 없다 — PageTransition 이 같은 값(fadeIn 0 → 1 · 150ms ease)을 matchMedia 로 골라 건다 */
 @media (prefers-reduced-motion: reduce) {
-  .page-enter,
   .moment-layer,
   .moment-card,
   [data-reveal="shown"] {
@@ -5061,10 +5054,9 @@ html[data-lowend] body::after {
    fixed 요소가 키보드 위로 올라오긴 하지만, 남은 화면의 아래 60px 을 바가 가리면
    입력 중인 줄이 안 보인다. 포커스가 풀리면 다시 나타난다. */
 @media (pointer: coarse) {
-  body:has(input:focus-visible) .note-savebar,
-  body:has(textarea:focus-visible) .note-savebar,
-  body:has(input:focus-visible) .complex-actionbar,
-  body:has(textarea:focus-visible) .complex-actionbar {
+  /* [1104 · 속도] 위 탭바 규칙과 같이 :has() → html[data-nz-typing](app/layout.tsx TYPING_SCRIPT) */
+  html[data-nz-typing] body .note-savebar,
+  html[data-nz-typing] body .complex-actionbar {
     display: none;
   }
 }
@@ -8643,3 +8635,51 @@ html[data-ad-free="1"] :is(.ad-zone, .ad-strip, [data-ad-gate]) {
     min-height: 90px;
   }
 }
+
+/* [1104 · 다크 · 접근성 점검] append-only — 기존 토큰만(새 hex 없음).
+   ① 밑줄 탭(.news-tabs · 지역 화면 공통 탭 .region-tabs 포함)의 키보드 포커스 링을 안쪽으로 그린다.
+      탭 줄이 가로 밀기(overflow-x:auto)라 바깥 2px 링의 위 · 아래 · 첫 탭 왼쪽이 잘려 오른쪽 2px 세로줄만 남았다(실측 /region/gangnam). */
+.news-tabs > :is(a, button):focus-visible {
+  outline-offset: -2px;
+}
+/* ② 시장 온도 타일 — 진한 두 면 위 글자가 본문 하한(4.5)에 못 미쳤다(실측 · 경기 드릴다운).
+      hot: 한지 글자 / --brand-red 라이트 4.32 · 다크 3.35 → 채움을 --danger-fill(테마 고정 · 흰 글자용 빨강)로: 4.99.
+      warm: 한지 글자 / --brand-red-on-dark 2.81 → 글자를 남색(--brand-navy · 고정)으로: 4.86. 면은 그대로라 색 단계는 유지된다.
+      보조 줄(.tmp-tile-d)의 85% 투명도는 진한 면 · cool 면에서 대비를 깎았다(cool 라이트 4.49) — 세 면만 100%. */
+.tmp-tile[data-band="hot"] {
+  background: var(--danger-fill);
+}
+.tmp-tile[data-band="warm"] {
+  color: var(--brand-navy);
+}
+.tmp-tile:is([data-band="hot"], [data-band="warm"], [data-band="cool"]) .tmp-tile-d {
+  opacity: 1;
+}
+.tmp-legend i[data-band="hot"] {
+  background: var(--danger-fill);
+}
+
+/* [1104 · 속도] 위 리퀴드 판 규칙들의 class 속성 선택자(class~= divide-y)를 같은 뜻의 .divide-y 로 바꿨다(매칭 동일 · 특이성 동일 0,1,0).
+   class 속성 선택자에 * 자식이 붙은 규칙은 <html>/<body> 의 class 가 바뀔 때마다 페이지 전체(≈860 요소)를 다시 계산하게 했다
+   (폰 4배 감속 실측: 첫 로드 전체 재계산 237ms → 89ms). */
+
+/* [1105 · 속도] body 의 직계 자식 링크(본문 바로가기)는 밑줄을 물려받지 않고 처음부터 "없음" — 보이는 값은 같다(body 에 밑줄이 없다).
+   Tailwind 기본 규칙 `a { text-decoration: inherit }` 는 상속되지 않는 속성을 inherit 으로 받는다. 그런 자식이 하나라도 있으면
+   크롬은 body 스타일이 바뀔 때마다 body 의 자식 **전부**(RSC <script> 수십~백여 개 포함)를 다시 계산한다 — 페이지 전환 페이드
+   300ms 동안 매 프레임, body class 가 바뀔 때마다(쿠키 배너 표식 등). 1104 빌드 실측(폰 390 · CPU 4배 · 홈): 프레임마다 87 → 9개,
+   이동 한 번 창 750ms 의 스타일 92 → 22ms · 페인트류 96 → 37ms. base 레이어라 이 자리에 붙은 underline 같은 유틸리티는 그대로 이긴다. */
+@layer base {
+  body > a {
+    text-decoration: none;
+  }
+}
+
+/* [1105 · 접근성] 가로 밀기 줄의 키보드 포커스 링을 안쪽으로 그린다(1104 .news-tabs 와 같은 방식 · 포커스 아닐 때 그림 변화 없음).
+   overflow-x:auto 틀은 바깥 2px 링의 위 · 아래(첫 칩은 왼쪽도)를 잘랐다(실측 /calculator · /complex/browse · /complex/compare 칩 줄 4px).
+   HScroll 틀 자신(넘칠 때 tabIndex=0)의 바깥 링은 오른쪽 흐림 마스크가 통째로 지웠다 — 안쪽이면 보인다.
+   data-hscroll = HScroll 틀 · 비교 허브 지역 칩 줄 / .scroll-x-hidden-bar = 막대 숨긴 칩 줄(단지 목록 구 칩 등). 색은 각 규칙 그대로 */
+:is([data-hscroll], .scroll-x-hidden-bar) :is(a, button, summary, input, select, textarea, [tabindex]):focus-visible,
+[data-hscroll]:focus-visible {
+  outline-offset: -2px;
+}
+

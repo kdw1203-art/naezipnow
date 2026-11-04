@@ -7,7 +7,7 @@ import Link from "@/app/components/IntentLink";
 import nextDynamic from "next/dynamic";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { useUpgradePaywall } from "@/app/components/upgrade-paywall-context";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { Icon } from "@/app/components/Icon";
 import { fromHubTradeWire, type HubTrade, type HubTradeWire } from "@/lib/complex/hub-trades";
 import type { DealTuple } from "@/lib/complex/hub-price";

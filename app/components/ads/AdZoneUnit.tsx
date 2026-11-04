@@ -10,6 +10,9 @@ import {
   type AdPlacement,
 } from "@/lib/ads/adsense-policy";
 import { getSessionLite } from "@/lib/client/session-lite";
+import { adSenseAdFree } from "@/lib/ads/ad-free";
+import { readAuthedHint } from "@/lib/auth/authed-hint";
+import { whenBoxVisible } from "@/lib/ads/push-when-visible";
 
 declare global {
   interface Window {
@@ -38,6 +41,7 @@ export function AdZoneUnit({ placement, className = "" }: { placement: AdPlaceme
 
   const [adFree, setAdFree] = useState<boolean | null>(null);
   const pushedRef = useRef(false);
+  const boxRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (!enabled) return;
@@ -45,12 +49,8 @@ export function AdZoneUnit({ placement, className = "" }: { placement: AdPlaceme
     (async () => {
       const s = await getSessionLite();
       if (!alive) return;
-      if (s === null) {
-        setAdFree(true);
-        return;
-      }
-      const plan = String(s.user?.plan ?? "free").toLowerCase();
-      setAdFree(plan === "pro" || plan === "expert" || plan === "enterprise");
+      /* [1105] null = 힌트 없으면 비회원(광고 대상) · 힌트 있으면 조회 실패(안 띄운다) — 예전엔 비회원에게도 안 그렸다 */
+      setAdFree(adSenseAdFree(s, readAuthedHint()));
     })();
     return () => {
       alive = false;
@@ -59,21 +59,29 @@ export function AdZoneUnit({ placement, className = "" }: { placement: AdPlaceme
 
   const show = enabled && adFree === false;
 
+  /* [1105] 칸 상자가 보일 때만 <ins> 를 그리고 push(lib/ads/push-when-visible 머리 주석) */
+  const [boxVisible, setBoxVisible] = useState(false);
   useEffect(() => {
-    if (!show || pushedRef.current) return;
+    if (!show) return;
+    return whenBoxVisible(boxRef.current, () => setBoxVisible(true));
+  }, [show]);
+
+  useEffect(() => {
+    if (!show || !boxVisible || pushedRef.current) return;
     pushedRef.current = true;
     try {
       (window.adsbygoogle = window.adsbygoogle || []).push({});
     } catch {
       /* 광고 차단기 등 — 대체 카드가 자리를 채운다 */
     }
-  }, [show]);
+  }, [show, boxVisible]);
 
   if (!show) return null;
 
   return (
-    <div className={`ad-zone-unit ${className}`}>
+    <div ref={boxRef} className={`ad-zone-unit ${className}`}>
       <div className="ad-zone-label mb-1">광고</div>
+      {boxVisible && (
       <ins
         className="adsbygoogle"
         style={{ display: "block" }}
@@ -83,6 +91,7 @@ export function AdZoneUnit({ placement, className = "" }: { placement: AdPlaceme
         data-ad-layout={inArticle ? "in-article" : undefined}
         data-full-width-responsive={inArticle ? undefined : "true"}
       />
+      )}
     </div>
   );
 }

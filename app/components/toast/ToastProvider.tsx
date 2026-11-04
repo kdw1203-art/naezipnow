@@ -2,14 +2,16 @@
 
 import Link from "@/app/components/IntentLink";
 import {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
   useRef,
   useState,
 } from "react";
 import type { ReactNode } from "react";
+/* [1104] 컨텍스트 · 훅 · 타입은 use-toast.ts 로 옮겼다(훅만 쓰는 화면 청크에 공급자 본체가 딸려 가지 않게) — 예전 경로 그대로 쓰도록 다시 내보낸다 */
+import { ToastContext, useToast, type ToastAction } from "./use-toast";
+export { useToast };
+export type { ToastAction };
 
 /* 공용 토스트 (#42 · 961 브랜드 모션) — 동작 후 확인 피드백을 사이트 전역에서 일관되게.
    스펙: 동시 1개 · 3초(액션 있으면 5초) · 모바일 탭바 위 · 액션 최대 1개.
@@ -18,20 +20,7 @@ import type { ReactNode } from "react";
    띄우는 대신 흐름을 끊지 않고 되돌릴 길을 준다(인터랙션 라이브러리 06).
    Provider 밖에서 useToast()가 호출돼도 no-op으로 안전. */
 
-export type ToastAction =
-  | { label: string; href: string; onClick?: never }
-  | { label: string; onClick: () => void; href?: never };
-type ToastContextValue = {
-  showToast: (message: string, action?: ToastAction) => void;
-};
 type ToastState = { id: number; message: string; action?: ToastAction; leaving: boolean };
-
-const ToastContext = createContext<ToastContextValue | null>(null);
-
-export function useToast(): ToastContextValue {
-  const ctx = useContext(ToastContext);
-  return ctx ?? { showToast: () => {} };
-}
 
 const HOLD_MS = 3000;
 const HOLD_WITH_ACTION_MS = 5000;

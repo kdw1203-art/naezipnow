@@ -378,15 +378,19 @@ export function RedevelopmentMap({
         <div className="card overflow-hidden rounded-2xl p-1.5">
           {/* [1030 · G5] 겹침 정리 — 40곳 이름표가 서울 중심에 포개졌다(한남2·압구정3·반포주공1·잠실주공5 …). 겹치는 구역은
               색 점으로 접히고 확대하면 이름이 돌아온다(/map 과 같은 declutterMarkers). */}
-          <NaverMap
-            markers={markers}
-            center={center}
-            level={level}
-            fitToMarkers
-            declutter
-            className="h-[440px] md:h-[560px]"
-            onMarkerClick={handleMarkerClick}
-          />
+          {/* [1104 · 번들] 높이는 감싸는 상자가 준다 — NaverMap 이 tailwind-merge 를 걷어, 지도에 h-[440px] 를 주면 기본 h-full 과
+              둘 다 남아 CSS 순서로 갈린다(NaverMap joinClasses 주석). 지도 상자 크기는 예전과 같다(폭 100% · 440/560px). */}
+          <div className="h-[440px] md:h-[560px]">
+            <NaverMap
+              markers={markers}
+              center={center}
+              level={level}
+              fitToMarkers
+              declutter
+              className="h-full w-full"
+              onMarkerClick={handleMarkerClick}
+            />
+          </div>
         </div>
       ) : null}
 

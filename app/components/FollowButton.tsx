@@ -11,7 +11,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 export function FollowButton({ handle }: { handle: string }) {
   const pathname = usePathname();

@@ -8,7 +8,7 @@ import { loginHrefWithNext } from "@/lib/auth/auth-ux";
 import { ReportButton } from "@/app/components/ReportButton";
 import { CharCount } from "@/app/components/ui/CharCount";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 /* [967 · 12] 임장노트 댓글 — app/town/news/[id]/CommentThread 를 본떴다(1단계 답글).
  *

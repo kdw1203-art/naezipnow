@@ -1,9 +1,9 @@
-/** KOSIS 국가통계포털 Open API 클라이언트 (서버 전용). */
+/** KOSIS 국가통계포털 Open API 클라이언트 (서버 전용). 요청 주소 · 응답 해석 · 지역 매핑은 ./parse (순수). */
 import { logger } from "@/lib/log";
-import { matchRegionFromClsFullNm, matchRegionByName, type RegionMatch } from "@/lib/market/region-code";
 import type { KosisTable } from "./stat-tables";
+import { buildKosisUrl, mapKosisRows, parseKosisResponse, type KosisDataRow } from "./parse";
 
-const BASE = "https://kosis.kr/openapi/Param/statisticsParameterData.do";
+export type { KosisDataRow } from "./parse";
 
 export function kosisKey(): string {
   return process.env.KOSIS_API_KEY?.trim() ?? "";
@@ -13,115 +13,52 @@ export function isKosisConfigured(): boolean {
   return kosisKey().length > 0;
 }
 
-export interface KosisDataRow {
-  region: RegionMatch;
-  /** yyyymm 또는 yyyy */
-  period: string;
-  itmNm: string;
-  value: number;
-}
-
-/** KOSIS Param 자료 API 응답 한 행 */
-interface RawKosisRow {
-  PRD_DE?: string; // 수록시점 (예: 202404, 2024)
-  C1?: string;
-  C1_NM?: string; // 분류1 명 (보통 시도)
-  C2?: string;
-  C2_NM?: string; // 분류2 명 (보통 시군구)
-  ITM_ID?: string;
-  ITM_NM?: string; // 항목명
-  DT?: string | number; // 값
-  UNIT_NM?: string;
-}
-
-function toRegion(row: RawKosisRow): RegionMatch | null {
-  // 시군구가 분류2에 오는 표: "시도>시군구" 조합 우선
-  if (row.C1_NM && row.C2_NM) {
-    const full = matchRegionFromClsFullNm(`${row.C1_NM}>${row.C2_NM}`);
-    if (full) return full;
-    const byName = matchRegionByName(row.C2_NM, normalizeCity(row.C1_NM));
-    if (byName) return byName;
-  }
-  // 시군구가 분류1에 오는 표
-  if (row.C1_NM) {
-    const byName = matchRegionByName(row.C1_NM);
-    if (byName) return byName;
-  }
-  return null;
-}
-
-function normalizeCity(sido: string): string | undefined {
-  const s = sido.trim();
-  if (!s) return undefined;
-  if (s.startsWith("서울")) return "서울";
-  if (s.startsWith("경기")) return "경기";
-  if (s.startsWith("인천")) return "인천";
-  return undefined;
+export interface KosisFetchResult {
+  rows: KosisDataRow[];
+  /** KOSIS 가 돌려준 행 수(지역 매핑 전) */
+  received: number;
+  /** 지역을 못 찾은 행 수 */
+  unmatched: number;
+  /** [1104] 실패 사유 — KOSIS err 코드·문구 · HTTP · 시간 초과. 예전엔 경고 로그로만 남기고 빈 배열(=0건)이었다 */
+  error: { code: string; message: string } | null;
 }
 
 /**
- * 한 KOSIS 통계표의 최신 N개 시점을 내부 지역으로 매핑해 반환.
- * 키 미설정·인증실패·표 없음 등은 모두 graceful 하게 빈 배열을 반환한다.
+ * 한 KOSIS 통계표의 최신 N개 시점을 내부 지역으로 매핑해 반환. 던지지 않는다 —
+ * 실패는 error 에 코드·문구로 담아 수집 기록(market_ingest_log)에 그대로 남긴다.
+ * 요청 주소에 apiKey 가 있으므로 주소는 어디에도 싣지 않는다.
  */
 export async function fetchKosisTable(
   table: KosisTable,
   opts: { recentCount?: number } = {},
-): Promise<KosisDataRow[]> {
-  if (!isKosisConfigured()) return [];
-  const qs = new URLSearchParams({
-    method: "getList",
-    apiKey: kosisKey(),
-    itmId: table.itmId ?? "ALL",
-    objL1: table.objL1 ?? "ALL",
-    format: "json",
-    jsonVifId: "",
-    prdSe: table.prdSe,
-    newEstPrdCnt: String(opts.recentCount ?? (table.prdSe === "M" ? 2 : 1)),
-    orgId: table.orgId,
-    tblId: table.tblId,
-  });
-  if (table.objL2) qs.set("objL2", table.objL2);
+): Promise<KosisFetchResult> {
+  const empty = (error: KosisFetchResult["error"]): KosisFetchResult => ({ rows: [], received: 0, unmatched: 0, error });
+  if (!isKosisConfigured()) return empty({ code: "10", message: "KOSIS_API_KEY 미설정" });
 
   let text: string;
   try {
-    const res = await fetch(`${BASE}?${qs.toString()}`, {
+    const res = await fetch(buildKosisUrl(table, { apiKey: kosisKey(), recentCount: opts.recentCount }), {
       headers: { Accept: "application/json" },
       signal: AbortSignal.timeout(20_000),
+      cache: "no-store",
     });
-    if (!res.ok) throw new Error(`KOSIS HTTP ${res.status}`);
     text = await res.text();
+    if (!res.ok) {
+      logger.warn(`[kosis] ${table.label} HTTP ${res.status}`);
+      return empty({ code: `HTTP ${res.status}`, message: "" });
+    }
   } catch (err) {
-    logger.warn(`[kosis] ${table.label} fetch failed`, err);
-    return [];
+    const timeout = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+    logger.warn(`[kosis] ${table.label} fetch failed`, err instanceof Error ? err.name : String(err));
+    return empty({ code: timeout ? "timeout" : "network", message: "" });
   }
 
-  let json: unknown;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    // KOSIS 오류는 JSON 비표준 형태({err:"11",...})로 옴 → 인증 대기/실패
-    logger.warn(`[kosis] ${table.label} non-JSON response`, text.slice(0, 120));
-    return [];
+  const parsed = parseKosisResponse(text);
+  if (!parsed.ok) {
+    // [1104] 실패 코드를 버리지 않는다 — 인증키(10·11) · 요청변수(20·21) · 자료 없음(30) 을 기록에서 가른다
+    logger.warn(`[kosis] ${table.label} err ${parsed.code}`, parsed.message);
+    return empty({ code: parsed.code, message: parsed.message });
   }
-  if (!Array.isArray(json)) {
-    logger.warn(`[kosis] ${table.label} unexpected payload`, JSON.stringify(json).slice(0, 120));
-    return [];
-  }
-
-  const rows = json as RawKosisRow[];
-  const out: KosisDataRow[] = [];
-  for (const r of rows) {
-    if (table.itmNmIncludes && !(r.ITM_NM ?? "").includes(table.itmNmIncludes)) continue;
-    const region = toRegion(r);
-    if (!region) continue;
-    const value = typeof r.DT === "string" ? Number(r.DT.replace(/,/g, "")) : r.DT;
-    if (value == null || !Number.isFinite(value)) continue;
-    out.push({
-      region,
-      period: String(r.PRD_DE ?? ""),
-      itmNm: String(r.ITM_NM ?? ""),
-      value,
-    });
-  }
-  return out;
+  const mapped = mapKosisRows(table, parsed.rows);
+  return { rows: mapped.rows, received: parsed.rows.length, unmatched: mapped.unmatched, error: null };
 }

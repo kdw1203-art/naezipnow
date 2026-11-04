@@ -45,14 +45,15 @@ test("[1026] 면적대별 — 결론 '남양주시 60~85㎡ 거래 최다 3,852�
   const c = priceConclusion("남양주시", NAMYANGJU_60_85, true);
   assert.equal(c.title, "남양주시 60~85㎡ 거래 최다 3,852건 · 중앙 5.5억");
   assert.deepEqual(c.chip, { label: "평단가 상위 19%", tone: "neutral" });
-  assert.equal(c.sub, "평당 2,402만 · 247개 단지 · 실거래 1.2억~14억");
+  /* [1104] 소유자 시안 승인 — 근거 줄 없음(아래 면적대 칸 · 범위 카드와 같은 수) */
+  assert.equal(c.sub, null);
   /* 다른 칸을 고르면 "거래 최다"가 빠지고 그 칸의 값으로 */
   const other = priceConclusion("남양주시", { ...NAMYANGJU_60_85, label: "85~102㎡", txCount: 253, medianText: "7.3억", top: 31 }, false);
   assert.equal(other.title, "남양주시 85~102㎡ 253건 · 중앙 7.3억");
   /* 분위가 없으면: 거래 최다 칸만 "거래 최다", 아니면 칩 없음(지어내지 않는다) */
   assert.deepEqual(priceConclusion("남양주시", { ...NAMYANGJU_60_85, top: null }, true).chip, { label: "거래 최다", tone: "neutral" });
   assert.equal(priceConclusion("남양주시", { ...NAMYANGJU_60_85, top: null }, false).chip, null);
-  assert.equal(priceConclusion("남양주시", { ...NAMYANGJU_60_85, perText: null }, true).sub, "247개 단지 · 실거래 1.2억~14억");
+  assert.equal(priceConclusion("남양주시", { ...NAMYANGJU_60_85, perText: null }, true).sub, null);
 
   const plan = priceSteps("남양주시", NAMYANGJU_60_85);
   assert.equal(plan.current, 2);
@@ -77,9 +78,10 @@ test("[1026] 시세·타이밍 — 결론 '서울 강남구 지수 -0.42% · 온
   const c = timingConclusion(input)!;
   assert.equal(c.title, "서울 강남구 지수 -0.42% · 온도 37");
   assert.deepEqual(c.chip, { label: "서늘함", tone: "neutral" });
-  assert.equal(c.sub, "매매가격지수 100.1pt · 지난달 대비 -0.42% · 기간 누적 +5.2% · 추세 상승 지속");
+  /* [1104] 소유자 시안 승인 — "지난달 대비"는 제목의 "지수 -0.42%"와 같은 수라 근거 줄에서 뺐다 */
+  assert.equal(c.sub, "매매가격지수 100.1pt · 기간 누적 +5.2% · 추세 상승 지속");
   assert.equal(timingConclusion({ ...input, latestChangePct: 0.02 })!.title, "서울 강남구 지수 보합 · 온도 37", "±0.05% 미만은 보합");
-  assert.ok(timingConclusion({ ...input, weekly: true })!.sub!.includes("지난주 대비"));
+  assert.ok(!timingConclusion({ ...input, weekly: true })!.sub!.includes("대비"));
   /* 온도가 없으면 칩은 지수 판정(보통) · 지수도 온도도 없으면 결론 없음 */
   assert.deepEqual(timingConclusion({ ...input, tempScore: null, tempHeadline: null })!.chip, { label: "상승 지속", tone: "neutral" });
   assert.equal(timingConclusion({ ...input, latestChangePct: null, cumulativePct: null, verdict: null, latestIndex: null, tempScore: null, tempHeadline: null }), null);

@@ -10,7 +10,7 @@ import {
   subscribeCompareTray,
   toggleCompareTray,
 } from "@/lib/newui/compare-tray";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 /* 비교 담기 버튼 — lib/newui/compare-tray (localStorage, 최대 5개).
  *

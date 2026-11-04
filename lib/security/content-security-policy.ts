@@ -34,12 +34,15 @@ export function buildContentSecurityPolicy(
   /* [1030 · 3차] fundingchoicesmessages.google.com — 애드센스 스크립트(pagead2)가 광고 차단 복구·동의 메시지용으로
      같이 불러오는 구글 도메인. 막혀 있어 **모든 화면**에서 콘솔 오류 1건 + CSP 위반 리포트 1건(7일 739건 =
      /api/security/csp-report 함수 호출 739회 · 2026-10-04 Vercel 로그, 리포트 전부 이 도메인)이 났다. */
+  /* [1105] *.adtrafficquality.google — 애드센스 부정 트래픽 점검(sodar) 스크립트 · 설정 · 프레임. 1105 에서 비회원 광고 잠금이 처음으로 풀리자
+     로컬 실측에서 connect-src 위반("ep1.adtrafficquality.google/getconfig/sodar")이 났다 — Google 의 애드센스 CSP 안내 목록에 있는 도메인이다.
+     frame-src 의 www.google.com 도 같은 실측("Refused to frame https://www.google.com/") — 애드센스가 띄우는 프레임. */
   const googleAdsScript =
-    "https://www.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://www.googleadservices.com https://www.gstatic.com https://www.google.com https://fundingchoicesmessages.google.com";
+    "https://www.googletagmanager.com https://pagead2.googlesyndication.com https://*.googlesyndication.com https://www.googleadservices.com https://www.gstatic.com https://www.google.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google";
   const googleAdsConnect =
-    "https://*.googlesyndication.com https://*.doubleclick.net https://www.googleadservices.com https://www.google.com https://www.gstatic.com https://fundingchoicesmessages.google.com";
+    "https://*.googlesyndication.com https://*.doubleclick.net https://www.googleadservices.com https://www.google.com https://www.gstatic.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google";
   const googleAdsFrame =
-    "https://googleads.g.doubleclick.net https://*.googlesyndication.com https://tpc.googlesyndication.com";
+    "https://googleads.g.doubleclick.net https://*.googlesyndication.com https://tpc.googlesyndication.com https://*.adtrafficquality.google https://www.google.com";
 
   /* 토스페이먼츠 결제위젯/결제창 v2 — SDK 는 js.tosspayments.com 에서 로드되고
      (cdn.toss.im 은 구 SDK 도메인), 위젯 UI·본인인증은 iframe 과 API 호출을

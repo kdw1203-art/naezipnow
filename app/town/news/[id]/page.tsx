@@ -429,7 +429,9 @@ export default async function TownNewsDetailPage({
                 [970 · C-12] 로드 실패 시 NewsHero 가 상자·캡션까지 통째로 치운다. */}
             {heroImage ? <NewsHero src={heroImage} sourceName={post.sourceName} /> : null}
 
-            <div className="flex flex-col gap-4 t-body leading-[1.85] text-text-1">
+            {/* [1104] wrap-anywhere — 자동 집계 글 본문의 긴 주소(naezipnow.com/map?q=%EA… 퍼센트 인코딩 한 덩어리)가 keep-all 에서
+                끊을 자리가 없어 390 폰에서 문서 폭이 665px 로 늘었다(화면이 축소돼 그려짐 · 실측). 넘칠 때만 아무 데서나 끊는다 */}
+            <div className="flex flex-col gap-4 t-body leading-[1.85] text-text-1 wrap-anywhere">
               {/* 우리가 쓴 요약 — 원문 문장을 옮기지 않고 핵심 사실만 재구성한 글 */}
               {summaryParas.map((t, i) => (
                 <p key={`sum-${i}`}>{t}</p>
@@ -476,11 +478,13 @@ export default async function TownNewsDetailPage({
             {/* [1103 · 같은 사실 한 번] 문답은 접어 둔다 — 답이 위 AI 요약 · 본문의 수(건수 · 비율)를 그대로 되풀이해 폰에서 같은 숫자를
                 세 번 읽었다. 내용은 그대로 DOM 에 있다(접힌 문답도 보이는 내용 — FAQPage 와 같은 배열). */}
             {faq.length > 0 ? (
-              <details aria-label="자주 묻는 질문" className="group flex flex-col gap-3 border-t border-divider pt-4">
+              /* [1104] details 의 aria-label 은 걷고(그룹 이름이 아니라 펼침 단추 이름이 읽혀야 한다) summary 안 <h2> 는 <span> 으로 —
+                 summary 는 단추 역할이라 안의 제목 표식이 보조기기에서 지워지거나 단추 이름이 "제목 수준 2 …"로 섞여 읽힌다. 요약 글자가 곧 이름이다 */
+              <details className="group flex flex-col gap-3 border-t border-divider pt-4">
                 <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
-                  <h2 className="t-section font-bold text-ink">
+                  <span className="t-section font-bold text-ink">
                     자주 묻는 질문 <span className="t-sub font-medium text-text-3">{faq.length}개</span>
-                  </h2>
+                  </span>
                   {/* dead-control-ok: <summary> 안 — 줄 전체가 펼침 단추(details) */}
                   <span className="shrink-0 t-body text-text-3 transition-transform group-open:rotate-180" aria-hidden="true">▾</span>
                 </summary>

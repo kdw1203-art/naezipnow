@@ -3,7 +3,7 @@
 /* [1012 · 규칙 8] 굵기 800 이상(font-bold·font-bold) → 700(font-bold). 기준 사이트 4곳은 굵기 3단(400·500·700)만 쓴다. */
 /* [1012 · 규칙 2] 손으로 적은 큰 그림자(rgba 16~60px) → 토큰(--shadow-md/lg) 또는 그림자 없이 1px 선 · 호버 들림(-translate-y) 제거 */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { useExperiment } from "@/lib/experiments/client";
@@ -118,8 +118,13 @@ export function SoftSignupProvider({ children }: { children: ReactNode }) {
   }, [intent]);
   const callback = intent?.callbackUrl ?? `${pathname ?? "/"}${search}`;
 
+  /* [1105 · 속도] 값 객체를 고정한다 — 렌더마다 새 { promptSignup } 를 내려 보내 마운트 뒤 다시 그릴 때 아직 하이드레이트 안 된
+     Suspense 경계마다 React 가 렌더를 다시 시작했다(운영 단지 상세: 25회 · 메뉴 시트 2,127 요소를 매번 만들고 버림 · 925ms 작업 하나).
+     브라우저에서 이 한 줄만 고쳐 TBT 1,364 → 540ms 실측(1105 속도 조사). */
+  const contextValue = useMemo(() => ({ promptSignup }), [promptSignup]);
+
   return (
-    <SoftSignupContext.Provider value={{ promptSignup }}>
+    <SoftSignupContext.Provider value={contextValue}>
       {children}
       {intent && (
         <div

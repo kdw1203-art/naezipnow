@@ -13,7 +13,7 @@ import { useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { currentLoginReturnHref } from "@/lib/client/use-return-href";
 
 /* [1058 · C3] 신고 대상 종류 — 거주민 후기는 content_reports 에 들어갈 수 없다(CHECK target_type ∈ post·comment·note ·

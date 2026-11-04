@@ -19,7 +19,7 @@
  */
 import { useEffect, useState, type Dispatch, type SetStateAction } from "react";
 import { Icon } from "@/app/components/Icon";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import { hasTodoText, toggleTodoText } from "@/lib/notes/form-extras";
 import type { TodoItem } from "./NoteForm";
 import { briefFetchedLabel, buildFieldBrief } from "@/lib/inspection/field-brief";

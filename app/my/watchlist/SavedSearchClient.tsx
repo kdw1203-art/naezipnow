@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 import {
   SCOPE_LABELS,
   type SavedSearch,

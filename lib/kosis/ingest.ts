@@ -1,23 +1,23 @@
 /** KOSIS Open API → market_region_series 적재 (보조지표). */
-import { logger } from "@/lib/log";
 import { upsertSeries, logIngest } from "@/lib/market/store";
 import type { MarketSeriesRow } from "@/lib/market/types";
 import { KOSIS_TABLES } from "./stat-tables";
 import { fetchKosisTable, isKosisConfigured } from "./client";
+import {
+  kosisIngestMessage,
+  kosisIngestStatus,
+  kosisPeriodToDate,
+  type KosisTableOutcome,
+} from "./parse";
 
 export interface KosisIngestResult {
   ok: boolean;
   skipped?: boolean;
   seriesRows: number;
   byTable: Record<string, number>;
+  /** [1104] 표별 응답 수 · 매핑 수 · KOSIS 오류 코드 */
+  outcomes?: KosisTableOutcome[];
   message?: string;
-}
-
-/** KOSIS PRD_DE(yyyymm | yyyy) → YYYY-MM-DD */
-function periodToDate(prd: string): string {
-  if (/^\d{6}$/.test(prd)) return `${prd.slice(0, 4)}-${prd.slice(4, 6)}-01`;
-  if (/^\d{4}$/.test(prd)) return `${prd}-01-01`;
-  return prd;
 }
 
 export async function ingestKosis(
@@ -30,53 +30,46 @@ export async function ingestKosis(
 
   const allSeries: MarketSeriesRow[] = [];
   const byTable: Record<string, number> = {};
+  const outcomes: KosisTableOutcome[] = [];
 
   for (const table of KOSIS_TABLES) {
-    let rows: Awaited<ReturnType<typeof fetchKosisTable>> = [];
-    try {
-      rows = await fetchKosisTable(table, opts);
-    } catch (err) {
-      logger.warn(`[kosis.ingest] ${table.label} failed`, err);
-      byTable[table.label] = 0;
-      continue;
-    }
-    byTable[table.label] = rows.length;
-    const periodType = table.prdSe === "M" ? "monthly" : "monthly"; // 시계열 저장은 monthly로 통일(연간=1월1일)
-    for (const r of rows) {
+    // [1104] fetchKosisTable 은 던지지 않고 실패 코드를 돌려준다 — 예전엔 실패가 "0건"으로 묻혔다
+    const r = await fetchKosisTable(table, opts);
+    byTable[table.label] = r.rows.length;
+    outcomes.push({ label: table.label, received: r.received, matched: r.rows.length, unmatched: r.unmatched, error: r.error });
+    for (const row of r.rows) {
       allSeries.push({
         source: "kosis",
-        regionId: r.region.id,
-        regionName: r.region.name,
-        level: "sigungu",
+        regionId: row.region.id,
+        regionName: row.region.name,
+        // [1104] 시도 표(인허가 · 착공 · 보급률)는 시도 단위로 — 시군구에 붙이지 않는다
+        level: row.region.level,
         propertyType: "apt", // 지역 단위 보조지표 — property_type 은 중립 placeholder
         metric: table.metric,
-        periodType,
-        period: periodToDate(r.period),
-        value: r.value,
+        periodType: "monthly", // 시계열 저장은 monthly로 통일(연간=1월1일)
+        period: kosisPeriodToDate(row.period),
+        value: row.value,
       });
     }
   }
 
   const seriesRows = await upsertSeries(allSeries);
-  const empty = Object.entries(byTable).filter(([, n]) => n === 0).map(([k]) => k);
+  const status = kosisIngestStatus(seriesRows, outcomes);
+  const message = kosisIngestMessage(seriesRows, outcomes);
   await logIngest({
     source: "kosis",
     dataset: "인구·세대·미분양·주택보급률",
     origin: "api",
     rows: seriesRows,
-    status: seriesRows > 0 ? "ok" : "skipped",
-    message:
-      `series=${seriesRows} ` +
-      Object.entries(byTable).map(([k, v]) => `${k}:${v}`).join(" ") +
-      (empty.length ? ` · 0건(키 활성화/표ID 확인 필요): ${empty.join(",")}` : ""),
+    status,
+    message,
   });
 
   return {
     ok: seriesRows > 0,
     seriesRows,
     byTable,
-    message: empty.length
-      ? `일부 표 0건 — 인증키 활성화 또는 통계표 ID 확인 필요(${empty.join(", ")})`
-      : undefined,
+    outcomes,
+    message,
   };
 }

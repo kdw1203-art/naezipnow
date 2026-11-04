@@ -3,6 +3,7 @@
  * 보호: CRON_SECRET · 관리자 세션 (lib/cron/authorize.ts)
  * 선행: DATA_GO_KR_SERVICE_KEY + POI_SCHOOLS_API_PATH / POI_STATIONS_API_PATH
  *      (오너 패킷 ⑧ — 표준데이터 오픈API 상세의 요청 주소 경로 2개 · odcloud /api/… 또는 /openapi/tn_pubr_…)
+ *      [1104] 학교는 env 가 없으면 고정 요청주소(tn_pubr_public_elesch_mskul_lc_api)로 돈다 · 역은 env 필수(미설정 문구에 할 일)
  * 스케줄: .github/workflows/etl.yml — 매월 1일 + 수동(workflow_dispatch).
  *         학교·역 위치는 월 단위 갱신이면 충분하다.
  * [1053] 역을 먼저 — 단지 위치 지도가 공공 역 표를 먼저 읽는다(작은 표 · 1~2쪽). 학교(13쪽 안팎)는 그다음.

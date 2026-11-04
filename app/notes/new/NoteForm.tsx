@@ -18,7 +18,7 @@ import { ActionButton } from "@/app/components/ui/ActionButton";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
 /* [1006 · H2] 스위치 시각부(≈0.2KB) — 퀵모드 한 화면의 공개/비공개 줄이 3단계 스위치와 같은 모양이어야 한다 */
 import { Switch } from "@/app/components/ui/Switch";
-import { useToast } from "@/app/components/toast/ToastProvider";
+import { useToast } from "@/app/components/toast/use-toast";
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "@/app/components/IntentLink";

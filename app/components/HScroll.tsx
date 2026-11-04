@@ -51,8 +51,10 @@ export function HScroll({
     /* 바깥 = 판 껍데기(lq-panel 등 · className) · 안쪽 = 스크롤 틀. 마스크는 안쪽에만 — 판의 테두리·바탕은 흐리지 않는다 */
     <div className={className}>
       {/* 넘치고 끝이 아니면 오른쪽 가장자리를 마스크로 흐린다(.tab-scroll 과 같은 방식 · globals.css .nz-hscroll-fade) */}
+      {/* [1105] data-hscroll — 틀 안 칩 · 틀 자신의 키보드 포커스 링을 안쪽으로(globals.css 끝 · 바깥 링은 overflow · 마스크에 잘렸다) */}
       <div
         ref={ref}
+        data-hscroll=""
         className={`overflow-x-auto ${overflowing && !atEnd ? "nz-hscroll-fade" : ""} ${stickyFirst ? "nz-hscroll-sticky" : ""} ${stickyFirst && scrolled ? "nz-hscroll-scrolled" : ""}`}
         tabIndex={overflowing ? 0 : undefined}
       >
