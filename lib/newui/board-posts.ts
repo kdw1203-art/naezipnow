@@ -181,7 +181,15 @@ const BOARD_SELECT_LIGHT =
   "id,board_type,category,region,title,source_url,source_name," +
   "source_published_at,external_key,is_automated,created_at,updated_at";
 
-type BoardQueryKind = "full" | "light";
+/* [1103] 뉴스 주제 허브(/town/news/tag/[tag]) 20장 전용 — 본문(content · 행당 795B)만 뺀 열.
+ * 허브가 쓰는 것: 제목·분류·tags(주제 매칭 postMatchesTag)·출처·시각·is_automated·automation_meta(썸네일 유무 newsImageUrl).
+ * 품질 게이트·정렬·중복 제거 열(external_key·created_at·source_published_at)도 그대로라 고르는 글은 "*" 와 같다.
+ * 운영 사실(2026-10-31T23:05): 20장이 같은 순간 다시 그려지며 "*" 300행(≈750KB)을 20번 읽다가 12초 예산(TimeoutError)에 걸렸다. */
+const BOARD_SELECT_TAGHUB =
+  "id,board_type,category,region,title,tags,source_url,source_name," +
+  "source_published_at,external_key,is_automated,automation_meta,created_at,updated_at";
+
+type BoardQueryKind = "full" | "light" | "taghub";
 
 /**
  * 실제 조회 — 요청당 한 번만 나가도록 아래 read* 래퍼가 감싼다.
@@ -233,7 +241,7 @@ async function fetchBoardPosts(limit: number, kind: BoardQueryKind): Promise<Pos
   /* 미구성은 "고장"이 아니라 "이 환경엔 DB 가 없음"이다 — 던지지 않는다.
      (getBoardPost 도 같은 자리에서 null 을 준다.) */
   if (!sb) return [];
-  const select = kind === "light" ? BOARD_SELECT_LIGHT : BOARD_SELECT_PLAIN;
+  const select = kind === "light" ? BOARD_SELECT_LIGHT : kind === "taghub" ? BOARD_SELECT_TAGHUB : BOARD_SELECT_PLAIN;
   /* 모든 시도가 **함께** 쓰는 예산(12초, 위 boardReadBudgetMs). resilient-fetch 는 넘겨받은
      signal 이 이미 끊겼으면 자기 재시도(503 백오프)도 멈추므로, 이 하나로 전 구간이 잘린다.
      [1007] 시도는 ① 서비스 롤 → ② anon 두 단계다. 예전의 "중첩 count → count 없이 → anon"
@@ -306,6 +314,16 @@ export function readBoardPosts(limit: number = BOARD_POSTS_LIMIT): Promise<Post[
 /** 관련글용 경량 조회 — 본문·automation_meta 없이. 요청당 1회로 접힌다. */
 function readLightBoardPosts(): Promise<Post[]> {
   return loadBoardPosts(BOARD_POSTS_LIMIT, "light");
+}
+
+/**
+ * [1103] 뉴스 주제 허브용 병합 피드 — readTownPosts 와 **고르는 글이 같다**(같은 300행 창 · 같은 게이트 · 같은 병합).
+ * 다른 점은 본문(content)을 안 읽는다는 것뿐이다(BOARD_SELECT_TAGHUB 주석). 0건이면 빈 배열, 못 읽으면 던진다.
+ * 데이터 캐시(태그 town-posts)는 허브 라우트 쪽(app/town/news/tag/[tag]/tag-posts.ts)에 둔다 — 이 모듈은 단지 화면·뉴스 상세
+ * 번들에도 들어가서, 여기 태그 캐시를 두면 scripts/check-isr-ttl.mjs 의 전역 태그 규칙에 걸린다.
+ */
+export function readNewsTagBoardPosts(): Promise<Post[]> {
+  return mergeTownPosts(loadBoardPosts(BOARD_POSTS_LIMIT, "taghub"));
 }
 
 /**

@@ -6,6 +6,7 @@
    → 따로 칸을 없애고 지역 동향 카드 아래 **접힘 한 줄**로. 접힌 줄은 브리핑의 "몇 곳 상승 · 평균"을 다시 말하지 않고
      브리핑에 없는 것(가장 많이 오른 구 · 가장 많이 내린 구)만 — 펼치면 구별 막대 25줄.
    같은 행 · 같은 기준월 · 같은 계산(lib/newui/home-briefing districtMovesFromIndexRows) — 새 조회 0. 서버 조각(JS 0 · details). */
+import type { CSSProperties } from "react";
 import { DivergingBars, type DivergingRow } from "@/app/components/viz/DivergingBars";
 
 export function HomeSeoulMoves({ data }: { data: { period: string; rows: { id: string; name: string; pct: number }[] } | null }) {
@@ -39,13 +40,20 @@ export function HomeSeoulMoves({ data }: { data: { period: string; rows: { id: s
           <span className="hidden font-bold text-primary group-open:inline">접기 ▴</span>
         </span>
       </summary>
-      <div className="border-t border-line px-4 pb-3 pt-2.5 max-md:px-3.5">
-        {/* 데스크톱 두 열 · 폰 한 열 — 같은 눈금. 구 이름 = 지역 화면 */}
-        <div className="hidden gap-x-8 md:grid md:grid-cols-2">
-          <DivergingBars rows={rows.slice(0, half)} max={peak} ariaLabel={`상승 폭 큰 순 1~${half}위`} />
-          <DivergingBars rows={rows.slice(half)} max={peak} ariaLabel={`상승 폭 큰 순 ${half + 1}~${rows.length}위`} />
-        </div>
-        <DivergingBars className="md:hidden" rows={rows} max={peak} ariaLabel="상승 폭 큰 순" />
+      <div
+        className="border-t border-line px-4 pb-3 pt-2.5 max-md:px-3.5"
+        style={{ "--nz-seoul-rows": half } as CSSProperties}
+      >
+        {/* 데스크톱 두 열 · 폰 한 열 — 같은 눈금. 구 이름 = 지역 화면
+            [1103 · 속도] 목록 한 벌 — 예전엔 데스크톱 두 열(반씩 두 목록)과 폰 한 열(25줄)을 둘 다 그리고 CSS 로 하나를 숨겨,
+            접힌 칸 안의 25줄이 HTML · RSC · 하이드레이션에 두 번(li 50개 · 요소 ~350개 = 홈 DOM 의 30%) 실렸다.
+            md 부터는 같은 목록을 세로 우선 2열 격자로(1~{half}위 왼쪽 · 나머지 오른쪽 — 예전 두 목록과 같은 자리 · 같은 간격) */}
+        <DivergingBars
+          className="md:grid md:grid-flow-col md:grid-cols-2 md:gap-x-8 md:[grid-template-rows:repeat(var(--nz-seoul-rows),auto)]"
+          rows={rows}
+          max={peak}
+          ariaLabel="상승 폭 큰 순"
+        />
         <p className="m-0 mt-2 t-caption text-text-3">한국부동산원 월간 매매가격지수 · 구별 전월비 · 위 AI 브리핑과 같은 기준</p>
       </div>
     </details>

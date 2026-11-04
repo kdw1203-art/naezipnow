@@ -4,7 +4,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "../../components/toast/ToastProvider";
-import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
+import { useUpgradePaywall } from "@/app/components/upgrade-paywall-context";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 
 type Intent = "실거주" | "투자" | "전월세";

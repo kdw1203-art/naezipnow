@@ -43,7 +43,7 @@ const DEFAULT_NEXT: Record<AiAnalysisToolId, NextActionTarget> = {
     label: "지금 사기 좋은 타이밍인지 확인",
     href: "/analysis",
     emoji: "⏱️",
-    hint: "예측한 흐름을 바탕으로 매수 타이밍을 점검해 보세요.",
+    hint: "예측한 흐름 기준 매수 타이밍 점검",
   },
   "ai-inspection": {
     label: "임장 노트 바로 작성",

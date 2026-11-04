@@ -15,7 +15,7 @@ import { useToast } from "@/app/components/toast/ToastProvider";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { clearPendingWatch, PENDING_WATCH_ACTION, savePendingWatch, takePendingWatch } from "@/lib/client/pending-watch";
 import { regionIdForName } from "@/lib/region/catalog";
-import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
+import { useUpgradePaywall } from "@/app/components/upgrade-paywall-context";
 import { formatKrwManwon, formatKrwWon } from "@/lib/format/krw";
 import { readAreaUnitCookie } from "@/lib/prefs/area-unit";
 import type { AreaUnit } from "@/lib/prefs/ui-prefs";

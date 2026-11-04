@@ -4,6 +4,7 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { regionIdForName } from "@/lib/region/catalog";
 import { logger } from "@/lib/log";
 import { priceHighCopy, priorWindowLabel, type PriceHighRow } from "./price-record-copy";
+import { detectNewPriceHighs } from "./price-highs";
 
 export type { PriceHighRow };
 
@@ -34,17 +35,15 @@ export async function runPriceRecordWatch(): Promise<PriceRecordResult> {
   const sb = getServiceSupabase();
   if (!sb) return { detected: 0, posted: false, reason: "no-service-client" };
 
-  const { data, error } = await sb.rpc("detect_new_price_highs", {
-    p_hours: 26,
-    p_min_prior: 10,
-    p_margin: 1.03,
-    p_limit: 5,
-  });
-  if (error) {
-    logger.error("[price-record] RPC 실패", error);
-    throw new Error(`detect_new_price_highs 실패: ${error.message}`);
+  /* [1103] RPC detect_new_price_highs → 앱 쪽 작은 조회(lib/market/price-highs.ts) — 같은 규칙·같은 행 모양.
+     RPC 는 한 문장 안에서 묶음 4,651개의 앞선 이력을 힙으로 읽다가 함수 상한(25s)에 걸렸다(57014 · 그 파일 머리 주석). */
+  let rows: PriceHighRow[];
+  try {
+    rows = await detectNewPriceHighs({ hours: 26, minPrior: 10, margin: 1.03, limit: 5 });
+  } catch (e) {
+    logger.error("[price-record] 신고가 탐지 실패", e);
+    throw new Error(`신고가 탐지 실패: ${e instanceof Error ? e.message : String(e)}`);
   }
-  const rows = (data ?? []) as PriceHighRow[];
   // 단지+면적 중복 제거(같은 날 두 건 경신 시 최고가만)
   const seen = new Set<string>();
   const items = rows.filter((r) => {

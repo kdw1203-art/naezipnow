@@ -250,6 +250,19 @@ export function MapClientLazy(props: SharedProps) {
     let cancelled = false;
     /* 청크는 해석과 동시에 받는다 — 해석이 끝날 때쯤 대개 이미 와 있다 */
     void import("./map-client");
+    /* [1103 · 속도] 네이버 지도 SDK 도 지금 띄운다. 예전엔 maps.js 를 0.2초에 미리 받아 두고도 실행은 NaverMap 이 마운트된 뒤
+       (map-client 149KB 청크 다운로드 · 평가 뒤 ≈2.4초)였다 — 지도 타일(LCP)이 그 뒤를 따랐다(자동 측정 /map 성능 51).
+       같은 키 형식 검사(NaverMap resolveRuntimeClientId)를 통과한 값만 · 실패는 조용히 — NaverMap 이 마운트되며 같은 약속을 다시 잡고
+       인증 실패 처리(onAuthFailure)도 그때 붙인다. */
+    const sdkKey = props.ncpKeyId?.trim();
+    if (sdkKey && /^[a-z0-9]{6,24}$/i.test(sdkKey)) {
+      void import("@/lib/map/naver-maps-sdk")
+        /* 인증 실패 처리기를 지금 건다 — 실패가 지도 판 마운트 전에 와도 기록이 남아 판이 폴백을 그린다(naver-maps-sdk authFailed) */
+        .then((m) => m.loadNaverMapsScript(sdkKey, { onAuthFailure: () => {} }))
+        .catch(() => {
+          /* 여기서의 실패는 무시 — 지도 판이 같은 일을 다시 하고 실패를 화면에 말한다 */
+        });
+    }
     let search = "";
     try {
       search = window.location.search;

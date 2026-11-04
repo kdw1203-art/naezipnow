@@ -5,7 +5,8 @@ import { DesktopSideNav } from "./components/DesktopSideNav";
 import { TabBar } from "./components/TabBar";
 import { AIPanel } from "./components/AIPanel";
 import { Fineprint } from "./components/Fineprint";
-import { ResumeDraftPopup } from "./components/home/ResumeDraftPopup";
+/* [1103 · 번들] 이어서 쓰기 팝업은 지연 로더로(초안 파서 · 상대 시각이 홈 첫 로드 번들에서 빠진다 — 서버 HTML 은 원래 비어 있다) */
+import { ResumeDraftPopupLazy as ResumeDraftPopup } from "./components/home/ResumeDraftPopupLazy";
 import { EmptyState, ErrorState } from "./components/ui/EmptyState";
 import { AdZone } from "./components/ads/AdZone";
 import { AdSenseUnit } from "./components/ads/AdSenseUnit";

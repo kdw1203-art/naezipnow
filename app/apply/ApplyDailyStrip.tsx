@@ -1,4 +1,3 @@
-import Link from "@/app/components/IntentLink";
 import { buildApplyCalendar } from "@/lib/applyhome/calendar";
 import { listRecentCompetition } from "@/lib/applyhome/store";
 import { houseTypeLabel } from "@/lib/applyhome/normalize";
@@ -78,9 +77,7 @@ export async function ApplyDailyStrip() {
             ))}
           </ul>
         )}
-        <Link href="/apply/calendar" className="inline-block self-start py-[5px] t-sub font-bold text-primary no-underline">
-          날짜별 캘린더 ›
-        </Link>
+        {/* [1103] "날짜별 캘린더 ›"는 뺐다 — 머리글 오른쪽 "청약 캘린더" 단추(TownHero heroCta)와 같은 곳(/apply/calendar)이 한 화면에 두 번이었다 */}
       </div>
 
       <div className="card flex flex-col gap-2 p-4 max-md:p-3.5">

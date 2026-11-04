@@ -61,7 +61,7 @@ async function handle(req: Request) {
       await appendInboxNotification({
         userEmail: w.user_email,
         title: `기준금리 ${rate}% — 설정한 임계(${th}% ${w.direction === "above" ? "이상" : "이하"}) 도달`,
-        body: "경제지표 모니터에서 등록한 조건입니다. 시뮬레이터로 이자 부담을 다시 계산해 보세요.",
+        body: "경제지표 모니터에 등록한 조건 · 시뮬레이터로 이자 부담 다시 계산",
         actionUrl: "/analysis/ai/ai-economy",
       }).catch(() => {});
       await sb

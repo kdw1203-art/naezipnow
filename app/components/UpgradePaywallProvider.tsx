@@ -1,55 +1,28 @@
 "use client";
 
 import {
-  createContext,
   useCallback,
-  useContext,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
 import { UpgradePaywall } from "@/app/components/UpgradePaywall";
+import {
+  UpgradePaywallContext,
+  useUpgradePaywall,
+  type UpgradeIntent,
+} from "@/app/components/upgrade-paywall-context";
 
 /**
  * 전역 페이월 — 402 / QUOTA_EXCEEDED / TIER 부족을 한곳에서 띄운다.
  * SoftSignup(401)과 짝: 로그인 벽 vs 플랜 벽.
+ * [1103] 컨텍스트 · 훅 · 타입은 upgrade-paywall-context.ts 로 옮겼다(훅만 쓰는 화면 청크에 본체가 딸려 가지 않게). 예전 경로 그대로 쓰도록 다시 내보낸다.
  */
-
-export type UpgradeIntent = {
-  title?: string;
-  message: string;
-  href?: string;
-  ctaLabel?: string;
-};
-
-type UpgradePaywallContextValue = {
-  promptUpgrade: (intent: UpgradeIntent) => void;
-  /**
-   * fetch 응답을 보고 402/403(쿼터)·플랜 부족이면 페이월을 띄우고 true.
-   * 호출측은 true면 early-return 하면 된다.
-   */
-  handleUpgradeResponse: (
-    status: number,
-    body?: { code?: string; error?: string; message?: string } | null,
-  ) => boolean;
-};
-
-const UpgradePaywallContext = createContext<UpgradePaywallContextValue | null>(null);
+export { useUpgradePaywall };
+export type { UpgradeIntent };
 
 const DEFAULT_MESSAGE =
   "이 기능은 현재 플랜 한도를 넘었어요. 구독에서 이어서 쓸 수 있어요.";
-
-export function useUpgradePaywall(): UpgradePaywallContextValue {
-  const ctx = useContext(UpgradePaywallContext);
-  return (
-    ctx ?? {
-      promptUpgrade: () => {
-        /* Provider 밖 — 조용히 no-op (기능 자체는 호출측 에러 처리에 맡김) */
-      },
-      handleUpgradeResponse: () => false,
-    }
-  );
-}
 
 export function UpgradePaywallProvider({ children }: { children: ReactNode }) {
   const [intent, setIntent] = useState<UpgradeIntent | null>(null);

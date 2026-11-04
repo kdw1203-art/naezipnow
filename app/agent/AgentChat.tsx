@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { scrollIntoViewSafely } from "@/lib/ui/scroll";
 import Link from "@/app/components/IntentLink";
-import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
+import { useUpgradePaywall } from "@/app/components/upgrade-paywall-context";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 
 /* 내집나우 AI 에이전트 채팅.

@@ -4,7 +4,7 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { transactionNameCandidates } from "@/lib/market/store";
 import { logger } from "@/lib/log";
 import { currentYm, ymMonthsBefore } from "@/lib/format/ym";
-import { readPaged } from "@/lib/supabase/read-paged";
+import { readRecentMonths } from "@/lib/supabase/read-paged";
 
 /* [#94, 2026-08-23] 전월세 실거래 표면화 — 46.9만 행(216개 지역, 최근 12개월)이
  * DB에 있는데 보여주는 화면이 없었다. 이 모듈은 지역 단위 전월세 스냅샷을
@@ -79,7 +79,10 @@ export async function getRegionRentSnapshot(
   /* [1055] 끝까지 나눠 읽는다 — `.limit(4000)` 한 번은 PostgREST 상한(1,000행)에서 조용히 잘려 운영 지역 12곳+(평택 2,329 ·
      강남 1,996 · 송파 1,921 …)가 "신고분 1,000건 기준"을 사실처럼 적고 중앙값은 임의의 1,000행에서 나왔다(정렬도 없었다).
      정렬은 (contract_ym, id)로 유일하게 — 쪽이 겹치거나 빠지지 않는다. SAMPLE_CAP 에 닿으면 sampleTruncated. */
-  const rowP = readPaged<Record<string, unknown>>((from, to) => {
+  /* [1103] 달마다 한 번씩 나란히 · 정렬 없이(인덱스만) — 이유와 실측은 lib/supabase/read-paged.ts readRecentMonths.
+     예전(3개월을 (contract_ym, id) 정렬로 쪽 나누기)은 쪽마다 힙을 다시 읽어 큰 구에서 8초 예산을 넘겼다. 읽는 행 집합은
+     같다(최신 달은 gte, 나머지 달은 eq — 합치면 gte(from3)). 한 달이 1,000행을 채우면 그 달만 예전 정렬로 다시 읽는다. */
+  const rowP = readRecentMonths<Record<string, unknown>>([ymMonthsAgo(0), ymMonthsAgo(1), from3], (ym, { newest, ordered }, from, to) => {
     let q = sb
       .from("market_transactions")
       .select("deposit_krw, monthly_rent_krw, area_m2, contract_ym")
@@ -87,11 +90,10 @@ export async function getRegionRentSnapshot(
       .eq("transaction_type", "rent")
       .eq("is_cancelled", false)
       .eq("property_type", "apartment")
-      .gte("contract_ym", from3)
-      .not("deposit_krw", "is", null)
-      .order("contract_ym", { ascending: false })
-      .order("id", { ascending: true })
-      .range(from, to);
+      .not("deposit_krw", "is", null);
+    q = newest ? q.gte("contract_ym", ym) : q.eq("contract_ym", ym);
+    if (ordered) q = q.order("contract_ym", { ascending: false }).order("id", { ascending: true });
+    q = q.range(from, to);
     if (signal) q = q.abortSignal(signal);
     return q;
   }, SAMPLE_CAP).then(
@@ -105,7 +107,10 @@ export async function getRegionRentSnapshot(
     throw new Error(`market_region_monthly(rent) 조회 실패: ${volRes.error.message}`);
   }
   if (!rowRes.ok) {
-    logger.error(`[rent] 원본 표본 조회 실패(${regionId})`, rowRes.error);
+    /* [1103] 곁다리 예산이 끊은 것(signal.aborted)은 설계대로 접힌 것 — warn. 진짜 조회 실패만 error(section-budget.ts 와 같은 구분).
+       호출부(/region/[id])가 같은 실패를 한 번 더 적는다. */
+    if (signal?.aborted) logger.warn(`[rent] 원본 표본 예산 초과로 접음(${regionId})`, rowRes.error.message);
+    else logger.error(`[rent] 원본 표본 조회 실패(${regionId})`, rowRes.error);
     throw new Error(`market_transactions(rent) 조회 실패: ${rowRes.error.message}`);
   }
 

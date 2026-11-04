@@ -473,10 +473,18 @@ export default async function TownNewsDetailPage({
             </div>
 
             {/* FAQ — FAQPage 구조화 데이터와 화면 내용이 같아야 유효하므로 함께 낸다. */}
+            {/* [1103 · 같은 사실 한 번] 문답은 접어 둔다 — 답이 위 AI 요약 · 본문의 수(건수 · 비율)를 그대로 되풀이해 폰에서 같은 숫자를
+                세 번 읽었다. 내용은 그대로 DOM 에 있다(접힌 문답도 보이는 내용 — FAQPage 와 같은 배열). */}
             {faq.length > 0 ? (
-              <section aria-label="자주 묻는 질문" className="flex flex-col gap-3 border-t border-divider pt-4">
-                <h2 className="t-section font-bold text-ink">자주 묻는 질문</h2>
-                <dl className="flex flex-col gap-3">
+              <details aria-label="자주 묻는 질문" className="group flex flex-col gap-3 border-t border-divider pt-4">
+                <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+                  <h2 className="t-section font-bold text-ink">
+                    자주 묻는 질문 <span className="t-sub font-medium text-text-3">{faq.length}개</span>
+                  </h2>
+                  {/* dead-control-ok: <summary> 안 — 줄 전체가 펼침 단추(details) */}
+                  <span className="shrink-0 t-body text-text-3 transition-transform group-open:rotate-180" aria-hidden="true">▾</span>
+                </summary>
+                <dl className="mt-3 flex flex-col gap-3">
                   {faq.map((f, i) => (
                     <div key={i} className="flex flex-col gap-1">
                       <dt className="t-body font-bold text-ink">Q. {f.q}</dt>
@@ -484,7 +492,7 @@ export default async function TownNewsDetailPage({
                     </div>
                   ))}
                 </dl>
-              </section>
+              </details>
             ) : null}
 
             {/* 관련 지역 — 해석되는 시군구만 링크(죽은 링크 금지) */}

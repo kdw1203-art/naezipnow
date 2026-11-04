@@ -421,7 +421,11 @@ export default async function RegionHubPage({
       /* [#94] 전월세 스냅샷 — txBandRegion 과 같은 성격의 보너스 섹션: 실패하면
          섹션이 빠질 뿐이라 sideResults(중단 판정)에는 넣지 않는다. */
       getRegionRentSnapshot(id, name, budget.signal).catch((e: unknown): RegionRentSnapshot | null => {
-        logger.error(`[/region/${id}] 전월세 스냅샷 조회 실패 — 섹션 생략:`, e instanceof Error ? e.message : String(e));
+        /* [1103] 공유 예산이 끊은 것(budget.signal.aborted)은 설계대로 접힌 것 — warn(lib/data/section-budget.ts settle 과 같은 구분).
+           원인이던 표본 읽기(쪽마다 힙 재읽기 · 직렬)는 lib/market/rent.ts 에서 달별 인덱스 읽기로 바꿨다. */
+        const msg = e instanceof Error ? e.message : String(e);
+        if (budget.signal.aborted) logger.warn(`[/region/${id}] 전월세 스냅샷 예산 초과로 접음 — 섹션 생략:`, msg);
+        else logger.error(`[/region/${id}] 전월세 스냅샷 조회 실패 — 섹션 생략:`, msg);
         return null;
       }),
       /* [#52] 평형대별 시세 — 같은 규칙 */

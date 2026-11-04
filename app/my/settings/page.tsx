@@ -1,4 +1,5 @@
 import { SettingsClient, type NotifyChannels } from "./SettingsClient";
+import { PageShell } from "@/app/components/PageShell";
 import { isEmailConfigured } from "@/lib/email/send";
 import { isWebPushConfigured } from "@/lib/push/vapid";
 import { isNcpSensConfigured } from "@/lib/ncp/sens-sms";
@@ -35,5 +36,10 @@ export default function SettingsPage() {
     sms: isNcpSensConfigured(),
   };
 
-  return <SettingsClient channels={channels} />;
+  /* [1103 · 번들] 셸은 서버에서 감싼다 — 클라이언트 SettingsClient 안에서 감싸면 푸터(서버 조각)까지 브라우저 번들에 실렸다(미등재 상한 495KB 에 2KB 남던 원인 중 하나) */
+  return (
+    <PageShell title="설정" breadcrumb="마이 › 설정">
+      <SettingsClient channels={channels} />
+    </PageShell>
+  );
 }

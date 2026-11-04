@@ -5,13 +5,13 @@ import { useTheme } from "next-themes";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "@/app/components/IntentLink";
-import { signOut } from "next-auth/react";
-import { PageShell } from "@/app/components/PageShell";
+/* [1103 · 번들] signOut(next-auth/react · 5.5KB 조각)은 탈퇴 접수 뒤 한 번만 부른다 — 그때 받는다(DeleteAccountSection).
+   PageShell 은 서버 page.tsx 가 감싼다 — 여기서 import 하면 서버 조각인 푸터(사업자 고지 · 링크 목록 7.8KB)까지 클라이언트 번들에 실렸다. */
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { DELETE_CONFIRM_WORD, DELETE_GRACE_DAYS } from "@/lib/account/deletion";
 import { useUnsavedGuard } from "@/lib/client/use-unsaved-guard";
 import { hasSession } from "@/lib/client/has-session";
-import { ProfileEditSheet } from "../ProfileEditSheet";
+import type { ProfileEditSheet as ProfileEditSheetComponent } from "../ProfileEditSheet";
 import type { ProfileInitial } from "../profile-fields";
 import { shouldShowSaveToast } from "./save-toast";
 import { formatKstDate } from "@/lib/format/kst";
@@ -705,9 +705,26 @@ function ThemeRow() {
 
 /* [1000] 프로필 — 이름·관심 지역. 이 화면은 정적(세션 없음)이라 값을 클라이언트에서 읽고,
    편집은 /my 히어로와 같은 ProfileEditSheet 로 한다(저장 뒤 onSaved 로 즉시 반영). */
+/* [1103 · 번들] 편집 시트(폼 검증 · 지역 목록 · 모달 — 첫 로드 25KB)는 따로 받는 조각이다. 프로필 조회와 **같이** 받기 시작해
+   보통은 값이 올 때 이미 와 있다(단추가 값과 함께 선다). 늦으면 같은 모양의 잠긴 단추가 그 사이만 선다. */
+const loadProfileEditSheet = () => import("../ProfileEditSheet").then((m) => m.ProfileEditSheet);
+
 function ProfileRows() {
   const [profile, setProfile] = useState<ProfileInitial | null>(null);
   const [phase, setPhase] = useState<"loading" | "ready" | "guest" | "error">("loading");
+  const [Sheet, setSheet] = useState<typeof ProfileEditSheetComponent | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    loadProfileEditSheet()
+      .then((C) => {
+        if (alive) setSheet(() => C);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -743,9 +760,14 @@ function ProfileRows() {
     <div id="region" className="card flex scroll-mt-[72px] flex-col rounded-2xl px-4 py-1">
       <div className="flex items-center justify-between gap-2 pb-1 pt-2">
         <span className="t-sub font-bold text-text-3">프로필</span>
-        {phase === "ready" && profile && (
-          <ProfileEditSheet variant="button" initial={profile} onSaved={setProfile} />
-        )}
+        {phase === "ready" && profile &&
+          (Sheet ? (
+            <Sheet variant="button" initial={profile} onSaved={setProfile} />
+          ) : (
+            <button type="button" disabled aria-busy="true" className="btn-soft btn-md shrink-0">
+              편집
+            </button>
+          ))}
       </div>
       {phase === "loading" ? (
         <div className="py-4 text-center t-sub text-text-3">프로필을 불러오는 중…</div>
@@ -888,7 +910,10 @@ function DeleteAccountSection() {
         : `${DELETE_GRACE_DAYS}일 뒤`;
       setDone(when);
       window.setTimeout(() => {
-        void signOut({ callbackUrl: "/?bye=1" });
+        /* [1103 · 번들] 이때만 받는다 — 조각을 못 받으면(오프라인) 로그아웃 화면이 같은 일을 한다 */
+        void import("next-auth/react")
+          .then(({ signOut }) => signOut({ callbackUrl: "/?bye=1" }))
+          .catch(() => window.location.assign("/logout"));
       }, 2500);
     } catch {
       setError("저장 실패 · 잠시 후 다시");
@@ -1006,8 +1031,8 @@ export function SettingsClient({ channels }: { channels: NotifyChannels }) {
       dead = true;
     };
   }, []);
+  /* [1103 · 번들] 셸(PageShell title="설정")은 page.tsx(서버)가 감싼다 — DOM 은 그대로(셸 children 자리에 이 div) */
   return (
-    <PageShell title="설정" breadcrumb="마이 › 설정">
       <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4">
         {/* [1000] 탭은 유리 알약(.lg-capsule) — 같은 화면의 상태라 링크가 아니라 버튼(aria-pressed) */}
         <div className="rise-in lg-capsule self-start" role="group" aria-label="설정 구분">
@@ -1036,6 +1061,5 @@ export function SettingsClient({ channels }: { channels: NotifyChannels }) {
           {tab === "privacy" && <PrivacyTab prefsApi={prefsApi} />}
         </div>
       </div>
-    </PageShell>
   );
 }

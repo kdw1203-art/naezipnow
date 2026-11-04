@@ -4,7 +4,7 @@
 import { useEffect, useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
-import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
+import { useUpgradePaywall } from "@/app/components/upgrade-paywall-context";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
 import { useReturnHref } from "@/lib/client/use-return-href";
 import { fetchMyNotesShared } from "./hub-viewer";

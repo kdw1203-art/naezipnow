@@ -4,7 +4,7 @@ import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { ShellBreadcrumb, ShellNarrow } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
-import { readTownPosts } from "@/lib/newui/board-posts";
+import { readNewsTagHubPosts } from "./tag-posts";
 import { NEWS_TAGS, findNewsTag, postMatchesTag } from "@/lib/news/tags";
 import { clusterNews } from "@/lib/news/cluster";
 import type { Post } from "@/lib/types/post";
@@ -28,6 +28,9 @@ import { newsThumbPath } from "@/lib/news/thumb";
    뉴스 성격의 글을 싣는 크론 3곳(weekly-market-post · region-intro-posts · price-record-watch). */
 export const revalidate = 86_400;
 export const dynamicParams = false;
+
+/* [1103] 빌드 프리렌더인가 — 조회 실패를 실패 화면으로 그릴지(빌드) 던질지(운영 재검증)를 가른다(본문 catch 주석) */
+const IS_BUILD_PHASE = process.env.NEXT_PHASE === "phase-production-build";
 
 export function generateStaticParams(): Array<{ tag: string }> {
   return NEWS_TAGS.map((t) => ({ tag: t.slug }));
@@ -62,12 +65,20 @@ export default async function NewsTagPage({
   let news: Post[] = [];
   let failed = false;
   try {
-    const all = await readTownPosts();
+    /* [1103] 20장이 한 벌을 나눠 읽는다(tag-posts.ts — 이유·신선도 규칙은 그 파일 머리). 고르는 글은 예전 readTownPosts 와 같다. */
+    const all = await readNewsTagHubPosts();
     news = all
       .filter((p) => p.isAutomated && postMatchesTag(tag, p))
       .sort((a, b) => Date.parse(displayIso(b)) - Date.parse(displayIso(a)));
   } catch (e) {
-    logger.error(`[news-tag] ${slug} 조회 실패`, e);
+    /* [1103] 운영의 재검증 중이면 던진다 — Next 가 직전에 만든 화면을 그대로 둔다. 예전엔 여기서 "뉴스 불러오기 실패 · 잠시 후
+       다시" 화면을 그려 ISR 에 넣었고, 그 화면이 하루(revalidate 86_400) 동안 멀쩡한 목록 대신 나갔다(2026-10-31 허브 ~15장).
+       빌드 중이면 예전처럼 실패 화면으로 넘어간다 — DB 한 번의 흔들림으로 배포를 깨지 않는다(app/redevelopment/seoul/[gu] 와 같은 규칙). */
+    if (!IS_BUILD_PHASE) {
+      logger.error(`[news-tag] ${slug} 조회 실패 — 직전 화면을 유지하려고 렌더를 중단합니다`, e);
+      throw e;
+    }
+    logger.error(`[news-tag] ${slug} 조회 실패(빌드) — 실패 화면으로 넘어간다`, e);
     failed = true;
   }
 

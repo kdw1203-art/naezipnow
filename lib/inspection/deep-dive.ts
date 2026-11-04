@@ -366,7 +366,7 @@ function buildChecks(note: InspectionNote, g: NoteGrounding): DeepDiveSection {
       if (age >= 25) {
         bullets.push(
           `준공 ${complex.build_year}년(약 ${age}년 차)입니다. 배관·승강기 교체 이력과 ` +
-            `장기수선충당금 적립 현황을 관리사무소에 확인해 보세요.`,
+            `장기수선충당금 적립 현황 · 관리사무소 확인 필요.`,
         );
       }
     }

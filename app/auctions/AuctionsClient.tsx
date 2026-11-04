@@ -392,8 +392,6 @@ export function AuctionsClient({
     const dist = usageDistribution(activeItems);
     const guDist = sigunguDistribution(activeItems);
     const withDday = cards.filter((c) => c.dday !== null);
-    const imminent = withDday.filter((c) => c.dday?.urgent).slice(0, 4);
-    const ongoing = withDday.filter((c) => !c.dday?.urgent).slice(0, 6);
     /* [1063 · 표·그래프] 머리 숫자 — 지금 보이는 목록에서 **직접 센** 값만. 임박 건수는 묶음에 그리는 4장이 아니라 전체이고,
        마감 범위는 가진 입찰마감일의 처음·끝이다(없는 날짜를 만들지 않는다). */
     const urgentCount = withDday.filter((c) => c.dday?.urgent).length;
@@ -406,10 +404,10 @@ export function AuctionsClient({
     const endRange =
       endDigits.length > 0 ? fmtDtRange(endDigits[0], endDigits[endDigits.length - 1]) : null;
     const { monthLabel, cells } = buildCalendar(cards.map((c) => c.targetDate), now);
-    return { cards, pastCards, dist, guDist, imminent, ongoing, urgentCount, endRange, monthLabel, cells };
+    return { cards, pastCards, dist, guDist, urgentCount, endRange, monthLabel, cells };
   }, [items, nowMs]);
 
-  const { cards, pastCards, dist, guDist, imminent, ongoing, urgentCount, endRange, monthLabel, cells } = derived;
+  const { cards, pastCards, dist, guDist, urgentCount, endRange, monthLabel, cells } = derived;
   /* [1028] 요약 칸(지역별·용도별)의 기준 — 받은 목록이 전체(또는 조건 전체)보다 적을 때만 적는다 */
   const listTotal = f.usage || f.gu || f.sido ? matchTotal : activeTotal;
   const basisNote = listTotal != null && cards.length > 0 && cards.length < listTotal ? `표시 중 ${cards.length.toLocaleString()}건 기준` : null;
@@ -590,31 +588,8 @@ export function AuctionsClient({
               </Fineprint>
             </section>
 
-            {/* b) 진행 중 물건 — [1063] 테두리 카드 6장 → 한 판 안 머리카락 선 6줄(줄 전체가 온비드 검색 링크) */}
-            {ongoing.length > 0 && (
-              <section className="rise-in-2 card p-[var(--pad-card)]">
-                {/* [1028] 괄호 건수를 뺐다 — 이 묶음에 보이는 카드 수(최대 6)라 전체 건수(위 "입찰 중·예정 N건")와 다르게 읽혔다 */}
-                <h2 className="m-0 t-section font-bold text-primary">진행 중 물건</h2>
-                <div data-tone="plain" className="mt-1.5 flex flex-col divide-y divide-line">
-                  {ongoing.map((c) => (
-                    <AuctionLine key={c.key} c={c} />
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* c) 마감 임박 / 예정 */}
-            {imminent.length > 0 && (
-              <section className="rise-in-3 card p-[var(--pad-card)]">
-                <h2 className="m-0 t-section font-bold text-danger">마감 임박 · D-3 이내</h2>
-                <div data-tone="plain" className="mt-1.5 flex flex-col divide-y divide-line">
-                  {imminent.map((c) => (
-                    <AuctionLine key={c.key} c={c} />
-                  ))}
-                </div>
-              </section>
-            )}
-
+            {/* [1102 → 1103 · 같은 사실 한 번] "진행 중 물건" 6줄 · "마감 임박" 4줄 묶음을 걷었다 — 둘 다 바로 아래 목록(마감 임박순)의
+                맨 윗줄들과 같은 물건이었다(운영: 표의 첫 4줄 = 임박 4줄). 폰은 그 줄 꼴(AuctionLine)을 목록 자체에 쓴다. */}
             {/* d) 진행·예정 물건 표 */}
             <div className="rise-in-4 px-1 pt-1.5 text-xs font-bold text-text-3">
               {/* [1028] 목록은 마감이 가까운 순으로 최대 200건만 읽는다 — 전체 건수와 지금 보이는 건수를 같이 적는다 */}
@@ -636,8 +611,27 @@ export function AuctionsClient({
                 </div>
               </div>
             ) : (
-              /* [1015] 표 껍데기 = 리퀴드 판(sand — 공매 톤, 브리프 규칙 I) */
-              <div data-tone="sand"><HScroll className="rise-in-4 lq-panel py-1">
+              /* [1015] 표 껍데기 = 리퀴드 판(sand — 공매 톤, 브리프 규칙 I)
+                 [1103] 폰은 다섯 칸 표(560px · 옆으로 밀기) 대신 한 줄 목록(AuctionLine — 이름 · 용도 · 소재지 · 감정가 · 대비 % · 마감 · 최저가) */
+              <>
+              <section className="rise-in-4 card p-[var(--pad-card)] md:hidden" aria-label="진행·예정 물건">
+                <div data-tone="plain" className="flex flex-col divide-y divide-line">
+                  {cards.slice(0, rowCap).map((c) => (
+                    <AuctionLine key={c.key} c={c} />
+                  ))}
+                </div>
+                {cards.length > rowCap && (
+                  <button
+                    type="button"
+                    onClick={() => setRowCap((n) => n + 48)}
+                    className="press mt-2 min-h-10 w-full rounded-xl bg-bg py-2.5 text-center t-sub font-bold text-primary"
+                  >
+                    더보기 ({Math.min(rowCap, cards.length).toLocaleString()} / {cards.length.toLocaleString()}건)
+                  </button>
+                )}
+                <p className="mt-2 t-caption text-text-3">마감 임박순 · 출처: 한국자산관리공사 온비드(공공데이터포털) · 매일 자동 갱신</p>
+              </section>
+              <div data-tone="sand" className="max-md:hidden"><HScroll className="rise-in-4 lq-panel py-1">
                 <div className="min-w-[560px]">
                   <div className="grid grid-cols-[1.9fr_.8fr_.8fr_.8fr_1fr] gap-2 border-b border-divider py-2 t-caption text-text-3">
                     <span>물건 · 소재지</span>
@@ -695,6 +689,7 @@ export function AuctionsClient({
                   </div>
                 </div>
               </HScroll></div>
+              </>
             )}
 
             {/* d-2) 입찰 캘린더 — [1063] 첫 화면의 42칸 격자를 표 아래로 내렸다(값·표시 규칙은 그대로).

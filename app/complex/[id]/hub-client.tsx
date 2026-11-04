@@ -6,7 +6,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "@/app/components/IntentLink";
 import nextDynamic from "next/dynamic";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
-import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
+import { useUpgradePaywall } from "@/app/components/upgrade-paywall-context";
 import { useToast } from "@/app/components/toast/ToastProvider";
 import { Icon } from "@/app/components/Icon";
 import { fromHubTradeWire, type HubTrade, type HubTradeWire } from "@/lib/complex/hub-trades";

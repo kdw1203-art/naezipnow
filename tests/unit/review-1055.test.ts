@@ -109,7 +109,9 @@ test("P1 limit 한 번이던 자리가 전부 readPaged — 전월세(지역·�
     ["lib/market/area-bands-lite.ts", "CAP"],
   ] as const) {
     const src = code(f);
-    assert.match(src, /readPaged/, f);
+    /* [1103] 지역 전월세(lib/market/rent.ts)는 readRecentMonths(달별 · 정렬 없는 인덱스 읽기)로 바뀌었다 — 그것도 끝까지 읽는다
+       (한 달이 한 쪽을 채우면 그 달만 readPaged 로 다시 읽는다 · tests/unit/ops-1103.test.ts ③). 뜻(1,000행에서 조용히 잘리지 않는다)은 같다. */
+    assert.match(src, /readPaged|readRecentMonths/, f);
     assert.match(src, /\.range\(/, f);
     assert.match(src, new RegExp(`${cap.replace(/[_]/g, "_")}`), f);
     assert.doesNotMatch(src, /\.limit\((SAMPLE_CAP|ROW_CAP|NONAPT_SAMPLE_CAP|CAP|20_000|3000|4000)\)/, f);

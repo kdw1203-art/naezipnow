@@ -40,7 +40,8 @@ test("지도 칩 줄 — 요약은 필터 단추 뒤 · PC 머리줄엔 없음 �
   for (const g of ["◎", "↔", "⌕", "≤"]) assert.ok(!m.includes(g), `기호 ${g}`);
   assert.match(m, /aria-label="필터 닫기"[\s\S]{0,200}<Icon name="x" size=\{18\} \/>/);
   assert.match(m, /<div className="hidden w-\[280px\] min-w-\[160px\] md:block">/, "PC 검색 칸 하한");
-  assert.match(m, /className=\{`glass absolute right-5 z-30 mt-\[36px\] flex/, "줌 탭은 검색 칸 아래(128)");
+  /* [1103] 폰 줌 탭은 검색 칸과 같은 줄(82) — 검색 칸 초점 동안 비킨다 */
+  assert.match(m, /className=\{`glass absolute right-4 z-30 -mt-\[10px\] flex items-center gap-0\.5 rounded-full p-1 md:right-5 md:mt-0 md:translate-y-9 xl:hidden \$\{phoneSearchFocus \? "max-md:pointer-events-none max-md:opacity-0" : ""\}/);
   /* 해요체 */
   for (const s of ["옮겨요", "찍혀요", "기준이에요", "옮겨져요", "모아 보여요", "불러와요", "않을 수 있어요"]) assert.ok(!m.includes(s), s);
 });

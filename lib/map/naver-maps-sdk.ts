@@ -117,7 +117,8 @@ function asNaverWindow(): NaverMapsWindow {
 
 export function installNaverMapAuthFailureHandler(onFailure: () => void): void {
   if (typeof window === "undefined") return;
-  authFailed = false;
+  /* [1103] 인증 실패는 이 페이지 로드에서 되돌릴 수 없다 — 예전엔 처리기를 새로 걸 때마다 false 로 되돌렸다.
+     지도 지연 로더가 SDK 를 먼저 띄우면(MapClientLazy) 실패가 NaverMap 마운트 전에 올 수 있어, 되돌리면 그 사실을 잃는다. */
   asNaverWindow().navermap_authFailure = () => {
     authFailed = true;
     onFailure();
@@ -336,6 +337,10 @@ export function loadNaverMapsScript(
   }
 
   const win = getNaverMapsWindow();
+  /* [1103] 먼저 띄운 로드에서 인증이 이미 실패했으면 maps 객체가 있어도 성공으로 치지 않는다(지도 판이 폴백을 그린다) */
+  if (authFailed) {
+    return Promise.reject(new Error(NAVER_MAP_AUTH_FAILURE_MESSAGE));
+  }
   if (win.naver?.maps) {
     return Promise.resolve();
   }

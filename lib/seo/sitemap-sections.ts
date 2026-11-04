@@ -218,22 +218,9 @@ function serializeSitemapIndex(paths: readonly string[]): string {
   return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</sitemapindex>\n`;
 }
 
-/**
- * optional 유형 하나의 "비었는지" 판정에 주는 시간(ms).
- *
- * 2026-07-26 프로덕션 오류를 보면 사이트맵 경로들이 하루에 100건 가까이
- * `Vercel Runtime Timeout Error: Task timed out after 300 seconds` 로 죽고 있었다
- * (/sitemap.xml 48 · /sitemap-pairs.xml 36 · /sitemap-regions.xml 12 ·
- * /sitemap-complexes.xml 4). 서치어드바이저에 사이트맵을 제출했을 때 나온
- * "접근 실패 · Status 0 · HTTP 응답을 받지 못했습니다" 가 바로 이것이다.
- *
- * 인덱스는 **제출하는 그 주소**라서 늦게라도 정확한 답보다 제때 뜨는 답이 낫다.
- * 그래서 판정에 예산을 주고, 예산을 넘기면 기다리지 않는다. 다만 넘겼다고
- * "URL 이 없다"로 해석하지는 않는다 — 모르는 것은 모르는 것이라, 아래에서
- * 조회 실패와 똑같이 "싣되 캐시하지 않는다"로 처리한다. 6초는 네 유형이
- * 병렬로 도니 인덱스 전체 상한이기도 하다.
- */
-const INDEX_PROBE_BUDGET_MS = 6_000;
+/* [1103] 여기 있던 INDEX_PROBE_BUDGET_MS(optional 유형 "비었는지" 판정 예산 6초)를 지웠다 — 인덱스가 더는 판정 조회를
+ * 하지 않는다(아래 buildSitemapIndex 의 [1103] 주석). 그 예산이 생긴 이유(2026-07-26 · /sitemap.xml 300초 무응답 48건 —
+ * 인덱스는 제출하는 그 주소라 제때 뜨는 답이 낫다)는 조회를 아예 없앤 지금 더 잘 지켜진다: 인덱스는 DB 를 읽지 않는다. */
 
 /**
  * 자식 사이트맵 한 장을 만드는 데 주는 시간(ms).
@@ -274,48 +261,19 @@ const SECTION_LOAD_BUDGET_MS = 45_000;
  * 예외로 올라오므로 잡아서 "뺄지 말지 모른다"로 다루고, 빼지 않고 싣되 캐시하지
  * 않는다. 못 읽은 것을 "이제 없다"로 광고하는 쪽이 훨씬 나쁜 거짓말이다.
  */
+/* [1103] optional 유형도 읽지 않는다 — required 를 읽지 않게 바꾼 위 판단(2026-07-26)을 optional 에 그대로 적용한다.
+ *
+ * [956] 이후 자식은 비지 않는다(0개면 허브 1줄). 그래서 판정 결과가 무엇이든 optional 은 **언제나** 인덱스에 실렸다 —
+ * 예전 코드도 세 갈래 모두 include: true 였다. 판정이 바꾸던 것은 로그와 "이번 응답을 캐시할지"뿐인데, 인덱스 본문은
+ * 어차피 늘 같다. 그 판정을 위해 인덱스 요청마다 optional 자식 6장(리포트·노트·온도·다이제스트·이야기·정비사업)을
+ * 통째로 만들었고, 하나라도 6초를 넘기면 응답이 no-store 가 되어 다음 크롤이 6장을 또 만들었다 —
+ * 운영 2026-11-02T21:35 digest·story·reports·redevelopment 넷이 한꺼번에 6초를 넘긴 오류가 그 고리다.
+ * "조회가 실패했다"는 사실은 자식 응답(503 + no-store + errorSampled 로그)에 그대로 남으므로 신호를 잃지 않는다.
+ * 반환 모양({ xml, cacheable })은 라우트(app/sitemap.xml/route.ts)가 그대로 쓰도록 둔다 — 이제 cacheable 은 늘 true. */
 export async function buildSitemapIndex(): Promise<{ xml: string; cacheable: boolean }> {
-  const optional = SITEMAP_SECTIONS.filter((s) => !s.required);
-
-  let cacheable = true;
-  const decided = await Promise.all(
-    optional.map(async (section) => {
-      /* 판정이 예산 안에 안 끝나면 기다리지 않는다. 이유는 INDEX_PROBE_BUDGET_MS
-         주석 참고 — 이 주소는 서치콘솔·서치어드바이저에 제출하는 바로 그 URL 이고,
-         제출 시점에 안 뜨면 등록 자체가 실패한다. */
-      const probe = await withBudget(
-        Promise.resolve().then(() => section.load()),
-        INDEX_PROBE_BUDGET_MS,
-      );
-      /* [956] 자식이 비지 않으므로(0개면 허브 1줄) optional 도 항상 싣는다. 판정을
-         계속 하는 이유: 조회 실패·타임아웃을 로그로 남기고 인덱스 캐시를 끄기 위해. */
-      if (probe.state === "ok") return { slug: section.slug, include: true };
-
-      cacheable = false;
-      if (probe.state === "timeout") {
-        logger.error(
-          `[sitemap] 인덱스: ${section.label}(${section.slug}) 판정이 ` +
-            `${INDEX_PROBE_BUDGET_MS}ms 안에 끝나지 않았습니다. ` +
-            `비었는지 알 수 없으므로 인덱스에 싣고, 응답을 캐시하지 않습니다.`,
-        );
-      } else {
-        logger.error(
-          `[sitemap] 인덱스: ${section.label}(${section.slug}) 조회에 실패했습니다 — ` +
-            `${probe.error instanceof Error ? probe.error.message : String(probe.error)}. ` +
-            `"URL 이 없다"와 구분되지 않으므로 인덱스에서 빼지 않고 싣고, 응답을 캐시하지 않습니다.`,
-        );
-      }
-      return { slug: section.slug, include: true };
-    }),
-  );
-  const includeOptional = new Map(decided.map((d) => [d.slug, d.include]));
-
   // 선언 순서를 그대로 유지한다 — 인덱스 순서가 흔들리면 diff 를 읽기 어렵다.
-  const paths = SITEMAP_SECTIONS.filter((s) => s.indexed !== false && (s.required || includeOptional.get(s.slug))).map((s) =>
-    sitemapSectionPath(s.slug),
-  );
-
-  return { xml: serializeSitemapIndex(paths), cacheable };
+  const paths = SITEMAP_SECTIONS.filter((s) => s.indexed !== false).map((s) => sitemapSectionPath(s.slug));
+  return { xml: serializeSitemapIndex(paths), cacheable: true };
 }
 
 /**

@@ -108,7 +108,7 @@ import { Fineprint } from "@/app/components/Fineprint";
 import { pureIdFromParam, complexHrefFromId, decodeNameIdSafe } from "@/lib/seo/complex-slug";
 import { tagComplexPageRegion } from "@/lib/complex/region-tag-cache";
 import { getCachedCoord } from "@/lib/map/complex-geocode";
-import { settle, startDeadline, SIDE_SECTION_BUDGET_MS } from "@/lib/data/section-budget";
+import { settle, startDeadline, SIDE_SECTION_BUDGET_MS, type Deadline } from "@/lib/data/section-budget";
 import { getMarketFreshnessDateLabel } from "@/lib/newui/freshness";
 import { RecentComplexRecorder } from "../../components/RecentComplexRecorder";
 import { MarketFreshnessLine } from "../../components/MarketFreshnessLine";
@@ -256,6 +256,9 @@ const SIDE_FAILURE_ABORT_THRESHOLD = 4;
    ISR 미스의 TTFB 는 그대로이고, 캐시 정책 게이트(check-cache-policy.mjs)가 요구하는
    ISR 분류를 깨지 않는 한 스트리밍은 불가능하다. 그래서 파도 수·상한만 줄인다. */
 const SIDE_QUERY_BUDGET_MS = 5_000;
+/* [1103] 곁다리 "한 번 더"의 예산 — loadView 의 그 자리 주석. 다시 묻는 넷은 한 줄짜리 인덱스 조회라(1~5ms) 3초는
+   "줄 선 연결이 풀리기를 기다리는 시간"이다. 최악의 렌더가 3초 길어지는 대신 5xx(→ 화면 전체 재렌더)를 피한다. */
+const SIDE_RETRY_BUDGET_MS = 3_000;
 
 /**
  * generateMetadata 와 본문은 같은 요청 안에서 각자 이 둘을 불렀다 — 즉 렌더
@@ -913,7 +916,51 @@ async function loadView(id: string): Promise<HubView | null> {
      요청이 실제로 끊기게 한다(안 끊으면 최대 45초 더 살아 연결을 붙잡는다).
      loadTxHistory 는 React cache() 로 렌더 내 재사용(아래 tx 재호출)되므로
      signal 을 받지 않는다 — 인자에 신호를 섞으면 dedupe 키가 깨진다. */
-  const [enriched, txR, postsR, sameDongR, coordR, listingsR] = await Promise.all([
+  /* [1103] 곁다리 넷(이야기·인근·좌표·매물)을 예산을 받는 함수로 묶었다 — 아래 "한 번 더"(SIDE_RETRY_BUDGET_MS)가
+     같은 조회를 새 예산으로 다시 부르기 위해서다. 인자·예산 연결·로그 이름은 예전 그대로다. */
+  const side = {
+    /* [1058 · C2] 단지 이야기 조회 키도 canonical_id. 틀린 사실: "글은 kapt id 로 묶여 있다" — 글 API 는 kapt id 를
+       받지 않으므로(위 notesWriteHref 주석) kapt id 로 묶인 글은 존재할 수 없고, 운영 DB 실측(2026-10-12)도 0건이다.
+       정규 키로 저장된 글이 이 칸에 보이게 한다. */
+    posts: (budget: Deadline) =>
+      settle(
+        `${row.name} 단지 이야기`,
+        rowP.then((r) => getComplexPosts((r ?? row).canonical_id, 12, budget.signal)),
+        budget.expired,
+      ),
+    // #34: 같은 동 다른 단지 — 자기 자신 제외분 확보 위해 더 넓게.
+    // [995] 읍면동 먼저, 3곳 미만이면 구로 물러선다(loadNearbyRows).
+    nearby: (budget: Deadline) =>
+      row.district
+        ? settle(
+            `${row.district}${emd ? ` ${emd}` : ""} 인근 단지`,
+            loadNearbyRows(row, emd, budget.signal),
+            budget.expired,
+          )
+        : Promise.resolve({
+            ok: true as const,
+            data: { rows: [] as ComplexRow[], scope: "district" as NearbyScope },
+          }),
+    // 좌표(캐시만) — 거리뷰·JSON-LD geo 용. 없으면 좌표 없이 진행.
+    // [1043] 예전엔 캐시에 없으면 이 자리에서 외부 지오코더를 불렀다(최대 3회 직렬 — 처음 열리는 단지의 TTFB 1초대).
+    //        좌표를 채우는 일은 백필 크론이 맡는다 — 화면은 있는 값만 읽는다.
+    coord: (budget: Deadline) =>
+      dec
+        ? settle(
+            `${row.name} 좌표`,
+            getCachedCoord(dec.region, dec.name),
+            budget.expired,
+          )
+        : Promise.resolve({ ok: true as const, data: null }),
+    // D8: 이 단지명으로 등록된 승인 매물 (정확 일치)
+    listings: (budget: Deadline) =>
+      settle(
+        `${row.name} 등록 매물`,
+        listApprovedListings({ complexName: row.name, signal: budget.signal }),
+        budget.expired,
+      ),
+  };
+  const [enriched, txR, postsR1, sameDongR1, coordR1, listingsR1] = await Promise.all([
     rowP,
     /* canonical_id 를 쓴다 — row.id 는 kapt 매칭 시 `kapt.A10027336` 이 되는데
        getTransactionHistory 는 decodeComplexId 로 시작하고 그 함수는 kapt id 에
@@ -921,54 +968,46 @@ async function loadView(id: string): Promise<HubView | null> {
        "실거래 없음 · 시세 준비 중"으로 그려지고 있었다(2026-08-05 표본 12개 중 6개).
        canonical_id 는 항상 name-id 라 decode 가 반드시 성공한다. */
     settle(`${row.name} 실거래 이력`, loadTxHistory(row.canonical_id, TX_HISTORY_MONTHS), heroBudget.expired),
-    /* [1058 · C2] 단지 이야기 조회 키도 canonical_id. 틀린 사실: "글은 kapt id 로 묶여 있다" — 글 API 는 kapt id 를
-       받지 않으므로(위 notesWriteHref 주석) kapt id 로 묶인 글은 존재할 수 없고, 운영 DB 실측(2026-10-12)도 0건이다.
-       정규 키로 저장된 글이 이 칸에 보이게 한다. */
-    settle(
-      `${row.name} 단지 이야기`,
-      rowP.then((r) => getComplexPosts((r ?? row).canonical_id, 12, budget.signal)),
-      budget.expired,
-    ),
-    // #34: 같은 동 다른 단지 — 자기 자신 제외분 확보 위해 더 넓게.
-    // [995] 읍면동 먼저, 3곳 미만이면 구로 물러선다(loadNearbyRows).
-    row.district
-      ? settle(
-          `${row.district}${emd ? ` ${emd}` : ""} 인근 단지`,
-          loadNearbyRows(row, emd, budget.signal),
-          budget.expired,
-        )
-      : Promise.resolve({
-          ok: true as const,
-          data: { rows: [] as ComplexRow[], scope: "district" as NearbyScope },
-        }),
-    // 좌표(캐시만) — 거리뷰·JSON-LD geo 용. 없으면 좌표 없이 진행.
-    // [1043] 예전엔 캐시에 없으면 이 자리에서 외부 지오코더를 불렀다(최대 3회 직렬 — 처음 열리는 단지의 TTFB 1초대).
-    //        좌표를 채우는 일은 백필 크론이 맡는다 — 화면은 있는 값만 읽는다.
-    dec
-      ? settle(
-          `${row.name} 좌표`,
-          getCachedCoord(dec.region, dec.name),
-          budget.expired,
-        )
-      : Promise.resolve({ ok: true as const, data: null }),
-    // D8: 이 단지명으로 등록된 승인 매물 (정확 일치)
-    settle(
-      `${row.name} 등록 매물`,
-      listApprovedListings({ complexName: row.name, signal: budget.signal }),
-      budget.expired,
-    ),
+    side.posts(budget),
+    side.nearby(budget),
+    side.coord(budget),
+    side.listings(budget),
   ]);
   budget.done();
   heroBudget.done();
+  let [postsR, sameDongR, coordR, listingsR] = [postsR1, sameDongR1, coordR1, listingsR1];
+  /* [1103] 곁다리 "한 번 더" — 아래 4/5 중단 판정 **앞에서**, 실거래(히어로)는 받았는데 곁다리 넷이 한꺼번에 접혔을 때만.
+     운영 사실(Vercel 2026-11-01T22:21 · 한 클라이언트): 단지 화면 ~20쪽이 같은 순간 "5개 중 4개 조회 실패"로 5xx 가 됐다.
+     실패한 넷은 전부 한 줄짜리 인덱스 조회다 — complex_geocode PK(평균 1.8ms) · complex_tx_stats_base(2~5ms) ·
+     posts / listings(둘 다 0행 표). 무거운 실거래(8초 예산)는 같은 렌더에서 **성공**했으니 DB 가 내려간 게 아니라
+     몰린 렌더가 PostgREST 연결 대기열에 줄을 서서 5초 예산이 먼저 끝난 것이다. 그 상태에서 던지면 크롤러는 5xx 를
+     받고, 다시 오면 화면 전체(조회 ~20개)를 처음부터 다시 그린다 — 실패한 넷만 3초 더 물어보는 쪽이 DB 에 훨씬 싸다.
+     중단 원칙(빈 껍데기를 7일 캐시에 남기지 않는다)은 그대로다: 다시 물어도 넷이 접히면 예전처럼 던진다.
+     [973] 의 교훈(포화 중 재시도는 독)을 따라, 대표행 시간 초과가 연달아 난 창(rowBreaker)에서는 다시 묻지 않는다. */
+  const firstSideFailures = [txR, postsR1, sameDongR1, coordR1, listingsR1].filter((r) => !r.ok).length;
+  const sideRetried =
+    txR.ok && firstSideFailures >= SIDE_FAILURE_ABORT_THRESHOLD && !shouldSkipRetry(rowBreaker, Date.now());
+  if (sideRetried) {
+    const retry = startDeadline(SIDE_RETRY_BUDGET_MS);
+    [postsR, sameDongR, coordR, listingsR] = await Promise.all([
+      postsR.ok ? postsR : side.posts(retry),
+      sameDongR.ok ? sameDongR : side.nearby(retry),
+      coordR.ok ? coordR : side.coord(retry),
+      listingsR.ok ? listingsR : side.listings(retry),
+    ]);
+    retry.done();
+  }
   /* [949 · 계측] 본문 파도 시간 — 대표행(base)과 enrich+곁다리 파도를 따로 잰다.
      느린 렌더(600ms↑)는 전부, 나머지는 5% 표본만 남긴다. ISR 미스의 TTFB 는
      이 두 파도 + 섹션 파도이므로, 배포 뒤 이 로그로 "어느 파도가 남았는지"를 읽는다. */
   const tSides = Date.now();
   if (tSides - t0 >= 600 || Math.random() < 0.05) {
     // logger.info 는 운영에서 침묵한다(lib/log.ts) — 이 줄은 운영 로그가 목적이다.
+    /* [1103] retry=1 이면 "한 번 더"를 탄 렌더 — fail 은 다시 물은 뒤의 실패 수, fail1 은 첫 파도의 실패 수 */
     console.info(
       `[complex-timing] base=${tBase - t0}ms wave2=${tSides - tBase}ms total=${tSides - t0}ms ` +
-        `fail=${[txR, postsR, sameDongR, coordR, listingsR].filter((r) => !r.ok).length} id=${id.slice(0, 40)}`,
+        `fail=${[txR, postsR, sameDongR, coordR, listingsR].filter((r) => !r.ok).length} ` +
+        `fail1=${firstSideFailures} retry=${sideRetried ? 1 : 0} id=${id.slice(0, 40)}`,
     );
   }
   const rowFinal: ComplexRow = enriched ?? row;
@@ -983,6 +1022,7 @@ async function loadView(id: string): Promise<HubView | null> {
   /* [968 · 1] 예산이 5초로 짧아졌으니 "4개 실패"에는 5초를 넘긴 것도 든다. DB 가
      5~8초로 느린 동안엔 예전처럼 늦게라도 완성본을 내는 대신 5xx(캐시 안 됨)가
      난다 — 그 상태의 반쪽짜리 페이지가 6시간 얼어붙는 것보다 낫다는 같은 판단이다. */
+  /* [1103] 판정은 "한 번 더"(위) 뒤의 결과로 한다 — 다시 물어 살아난 곁다리는 실패로 세지 않는다. 기준(4/5)·던지는 뜻은 그대로. */
   const sideResults = [txR, postsR, sameDongR, coordR, listingsR];
   const sideFailures = sideResults.filter((r) => !r.ok).length;
   if (sideFailures >= SIDE_FAILURE_ABORT_THRESHOLD) {

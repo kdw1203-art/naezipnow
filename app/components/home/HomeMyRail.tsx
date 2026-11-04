@@ -5,8 +5,15 @@ import Link from "@/app/components/IntentLink";
 import dynamic from "next/dynamic";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
-import { HomeWatchlistBrief } from "@/app/components/HomeWatchlistBrief";
 import { RecentComplexChips } from "@/app/components/RecentComplexes";
+
+/* [1103 · 번들] 관심 단지 변동 요약도 오늘의 활동 카드와 같은 방식 — 로그인 확인 뒤에만 그리므로(아래 `if (!authed) return null`)
+   정적 import 는 비로그인 첫 화면 번들에 쓰지 않는 코드를 싣는다. 최근 본 단지(RecentComplexChips)는 검색창(HomeHeroSearch)이
+   같은 모듈을 이미 쓰고 있어 떼어도 줄지 않는다 — 그대로 둔다. */
+const HomeWatchlistBrief = dynamic(
+  () => import("@/app/components/HomeWatchlistBrief").then((m) => m.HomeWatchlistBrief),
+  { ssr: false },
+);
 
 /* [1056] "오늘의 활동"(출석·포인트·미션·관심지역) 카드 — 로그인 확인 뒤에만 동적 import.
    정적 import 는 홈 첫 번들(488KB · 상한 495KB)에 들어가므로 세션이 확인된 사용자에게만 내려받는다. */

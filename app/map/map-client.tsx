@@ -64,7 +64,12 @@ const ComplexInfoPanel = dynamic(
 );
 const HistogramRangeSlider = dynamic(
   () => import("./HistogramRangeSlider").then((m) => m.HistogramRangeSlider),
-  { ssr: false },
+  {
+    ssr: false,
+    /* [1103] 받는 동안 같은 높이 자리(제목 줄 + 막대 38 + 손잡이 줄 20 + 수 한 줄 ≈ 96px) — 예전엔 빈칸이었다가
+       슬라이더 넷이 한꺼번에 튀어나와 패널 아래 칸(단지 조건 · 레이어)이 380px 쯤 밀려 내려갔다 */
+    loading: () => <div aria-hidden="true" className="h-[96px] rounded-lg bg-[rgba(16,28,54,.04)]" />,
+  },
 );
 const ListingPreviewPanel = dynamic(
   () => import("./ListingPreviewPanel").then((m) => m.ListingPreviewPanel),
@@ -1057,6 +1062,8 @@ export function MapClient({
      또는 탭에 다시 편다. 전이 규칙은 lib/map/chrome-state.ts(순수 함수·단위테스트).
      접힌 동안에도 컨트롤은 DOM 에 남는다(inert) — 없애는 게 아니라 잠깐 비키는 것. */
   const [chromeState, setChromeState] = useState<MapChromeState>("expanded");
+  /* [1103] 폰 검색 칸에 초점 — 이때만 검색 칸이 줄 전체로 넓어지고 줌 탭은 잠시 비킨다(아래 "모바일 검색" 주석) */
+  const [phoneSearchFocus, setPhoneSearchFocus] = useState(false);
   const chromeStateRef = useRef<MapChromeState>("expanded");
   chromeStateRef.current = chromeState;
   const chromeNarrowRef = useRef(false);
@@ -4193,6 +4200,14 @@ export function MapClient({
      시·군·구/동 축척의 지역 평균 말풍선(한국부동산원)도 필터와 무관한 값이다 — "10억 이하"를 걸어도 29억 구 평균이
      그대로 보인다(로컬 실측 1053). 그 말풍선이 떠 있을 때도 같은 고지를 띄운다. */
   const regionBubblesShown = zoom !== "danji" && regionMarketMarkers.length > 0;
+  /* [1103] 월세는 실거래 마커가 없다(국토부 월세 집계를 지도에 싣지 않는다) — 월세를 고르면 매물 레이어가 켜지고, 단지 금액은
+     직전에 보던 매매(또는 전세) 실거래가 그대로 남는다. 예전엔 그 사실을 어디에도 적지 않아 월세 화면의 "13억"이 월세처럼 읽혔다. */
+  if (listingTradeKey === "monthly") {
+    mapNotices.push({
+      key: "monthly-basis",
+      text: `월세 = 등록 매물 · 단지 금액은 ${txType === "rent" ? "전세 보증금" : "매매"} 실거래`,
+    });
+  }
   if ((rangeActive || cxOn) && txType !== "rent" && ((clusterMode === "clusters" && clusters.length > 0) || regionBubblesShown)) {
     mapNotices.push({
       key: "range-cluster",
@@ -4660,11 +4675,19 @@ export function MapClient({
       {/* ===== 모바일 검색 (md 미만) — 패널 열려 있으면 숨김 ===== */}
       {/* [968 · 24] 접힌 동안은 투명·inert 로 비킨다(언마운트하지 않는다 — 입력값 유지).
           감속 모션이면 전환 없이 즉시(motion-safe). */}
+      {/* [1103 · 조작 다이어트] 폰 위쪽 크롬이 네 줄(머리 16~74 · 검색 82~128 · 줌 탭 128~176 · 칩 176~223 = 화면의 26%)이었다.
+          검색 칸과 줌 탭을 한 줄에 둔다 — 검색 칸은 줌 탭(약 154px) 왼쪽까지, 누르면(초점) 줄 전체로 넓어지고 줌 탭은 잠시 비킨다.
+          칩 줄은 136 · 상세 필터 패널은 178 로 한 줄만큼(40px) 올렸다. */}
       {!infoComplex && (
         <div
-          className={`absolute left-4 right-4 z-40 md:hidden ${chromeFoldClass}`}
+          className={`absolute left-4 z-40 transition-[right] duration-150 md:hidden ${phoneSearchFocus ? "right-4" : "right-[178px]"} ${chromeFoldClass}`}
           style={{ top: "calc(env(safe-area-inset-top, 0px) + 82px)" }}
           inert={chromeCompact}
+          onFocusCapture={() => setPhoneSearchFocus(true)}
+          onBlurCapture={(e) => {
+            const next = e.relatedTarget as Node | null;
+            if (!next || !e.currentTarget.contains(next)) setPhoneSearchFocus(false);
+          }}
         >
           <MapSearchBox
             variant="floating"
@@ -4744,7 +4767,7 @@ export function MapClient({
       <div
         data-ptr-ignore=""
         inert={chromeCompact}
-        className={`scroll-x-hidden-bar absolute left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+176px)] z-30 flex items-center gap-1.5 py-0.5 md:left-[356px] md:right-[240px] md:top-[calc(env(safe-area-inset-top,0px)+88px)] lg:hidden [&>*]:shrink-0 ${chromeFoldClass}`}
+        className={`scroll-x-hidden-bar absolute left-4 right-4 top-[calc(env(safe-area-inset-top,0px)+136px)] z-30 flex items-center gap-1.5 py-0.5 md:left-[356px] md:right-[240px] md:top-[calc(env(safe-area-inset-top,0px)+88px)] lg:hidden [&>*]:shrink-0 ${chromeFoldClass}`}
       >
         {filterBar}
         {viewportCountChip}
@@ -4757,7 +4780,7 @@ export function MapClient({
            204 로 내린다. 겹침을 없애되 존재를 지우지 않는다. */}
       {filtersExpanded && (
         <div
-          className="absolute left-4 top-[calc(env(safe-area-inset-top,0px)+218px)] z-[41] w-[300px] max-w-[calc(100vw_-_32px)] [--nz-filter-max-h:calc(100dvh_-_env(safe-area-inset-top,0px)_-_218px_-_var(--nz-map-bottom-lane)_-_8px)] md:left-[var(--nz-filter-left)] md:top-[calc(env(safe-area-inset-top,0px)+204px)] md:max-w-[calc(100vw_-_var(--nz-filter-left)_-_16px)] md:[--nz-filter-max-h:calc(100dvh_-_env(safe-area-inset-top,0px)_-_204px_-_var(--nz-map-bottom-lane)_-_8px)] lg:left-[var(--nz-filter-left-lg)] lg:max-w-[calc(100vw_-_var(--nz-filter-left-lg)_-_16px)]"
+          className="absolute left-4 top-[calc(env(safe-area-inset-top,0px)+178px)] z-[41] w-[300px] max-w-[calc(100vw_-_32px)] [--nz-filter-max-h:calc(100dvh_-_env(safe-area-inset-top,0px)_-_178px_-_var(--nz-map-bottom-lane)_-_8px)] md:left-[var(--nz-filter-left)] md:top-[calc(env(safe-area-inset-top,0px)+204px)] md:max-w-[calc(100vw_-_var(--nz-filter-left)_-_16px)] md:[--nz-filter-max-h:calc(100dvh_-_env(safe-area-inset-top,0px)_-_204px_-_var(--nz-map-bottom-lane)_-_8px)] lg:left-[var(--nz-filter-left-lg)] lg:max-w-[calc(100vw_-_var(--nz-filter-left-lg)_-_16px)]"
           style={
             {
               "--nz-filter-left": `${filterLeftMdPx}px`,
@@ -5058,11 +5081,11 @@ export function MapClient({
            지도 위 플로팅 판은 우측 마커 라벨 위에 뜬다. 넓은 화면은 헤더로
            올렸고(위 헤더 블록), 이 판은 헤더에 자리가 없는 폭에서만 남는다. */}
       {/* [968 · 24] 모바일 접힘 대상 — 줌 탭도 상단 크롬(128~176 레인)이다
-          [1102] mt-9 는 이 테마의 간격 단위로 27px 이라 판이 119 에서 시작해 검색 칸(82~128) 아래끝 9px 를 파고들었다
-          (판 윗머리가 검색 칸에 가려 잘려 보임 · 운영 폰 재현). 픽셀로 못박는다 — 128~176(터치 40px 칸 + 안쪽 여백), 칩 줄은 176 부터. */}
+          [1102] mt-9(이 테마 간격 단위로 27px)가 판을 검색 칸 아래끝에 9px 파고들게 했다 → 픽셀로 못박음.
+          [1103] 폰은 검색 칸과 같은 줄(82~130 · 오른쪽) — 아래 "모바일 검색" 주석. md 이상은 그대로(md:mt-0 · translate-y-9). */}
       <div
         inert={chromeCompact}
-        className={`glass absolute right-5 z-30 mt-[36px] flex items-center gap-0.5 rounded-full p-1 md:mt-0 md:translate-y-9 xl:hidden ${chromeFoldClass}`}
+        className={`glass absolute right-4 z-30 -mt-[10px] flex items-center gap-0.5 rounded-full p-1 md:right-5 md:mt-0 md:translate-y-9 xl:hidden ${phoneSearchFocus ? "max-md:pointer-events-none max-md:opacity-0" : ""} ${chromeFoldClass}`}
         style={{ top: "calc(env(safe-area-inset-top, 0px) + 92px)" }}
       >
         <ZoomTabButtons zoom={zoom} onSelect={handleZoomTab} />

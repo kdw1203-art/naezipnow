@@ -7,7 +7,7 @@ import { hasSession } from "@/lib/client/has-session";
 import { Icon } from "@/app/components/Icon";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
 import { useSoftSignup } from "@/app/components/soft-signup/soft-signup-context";
-import { useUpgradePaywall } from "@/app/components/UpgradePaywallProvider";
+import { useUpgradePaywall } from "@/app/components/upgrade-paywall-context";
 
 /* ============================================================
    뉴스·글 상세의 실제 동작하는 컨트롤 모음.
