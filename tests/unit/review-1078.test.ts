@@ -39,7 +39,8 @@ test("S1 말투 2차 — 짧은 라벨·제목", () => {
     ["app/my/points/ReferralSection.tsx", ">초대 방법<", "이렇게 초대돼요"],
     ["app/my/subscription/SubscriptionManageClient.tsx", ">해지 시 변경 사항<", "해지하면 이렇게 돼요"],
     ["app/components/explain/ExplainSheet.tsx", ">계산 방법<", "이렇게 계산했어요"],
-    ["app/about/page.tsx", 'title: "판단은 사용자가 합니다"', "사용자의 것입니다"],
+    /* [1107] 원칙 제목을 표 낱말로 줄였다 */
+    ["app/about/page.tsx", 'title: "판단은 사용자"', "사용자의 것입니다"],
     ["app/region/[id]/page.tsx", "요약 · 지수 · 거래 · 뉴스", "한 줄 이야기 · 지수"],
     ["app/complex/[id]/page.tsx", "이 단지 토론 · 새 글 30초마다", "이 단지 한 줄 ·"],
     ["app/my/consultations/CloseConsult.tsx", "상담 종료", "더 기다리지 않을래요"],

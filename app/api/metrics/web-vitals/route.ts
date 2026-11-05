@@ -5,6 +5,7 @@ import { isMissingTableError, isTransientSchemaCacheError } from "@/lib/supabase
 import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { isBotUserAgent } from "@/lib/client/is-bot-ua";
 import { normalizeSampleRate } from "@/lib/metrics/vitals-sample";
+import { telemetryWritesDisabled } from "@/lib/metrics/telemetry-write";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,6 +82,8 @@ function toRow(body: VitalsPayload, userAgent: string | null): VitalRow | null {
 export async function POST(req: NextRequest): Promise<Response> {
   const ua = (req.headers.get("user-agent") ?? "").slice(0, 256);
   if (isBotUserAgent(ua)) return new NextResponse(null, { status: 204 });
+  /* [1106] 자동 점검 서버(CI E2E)의 측정은 사람 기준 p75 를 흐린다 — 저장 없이 204 */
+  if (telemetryWritesDisabled()) return new NextResponse(null, { status: 204 });
 
   /* 무인증 텔레메트리 — 페이지뷰당 이제 요청 1회(표본 ≤ 50) 안팎이다. 도배만 막는다. */
   const rl = rateLimit(`web-vitals:${getClientIp(req)}`, { limit: 60, windowMs: 60_000 });

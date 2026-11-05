@@ -1,10 +1,20 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { loadSearchLandings } from "@/lib/admin/search-landings";
+import { loadSearchLandings, type SearchLandingsLoaded } from "@/lib/admin/search-landings";
 import { loadGscPerformance, type GscLoaded } from "@/lib/admin/gsc-performance";
 import { listSearchReports } from "@/lib/admin/search-reports";
-import { SOURCE_LABEL, SOURCE_ORDER, deltaPct, type LandingSource, type SearchLandingSummary } from "@/lib/seo/search-engines";
+import {
+  SOURCE_LABEL,
+  SOURCE_ORDER,
+  comparablePeriods,
+  deltaPct,
+  type LandingCoverage,
+  type LandingSource,
+  type SearchLandingSummary,
+} from "@/lib/seo/search-engines";
+import { KNOWN_OUTAGES } from "@/lib/metrics/known-outages";
+import { formatKstDateTime } from "@/lib/format/kst";
 import { pagePath, type GscMetricRow } from "@/lib/seo/gsc-performance-shape";
 import { SEARCH_REPORT_ENGINE_LABEL, reportCtr, type SearchReport } from "@/lib/seo/search-report-rules";
 import { kstDay } from "@/lib/metrics/page-count";
@@ -69,10 +79,28 @@ function Failed({ what, detail }: { what: string; detail?: string }) {
 
 const SEARCH_SOURCES: readonly LandingSource[] = ["naver", "google", "bing", "daum", "other-search", "ai"];
 
+/* [1106] 앞 기간 비교 문구 — "앞 28일 0"을 사실처럼 적지 않는다(수집 전 · 일부만 · 정지 날 포함을 구분) */
+function coverageNote(c: LandingCoverage | undefined): string | null {
+  if (!c) return null;
+  const parts: string[] = [];
+  if (c.prevDays === 0) parts.push("앞 28일 수집 전");
+  else if (c.prevDays < 28) parts.push(`앞 28일 중 ${c.prevDays}일만 수집`);
+  if (c.curOutageDays > 0) parts.push(`운영 정지 ${c.curOutageDays}일 제외`);
+  else if (c.prevOutageDays > 0) parts.push(`앞 기간 운영 정지 ${c.prevOutageDays}일 제외`);
+  return parts.length ? parts.join(" · ") : null;
+}
+
+function LandingDelta({ now, prev, c }: { now: number; prev: number; c: LandingCoverage | undefined }) {
+  if (comparablePeriods(c)) return <Delta now={now} prev={prev} />;
+  return <span className="text-[12px] text-text-3">{coverageNote(c) ?? "비교 없음"}</span>;
+}
+
 function LandingBars({ s }: { s: SearchLandingSummary }) {
   const searchTotal = (d: SearchLandingSummary["days"][number]) =>
     SEARCH_SOURCES.reduce((a, k) => a + (d.bySource[k] ?? 0), 0);
-  const max = Math.max(1, ...s.days.map(searchTotal));
+  /* 정지 · 수집 전 날은 높이 기준에서 뺀다(그날 수는 사람 방문이 아니거나 없다) */
+  const max = Math.max(1, ...s.days.filter((d) => d.flag !== "outage" && d.flag !== "before").map(searchTotal));
+  const outageLabel = KNOWN_OUTAGES[0]?.label ?? "운영 정지";
   return (
     <div className="mt-3 flex items-end gap-1 overflow-x-auto pb-1" aria-label="검색엔진에서 온 첫 화면 · 최근 28일">
       {s.days.map((d) => {
@@ -81,6 +109,20 @@ function LandingBars({ s }: { s: SearchLandingSummary }) {
         const total = searchTotal(d);
         const others = total - naver - google;
         const h = (n: number) => `${Math.round((n / max) * 80)}px`;
+        if (d.flag === "before" || d.flag === "outage") {
+          return (
+            <div
+              key={d.day}
+              className="flex min-w-[26px] flex-1 flex-col items-center gap-1"
+              title={d.flag === "before" ? `${d.day} · 수집 시작 전` : `${d.day} · ${outageLabel}`}
+            >
+              <span className="min-h-[14px] text-[10px] text-text-3">{d.flag === "outage" ? "정지" : ""}</span>
+              <div className="h-[80px] w-full rounded-t-md border border-dashed border-line-strong" />
+              <span className="text-[10px] text-text-3">{fmtDay(d.day)}</span>
+            </div>
+          );
+        }
+        const today = d.flag === "today";
         return (
           <div key={d.day} className="flex min-w-[26px] flex-1 flex-col items-center gap-1">
             {/* 0 인 날은 숫자를 비워 막대 줄이 숫자 벽이 되지 않게(자리는 남긴다) */}
@@ -88,13 +130,13 @@ function LandingBars({ s }: { s: SearchLandingSummary }) {
             <div
               className="flex w-full flex-col-reverse overflow-hidden rounded-t-md"
               style={{ height: "80px", justifyContent: "flex-start" }}
-              title={`${d.day} · 네이버 ${naver} · 구글 ${google} · 그 밖 ${others}`}
+              title={`${d.day}${today ? " · 오늘(자정까지 오름)" : ""} · 네이버 ${naver} · 구글 ${google} · 그 밖 ${others} · 전체 첫 화면 ${d.total}`}
             >
               <div className="w-full bg-primary/70" style={{ height: h(naver) }} />
               <div className="w-full bg-ink/40" style={{ height: h(google) }} />
               <div className="w-full bg-text-3/30" style={{ height: h(others) }} />
             </div>
-            <span className="text-[10px] text-text-3">{fmtDay(d.day)}</span>
+            <span className={`text-[10px] ${today ? "font-bold text-primary" : "text-text-3"}`}>{today ? "오늘" : fmtDay(d.day)}</span>
           </div>
         );
       })}
@@ -103,6 +145,8 @@ function LandingBars({ s }: { s: SearchLandingSummary }) {
 }
 
 function SourceTable({ s }: { s: SearchLandingSummary }) {
+  const c = s.coverage;
+  const comparable = comparablePeriods(c);
   return (
     <table className="mt-3 w-full text-[12px]">
       <thead>
@@ -117,12 +161,15 @@ function SourceTable({ s }: { s: SearchLandingSummary }) {
         {SOURCE_ORDER.map((k) => {
           const now = s.totals[k];
           const prev = s.prevTotals[k];
-          const d = deltaPct(now, prev);
+          /* [1106] 두 기간이 같은 조건(앞 기간 전부 수집 · 정지 날 없음)일 때만 변화율 */
+          const d = comparable ? deltaPct(now, prev) : null;
           return (
             <tr key={k} className="border-t border-line">
               <td className="py-1.5 text-ink">{SOURCE_LABEL[k]}</td>
               <td className="t-num py-1.5 text-right font-bold text-ink">{fmt(now)}</td>
-              <td className="t-num py-1.5 text-right text-text-2">{fmt(prev)}</td>
+              <td className="t-num py-1.5 text-right text-text-2">
+                {c && c.prevDays === 0 ? <span className="text-text-3">수집 전</span> : fmt(prev)}
+              </td>
               <td className="t-num py-1.5 text-right text-text-2">{d === null ? "—" : `${d > 0 ? "+" : ""}${d}%`}</td>
             </tr>
           );
@@ -319,7 +366,9 @@ export default async function AdminSearchPage() {
     ),
   ]);
   const latestNaver = naverR.ok ? (naverR.rows[0] ?? null) : null;
-  const s = landingsR.ok ? landingsR.s : null;
+  const s: SearchLandingsLoaded | null = landingsR.ok ? landingsR.s : null;
+  const firstDay = s?.coverage?.firstDay ?? null;
+  const note = s ? coverageNote(s.coverage) : null;
 
   return (
     <div className="flex flex-col gap-5 rounded-2xl bg-bg p-4 md:p-5">
@@ -337,12 +386,12 @@ export default async function AdminSearchPage() {
         <Tile
           label="네이버 검색에서 온 첫 화면 · 28일"
           value={s ? fmt(s.totals.naver) : "—"}
-          sub={s ? <Delta now={s.totals.naver} prev={s.prevTotals.naver} /> : <span className="text-[12px] text-danger">조회 실패</span>}
+          sub={s ? <LandingDelta now={s.totals.naver} prev={s.prevTotals.naver} c={s.coverage} /> : <span className="text-[12px] text-danger">조회 실패</span>}
         />
         <Tile
           label="구글 검색에서 온 첫 화면 · 28일"
           value={s ? fmt(s.totals.google) : "—"}
-          sub={s ? <Delta now={s.totals.google} prev={s.prevTotals.google} /> : <span className="text-[12px] text-danger">조회 실패</span>}
+          sub={s ? <LandingDelta now={s.totals.google} prev={s.prevTotals.google} c={s.coverage} /> : <span className="text-[12px] text-danger">조회 실패</span>}
         />
         <Tile
           label="서치콘솔 클릭 · 28일"
@@ -376,8 +425,16 @@ export default async function AdminSearchPage() {
         </h2>
         <p className="mt-1 text-[12px] leading-[1.6] text-text-3">
           익명 하루 수(동의와 무관) 가운데 세션 첫 화면의 리퍼러를 묶었습니다. 막대는 검색엔진(네이버 · 구글 · 그 밖 검색 · AI)만,
-          표는 전부. {s ? `${s.range.start} ~ ${s.range.end}` : ""} · 10.11 부터 쌓임.
+          표는 전부. {s ? `${s.range.start} ~ ${s.range.end}` : ""}
+          {firstDay ? ` · ${fmtDay(firstDay)} 부터 쌓임` : ""}
         </p>
+        {s ? (
+          /* [1106] 소유자 "이것도 업데이트 매일 해줘" — 이 표는 열 때마다 새로 읽는다(저장해 둔 사본 없음). 마지막 기록 시각으로 보인다 */
+          <p className="mt-1 text-[12px] text-text-3">
+            열 때마다 새로 읽음 · 마지막 기록 {s.lastRecordedAt ? formatKstDateTime(s.lastRecordedAt) : "—"} · 오늘 수는 한국 자정까지 오름
+            {s.truncated ? " · 2만 줄 상한에 닿아 일부만" : ""}
+          </p>
+        ) : null}
         {!s ? (
           <div className="mt-3">
             <Failed what="착지" detail={landingsR.ok ? undefined : landingsR.detail} />
@@ -389,7 +446,19 @@ export default async function AdminSearchPage() {
               <span className="inline-flex items-center gap-1"><i className="inline-block h-2.5 w-2.5 rounded-sm bg-primary/70" />네이버</span>
               <span className="inline-flex items-center gap-1"><i className="inline-block h-2.5 w-2.5 rounded-sm bg-ink/40" />구글</span>
               <span className="inline-flex items-center gap-1"><i className="inline-block h-2.5 w-2.5 rounded-sm bg-text-3/30" />그 밖 검색 · AI</span>
+              {s.days.some((d) => d.flag === "outage" || d.flag === "before") ? (
+                <span className="inline-flex items-center gap-1">
+                  <i className="inline-block h-2.5 w-2.5 rounded-sm border border-dashed border-line-strong" />
+                  {[
+                    s.days.some((d) => d.flag === "before") ? "빈 점선 = 수집 전" : null,
+                    s.days.some((d) => d.flag === "outage") ? `정지 = ${KNOWN_OUTAGES[0]?.label ?? "운영 정지"}` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </span>
+              ) : null}
             </p>
+            {note ? <p className="mt-1 text-[12px] text-text-3">변화율 없음 · {note}</p> : null}
             <div className="mt-4 grid gap-5 lg:grid-cols-[1.1fr_1fr_1fr]">
               <SourceTable s={s} />
               <TopRoutes s={s} source="naver" />

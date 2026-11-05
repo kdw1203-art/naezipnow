@@ -13,8 +13,13 @@
    · 점수 없는 줄 세 가지를 글과 모양으로 가른다: 불러오기 실패(점선 경고 테) · 표본 적음(기준선만) · 자료 없음(빈 줄).
      "반영 n/8"은 점수가 있는 요인만 세고, 빠진 까닭을 개수로 붙인다.
    · 요인 이름은 계산 방법의 그 요인 칸(/methodology#signal-<key>)으로 간다. 줄마다 출처 · 기준 시점.
-   · 최신 자료 시점은 꼴이 섞인 asOf("2026.09" · "2026-08" · "202608" · "2026-10-05")를 숫자 키로 맞춰 고른다. */
+   · 최신 자료 시점은 꼴이 섞인 asOf("2026.09" · "2026-08" · "202608" · "2026-10-05")를 숫자 키로 맞춰 고른다.
+
+   [1107] 간결화 — 소유자 2026-11-05 "글씨크기 글자수 디자인 표 등 … 통합 간결화"(단지 화면 캡처). 요인 하나가 세 줄(이름·막대 /
+   사실 / 출처)이라 8요인이 24줄 · 판 높이 화면 하나였다. → 넓은 판(@xl)은 요인 한 줄(이름 · 사실 · 막대 · 낱말) 표,
+   좁은 판(폰 · 노트 칸)은 두 줄. 풀이(note) · 출처 · 기준 시점 · 계산식은 판 아래 "근거 · 출처" 접힘 하나로(글은 그대로 DOM). */
 import Link from "@/app/components/IntentLink";
+import { Fineprint } from "@/app/components/Fineprint";
 import { coverageBreakdown, factorStateWord, latestAsOf, scoreLean, unscoredReason, ymLabel } from "@/lib/signals/display";
 import type { SignalReport, SignalFactor } from "@/lib/signals/engine";
 
@@ -131,46 +136,59 @@ export function SignalBoard({
         )}
       </div>
 
-      {/* 요인 8줄 */}
+      {/* 요인 8줄 — 넓은 판: 이름 · 사실 · 막대 · 낱말 한 줄 / 좁은 판: 이름 · 막대 · 낱말 + 사실 한 줄 */}
       <ul className="mt-2 flex list-none flex-col divide-y p-0" data-tone="plain">
         {report.factors.map((f) => {
           const href = factorHref(f.key);
-          const asOf = ymLabel(f.asOf);
           const why = unscoredReason(f);
           return (
-            <li key={f.key} className="flex flex-col gap-1 py-2" data-factor={f.key} data-factor-state={why ?? "scored"}>
-              <div className="grid grid-cols-[4.5rem_minmax(0,1fr)_5.5rem] items-center gap-2.5">
-                {href ? (
-                  /* 보이는 줄 높이는 그대로(음수 마진) · 눌리는 범위만 폰 40px · 데스크톱 24px */
-                  <Link
-                    href={href}
-                    aria-label={`${f.label} 계산 방법`}
-                    className="-my-2.5 inline-flex min-h-[40px] min-w-[40px] items-center self-center t-sub font-bold text-ink underline decoration-line-strong decoration-dotted underline-offset-4 hover:text-primary md:-my-0.5 md:min-h-6 md:min-w-6"
-                  >
-                    {f.label}
-                  </Link>
-                ) : (
-                  <span className="t-sub font-bold text-ink">{f.label}</span>
-                )}
+            <li
+              key={f.key}
+              className="grid grid-cols-[4.5rem_minmax(0,1fr)_5.5rem] items-center gap-x-2.5 gap-y-0.5 py-2 @xl:grid-cols-[4.5rem_minmax(0,1fr)_7rem_5.5rem]"
+              data-factor={f.key}
+              data-factor-state={why ?? "scored"}
+            >
+              {href ? (
+                /* 보이는 줄 높이는 그대로(음수 마진) · 눌리는 범위만 폰 40px · 데스크톱 24px */
+                <Link
+                  href={href}
+                  aria-label={`${f.label} 계산 방법`}
+                  className="col-start-1 row-start-1 -my-2.5 inline-flex min-h-[40px] min-w-[40px] items-center self-center t-sub font-bold text-ink underline decoration-line-strong decoration-dotted underline-offset-4 hover:text-primary md:-my-0.5 md:min-h-6 md:min-w-6"
+                >
+                  {f.label}
+                </Link>
+              ) : (
+                <span className="col-start-1 row-start-1 t-sub font-bold text-ink">{f.label}</span>
+              )}
+              <p className="col-span-3 row-start-2 t-caption text-text-2 @xl:col-span-1 @xl:col-start-2 @xl:row-start-1">{f.value}</p>
+              <div className="col-start-2 row-start-1 @xl:col-start-3">
                 <Bar factor={f} />
-                <span className={`text-right t-caption font-bold ${wordTone(f)}`}>{factorStateWord(f)}</span>
               </div>
-              <p className="t-caption text-text-2">
-                {f.value}
-                {f.note ? <span className="text-text-3"> · {f.note}</span> : null}
-              </p>
-              <p className="t-caption text-text-3">
-                출처 {f.source}
-                {asOf ? ` · 기준 ${asOf}` : ""}
-              </p>
+              <span className={`col-start-3 row-start-1 text-right t-caption font-bold @xl:col-start-4 ${wordTone(f)}`}>{factorStateWord(f)}</span>
             </li>
           );
         })}
       </ul>
 
-      <p className="mt-1.5 t-caption text-text-3">
-        요인 점수 −2~+2 가중 평균 → 0~100(50 중립) · 점수 없는 요인 제외 · 매수·매도 권유 아님
-        {latest ? ` · 최신 자료 ${latest}` : ""}
+      {/* [1107] 풀이 · 출처 · 기준 시점 · 계산식 — 요인마다 두 줄씩 깔리던 글을 접힘 하나로(글은 그대로) */}
+      <Fineprint label={`근거 · 출처${latest ? ` · 최신 자료 ${latest}` : ""}`} className="mt-1.5">
+        <ul className="flex list-none flex-col gap-1 p-0">
+          {report.factors.map((f) => {
+            const asOf = ymLabel(f.asOf);
+            return (
+              <li key={f.key}>
+                <b className="font-bold text-text-2">{f.label}</b>
+                {f.note ? ` ${f.note} · ` : " "}
+                출처 {f.source}
+                {asOf ? ` · 기준 ${asOf}` : ""}
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-1.5">요인 점수 −2~+2 가중 평균 → 0~100(50 중립) · 점수 없는 요인 제외</p>
+      </Fineprint>
+      <p className="mt-0.5 t-caption text-text-3">
+        매수·매도 권유 아님
         {methodHref ? (
           <>
             {" · "}

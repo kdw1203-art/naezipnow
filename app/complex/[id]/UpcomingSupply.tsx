@@ -1,6 +1,7 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
 import { loadUpcomingSupply, withSectionBudget } from "./section-loaders";
 import { currentYm } from "@/lib/format/ym";
+import { supplyPlaceLabel } from "@/lib/supply/place-label";
 
 /* [948→949] 지역 키 6시간 데이터 캐시 + 요청 내 프리페치 dedupe — 둘 다
    section-loaders.ts 에 있다(실패는 던져서 캐시에 남지 않는다; 아래 .catch 가
@@ -51,32 +52,36 @@ export async function UpcomingSupply({
           {totalHouseholds > 0 ? ` · 약 ${totalHouseholds.toLocaleString("ko-KR")}세대` : ""}
         </span>
       </h2>
-      {/* [1015 · 규칙 I] 공급 목록 = sand 리퀴드 판 */}
-      <ul className="lq-panel flex flex-col divide-y" data-tone="sand">
-          {shown.map((i, idx) => (
-            <li
-              key={`${i.moveInYm}-${i.aptName}-${idx}`}
-              className="flex items-center justify-between gap-3 py-2.5"
-            >
-              <div className="min-w-0">
-                <div className="truncate t-body font-bold text-ink">
+      {/* [1107] 목록 → 표(단지 · 위치 · 입주 · 세대). 주소 전체("경기도 안양시 동안구 관양동 521번지 일원 (… 도시개발사업 내 A1BL)")는
+          머리의 지역과 겹치는 반복이라 동 하나로(lib/supply/place-label) · 공급 유형은 "분양"이 아닐 때만 이름 옆에.
+          [1015 · 규칙 I] sand 리퀴드 판은 그대로. */}
+      <div className="lq-panel overflow-x-auto" data-tone="sand">
+        <table className="w-full t-sub">
+          <thead>
+            <tr className="text-left t-caption text-text-3">
+              <th scope="col" className="py-1.5 font-medium">단지</th>
+              <th scope="col" className="py-1.5 font-medium">위치</th>
+              <th scope="col" className="py-1.5 text-right font-medium">입주</th>
+              <th scope="col" className="py-1.5 text-right font-medium">세대</th>
+            </tr>
+          </thead>
+          <tbody>
+            {shown.map((i, idx) => (
+              <tr key={`${i.moveInYm}-${i.aptName}-${idx}`} className="border-t border-divider">
+                <th scope="row" className="break-keep py-2 pr-2 text-left t-body font-bold text-ink">
                   {i.aptName || "공급 예정 단지"}
-                </div>
-                <div className="truncate t-sub text-text-3">
-                  {[i.address || i.region, i.bizType].filter(Boolean).join(" · ")}
-                </div>
-              </div>
-              <div className="shrink-0 text-right">
-                <div className="t-body t-num font-bold">{fmtYm(i.moveInYm)}</div>
-                {i.households != null && (
-                  <div className="t-sub text-text-3">
-                    {i.households.toLocaleString("ko-KR")}세대
-                  </div>
-                )}
-              </div>
-            </li>
-          ))}
-      </ul>
+                  {i.bizType && i.bizType !== "분양" ? <span className="ml-1 t-caption font-medium text-text-3">{i.bizType}</span> : null}
+                </th>
+                <td className="whitespace-nowrap py-2 pr-2 text-text-2">{supplyPlaceLabel(i.address) || i.region || "—"}</td>
+                <td className="whitespace-nowrap py-2 text-right t-num font-bold text-ink">{fmtYm(i.moveInYm)}</td>
+                <td className="whitespace-nowrap py-2 pl-2 text-right t-num text-text-2">
+                  {i.households != null ? i.households.toLocaleString("ko-KR") : "—"}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {/* [1015 · 규칙 B·D] 설명 문장("영향을 줄 수 있어요")은 걷고 출처·주의만 */}
       <p className="mt-1.5 px-1 t-caption text-text-3">공공 공급 데이터 기준 · 일정은 변동될 수 있음</p>
     </section>

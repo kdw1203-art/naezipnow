@@ -1,3 +1,4 @@
+import { formatKstDate } from "@/lib/format/kst";
 import {
   loadExperimentResults,
   MIN_CONVERSIONS_PER_VARIANT,
@@ -36,13 +37,9 @@ function signedPct(v: number | null): string {
   return v > 0 ? `+${s}%` : `${s}%`;
 }
 
+/* [1106] 서버는 UTC — 날짜·시각은 한국 시간으로(lib/format/kst) */
 function stamp(iso: string | null): string {
-  if (!iso) return "—";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "—";
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(
-    d.getDate(),
-  ).padStart(2, "0")}`;
+  return (iso ? formatKstDate(iso) : "") || "—";
 }
 
 /** 기준까지 얼마나 남았는지 — "부족하다"만 말하면 언제 볼 수 있는지 모른다. */

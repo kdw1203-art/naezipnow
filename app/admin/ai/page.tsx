@@ -1,3 +1,4 @@
+import { kstMonthKey, kstMonthStartIso } from "@/lib/growth/channels";
 import Link from "next/link";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
@@ -52,14 +53,10 @@ async function loadStats(): Promise<{
   if (!sb) return empty;
 
   const since = new Date(Date.now() - 30 * 86400_000).toISOString();
-  const monthStart = new Date();
-  monthStart.setDate(1);
-  monthStart.setHours(0, 0, 0, 0);
-
-  const yyyymm = (() => {
-    const d = new Date();
-    return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}`;
-  })();
+  /* [1106] 이달 = 한국 달 — 예산 집행(app/api/ai/analysis kstMonthStart)과 한도(currentYm)가 한국 기준인데 이 화면만 UTC 라
+     1일 0~9시에는 지난달 전체를, 그 뒤로는 1일 0~9시를 빼고 셌다. */
+  const monthStart = new Date(kstMonthStartIso());
+  const yyyymm = kstMonthKey().replace("-", "");
 
   try {
     const [runsRes, fbRes, llmRes, allRes, usageRes] = await Promise.all([

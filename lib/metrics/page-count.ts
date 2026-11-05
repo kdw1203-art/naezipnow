@@ -157,7 +157,10 @@ export type AggRow = {
 };
 
 export type CountSummary = {
-  days: Array<{ day: string; n: number }>;
+  /** [1106] outage = 운영 정지 날(lib/metrics/known-outages) — 그날 수는 사람 방문이 아니다 */
+  days: Array<{ day: string; n: number; outage?: boolean }>;
+  /** [1106] 최근 7일 · 앞 7일 가운데 운영 정지 날 수(있으면 화면이 증감률을 적지 않는다) */
+  outageDays7?: { last: number; prev: number };
   last7: number;
   prev7: number;
   landings7: number;
@@ -188,7 +191,7 @@ export function deviceLabel(device: string): string {
  * 14일 줄 → 카드 숫자. today = 한국 날짜. 최근 7일 = today 포함 7일, 그 앞 7일과 비교.
  * 들어온 곳은 첫 화면 줄만(빈 호스트 = 직접 · 알 수 없음). 가입 단계는 최근 7일 수.
  */
-export function summarizeCounts(rows: AggRow[], today: string): CountSummary {
+export function summarizeCounts(rows: AggRow[], today: string, isOutage: (day: string) => boolean = () => false): CountSummary {
   const start7 = addDays(today, -6);
   const start14 = addDays(today, -13);
   const byDay = new Map<string, number>();
@@ -203,6 +206,8 @@ export function summarizeCounts(rows: AggRow[], today: string): CountSummary {
     const n = Number.isFinite(r.n) && r.n > 0 ? r.n : 0;
     if (!n || r.day < start14 || r.day > today) continue;
     byDay.set(r.day, (byDay.get(r.day) ?? 0) + n);
+    /* [1106] 운영 정지 날의 수는 사람 방문이 아니다(자동 점검) — 그래프 칸에만 남기고 합계·순위에서 뺀다 */
+    if (isOutage(r.day)) continue;
     if (r.day < start7) {
       prev7 += n;
       continue;
@@ -217,13 +222,20 @@ export function summarizeCounts(rows: AggRow[], today: string): CountSummary {
       refs.set(host, (refs.get(host) ?? 0) + n);
     }
   }
-  const days: Array<{ day: string; n: number }> = [];
+  const days: CountSummary["days"] = [];
+  const outageDays7 = { last: 0, prev: 0 };
   for (let i = 13; i >= 0; i--) {
     const d = addDays(today, -i);
-    days.push({ day: d, n: byDay.get(d) ?? 0 });
+    const outage = isOutage(d);
+    if (outage) {
+      if (i <= 6) outageDays7.last += 1;
+      else outageDays7.prev += 1;
+    }
+    days.push(outage ? { day: d, n: byDay.get(d) ?? 0, outage: true } : { day: d, n: byDay.get(d) ?? 0 });
   }
   return {
     days,
+    outageDays7,
     last7,
     prev7,
     landings7,

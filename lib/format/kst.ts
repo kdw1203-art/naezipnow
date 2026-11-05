@@ -153,3 +153,12 @@ export function isSameKstMonth(
   const pb = kstParts(b);
   return Boolean(pa && pb && pa.year === pb.year && pa.month === pb.month);
 }
+
+/**
+ * [1106] 한국 날짜 자정(오늘 + offsetDays)의 ISO 시각 — 서버(Vercel)는 UTC 라 `setHours(0,0,0,0)` 은 한국 09:00 이었다
+ * (관리 화면 "오늘 가입 · 오늘 결제"가 아침 9시에야 0 으로 돌아가고, 0~9시 일은 전날로 셌다).
+ */
+export function kstDayStartIso(nowMs: number = Date.now(), offsetDays = 0): string {
+  const day = new Date(nowMs + 9 * 3_600_000 + offsetDays * 86_400_000).toISOString().slice(0, 10);
+  return new Date(`${day}T00:00:00+09:00`).toISOString();
+}

@@ -1,3 +1,4 @@
+import { formatKstDateTime } from "@/lib/format/kst";
 import { loadSourceFreshness } from "@/lib/admin/source-freshness";
 import { loadNewsRegionLinkage } from "@/lib/admin/news-region-link";
 import { loadGeocodeCoverage, loadIngestLogSummary24h } from "@/lib/admin/data-health-extras";
@@ -8,11 +9,10 @@ import { loadGeocodeCoverage, loadIngestLogSummary24h } from "@/lib/admin/data-h
 
 export const dynamic = "force-dynamic";
 
+/* [1106] 서버는 UTC — 날짜·시각은 한국 시간으로(lib/format/kst) */
 function fmt(iso: string | null): string {
   if (!iso) return "확인 불가";
-  const d = new Date(iso);
-  const p = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}.${p(d.getMonth() + 1)}.${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+  return formatKstDateTime(iso) || "확인 불가";
 }
 
 function age(h: number | null): string {

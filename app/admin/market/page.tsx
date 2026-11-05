@@ -2,6 +2,7 @@
    정산(GMV·수수료)은 결제 연동 전까지 조작 수치 대신 '준비 중' + 실 의뢰/전문가 수만.
    배너는 실제 설정된 배너(listBanners)를 노출 — 가짜 노출/클릭률은 표기하지 않음. */
 
+import { formatKstShortDate } from "@/lib/format/kst";
 import { loadAdminKpi } from "@/lib/admin/stats";
 import { listBanners, type Banner } from "@/lib/admin/banners";
 
@@ -19,12 +20,9 @@ const PLACEMENT_LABEL: Record<Banner["placement"], string> = {
 };
 
 /** ISO → "MM.DD", 없으면 "" */
+/* [1106] 서버는 UTC — 날짜·시각은 한국 시간으로(lib/format/kst) */
 function ymd(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const t = Date.parse(iso);
-  if (!Number.isFinite(t)) return "";
-  const d = new Date(t);
-  return `${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  return iso ? formatKstShortDate(iso) : "";
 }
 
 export default async function AdminMarketPage() {

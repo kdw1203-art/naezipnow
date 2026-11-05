@@ -1,3 +1,4 @@
+import { kstParts } from "@/lib/format/kst";
 import { probeWidgetUi, WIDGET_UI_NOTE } from "@/lib/payments/toss-widget-probe";
 import { tossWidgetVariant } from "@/lib/payments/toss-variant";
 import { billingLabel } from "@/lib/subscriptions/labels";
@@ -58,8 +59,10 @@ function fmtWhen(iso: string | null | undefined): string {
   if (!iso) return "—";
   const t = Date.parse(iso);
   if (!Number.isFinite(t)) return "—";
-  const d = new Date(t);
-  return `${d.getMonth() + 1}.${String(d.getDate()).padStart(2, "0")} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  /* [1106] 서버는 UTC — 한국 시각으로 */
+  const p = kstParts(t);
+  if (!p) return "—";
+  return `${p.month}.${String(p.day).padStart(2, "0")} ${String(p.hour).padStart(2, "0")}:${String(p.minute).padStart(2, "0")}`;
 }
 
 /** 이메일 마스킹 — 어드민이라도 목록 화면에 전체 주소를 깔 필요는 없다 */

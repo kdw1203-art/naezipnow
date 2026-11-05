@@ -139,7 +139,8 @@ test("관리자 — 이모지 없음 · 배너 미리보기 단색(끝색 입력
   assert.match(read("app/admin/AdminNav.tsx"), /\{ href: "\/admin\/listings", label: "매물 검수" \}/);
   assert.doesNotMatch(read("lib/admin/moderation-policy.ts"), /\/admin\/reports/);
   assert.match(read("app/admin/page.tsx"), /sub: "검수 대기 매물",/);
-  assert.match(read("app/admin/quality/page.tsx"), /sub: "app_users"/);
+  /* [1106] 회원 수의 자를 profiles 로(app_users 는 일부 계정만) — 라벨도 따라 바뀜 */
+  assert.match(read("app/admin/quality/page.tsx"), /sub: "가입 계정\(profiles\)"/);
   assert.match(read("app/admin/quality/page.tsx"), /좋아요·싫어요 비율은 <a href="\/admin\/ai"/);
   const stats = strip(read("lib/admin/stats.ts"));
   assert.match(stats, /export const loadAdminKpi = cache\(loadAdminKpiUncached\);/);

@@ -123,7 +123,8 @@ export default async function AdminOpsPage() {
   // 운영 지표 — 실집계(loadAdminKpi). 조작 KPI(DAU/리텐션 등) 대신 실 수치만.
   const weekly: { label: string; value: string }[] = [
     { label: "신규 가입(7일)", value: kpi.newUsers7d.toLocaleString("ko-KR") },
-    { label: "활성 사용자(7일)", value: kpi.activeUsers7d.toLocaleString("ko-KR") },
+    /* [1106] 방문자가 아니라 글·노트를 쓴 사람 수다(lib/admin/stats activeUsers7d) — 이름을 센 것에 맞춘다 */
+    { label: "글·노트 쓴 사람(7일)", value: kpi.activeUsers7d.toLocaleString("ko-KR") },
     { label: "이번 주 글", value: kpi.postsThisWeek.toLocaleString("ko-KR") },
     { label: "전체 사용자", value: kpi.totalUsers.toLocaleString("ko-KR") },
   ];

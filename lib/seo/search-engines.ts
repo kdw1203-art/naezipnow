@@ -84,7 +84,29 @@ export type LandingRow = {
   n: number;
 };
 
-export type SourceDay = { day: string; total: number; bySource: Partial<Record<LandingSource, number>> };
+/** [1106] 그날의 성격 — before: 수집 시작 전 · outage: 운영 정지(수가 사람 방문이 아님) · today: 오늘(자정까지 늘어남) */
+export type DayFlag = "before" | "outage" | "today";
+
+export type SourceDay = {
+  day: string;
+  total: number;
+  bySource: Partial<Record<LandingSource, number>>;
+  flag?: DayFlag;
+};
+
+/** [1106] 두 기간이 실제로 몇 날을 담았나 — 앞 기간이 수집 시작 전이면 "앞 28일 0"은 사실이 아니다 */
+export type LandingCoverage = {
+  /** 처음 수가 쌓인 날(표 전체 기준) · 모르면 null */
+  firstDay: string | null;
+  /** 최근 기간 가운데 수집 시작 뒤 날 수 */
+  curDays: number;
+  /** 앞 기간 가운데 수집 시작 뒤 날 수(0 = 수집 전) */
+  prevDays: number;
+  /** 최근 기간 가운데 운영 정지 날 수 */
+  curOutageDays: number;
+  /** 앞 기간 가운데 운영 정지 날 수 */
+  prevOutageDays: number;
+};
 
 export type SearchLandingSummary = {
   /** 최근 `days` 일(오늘 포함) 하루씩 — 없는 날은 0 */
@@ -97,7 +119,27 @@ export type SearchLandingSummary = {
   topRoutes: Partial<Record<LandingSource, Array<{ route: string; n: number }>>>;
   /** 기간 */
   range: { start: string; end: string; prevStart: string; prevEnd: string };
+  /** [1106] 수집 범위 — opts.firstDay 를 받았을 때만 */
+  coverage?: LandingCoverage;
 };
+
+export type SummarizeLandingOpts = {
+  /** 표에 처음 수가 쌓인 날(YYYY-MM-DD) */
+  firstDay?: string | null;
+  /** 그날이 운영 정지 날인가(lib/metrics/known-outages outageOn) */
+  isOutage?: (day: string) => boolean;
+};
+
+function spanDays(start: string, end: string): number {
+  if (start > end) return 0;
+  return Math.round((Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000) + 1;
+}
+
+function countDays(start: string, end: string, pred: (d: string) => boolean): number {
+  let n = 0;
+  for (let d = start; d <= end; d = addDays(d, 1)) if (pred(d)) n++;
+  return n;
+}
 
 function addDays(day: string, delta: number): string {
   const t = Date.parse(`${day}T00:00:00Z`) + delta * 86_400_000;
@@ -121,16 +163,25 @@ function emptyTotals(): Record<LandingSource, number> {
  * 착지 줄(is_landing = true 만) → 출처별 하루 수·합·앞 기간·상위 화면.
  * today = 한국 날짜(YYYY-MM-DD). 줄의 day 가 기간 밖이면 버린다.
  */
-export function summarizeSearchLandings(rows: readonly LandingRow[], today: string, days = 28): SearchLandingSummary {
+export function summarizeSearchLandings(
+  rows: readonly LandingRow[],
+  today: string,
+  days = 28,
+  opts: SummarizeLandingOpts = {},
+): SearchLandingSummary {
   const span = Math.max(1, Math.floor(days));
   const start = addDays(today, -(span - 1));
   const prevEnd = addDays(start, -1);
   const prevStart = addDays(prevEnd, -(span - 1));
 
+  const firstDay = opts.firstDay ?? null;
+  const isOutage = opts.isOutage ?? (() => false);
   const perDay = new Map<string, SourceDay>();
   for (let i = 0; i < span; i++) {
     const d = addDays(start, i);
-    perDay.set(d, { day: d, total: 0, bySource: {} });
+    const flag: DayFlag | undefined =
+      firstDay !== null && d < firstDay ? "before" : isOutage(d) ? "outage" : d === today ? "today" : undefined;
+    perDay.set(d, flag ? { day: d, total: 0, bySource: {}, flag } : { day: d, total: 0, bySource: {} });
   }
   const totals = emptyTotals();
   const prevTotals = emptyTotals();
@@ -140,11 +191,14 @@ export function summarizeSearchLandings(rows: readonly LandingRow[], today: stri
     const n = Number(r.n) || 0;
     if (n <= 0) continue;
     const src = classifyRefHost(r.ref_host);
+    /* [1106] 운영 정지 날의 수는 사람 방문이 아니다(자동 점검) — 막대 칸에만 남기고 합계·비교·상위 화면에서 뺀다 */
+    const outage = isOutage(r.day);
     if (r.day >= start && r.day <= today) {
       const d = perDay.get(r.day);
       if (!d) continue;
       d.total += n;
       d.bySource[src] = (d.bySource[src] ?? 0) + n;
+      if (outage) continue;
       totals[src] += n;
       if (src === "naver" || src === "google" || src === "bing" || src === "daum" || src === "ai") {
         const m = routeMaps[src] ?? new Map<string, number>();
@@ -152,6 +206,7 @@ export function summarizeSearchLandings(rows: readonly LandingRow[], today: stri
         routeMaps[src] = m;
       }
     } else if (r.day >= prevStart && r.day <= prevEnd) {
+      if (outage) continue;
       prevTotals[src] += n;
     }
   }
@@ -164,13 +219,30 @@ export function summarizeSearchLandings(rows: readonly LandingRow[], today: stri
       .map(([route, n]) => ({ route, n }));
   }
 
-  return {
+  const out: SearchLandingSummary = {
     days: [...perDay.values()],
     totals,
     prevTotals,
     topRoutes,
     range: { start, end: today, prevStart, prevEnd },
   };
+  if (opts.firstDay !== undefined) {
+    const from = (a: string) => (firstDay !== null && firstDay > a ? firstDay : a);
+    out.coverage = {
+      firstDay,
+      curDays: firstDay === null ? 0 : spanDays(from(start), today),
+      prevDays: firstDay === null ? 0 : spanDays(from(prevStart), prevEnd),
+      curOutageDays: countDays(start, today, isOutage),
+      prevOutageDays: countDays(prevStart, prevEnd, isOutage),
+    };
+  }
+  return out;
+}
+
+/** [1106] 앞 기간과 비교해도 되는가 — 앞 기간이 통째로 수집된 날이고 두 기간 모두 정지 날이 없을 때만 */
+export function comparablePeriods(c: LandingCoverage | undefined, span = 28): boolean {
+  if (!c) return true;
+  return c.prevDays >= span && c.curDays >= span && c.curOutageDays === 0 && c.prevOutageDays === 0;
 }
 
 /** 앞 기간 대비 변화율(%) — 앞 기간 0 이면 null(비율 없음) */

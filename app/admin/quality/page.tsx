@@ -1,4 +1,6 @@
+import { formatKstShortDate } from "@/lib/format/kst";
 import { loadAdminKpi } from "@/lib/admin/stats";
+import { paidSubscriptionCount } from "@/lib/admin/subscription-metrics";
 import {
   loadExpertOpsSummary,
   loadPendingVerificationQueue,
@@ -44,11 +46,9 @@ function fmt(n: number): string {
   return n.toLocaleString("ko-KR");
 }
 
+/* [1106] 서버는 UTC — 날짜·시각은 한국 시간으로(lib/format/kst) */
 function relDate(iso: string | null): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  return `${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getDate()).padStart(2, "0")}`;
+  return iso ? formatKstShortDate(iso) : "";
 }
 
 export default async function AdminQualityPage() {
@@ -85,22 +85,20 @@ export default async function AdminQualityPage() {
   };
 
   // 사실 기반 세그먼트 — 정의 가능한 실측치만 (휴면/이탈 코호트는 행동 정의 필요 → 준비 중)
-  const paidSubscribers = kpi
-    ? Object.entries(kpi.planCounts)
-        .filter(([tier]) => tier && tier !== "free" && tier !== "basic")
-        .reduce((s, [, c]) => s + (c || 0), 0)
-    : 0;
+  /* [1106] 유료 구독 = 수익 화면과 같은 자(paidSubscriptionCount — pro · expert 계열). 예전엔 "무료 아닌 모든 등급"이라
+     관리자 계정(enterprise)이 1명으로 잡혀 수익 화면(0)과 숫자가 달랐다. */
+  const paidSubscribers = kpi ? paidSubscriptionCount(kpi.planCounts) : 0;
 
   const segments = [
-    { dot: "#177a4a", label: "전체 가입", sub: "app_users", value: kpi ? fmt(kpi.totalUsers) : "—" },
+    { dot: "#177a4a", label: "전체 가입", sub: "가입 계정(profiles)", value: kpi ? fmt(kpi.totalUsers) : "—" },
     {
       dot: "#3182f6",
       label: "최근 7일 활동 작성자",
       sub: "글·노트 작성 유니크",
       value: kpi ? fmt(kpi.activeUsers7d) : "—",
     },
-    { dot: "#e8a13a", label: "오늘 신규 가입", sub: "24시간", value: kpi ? fmt(kpi.newUsersToday) : "—" },
-    { dot: "#7c3aed", label: "유료 구독", sub: "무료 제외 tier", value: kpi ? fmt(paidSubscribers) : "—" },
+    { dot: "#e8a13a", label: "오늘 신규 가입", sub: "한국 자정부터", value: kpi ? fmt(kpi.newUsersToday) : "—" },
+    { dot: "#7c3aed", label: "유료 구독", sub: "프로 · 전문가 플랜", value: kpi ? fmt(paidSubscribers) : "—" },
   ];
 
   return (

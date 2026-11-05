@@ -1,7 +1,11 @@
 import { cache } from "react";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { readPosts } from "@/lib/posts-store";
-import { readMarketRequestsFile } from "@/lib/market-store-file";
+import { kstDayStartIso } from "@/lib/format/kst";
+import { isLabAuthor } from "@/lib/notes/author-label";
+import { readPaged } from "@/lib/supabase/read-paged";
+import { vitalRowUsable } from "@/lib/metrics/vitals-scope";
+import { isLegacyProbeSample } from "@/lib/client/probe";
 
 /** 30일 가입 추이 조회 상한(#32) — 닿으면 잘린 그래프 대신 실패로 알린다 */
 const SIGNUP_TREND_LIMIT = 50_000;
@@ -34,11 +38,14 @@ export type AdminKpi = {
   totalExperts: number;
   totalMeetings: number;
   meetingsToday: number;
+  /** [1106] 사람이 쓴 임장노트(운영진 예시 "내집나우 Lab" 글 제외 — lib/notes/author-label isLabAuthor) */
   totalInspections: number;
   inspectionsThisWeek: number;
+  /** [1106] 운영진 예시(Lab) 노트 — 하루 몇 건씩 자동으로 올라와 "사용자 활동"처럼 보였다 */
+  labInspections: number;
   totalReportDocs: number;
   reportDocsToday: number;
-  /** 최근 7일 글 작성자 근사(이메일 또는 author_label 기준 유니크) */
+  /** 최근 7일 글·임장노트를 쓴 사람(이메일 또는 author_label 기준 유니크 · Lab 제외) — 방문자 수가 아니다 */
   activeUsers7d: number;
   /** Supabase payments 확정 건수(30일, paid_at 기준) */
   paymentsCompleted30d: number;
@@ -107,18 +114,29 @@ export async function loadVitalsLast7d(): Promise<VitalStat[]> {
   }));
   if (!sb) return empty;
 
-  const since = new Date();
-  since.setDate(since.getDate() - 7);
-  const { data, error } = await sb
-    .from("web_vitals")
-    .select("metric, value")
-    .gte("created_at", since.toISOString())
-    .limit(5000);
-  if (error || !Array.isArray(data)) return empty;
+  const since = new Date(Date.now() - 7 * 86_400_000);
+  /* [1106] 관리 › 성능과 같은 자 — 쪽으로 끝까지 읽고(응답 상한 1,000행) · 점검 로봇 표본 · 단위가 맞지 않는 줄을 뺀다 */
+  let data: Array<{ metric: string; value: number; scope: string | null; user_agent: string | null; created_at: string | null }>;
+  try {
+    const paged = await readPaged<{ metric: string; value: number; scope: string | null; user_agent: string | null; created_at: string | null }>(
+      (from, to) =>
+        sb
+          .from("web_vitals")
+          .select("metric, value, scope, user_agent, created_at")
+          .gte("created_at", since.toISOString())
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      20_000,
+    );
+    data = paged.rows.filter((r) => !isLegacyProbeSample(r.user_agent, r.created_at) && vitalRowUsable(r.metric, r.scope));
+  } catch {
+    return empty;
+  }
 
   const buckets = new Map<VitalKey, number[]>();
   for (const m of metrics) buckets.set(m, []);
-  for (const row of data as Array<{ metric: string; value: number }>) {
+  for (const row of data) {
     const key = row.metric as VitalKey;
     const bucket = buckets.get(key);
     if (bucket && Number.isFinite(row.value)) {
@@ -177,16 +195,14 @@ export type AdminRecent = {
   }>;
 };
 
+/* [1106] 날의 경계는 한국 자정 — 서버(Vercel)는 UTC 라 예전 setHours(0) 은 한국 09:00 이었다
+   ("오늘 가입 · 오늘 글 · 오늘 리포트"가 아침 9시에 넘어가고 0~9시 일은 전날로 셌다). */
 function startOfDay(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
+  return new Date(kstDayStartIso(d.getTime()));
 }
 
 function daysAgo(n: number): Date {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return startOfDay(d);
+  return new Date(kstDayStartIso(Date.now(), -n));
 }
 
 async function safeCountSinceTable(
@@ -234,6 +250,7 @@ async function loadAdminKpiUncached(): Promise<AdminKpi> {
     meetingsToday: 0,
     totalInspections: 0,
     inspectionsThisWeek: 0,
+    labInspections: 0,
     totalReportDocs: 0,
     reportDocsToday: 0,
     activeUsers7d: 0,
@@ -261,14 +278,8 @@ async function loadAdminKpiUncached(): Promise<AdminKpi> {
       /* ignore */
     }
   }
-  try {
-    const market = await readMarketRequestsFile();
-    base.marketTotal = market.length;
-    base.marketOpen = market.filter((m) => m.status === "open").length;
-  } catch {
-    /* ignore */
-  }
-
+  /* [1106] 의뢰는 market_requests 표에 쌓인다(lib/market/store-db). 예전 집계는 서버리스에 없는 로컬 파일
+     (data/market_requests.json)을 읽어 운영에서 늘 0 이었다(실측 2026-11-05: 표 1건 · 진행 중 1건). */
   if (!sb) return base;
 
   const thirtyAgo = daysAgo(30).toISOString();
@@ -290,8 +301,9 @@ async function loadAdminKpiUncached(): Promise<AdminKpi> {
     expertsTotalRes,
     meetingsTotalRes,
     meetingsTodayRes,
-    inspectionsTotalRes,
-    inspections7Res,
+    notesRes,
+    marketTotalRes,
+    marketOpenRes,
     reportDocsTotalRes,
     reportDocsTodayRes,
     bookmarksTotalRes,
@@ -301,10 +313,12 @@ async function loadAdminKpiUncached(): Promise<AdminKpi> {
     postsTodayCountRes,
     postsWeekCountRes,
   ] = await Promise.all([
-    sb.from("app_users").select("*", { count: "exact", head: true }),
+    /* [1106] 회원 수는 profiles(가입 계정마다 한 줄 = auth.users) — app_users 는 비밀번호·역할 보조 표라 일부만 있다
+       (실측 2026-11-05: profiles 15 · auth.users 15 · app_users 5). 대시보드 "회원 관리 총 15명"과 같은 자. */
+    sb.from("profiles").select("*", { count: "exact", head: true }),
     sb.from("app_users").select("*", { count: "exact", head: true }).eq("role", "admin"),
-    sb.from("app_users").select("*", { count: "exact", head: true }).gte("created_at", weekAgo),
-    sb.from("app_users").select("*", { count: "exact", head: true }).gte("created_at", thirtyAgo),
+    sb.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", weekAgo),
+    sb.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", thirtyAgo),
     sb.from("posts").select("*", { count: "exact", head: true }),
     sb.from("content_reports").select("*", { count: "exact", head: true }).eq("status", "open"),
     sb.from("content_reports").select("*", { count: "exact", head: true }),
@@ -322,15 +336,23 @@ async function loadAdminKpiUncached(): Promise<AdminKpi> {
       .from("meeting_requests")
       .select("*", { count: "exact", head: true })
       .eq("status", "pending"),
-    sb.from("app_users").select("*", { count: "exact", head: true }).gte("created_at", today),
+    sb.from("profiles").select("*", { count: "exact", head: true }).gte("created_at", today),
     sb.from("expert_profiles").select("*", { count: "exact", head: true }),
     sb.from("meetings").select("*", { count: "exact", head: true }),
     sb.from("meetings").select("*", { count: "exact", head: true }).gte("created_at", today),
-    sb.from("inspection_notes").select("*", { count: "exact", head: true }),
-    sb
-      .from("inspection_notes")
-      .select("*", { count: "exact", head: true })
-      .gte("created_at", weekAgo),
+    /* [1106] 노트는 작성자 라벨까지 읽어 Lab(운영진 예시) 글을 가른다 — 머리 count 로는 거를 수 없다(정규식 단어 경계) */
+    readPaged<{ author_label: string | null; author_email: string | null; user_id: string | null; created_at: string }>(
+      (from, to) =>
+        sb
+          .from("inspection_notes")
+          .select("author_label, author_email, user_id, created_at")
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      20_000,
+    ).catch(() => null),
+    sb.from("market_requests").select("*", { count: "exact", head: true }),
+    sb.from("market_requests").select("*", { count: "exact", head: true }).eq("status", "open"),
     sb.from("reports").select("*", { count: "exact", head: true }),
     /* reports 에는 created_at 이 없다(published_at·updated_at 뿐). 없는 컬럼으로
        거르면 이 count 는 매번 error 라 "오늘 0건"이 사실처럼 남았다. */
@@ -378,8 +400,23 @@ async function loadAdminKpiUncached(): Promise<AdminKpi> {
   if (typeof expertsTotalRes.count === "number") base.totalExperts = expertsTotalRes.count;
   if (typeof meetingsTotalRes.count === "number") base.totalMeetings = meetingsTotalRes.count;
   if (typeof meetingsTodayRes.count === "number") base.meetingsToday = meetingsTodayRes.count;
-  if (typeof inspectionsTotalRes.count === "number") base.totalInspections = inspectionsTotalRes.count;
-  if (typeof inspections7Res.count === "number") base.inspectionsThisWeek = inspections7Res.count;
+  if (typeof marketTotalRes.count === "number") base.marketTotal = marketTotalRes.count;
+  if (typeof marketOpenRes.count === "number") base.marketOpen = marketOpenRes.count;
+  const noteAuthors7d = new Set<string>();
+  if (notesRes) {
+    for (const n of notesRes.rows) {
+      if (isLabAuthor(n.author_label)) {
+        base.labInspections += 1;
+        continue;
+      }
+      base.totalInspections += 1;
+      if (Date.parse(n.created_at) >= Date.parse(weekAgo)) {
+        base.inspectionsThisWeek += 1;
+        const key = n.user_id || String(n.author_email ?? "").trim().toLowerCase();
+        if (key) noteAuthors7d.add(`note:${key}`);
+      }
+    }
+  }
   if (typeof reportDocsTotalRes.count === "number") base.totalReportDocs = reportDocsTotalRes.count;
   if (typeof reportDocsTodayRes.count === "number") base.reportDocsToday = reportDocsTodayRes.count;
   if (typeof bookmarksTotalRes.count === "number") base.totalBookmarks = bookmarksTotalRes.count;
@@ -407,9 +444,13 @@ async function loadAdminKpiUncached(): Promise<AdminKpi> {
         .trim()
         .toLowerCase();
       const key = email || label;
-      if (key) uniq.add(key);
+      if (key && !isLabAuthor(label)) uniq.add(key);
     }
+    /* [1106] 노트 작성자도 활동한 사람이다(예전엔 글만 세어 노트만 쓴 사람이 0 으로 보였다). 같은 사람이 둘 다 쓰면 두 번 셀 수 있다 — 근사 */
+    for (const k of noteAuthors7d) uniq.add(k);
     base.activeUsers7d = uniq.size;
+  } else {
+    base.activeUsers7d = noteAuthors7d.size;
   }
 
   const pc: Record<string, number> = {};

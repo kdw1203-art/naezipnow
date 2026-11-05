@@ -13,6 +13,7 @@ import { fromHubTradeWire, type HubTrade, type HubTradeWire } from "@/lib/comple
 import type { DealTuple } from "@/lib/complex/hub-price";
 import { TradeRow } from "./TradeRow";
 import type { MonthDeltaView } from "@/lib/complex/month-delta";
+import type { SummaryTile } from "@/lib/complex/summary-tiles";
 import { DealListLazy as DealList } from "./DealListLazy";
 import { primeWatching, readWatching } from "./watchlist-status";
 import { clearPendingWatch, hasPendingWatch, savePendingWatch, takePendingWatch } from "@/lib/client/pending-watch";
@@ -412,9 +413,12 @@ export function ComplexHubTabs({
   dealsFailed = false,
   tradeDeltas,
   summaryDeals = true,
+  summaryTiles,
 }: {
   aiTitle: string;
   aiBody: string;
+  /** [1107] 요약 숫자 칸(lib/complex/summary-tiles) — 두 칸 이상이면 문단 대신 칸으로 그린다 */
+  summaryTiles?: readonly SummaryTile[];
   listingsLabel: string;
   /** [1091] 월별 집계의 압축 행 — 여기서 HubTrade[] 로 편다(표기 · 전월비 계산은 lib/complex/hub-trades 그대로) */
   tradesWire: HubTradeWire[];
@@ -485,25 +489,8 @@ export function ComplexHubTabs({
   /* latestAvgManwon 은 서버(page.tsx)가 계산해 넘긴다 — 시세 탭 필터·정렬 상태는
      [968 · 4] PriceTab.tsx 로 옮겼다(탭이 열릴 때만 내려받는 청크). */
 
-  /* [967 · 15] 요약 탭의 "내 기록" 카드 — 예전엔 서버가 넘긴 고정 문구("로그인하면…")
-     였다. 방문자 공용 HTML 에 개인 상태를 단정하는 문장은 못 싣는다. 탭으로 보내는
-     안내만 남긴다(실데이터는 그 탭이 마운트되며 읽는다). */
-  const myRecordCard = (
-    <button
-      type="button"
-      onClick={() => setTab("내 기록")}
-      /* [1009 · C 리뷰] 문장과 "열기 ›"가 390px 에서 붙어 보였다("봐요열기 ›") — 간격. 누를 수 있는 카드라 눌림(press) */
-      className="card tile press flex w-full items-center justify-between gap-3 rounded-lg px-[15px] py-3.5 text-left"
-    >
-      {/* [1015 · 규칙 D] 대시 잇기·"~봐요" 없이 */}
-      <span className="min-w-0 t-body text-text-1">
-        <b className="text-ink">내 기록</b> · {complexName ?? "이 단지"} 임장노트 회차별 모음
-      </span>
-      {/* [1012 · 규칙 5] "열기" → 동사 + 대상 */}
-      <span className="shrink-0 text-xs font-bold text-primary">내 기록 열기 ›</span>
-    </button>
-  );
-
+  /* [1107] 요약 탭의 "내 기록 · 임장노트 회차별 모음 · 내 기록 열기 ›" 카드는 걷었다 — 바로 위 탭 줄의 "내 기록" 탭과 같은 입구가
+     한 화면에 둘이었다(같은 사실 두 곳). 탭은 그대로. */
   return (
     /* [968 · 2] fold — 767px 이하에서 이 안의 rise-in-* 리빌을 끈다(globals.css 의
        `.fold [class^="rise-in"]`). 탭 줄·기본 탭 본문은 첫 화면 안에 있어 지연 리빌이
@@ -554,12 +541,33 @@ export function ComplexHubTabs({
               <span className="t-body font-bold text-ink">{aiTitle}</span>
               <span className="shrink-0 t-caption text-text-3">공공데이터 자동 계산</span>
             </div>
-            {/* [1036 · 밀도] 첫 문장만 본문 — 나머지 사실 낱말은 접힘(위 data-ai-summary 와 같은 글이라 폰에서 두 번 읽히던 6줄) */}
-            <p className="break-words t-body leading-[1.6] text-text-1">{aiLead}</p>
-            {aiRest && <Fineprint label="기준 · 출처">{aiRest}</Fineprint>}
+            {summaryTiles && summaryTiles.length >= 2 ? (
+              /* [1107] 숫자 칸 — 열 조각을 이은 세 줄 문단 대신(준공 · 세대 · 전세가율은 위 개요 · 전세가율 카드가 말한다) */
+              <>
+                <dl className="mt-1 grid grid-cols-2 gap-2 md:grid-cols-4">
+                  {summaryTiles.map((t) => (
+                    <div key={t.key} className="flex min-w-0 flex-col gap-0.5 rounded-lg bg-bg px-3 py-2.5" title={t.title}>
+                      <dt className="t-caption text-text-3">{t.label}</dt>
+                      <dd
+                        className={`t-section t-num ${t.tone === "up" ? "text-up" : t.tone === "down" ? "text-down" : "text-ink"}`}
+                      >
+                        {t.value}
+                      </dd>
+                      {t.sub ? <dd className="truncate t-caption text-text-3">{t.sub}</dd> : null}
+                    </div>
+                  ))}
+                </dl>
+                <p className="t-caption text-text-3">국토교통부 실거래 · 공공데이터 기준 · 투자 권유 아님 · 현장 확인 후 판단</p>
+              </>
+            ) : (
+              <>
+                {/* [1036 · 밀도] 첫 문장만 본문 — 나머지 사실 낱말은 접힘(위 data-ai-summary 와 같은 글이라 폰에서 두 번 읽히던 6줄) */}
+                <p className="break-words t-body leading-[1.6] text-text-1">{aiLead}</p>
+                {aiRest && <Fineprint label="기준 · 출처">{aiRest}</Fineprint>}
+              </>
+            )}
           </div>
           {priceChart}
-          {myRecordCard}
           {!summaryDeals ? null : deals.length > 0 ? (
             /* [1009 · C] 월별 평균 줄(8.4억 · N건 · 최저~최고) → 한 건 단위(계약일 · 전용 · 층 · 거래가, 네이버 관례).
                "전체 보기"는 실거래 탭(면적대 필터·월별 평균 표)으로 — 예전엔 누를 수 없는 글자("시세 탭에서 전체")였다. */

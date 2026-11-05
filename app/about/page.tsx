@@ -5,7 +5,7 @@ import { PageShell } from "../components/PageShell";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { loadCoverage } from "@/lib/stats/coverage";
-import { FaqCompact } from "@/app/components/compact/FaqCompact";
+import { FactTable } from "@/app/components/compact/FactTable";
 
 /* 고도화 50 — 실적 숫자는 llms.txt 와 같은 로더에서 온다(1시간 재검증).
    손으로 적은 숫자는 낡는다 — 로더가 실패하면 숫자 문장을 통째로 생략한다. */
@@ -24,28 +24,15 @@ export const metadata = buildPageMetadata({
    브랜드 서사가 아니라 실제로 지키고 있는 원칙만 적는다 — 각 문장은
    서비스 어딘가에서 확인 가능한 동작이다(방법론 페이지가 그 증거다). */
 
-/* [1062 · 글 줄이기] keys = 본문(body)에 있는 사실 낱말만 — 접힌 상태에서 본문을 대신 보여 준다. 본문은 그대로(지우지 않는다). */
-const PRINCIPLES: { title: string; body: string; keys: string[] }[] = [
-  {
-    title: "사실이 최우선입니다",
-    body: "모든 가격은 국토교통부에 신고된 실거래만 집계하고, 수치에는 기준 시점을 붙입니다. 매물 호가·추정치를 실거래처럼 부르지 않습니다.",
-    keys: ["신고된 실거래만 집계", "기준 시점", "호가·추정치를 실거래처럼 부르지 않음"],
-  },
-  {
-    title: "없는 데이터는 없음으로 표시합니다",
-    body: "실거래가 없는 단지에 추정 가격을 만들지 않고, 데이터가 부족하면 화면에 그대로 '아직 없다'고 적습니다. AI 기능도 조회된 데이터에서만 답하며, 어떤 데이터를 읽었는지 답변과 함께 보여줍니다.",
-    keys: ["추정 가격 만들지 않음", "'아직 없다'고 적음", "AI는 조회된 데이터에서만"],
-  },
-  {
-    title: "계산 방식을 공개합니다",
-    body: "해제거래 제외, 신고 지연 처리, 시장 온도 공식 등 집계 방식 전부를 데이터 방법론 페이지에 공개합니다. 방식이 바뀌면 문서를 갱신합니다.",
-    keys: ["해제거래 제외", "신고 지연 처리", "시장 온도 공식", "데이터 방법론 페이지"],
-  },
-  {
-    title: "판단은 사용자가 합니다",
-    body: "내집나우는 매수·매도를 추천하지 않습니다. 데이터와 본인의 임장 기록을 나란히 두고, 판단의 근거를 쌓는 것을 돕습니다.",
-    keys: ["매수·매도 추천하지 않음", "데이터와 임장 기록 나란히", "판단의 근거"],
-  },
+/* [1062 · 글 줄이기] 원칙 한 줄 + 사실 낱말 칩 + 접힌 문단(▾).
+   [1107] 소유자 2026-11-05 "글씨크기 글자수 디자인 표 … 통합 간결화"(소개 캡처) — 칩 14개 · 펼침 표시 4개 · 두 줄로 접히는 제목이
+   카드 안 카드에 겹쳐 있었다. → 표 한 장(원칙 · 하는 일). 제목은 짧게, 하는 일은 사실 낱말만(문단에만 있던 사실 둘 —
+   "읽은 데이터를 답과 함께" · "방식이 바뀌면 문서 갱신" — 은 낱말로 옮겼다). */
+const PRINCIPLES: { title: string; facts: string[] }[] = [
+  { title: "사실 우선", facts: ["신고된 실거래만 집계", "수치마다 기준 시점", "호가 · 추정치를 실거래라 부르지 않음"] },
+  { title: "없으면 없음", facts: ["추정 가격 만들지 않음", "부족하면 '아직 없음'", "AI는 조회한 데이터로만 · 읽은 데이터를 답과 함께"] },
+  { title: "계산 공개", facts: ["해제거래 제외", "신고 지연 처리", "시장 온도 공식", "방식이 바뀌면 문서 갱신"] },
+  { title: "판단은 사용자", facts: ["매수 · 매도 추천하지 않음", "데이터와 임장 기록을 나란히"] },
 ];
 
 export default async function AboutPage() {
@@ -73,47 +60,42 @@ export default async function AboutPage() {
 
         {/* 고도화 50 — 실적 숫자(실측·1시간 재검증). 로더 실패면 이 블록 자체가
             사라진다 — 낡은 숫자를 소개 페이지에 굳히지 않는다. */}
+        {/* [1107] 두 칸에 같은 꼬리("· 국토부 신고 기준")가 두 번 — 카드 하나 · 두 숫자 · 기준은 한 번 */}
         {coverage.complexes !== null && coverage.regions !== null && (
-          <div className="rise-in-1 mt-4 grid grid-cols-2 gap-3 max-md:mt-3 max-md:gap-2">
-            <div className="card rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
-              <div className="t-num t-title text-ink">
-                <CountUp value={coverage.complexes} />
+          <div className="rise-in-1 card mt-4 rounded-2xl px-5 py-4 max-md:mt-3 max-md:px-3.5 max-md:py-3">
+            <dl className="grid grid-cols-2 divide-x divide-divider">
+              <div className="pr-4">
+                <dt className="t-sub text-text-3">실거래 집계 단지</dt>
+                <dd className="t-num t-title text-ink">
+                  <CountUp value={coverage.complexes} />
+                </dd>
               </div>
-              <div className="mt-0.5 t-sub text-text-3">실거래 집계 단지 · 국토부 신고 기준</div>
-            </div>
-            <div className="card rounded-2xl px-5 py-4 max-md:px-3.5 max-md:py-3">
-              <div className="t-num t-title text-ink">
-                <CountUp value={coverage.regions} />
+              <div className="pl-4">
+                {/* [1015] "시세 랜딩 지역 · 매시간 갱신" → 실거래 지역(재검증은 1일) */}
+                <dt className="t-sub text-text-3">실거래 집계 지역</dt>
+                <dd className="t-num t-title text-ink">
+                  <CountUp value={coverage.regions} />
+                </dd>
               </div>
-              {/* [1015] "시세 랜딩 지역 · 매시간 갱신" → 실거래 지역(재검증은 1일) */}
-              <div className="mt-0.5 t-sub text-text-3">실거래 집계 지역 · 국토부 신고 기준</div>
-            </div>
+            </dl>
+            <p className="mt-2 t-caption text-text-3">국토교통부 신고 기준</p>
           </div>
         )}
 
-        {/* [1062 · 글 줄이기] 원칙 4장(제목 + 문단)이 늘 펼쳐져 있던 것 → 한 카드 안 원칙 한 줄 + 핵심 낱말 칩, 문단은 눌러야 펼쳐진다.
-            글은 그대로 DOM 에 있다. 질문·답이 아니므로 FAQPage JSON-LD 는 내지 않는다(jsonLd=false). */}
-        <FaqCompact
-          className="rise-in-2 mt-6 rounded-3xl max-md:mt-4"
-          title="운영 원칙"
-          jsonLd={false}
-          items={PRINCIPLES.map((p) => ({ q: p.title, a: p.body, keys: p.keys }))}
-        />
-
-        <div className="mt-6 flex flex-wrap gap-2 t-sub max-md:mt-4">
-          <Link href="/methodology" className="chip chip-soft px-3.5 py-2 no-underline">
-            데이터 방법론 ›
-          </Link>
-          <Link href="/glossary" className="chip chip-soft px-3.5 py-2 no-underline">
-            용어사전 ›
-          </Link>
-          <Link href="/reports" className="chip chip-soft px-3.5 py-2 no-underline">
-            월간 실거래 리포트 ›
-          </Link>
-          <Link href="/support" className="chip chip-soft px-3.5 py-2 no-underline">
-            고객센터 ›
-          </Link>
-        </div>
+        {/* [1107] 운영 원칙 = 표 한 장. 아래 링크 칩 넷(방법론 · 용어사전 · 월간 리포트 · 고객센터)은 바로 밑 푸터와 같은 링크라 걷고,
+            원칙의 근거 문서(데이터 방법론) 하나만 제목 줄에 둔다. */}
+        <section aria-labelledby="principles-title" className="rise-in-2 card mt-6 rounded-2xl px-5 py-4 max-md:mt-4 max-md:px-3.5 max-md:py-3">
+          <div className="flex items-baseline justify-between gap-2">
+            <h2 id="principles-title" className="t-section text-ink">
+              운영 원칙
+            </h2>
+            <Link href="/methodology" className="tap-line shrink-0 t-sub font-bold text-primary no-underline">
+              데이터 방법론 ›
+            </Link>
+          </div>
+          {/* 사이트 공용 "항목 | 사실" 표(compact/FactTable) — 요금제 · 데이터 출처 화면과 같은 꼴 */}
+          <FactTable dense className="mt-2" rows={PRINCIPLES.map((p) => ({ label: p.title, value: p.facts.join(" · ") }))} />
+        </section>
       </div>
     </PageShell>
   );

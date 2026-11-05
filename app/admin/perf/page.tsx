@@ -1,5 +1,7 @@
 import { isLegacyProbeSample } from "@/lib/client/probe";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { readPaged } from "@/lib/supabase/read-paged";
+import { VITAL_SCOPE_FOR } from "@/lib/metrics/vitals-scope";
 
 /* [OPT-41] 성능 매트릭스 — 경로×지표 p75(7일) + LCP 범인 목록.
    총계만 보이던 웹바이탈을 "어느 화면의 어떤 요소" 단위로 내린다.
@@ -31,13 +33,8 @@ type Row = {
 /* [979] 지표별로 어느 단위 줄을 읽는가.
    CLS·INP 는 문서 전체를 누적하므로 화면 단위로 쪼갠 줄이 그 화면의 값이고,
    LCP·FCP·TTFB 는 문서를 연 순간의 값이라 문서 단위 줄이 곧 첫 화면의 값이다. */
-const SCOPE_FOR: Record<string, "route" | "doc"> = {
-  CLS: "route",
-  INP: "route",
-  LCP: "doc",
-  FCP: "doc",
-  TTFB: "doc",
-};
+/* [1106] 표는 lib/metrics/vitals-scope.ts 로 옮겼다(관리 › 트래픽 카드와 같은 자) */
+const SCOPE_FOR = VITAL_SCOPE_FOR;
 
 function p75(values: number[]): number | null {
   if (values.length === 0) return null;
@@ -49,13 +46,23 @@ async function load() {
   const sb = getServiceSupabase();
   if (!sb) return null;
   const since = new Date(Date.now() - 7 * 86_400_000).toISOString();
-  const { data, error } = await sb
-    .from("web_vitals")
-    .select("metric,path,value,element,attr_url,scope,user_agent,created_at")
-    .gte("created_at", since)
-    .limit(20000);
-  if (error || !Array.isArray(data)) return null;
-  return data as Row[];
+  /* [1106] `.limit(20000)` 한 번은 PostgREST 상한 1,000행만 돌려준다 — 쪽으로 끝까지(2만 행 상한) */
+  try {
+    const paged = await readPaged<Row>(
+      (from, to) =>
+        sb
+          .from("web_vitals")
+          .select("metric,path,value,element,attr_url,scope,user_agent,created_at")
+          .gte("created_at", since)
+          .order("created_at", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      20_000,
+    );
+    return paged.rows;
+  } catch {
+    return null;
+  }
 }
 
 export default async function AdminPerfPage() {

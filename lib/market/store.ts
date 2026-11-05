@@ -297,6 +297,30 @@ export async function listIngestLog(limit = 20): Promise<IngestLogRow[]> {
   }));
 }
 
+/** [1106] 한 출처(source)의 가장 최근 실행 한 줄 — 실패·없음은 null.
+ *  관리 › 수익의 plan-expiry 칸은 "최근 60줄 안에서 찾기"였는데, 실행 사이(약 10시간)에 다른 적재가 61~73줄 쌓이는 동안 칸이 사라졌다. */
+export async function latestIngestLogFor(source: string): Promise<IngestLogRow | null> {
+  const sb = getServiceSupabase();
+  if (!sb) return null;
+  const { data, error } = await sb
+    .from("market_ingest_log")
+    .select("source,dataset,origin,rows,status,message,created_at")
+    .eq("source", source)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  if (error || !data || data.length === 0) return null;
+  const r = data[0];
+  return {
+    source: String(r.source),
+    dataset: String(r.dataset),
+    origin: String(r.origin),
+    rows: Number(r.rows),
+    status: String(r.status),
+    message: r.message ? String(r.message) : null,
+    createdAt: String(r.created_at),
+  };
+}
+
 export async function hasMarketData(): Promise<boolean> {
   if (hasDataCache && Date.now() - hasDataCache.at < SNAPSHOT_TTL_MS) return hasDataCache.value;
   const sb = getServiceSupabase();

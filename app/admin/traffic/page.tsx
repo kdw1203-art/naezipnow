@@ -16,6 +16,9 @@ import {
 import { loadShareInflow, type ShareInflow } from "@/lib/admin/share-inflow";
 import { GrowthWeekly } from "./GrowthWeekly";
 import { AnonCounts } from "./AnonCounts";
+import { kstDay } from "@/lib/metrics/page-count";
+import { formatKstDate } from "@/lib/format/kst";
+import { outageOn } from "@/lib/metrics/known-outages";
 
 export const metadata: Metadata = {
   title: "트래픽 | 내집나우 관리자",
@@ -46,7 +49,22 @@ type Summary = {
   views_total: number;
   first_event_at: string | null;
 };
-type DailyRow = { day: string; views: number; sessions: number };
+type DailyRow = { day: string; views: number; sessions: number; outage?: boolean };
+
+/* [1106] 최근 14일 달력 — 뷰(page_view_daily)는 수집이 없던 날을 줄로 내지 않는다. 예전엔 "최근 14줄"을 잘라
+   27일 남짓(10.09~11.05, 빈 날 10.22~10.31 · 11.04 건너뜀)을 14일이라 적었고, "이번 주 · 지난 주"도 줄 7개씩이라
+   실제 주와 어긋났다(실측 2026-11-05: 화면 ▼69% · 한국 날짜 7일씩 다시 세면 46 대 0). 빈 날은 0, 운영 정지 날은 표시. */
+function fillDays(rows: DailyRow[], today: string, span = 14): DailyRow[] {
+  const by = new Map(rows.map((r) => [String(r.day).slice(0, 10), r]));
+  const out: DailyRow[] = [];
+  for (let i = span - 1; i >= 0; i--) {
+    const d = new Date(Date.parse(`${today}T00:00:00Z`) - i * 86_400_000).toISOString().slice(0, 10);
+    const r = by.get(d);
+    const base = { day: d, views: Number(r?.views ?? 0) || 0, sessions: Number(r?.sessions ?? 0) || 0 };
+    out.push(outageOn(d) ? { ...base, outage: true } : base);
+  }
+  return out;
+}
 type RouteRow = {
   route: string;
   views: number;
@@ -170,7 +188,7 @@ async function loadAll(): Promise<{
   const [summaryR, dailyR, routesR, usageR, refR, utmR, vpR, retR, vitals7d, vwR, shareInflow] =
     await Promise.all([
     sb.from("page_view_summary").select("*").maybeSingle(),
-    sb.from("page_view_daily").select("*").order("day", { ascending: false }).limit(14),
+    sb.from("page_view_daily").select("*").gte("day", kstDay(Date.now() - 13 * 86_400_000)).order("day", { ascending: false }).limit(14),
     sb.from("page_view_route_30d").select("*").order("views", { ascending: false }).limit(15),
     sb.from("platform_event_usage_30d").select("*").order("events", { ascending: false }).limit(20),
     sb.from("page_view_referrer_30d").select("*").order("sessions", { ascending: false }).limit(15),
@@ -207,7 +225,7 @@ async function loadAll(): Promise<{
 
   return {
     summary: (summaryR.data as Summary | null) ?? null,
-    daily: ((dailyR.data as DailyRow[] | null) ?? []).slice().reverse(),
+    daily: dailyR.error ? [] : fillDays((dailyR.data as DailyRow[] | null) ?? [], kstDay(Date.now())),
     routes: (routesR.data as RouteRow[] | null) ?? [],
     usage: (usageR.data as UsageRow[] | null) ?? [],
     referrers: (refR.data as ReferrerRow[] | null) ?? [],
@@ -244,10 +262,9 @@ export default async function AdminTrafficPage() {
   } catch {
     demandsFailed = true;
   }
-  const collectedSince = summary?.first_event_at
-    ? new Date(summary.first_event_at).toLocaleDateString("ko-KR")
-    : null;
-  const maxViews = Math.max(1, ...daily.map((d) => d.views));
+  /* [1106] 한국 날짜로(서버는 UTC — toLocaleDateString 은 시간대 없이 하루 어긋날 수 있었다) */
+  const collectedSince = summary?.first_event_at ? formatKstDate(summary.first_event_at) : null;
+  const maxViews = Math.max(1, ...daily.filter((d) => !d.outage).map((d) => d.views));
 
   /* [G006 2026-08-31] 주간 목표선·추세 — 숫자는 많은데 "좋아지고 있나"가 없었다.
      daily 14일에서 이번 주(최근 7일)·지난 주(그 전 7일)를 접어 비교한다.
@@ -256,8 +273,10 @@ export default async function AdminTrafficPage() {
   const WEEKLY_PV_TARGET = 300;
   const thisWeekPv = daily.slice(-7).reduce((a, d) => a + d.views, 0);
   const prevWeekPv = daily.slice(-14, -7).reduce((a, d) => a + d.views, 0);
+  /* [1106] 운영 정지 날이 낀 주와는 증감을 내지 않는다 */
+  const outageInWindow = daily.some((d) => d.outage);
   const weekDeltaPct =
-    prevWeekPv > 0 ? Math.round(((thisWeekPv - prevWeekPv) / prevWeekPv) * 100) : null;
+    prevWeekPv > 0 && !outageInWindow ? Math.round(((thisWeekPv - prevWeekPv) / prevWeekPv) * 100) : null;
 
   const kpis = summary
     ? [
@@ -312,7 +331,9 @@ export default async function AdminTrafficPage() {
               <div className={`t-num mt-1 text-[19px] font-bold ${weekDeltaPct === null ? "text-text-3" : weekDeltaPct >= 0 ? "text-success" : "text-danger"}`}>
                 {weekDeltaPct === null ? "—" : `${weekDeltaPct >= 0 ? "▲" : "▼"} ${Math.abs(weekDeltaPct)}%`}
               </div>
-              <div className="mt-0.5 text-[12px] text-text-3">지난 주 {prevWeekPv.toLocaleString("ko-KR")}뷰</div>
+              <div className="mt-0.5 text-[12px] text-text-3">
+                지난 주 {prevWeekPv.toLocaleString("ko-KR")}뷰{outageInWindow ? " · 운영 정지 날 포함 · 증감 없음" : ""}
+              </div>
             </div>
           </div>
           {/* 목표 진행 막대 — 초과해도 100%로 클램프 */}
@@ -348,26 +369,34 @@ export default async function AdminTrafficPage() {
             최근 14일 · KST 기준 · 막대=페이지뷰, 숫자=방문자
           </span>
         </h2>
-        {daily.length === 0 ? (
+        {daily.every((d) => d.views === 0 && d.sessions === 0) ? (
           <p className="mt-3 text-[13px] text-text-3">
             아직 수집된 페이지뷰가 없어요. 분석 동의 방문이 생기면 이 자리에
             일별 추이가 쌓입니다.
           </p>
         ) : (
           <div className="mt-4 flex items-end gap-1.5 overflow-x-auto pb-1">
-            {daily.map((d) => (
-              <div key={d.day} className="flex min-w-[44px] flex-1 flex-col items-center gap-1">
-                <span className="text-[10px] font-bold text-text-2">
-                  {d.sessions.toLocaleString("ko-KR")}
-                </span>
-                <div
-                  className="w-full rounded-t-md bg-primary/70"
-                  style={{ height: `${Math.max(4, Math.round((d.views / maxViews) * 96))}px` }}
-                  title={`${d.day} · 페이지뷰 ${d.views}`}
-                />
-                <span className="text-[10px] text-text-3">{fmtDay(d.day)}</span>
-              </div>
-            ))}
+            {daily.map((d) =>
+              d.outage ? (
+                <div key={d.day} className="flex min-w-[44px] flex-1 flex-col items-center gap-1" title={`${d.day} · 운영 정지`}>
+                  <span className="text-[10px] text-text-3">정지</span>
+                  <div className="h-[96px] w-full rounded-t-md border border-dashed border-line-strong" />
+                  <span className="text-[10px] text-text-3">{fmtDay(d.day)}</span>
+                </div>
+              ) : (
+                <div key={d.day} className="flex min-w-[44px] flex-1 flex-col items-center gap-1">
+                  <span className="text-[10px] font-bold text-text-2">
+                    {d.sessions.toLocaleString("ko-KR")}
+                  </span>
+                  <div
+                    className={`w-full rounded-t-md ${d.views > 0 ? "bg-primary/70" : "bg-line"}`}
+                    style={{ height: `${d.views > 0 ? Math.max(4, Math.round((d.views / maxViews) * 96)) : 2}px` }}
+                    title={`${d.day} · 페이지뷰 ${d.views}`}
+                  />
+                  <span className="text-[10px] text-text-3">{fmtDay(d.day)}</span>
+                </div>
+              ),
+            )}
           </div>
         )}
       </section>
@@ -822,7 +851,7 @@ export default async function AdminTrafficPage() {
                     {d.emailCount > 0 ? d.emailCount.toLocaleString("ko-KR") : "—"}
                   </td>
                   <td className="py-2 text-right text-[12px] text-text-3">
-                    {d.lastAt ? new Date(d.lastAt).toLocaleDateString("ko-KR") : "—"}
+                    {d.lastAt ? formatKstDate(d.lastAt) : "—"}
                   </td>
                 </tr>
               ))}

@@ -1,6 +1,7 @@
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { FUNNEL_EVENT } from "@/lib/platform-funnel-events";
 import { loadAdminKpi, type AdminKpi } from "@/lib/admin/stats";
+import { kstDayStartIso } from "@/lib/format/kst";
 
 export type LayerMetric = {
   key: string;
@@ -35,16 +36,13 @@ export type OperatingDashboardData = {
   };
 };
 
+/* [1106] 날의 경계는 한국 자정(서버는 UTC — 예전 setHours(0) 은 한국 09:00) · lib/admin/stats.ts 와 같은 자 */
 function startOfDay(d: Date): Date {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
+  return new Date(kstDayStartIso(d.getTime()));
 }
 
 function daysAgo(n: number): Date {
-  const d = new Date();
-  d.setDate(d.getDate() - n);
-  return startOfDay(d);
+  return new Date(kstDayStartIso(Date.now(), -n));
 }
 
 function formatKRW(n: number): string {
@@ -202,10 +200,9 @@ export async function loadOperatingDashboard(
     if (typeof reviewedRes.count === "number") reportsReviewed30d = reviewedRes.count;
     if (typeof closedRes.count === "number") reportsClosed30d = closedRes.count;
 
-    if (firstInspection7d === 0) {
-      const n = await countTableSince(sb, "inspection_notes", d7);
-      if (n != null) firstInspection7d = n;
-    }
+    /* [1106] 이벤트가 0 이면 노트 표로 대신 세던 것 — 운영진 예시(Lab) 노트가 하루 3건씩 올라와 "첫 임장 15 · 퍼널 1500%"가 됐다.
+       사람이 쓴 노트(kpi.inspectionsThisWeek · Lab 제외)로 센다. */
+    if (firstInspection7d === 0) firstInspection7d = kpi.inspectionsThisWeek;
     if (firstSave7d === 0 && kpi.totalBookmarks > 0) {
       const n = await countTableSince(sb, "bookmarks", d7);
       if (n != null) firstSave7d = n;
@@ -245,47 +242,49 @@ export async function loadOperatingDashboard(
       ? Math.round((authFail7d / authAttempts7d) * 1000) / 10
       : null;
 
-  const signup30d = Math.max(1, kpi.newUsers30d);
+  /* [1106] 가입(30일)이 0 이면 비율이 없다 — 예전 max(1, 0) 분모는 "임장노트 15 → 1500%" 같은 숫자를 만들었다 */
+  const signup30d = kpi.newUsers30d;
+  const pctOf = (n: number): number | null => (signup30d > 0 ? Math.round((n / signup30d) * 1000) / 10 : null);
   const funnel: FunnelStep[] = [
     {
       label: "활성 방문(7일)",
       count: activeD7,
-      pctOfSignup: Math.round((activeD7 / signup30d) * 1000) / 10,
+      pctOfSignup: pctOf(activeD7),
     },
     {
       label: "임장노트(7일)",
       count: firstInspection7d,
-      pctOfSignup: Math.round((firstInspection7d / signup30d) * 1000) / 10,
+      pctOfSignup: pctOf(firstInspection7d),
     },
     {
       label: "AI·LLM(7일)",
       count: aiLlm7d,
-      pctOfSignup: Math.round((aiLlm7d / signup30d) * 1000) / 10,
+      pctOfSignup: pctOf(aiLlm7d),
     },
     {
       label: "AI·규칙(7일)",
       count: aiRule7d,
-      pctOfSignup: Math.round((aiRule7d / signup30d) * 1000) / 10,
+      pctOfSignup: pctOf(aiRule7d),
     },
     {
       label: "지도 핸드오프(7일)",
       count: mapFocus7d,
-      pctOfSignup: Math.round((mapFocus7d / signup30d) * 1000) / 10,
+      pctOfSignup: pctOf(mapFocus7d),
     },
     {
       label: "AI 피드백(7일)",
       count: aiFeedback7d,
-      pctOfSignup: Math.round((aiFeedback7d / signup30d) * 1000) / 10,
+      pctOfSignup: pctOf(aiFeedback7d),
     },
     {
       label: "회차 비교(7일)",
       count: fieldCompare7d,
-      pctOfSignup: Math.round((fieldCompare7d / signup30d) * 1000) / 10,
+      pctOfSignup: pctOf(fieldCompare7d),
     },
     {
       label: "결제(30일)",
       count: kpi.paymentsCompleted30d,
-      pctOfSignup: Math.round((kpi.paymentsCompleted30d / signup30d) * 1000) / 10,
+      pctOfSignup: pctOf(kpi.paymentsCompleted30d),
     },
   ];
 

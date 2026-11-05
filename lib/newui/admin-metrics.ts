@@ -1,10 +1,11 @@
 /**
  * 관리자 대시보드(`app/admin/page.tsx`) 실집계 로더 (#83).
  *
- * - DAU: `platform_activity_events` 최근 24h distinct 사용자/익명 세션 수
- * - 신규 임장노트: `inspection_notes` 최근 24h 건수
+ * - [1106] 오늘 방문: `page_view_daily_agg` 오늘(한국 날짜) 첫 화면 수 — 예전 "DAU(24h)"는 드문 UI 이벤트 표
+ *   (platform_activity_events · 하루 0~20건)를 세어 방문이 수백인 날에도 0 이었다
+ * - 신규 임장노트: `inspection_notes` 오늘(한국) 사람이 쓴 건수(운영진 예시 Lab 제외)
  * - 가입: `profiles` 최근 24h 건수 (테이블 없으면 `app_users` 폴백)
- * - 전환율: 신규 노트 ÷ DAU (계산 불가 시 null → "—")
+ * - 전환율: 오늘 신규 노트 ÷ 오늘 방문 (계산 불가 시 null → "—")
  * - 구독 매출: 승인된(`approved_at` 있는) `payment_orders.amount_krw` 합.
  *   못 읽으면 구 `payments` paid 합으로 한 번 폴백하고, 그마저 실패하면
  *   null 을 돌려 "—"가 뜨게 한다 — 조회 실패를 "0원"이라고 말하지 않는다.
@@ -18,6 +19,9 @@ import { getReadOnlySupabase, readOnlyClientHasServiceRole } from "@/lib/newui/s
 import { logger } from "@/lib/log";
 import { DEFAULT_ADMIN_EMAIL } from "@/lib/brand/business-info";
 import { relativeTimeLabel } from "@/lib/format/relative-time";
+import { kstDayStartIso } from "@/lib/format/kst";
+import { isLabAuthor } from "@/lib/notes/author-label";
+import { kstDay as kstDayOf } from "@/lib/metrics/page-count";
 
 export interface AdminKpiCard {
   label: string;
@@ -26,6 +30,8 @@ export interface AdminKpiCard {
   /** 보조 라벨 (전일 대비 등) — 없으면 null */
   delta: string | null;
   accent: boolean;
+  /** [1106] 값 아래 한 줄(무엇을 셌는지 · 어제 값) — 없으면 생략 */
+  note?: string | null;
 }
 
 export interface AdminPendingItem {
@@ -42,47 +48,43 @@ export interface AdminDashboardMetrics {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
-/** platform_activity_events 행에서 distinct 키(세션 > 이메일 > 행 id) 추출 */
-function activityKeyOf(row: {
-  id: string;
-  user_email?: string | null;
-  metadata?: Record<string, unknown> | null;
-}): string {
-  const meta = row.metadata ?? {};
-  const session =
-    (typeof meta.session_id === "string" && meta.session_id) ||
-    (typeof meta.sessionId === "string" && meta.sessionId) ||
-    null;
-  return session || row.user_email?.trim().toLowerCase() || row.id;
-}
-
-/** 최근 24h(및 이전 24h) distinct 활동 사용자 수 — 실패 시 null */
-async function loadDau(): Promise<{ current: number; prev: number | null } | null> {
+/** [1106] 오늘 · 어제(한국 날짜) 첫 화면 수 — 익명 하루 수(page_view_daily_agg · 동의와 무관). 실패 시 null */
+async function loadVisits(): Promise<{ today: number; yesterday: number } | null> {
   const sb = getReadOnlySupabase();
   if (!sb) return null;
   const now = Date.now();
-  const load = async (fromMs: number, toMs: number): Promise<number | null> => {
-    const { data, error } = await sb
-      .from("platform_activity_events")
-      .select("id, user_email, metadata")
-      .gte("created_at", new Date(fromMs).toISOString())
-      .lt("created_at", new Date(toMs).toISOString())
-      .limit(10000);
-    if (error || !Array.isArray(data)) return null;
-    const uniq = new Set<string>();
-    for (const row of data as Array<{
-      id: string;
-      user_email?: string | null;
-      metadata?: Record<string, unknown> | null;
-    }>) {
-      uniq.add(activityKeyOf(row));
-    }
-    return uniq.size;
-  };
-  const current = await load(now - DAY_MS, now + 60_000);
-  if (current === null) return null;
-  const prev = await load(now - 2 * DAY_MS, now - DAY_MS).catch(() => null);
-  return { current, prev };
+  const today = kstDayOf(now);
+  const yesterday = kstDayOf(now - DAY_MS);
+  const { data, error } = await sb
+    .from("page_view_daily_agg")
+    .select("day, n")
+    .eq("is_landing", true)
+    .in("day", [today, yesterday])
+    .limit(1000);
+  if (error || !Array.isArray(data)) return null;
+  let t = 0;
+  let y = 0;
+  for (const r of data as Array<{ day: string; n: number | string | null }>) {
+    const n = Number(r.n ?? 0) || 0;
+    if (r.day === today) t += n;
+    else if (r.day === yesterday) y += n;
+  }
+  /* 하루 첫 화면 줄은 100~150 남짓 — 1,000줄(응답 상한)에 닿으면 합이 모자라므로 모른다고 한다 */
+  if (data.length >= 1000) return null;
+  return { today: t, yesterday: y };
+}
+
+/** [1106] 오늘(한국 자정부터) 사람이 쓴 임장노트 수 — 운영진 예시(Lab) 글은 하루 3건씩 자동으로 올라와 뺀다. 실패 시 null */
+async function countHumanNotesToday(): Promise<number | null> {
+  const sb = getReadOnlySupabase();
+  if (!sb) return null;
+  const { data, error } = await sb
+    .from("inspection_notes")
+    .select("author_label")
+    .gte("created_at", kstDayStartIso())
+    .limit(1000);
+  if (error || !Array.isArray(data)) return null;
+  return (data as Array<{ author_label: string | null }>).filter((r) => !isLabAuthor(r.author_label)).length;
 }
 
 /** 테이블 count(created_at 최근 24h) — 실패 시 null */
@@ -262,14 +264,6 @@ function formatKrw(total: number): string {
   return `${Math.round(total).toLocaleString("ko-KR")}원`;
 }
 
-function deltaVsPrev(current: number, prev: number | null): string | null {
-  if (prev === null || prev <= 0) return null;
-  const pct = ((current - prev) / prev) * 100;
-  if (!Number.isFinite(pct)) return null;
-  const sign = pct >= 0 ? "+" : "−";
-  return `${sign}${Math.abs(pct).toFixed(0)}%`;
-}
-
 /* [G005 2026-08-31] 북극성 — 주간 "첫 노트" 사용자 수.
  *
  * 지금 단계(가입 14명·유료 0건)의 성공은 매출도 DAU 도 아니고, "처음으로
@@ -283,15 +277,25 @@ function deltaVsPrev(current: number, prev: number | null): string | null {
 async function loadWeeklyFirstNoteUsers(): Promise<number | null> {
   const sb = getReadOnlySupabase();
   if (!sb) return null;
+  /* [1106] 예전엔 없는 열(author_id)을 읽어 조회가 늘 실패했다 → 첫 카드가 배포 뒤 한 번도 숫자를 못 냈다("—").
+     작성자 = user_id(로그인 노트) 또는 작성 이메일. 운영진 예시(Lab) 글은 사람이 아니다. */
   const { data, error } = await sb
     .from("inspection_notes")
-    .select("author_id, created_at")
+    .select("user_id, author_email, author_label, created_at")
     .order("created_at", { ascending: true })
-    .limit(2000);
+    .limit(1000);
   if (error || !Array.isArray(data)) return null;
+  /* 응답 상한(1,000줄)에 닿으면 "처음 쓴 날"을 잘못 짚을 수 있다 — 모른다고 한다 */
+  if (data.length >= 1000) return null;
   const firstByAuthor = new Map<string, string>();
-  for (const r of data as Array<{ author_id: string | null; created_at: string }>) {
-    const a = r.author_id ?? "";
+  for (const r of data as Array<{
+    user_id: string | null;
+    author_email: string | null;
+    author_label: string | null;
+    created_at: string;
+  }>) {
+    if (isLabAuthor(r.author_label)) continue;
+    const a = r.user_id || String(r.author_email ?? "").trim().toLowerCase();
     if (!a || firstByAuthor.has(a)) continue;
     firstByAuthor.set(a, r.created_at);
   }
@@ -304,22 +308,22 @@ async function loadWeeklyFirstNoteUsers(): Promise<number | null> {
 }
 
 export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics> {
-  const [firstNotes, dau, notes, signups, revenue, pending] = await Promise.all([
+  const [firstNotes, visits, notes, signups, revenue, pending] = await Promise.all([
     loadWeeklyFirstNoteUsers().catch((): number | null => null),
-    loadDau().catch((e) => {
-      logger.error("[admin-metrics] dau", e);
+    loadVisits().catch((e) => {
+      logger.error("[admin-metrics] visits", e);
       return null;
     }),
-    count24h("inspection_notes").catch((): number | null => null),
+    countHumanNotesToday().catch((): number | null => null),
     loadSignups24h().catch((): number | null => null),
     loadSubscriptionRevenue().catch((): number | null => null),
     loadPendingReports().catch((): AdminPendingItem[] => []),
   ]);
 
-  // 노트 작성 전환율 = 24h 신규 노트 ÷ 24h DAU — 어느 한쪽이라도 없으면 "—"
+  // 노트 작성 전환율 = 오늘 사람 노트 ÷ 오늘 방문(첫 화면) — 어느 한쪽이라도 없으면 "—"
   const conversion =
-    dau && dau.current > 0 && notes !== null
-      ? `${((notes / dau.current) * 100).toFixed(1)}%`
+    visits && visits.today > 0 && notes !== null
+      ? `${((notes / visits.today) * 100).toFixed(1)}%`
       : null;
 
   const kpis: AdminKpiCard[] = [
@@ -330,24 +334,28 @@ export async function loadAdminDashboardMetrics(): Promise<AdminDashboardMetrics
       value: firstNotes !== null ? `${firstNotes}명` : "—",
       delta: null,
       accent: true,
+      note: "처음 노트를 쓴 사람 · 7일 · 예시 글 제외",
     },
     {
-      label: "DAU (24h)",
-      value: dau ? dau.current.toLocaleString("ko-KR") : "—",
-      delta: dau ? deltaVsPrev(dau.current, dau.prev) : null,
+      label: "오늘 방문 (첫 화면)",
+      value: visits ? visits.today.toLocaleString("ko-KR") : "—",
+      delta: null,
       accent: false,
+      note: visits ? `어제 ${visits.yesterday.toLocaleString("ko-KR")} · 사람 수 아님 · 한국 날짜` : "방문 수 불러오기 실패",
     },
     {
-      label: "신규 임장노트 (24h)",
+      label: "신규 임장노트 (오늘)",
       value: notes !== null ? notes.toLocaleString("ko-KR") : "—",
       delta: signups !== null ? `가입 +${signups.toLocaleString("ko-KR")}` : null,
       accent: false,
+      note: "사람이 쓴 노트 · 가입은 24시간",
     },
     {
       label: "노트 작성 전환율",
       value: conversion ?? "—",
       delta: null,
       accent: true,
+      note: "오늘 노트 ÷ 오늘 방문",
     },
     {
       label: "구독 매출",

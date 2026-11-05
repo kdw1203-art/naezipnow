@@ -1,5 +1,6 @@
 import { loadAnonCounts } from "@/lib/admin/anon-counts";
 import { deviceLabel, type CountSummary } from "@/lib/metrics/page-count";
+import { KNOWN_OUTAGES } from "@/lib/metrics/known-outages";
 
 /* [1053 · 방문 집계] 전체 방문 수 — 동의와 무관한 익명 하루 수(page_view_daily_agg).
    아래 카드들(방문자 · 체류 · 유입)은 분석 동의 표본이라 방문의 일부만 보였다(운영 실측 약 7%).
@@ -26,8 +27,11 @@ export async function AnonCounts() {
 
 /** 그리기만 — 데이터는 위에서(또는 캡처 대본에서) 넣는다. null 이면 실패 문구 */
 export function AnonCountsView({ data }: { data: CountSummary | null }) {
-  const max = data ? Math.max(1, ...data.days.map((d) => d.n)) : 1;
-  const delta = data && data.prev7 > 0 ? Math.round(((data.last7 - data.prev7) / data.prev7) * 100) : null;
+  const max = data ? Math.max(1, ...data.days.filter((d) => !d.outage).map((d) => d.n)) : 1;
+  /* [1106] 운영 정지 날이 낀 주와는 증감을 내지 않는다(그날 수는 자동 점검이 남긴 것) */
+  const outage7 = data?.outageDays7 ?? { last: 0, prev: 0 };
+  const comparable = outage7.last === 0 && outage7.prev === 0;
+  const delta = data && comparable && data.prev7 > 0 ? Math.round(((data.last7 - data.prev7) / data.prev7) * 100) : null;
   return (
     <section className="card rounded-2xl p-5" aria-labelledby="anon-counts-title">
       <h2 id="anon-counts-title" className="text-[15px] font-bold text-ink">
@@ -48,6 +52,7 @@ export function AnonCountsView({ data }: { data: CountSummary | null }) {
               <div className="mt-0.5 text-[12px] text-text-3">
                 지난 7일 {data.prev7.toLocaleString("ko-KR")}
                 {delta !== null && ` · ${delta >= 0 ? "▲" : "▼"} ${Math.abs(delta)}%`}
+                {!comparable && ` · 운영 정지 ${outage7.last + outage7.prev}일 제외 · 증감 없음`}
               </div>
             </div>
             <div>
@@ -72,18 +77,33 @@ export function AnonCountsView({ data }: { data: CountSummary | null }) {
           </div>
 
           <div className="mt-4 flex items-end gap-1.5 overflow-x-auto pb-1" aria-label="최근 14일 화면 열림 수">
-            {data.days.map((d) => (
-              <div key={d.day} className="flex min-w-[40px] flex-1 flex-col items-center gap-1">
-                <span className="text-[10px] font-bold text-text-2">{d.n.toLocaleString("ko-KR")}</span>
+            {data.days.map((d) =>
+              d.outage ? (
                 <div
-                  className="w-full rounded-t-md bg-primary/70"
-                  style={{ height: `${Math.max(3, Math.round((d.n / max) * 80))}px` }}
-                  title={`${d.day} · ${d.n}`}
-                />
-                <span className="text-[10px] text-text-3">{fmtDay(d.day)}</span>
-              </div>
-            ))}
+                  key={d.day}
+                  className="flex min-w-[40px] flex-1 flex-col items-center gap-1"
+                  title={`${d.day} · ${KNOWN_OUTAGES[0]?.label ?? "운영 정지"} · 기록 ${d.n}건은 자동 점검`}
+                >
+                  <span className="text-[10px] text-text-3">정지</span>
+                  <div className="h-[80px] w-full rounded-t-md border border-dashed border-line-strong" />
+                  <span className="text-[10px] text-text-3">{fmtDay(d.day)}</span>
+                </div>
+              ) : (
+                <div key={d.day} className="flex min-w-[40px] flex-1 flex-col items-center gap-1">
+                  <span className="text-[10px] font-bold text-text-2">{d.n.toLocaleString("ko-KR")}</span>
+                  <div
+                    className="w-full rounded-t-md bg-primary/70"
+                    style={{ height: `${Math.max(3, Math.round((d.n / max) * 80))}px` }}
+                    title={`${d.day} · ${d.n}`}
+                  />
+                  <span className="text-[10px] text-text-3">{fmtDay(d.day)}</span>
+                </div>
+              ),
+            )}
           </div>
+          {data.days.some((d) => d.outage) ? (
+            <p className="mt-1 text-[12px] text-text-3">정지 = {KNOWN_OUTAGES[0]?.label ?? "운영 정지"} · 그날 수는 자동 점검이 남긴 것이라 그래프 높이에서 뺌</p>
+          ) : null}
 
           <div className="mt-4 grid gap-4 md:grid-cols-3">
             <div>

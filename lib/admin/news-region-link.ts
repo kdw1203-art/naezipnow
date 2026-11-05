@@ -2,6 +2,7 @@ import "server-only";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
+import { readPaged } from "@/lib/supabase/read-paged";
 import { resolveNewsRegion, tallyNewsRegions, type NewsRegionInput, type NewsRegionTally } from "@/lib/news/region-link";
 
 /* [개선 #19] 뉴스→지역 연결률 — 자동수집 뉴스가 지역 허브(/region/[id])로 실제로 연결되는 비율.
@@ -33,16 +34,26 @@ export async function loadNewsRegionLinkage(): Promise<NewsRegionLinkage | null>
   const sb = getServiceSupabase();
   if (!sb) return null;
   try {
-    const { data, error } = await sb
-      .from("board_posts")
-      .select("region,title,tags,geo:automation_meta->geo")
-      .eq("board_type", "community")
-      .eq("is_published", true)
-      .eq("is_automated", true)
-      .order("created_at", { ascending: false })
-      .limit(FETCH_CAP);
-    if (error || !Array.isArray(data)) {
-      logger.error("[news-region-link] 조회 실패", error ?? "invalid");
+    /* [1106] `.limit(3000)` 한 번은 PostgREST 상한 1,000행만 돌려준다 — 화면이 "자동수집 1,000건 중"이라 적었다
+       (실측 2026-11-05: 같은 조건 1,587건). 쪽으로 끝까지(최신 3,000건). */
+    let data: unknown[];
+    try {
+      const paged = await readPaged<unknown>(
+        (from, to) =>
+          sb
+            .from("board_posts")
+            .select("region,title,tags,geo:automation_meta->geo")
+            .eq("board_type", "community")
+            .eq("is_published", true)
+            .eq("is_automated", true)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to),
+        FETCH_CAP,
+      );
+      data = paged.rows;
+    } catch (error) {
+      logger.error("[news-region-link] 조회 실패", error);
       return null;
     }
     const inputs = (data as unknown as Array<Record<string, unknown>>).map(toInput);

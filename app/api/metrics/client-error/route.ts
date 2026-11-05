@@ -4,11 +4,14 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
+import { telemetryWritesDisabled } from "@/lib/metrics/telemetry-write";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest): Promise<Response> {
+  /* [1106] 자동 점검 서버(CI E2E)가 일부러 낸 오류는 운영 오류 수에 넣지 않는다 */
+  if (telemetryWritesDisabled()) return NextResponse.json({ ok: true });
   const rl = rateLimit(`client-error:${getClientIp(req)}`, { limit: 10, windowMs: 60_000 });
   if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
   let body: { message?: string; stack?: string; path?: string } = {};

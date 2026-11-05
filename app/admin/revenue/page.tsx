@@ -2,7 +2,11 @@
    구독 MRR(실 플랜 카운트)·유료 전환·30일 결제(payments)·전문가 수 등 실데이터만 노출.
    결제 실패/환불 분쟁은 정산 연동 전까지 '준비 중'으로 정직하게 표기. */
 
-import { listIngestLog } from "@/lib/market/store";
+import { latestIngestLogFor } from "@/lib/market/store";
+import { readPaged } from "@/lib/supabase/read-paged";
+import { kstDay } from "@/lib/metrics/page-count";
+import { outageOn } from "@/lib/metrics/known-outages";
+import { formatKstDateTime } from "@/lib/format/kst";
 import Link from "next/link";
 import { loadAdminKpi, loadPreorderInterest } from "@/lib/admin/stats";
 import {
@@ -43,8 +47,8 @@ const ADSENSE_SESSION_DAYS = 14; //  연속 일수
 const ADSENSE_INDEXED_PAGES = 1000; // 색인 등록 페이지 기준
 
 interface AdsenseGate {
-  /** 최근 14일 일별 이벤트 건수 (오래된 날 → 최신). null = 조회 실패 */
-  dailyEvents: number[] | null;
+  /** null 칸 = 운영 정지 날(평균 · 연속 판정에서 뺀다) */
+  dailyEvents: Array<number | null> | null;
   eventDailyAvg: number | null;
   daysOver100: number;
   /** 최신 색인 스냅샷 — null 이면 GSC 미연결(오너 패킷 ②) 또는 조회 실패 */
@@ -66,45 +70,49 @@ async function loadAdsenseGate(): Promise<AdsenseGate> {
   };
   const sb = getServiceSupabase();
 
-  /* ① 트래픽 프록시 — 14일 이벤트를 KST 일 단위로 버킷 */
-  let dailyEvents: number[] | null = null;
+  /* ① 트래픽 — [1106] 하루 첫 화면 수(page_view_daily_agg · 익명 · 동의와 무관 ≈ 세션 시작).
+     예전 프록시는 platform_activity_events(드문 UI 이벤트 — 하루 0~20건)라 방문이 하루 수백인 날에도 "미충족 · 일평균 1건"이었다.
+     운영 정지 날(known-outages)의 수는 자동 점검이 남긴 것이라 빈 칸(null)으로 두고 평균에서 뺀다. */
+  let dailyEvents: Array<number | null> | null = null;
   if (sb) {
-    const since = new Date();
-    since.setDate(since.getDate() - ADSENSE_SESSION_DAYS);
-    since.setHours(0, 0, 0, 0);
-    const { data, error } = await sb
-      .from("platform_activity_events")
-      .select("created_at")
-      .gte("created_at", since.toISOString())
-      .limit(20000);
-    if (!error && Array.isArray(data)) {
+    const since = kstDay(Date.now() - (ADSENSE_SESSION_DAYS - 1) * 86_400_000);
+    try {
+      const paged = await readPaged<{ day: string; n: number | string | null }>(
+        (from, to) =>
+          sb
+            .from("page_view_daily_agg")
+            .select("day, n")
+            .eq("is_landing", true)
+            .gte("day", since)
+            .order("day", { ascending: true })
+            .order("route", { ascending: true })
+            .order("is_landing", { ascending: true })
+            .order("ref_host", { ascending: true })
+            .order("utm_source", { ascending: true })
+            .order("device", { ascending: true })
+            .range(from, to),
+        20_000,
+      );
       const byDay = new Map<string, number>();
-      for (const r of data as Array<{ created_at?: string }>) {
-        const t = r.created_at ? new Date(r.created_at) : null;
-        if (!t || Number.isNaN(t.getTime())) continue;
-        const day = new Intl.DateTimeFormat("sv-SE", {
-          timeZone: "Asia/Seoul",
-        }).format(t);
-        byDay.set(day, (byDay.get(day) ?? 0) + 1);
-      }
-      const days: number[] = [];
-      const cursor = new Date(since);
-      for (let i = 0; i < ADSENSE_SESSION_DAYS; i++) {
-        const key = new Intl.DateTimeFormat("sv-SE", {
-          timeZone: "Asia/Seoul",
-        }).format(cursor);
-        days.push(byDay.get(key) ?? 0);
-        cursor.setDate(cursor.getDate() + 1);
+      for (const r of paged.rows) byDay.set(r.day, (byDay.get(r.day) ?? 0) + (Number(r.n) || 0));
+      const days: Array<number | null> = [];
+      for (let i = ADSENSE_SESSION_DAYS - 1; i >= 0; i--) {
+        const d = kstDay(Date.now() - i * 86_400_000);
+        days.push(outageOn(d) ? null : (byDay.get(d) ?? 0));
       }
       dailyEvents = days;
+    } catch {
+      dailyEvents = null;
     }
   }
   const eventDailyAvg =
-    dailyEvents && dailyEvents.length > 0
-      ? Math.round(dailyEvents.reduce((s, v) => s + v, 0) / dailyEvents.length)
+    dailyEvents && dailyEvents.some((v) => v !== null)
+      ? Math.round(
+          dailyEvents.reduce<number>((s, v) => s + (v ?? 0), 0) / dailyEvents.filter((v) => v !== null).length,
+        )
       : null;
   const daysOver100 = dailyEvents
-    ? dailyEvents.filter((v) => v >= ADSENSE_SESSION_DAILY).length
+    ? dailyEvents.filter((v) => v !== null && v >= ADSENSE_SESSION_DAILY).length
     : 0;
 
   /* ② 색인 — GSC 주간 스냅샷 최신 1건 */
@@ -144,10 +152,7 @@ export default async function AdminRevenuePage() {
      바로 본다. 실패는 null(칸 미표시)로 두고 0건과 구분한다. */
   const [kpi, expiryLog, preorder, adsense] = await Promise.all([
     loadAdminKpi(),
-    listIngestLog(60).then(
-      (rows) => rows.find((r) => r.source === "plan-expiry") ?? null,
-      () => null,
-    ),
+    latestIngestLogFor("plan-expiry").catch(() => null),
     /* 고도화 31 — 결제 오픈 전 수요(오픈 알림 신청). 실패는 null → "—". */
     loadPreorderInterest().catch(() => null),
     /* [#145] 애드센스 신청 게이트 실측 */
@@ -164,7 +169,7 @@ export default async function AdminRevenuePage() {
   const kpis: { label: string; value: string; sub?: string }[] = [
     { label: "MRR (구독 추정)", value: money(mrr), sub: "유료 플랜 × 요금" },
     { label: "유료 구독", value: num(paid), sub: kpiReady ? `전환율 ${pct(paid, kpi.totalUsers)}` : "DB 미연결" },
-    { label: "전체 사용자", value: num(kpi.totalUsers), sub: kpiReady ? `활성(7일) ${num(kpi.activeUsers7d)}` : "DB 미연결" },
+    { label: "전체 사용자", value: num(kpi.totalUsers), sub: kpiReady ? `글·노트 쓴 사람(7일) ${num(kpi.activeUsers7d)}` : "DB 미연결" },
     { label: "전문가 수", value: num(kpi.totalExperts), sub: "인증 완료" },
     { label: "30일 결제 건수", value: num(kpi.paymentsCompleted30d), sub: "payments 완료" },
     { label: "30일 결제 매출", value: money(kpi.paymentsRevenue30dKrw), sub: "실 결제 합계" },
@@ -247,7 +252,7 @@ export default async function AdminRevenuePage() {
           </div>
           <p className="mt-1 text-[12px] leading-relaxed text-[#9aa6b8]">
             {expiryLog.message ?? `강등 ${expiryLog.rows}명`} ·{" "}
-            {new Date(expiryLog.createdAt).toLocaleString("ko-KR")} ·{" "}
+            {formatKstDateTime(expiryLog.createdAt)} ·{" "}
             {expiryLog.status === "ok" ? "정상" : `상태 ${expiryLog.status}`}
           </p>
         </div>
@@ -293,11 +298,11 @@ export default async function AdminRevenuePage() {
             </div>
             <div className="mt-1.5 text-[19px] font-bold tabular-nums text-white">
               {adsense.eventDailyAvg != null
-                ? `일평균 ${adsense.eventDailyAvg.toLocaleString("ko-KR")}건`
+                ? `일평균 ${adsense.eventDailyAvg.toLocaleString("ko-KR")}회`
                 : "—"}
             </div>
             <p className="mt-1 text-[12px] leading-relaxed text-[#9aa6b8]">
-              최근 {ADSENSE_SESSION_DAYS}일 활동 이벤트 기준 프록시 · 기준 넘긴 날{" "}
+              최근 {ADSENSE_SESSION_DAYS}일 첫 화면 수(익명 하루 수 · 운영 정지 날은 평균에서 뺌) 기준 · 기준 넘긴 날{" "}
               {adsense.daysOver100}/{ADSENSE_SESSION_DAYS}일. 최종 판정은 Vercel
               Analytics 실측(봇 제외)으로 — 프록시 단독으로 신청하지 않습니다.
             </p>

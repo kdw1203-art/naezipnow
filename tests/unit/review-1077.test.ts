@@ -103,7 +103,8 @@ test("R7 말투 — 문학 투 제목·라벨 → 표준 이름", () => {
     ["app/redevelopment/(index)/page.tsx", "단계별 상세 · 확인 사항", "이 단계에서 확인할 것"],
     ["app/redevelopment/(index)/page.tsx", "설명 · 유의점 · 확인 사항", "유의점 · 확인할 것"],
     ["app/analysis/ai/[tool]/ResultView.tsx", "계약 전 확인 사항", "계약 전에 확인할 것"],
-    ["app/about/page.tsx", "없는 데이터는 없음으로 표시합니다", "없다고 말합니다"],
+    /* [1107] 원칙 제목을 표 낱말로 줄였다("없으면 없음") — 바뀐 뜻 없음 */
+    ["app/about/page.tsx", 'title: "없으면 없음"', "없다고 말합니다"],
     ["app/components/home/HomeTodayLine.tsx", "오늘의 시장", "오늘의 한 줄\n"],
     ["app/components/talk/TalkPanel.tsx", 'aria-label="토론 의견"', "토론 한 줄"],
     ["app/decide/DecideClient.tsx", 'placeholder="메모"', "메모 한 줄"],

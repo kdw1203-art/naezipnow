@@ -161,10 +161,8 @@ export function RentView({ hist, name }: { hist: ComplexRentHistory; name: strin
           </tbody>
         </table>
       </div>
-      {/* [1029 · 6] 낱말 꼴 각주 */}
-      <p className="t-caption mt-1.5 px-1 text-text-3">
-        출처 국토교통부 전월세 신고 · 최근 1~2개월 신고 지연(과소 집계 가능) · 갱신·신규 계약 혼합 · 중앙값 = 면적 미가중
-      </p>
+      {/* [1029 · 6] 낱말 꼴 각주 · [1107] 주의 세 가지(신고 지연 · 갱신 혼합 · 면적 미가중)는 제목 옆 ⓘ 풀이가 이미 말한다 — 각주는 출처 · 가장 큰 주의 하나 */}
+      <p className="t-caption mt-1.5 px-1 text-text-3">출처 국토교통부 전월세 신고 · 최근 1~2개월은 적게 잡힐 수 있음</p>
     </section>
   );
 }

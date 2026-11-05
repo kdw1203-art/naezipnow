@@ -42,18 +42,32 @@ export default async function AdminDashboardPage() {
   let expertOps: ExpertOpsSummary | null = null;
   let kpi: AdminKpi | null = null;
   // 조회 실패는 "0건"과 다르다 — 실패 사유를 담아 두고 화면에서 구분해 표시한다.
-  let loadError: string | null = null;
-  try {
-    [metrics, membersData, ops, expertOps, kpi] = await Promise.all([
-      loadAdminDashboardMetrics(),
-      loadRecentMembers(5),
-      loadAdminOpsPanels(),
-      loadExpertOpsSummary(),
-      loadAdminKpi(),
-    ]);
-  } catch (err) {
-    loadError = err instanceof Error ? err.message : String(err);
-  }
+  /* [1106] 묶음 하나가 실패하면 다섯 묶음이 통째로 비던 것(Promise.all 하나의 try) → 묶음마다 따로 받고, 실패 사유도 그 패널에만 적는다 */
+  const errs: { metrics: string | null; members: string | null; ops: string | null; expert: string | null; kpi: string | null } = {
+    metrics: null,
+    members: null,
+    ops: null,
+    expert: null,
+    kpi: null,
+  };
+  const why = (e: unknown) => (e instanceof Error ? e.message : String(e));
+  const [metricsR, membersR, opsR, expertR, kpiR] = await Promise.allSettled([
+    loadAdminDashboardMetrics(),
+    loadRecentMembers(5),
+    loadAdminOpsPanels(),
+    loadExpertOpsSummary(),
+    loadAdminKpi(),
+  ]);
+  if (metricsR.status === "fulfilled") metrics = metricsR.value;
+  else errs.metrics = why(metricsR.reason);
+  if (membersR.status === "fulfilled") membersData = membersR.value;
+  else errs.members = why(membersR.reason);
+  if (opsR.status === "fulfilled") ops = opsR.value;
+  else errs.ops = why(opsR.reason);
+  if (expertR.status === "fulfilled") expertOps = expertR.value;
+  else errs.expert = why(expertR.reason);
+  if (kpiR.status === "fulfilled") kpi = kpiR.value;
+  else errs.kpi = why(kpiR.reason);
   // DB 미연결이면 loadAdminKpi 는 예외 대신 전부 0 을 돌려준다 — 0 과 "모름"을 구분한다.
   const kpiReady = Boolean(kpi?.supabaseConfigured);
   const num = (v: number | null | undefined): string =>
@@ -78,8 +92,8 @@ export default async function AdminDashboardPage() {
       ? metrics.kpis
       : ([
           { label: "주간 첫 노트 사용자 (목표 3)", value: "—", delta: null, accent: true },
-          { label: "DAU (24h)", value: "—", delta: null, accent: false },
-          { label: "신규 임장노트 (24h)", value: "—", delta: null, accent: false },
+          { label: "오늘 방문 (첫 화면)", value: "—", delta: null, accent: false },
+          { label: "신규 임장노트 (오늘)", value: "—", delta: null, accent: false },
           { label: "노트 작성 전환율", value: "—", delta: null, accent: true },
           { label: "구독 매출", value: "—", delta: null, accent: false },
         ] satisfies AdminDashboardMetrics["kpis"]);
@@ -116,7 +130,7 @@ export default async function AdminDashboardPage() {
               운영자는 기간을 바꿔 볼 수 있다고 읽고 눌렀지만 KPI 는 영원히 그대로였다.
               loadAdminDashboardMetrics() 는 기간 인자를 받지 않고 24h 고정 윈도로만
               집계하므로 Link 로 바꿔도 결과가 안 바뀐다 — 없는 기능을 흉내내느니 지운다.
-              실제 집계 구간은 아래 KPI 라벨("DAU (24h)" 등)에 그대로 적혀 있다. */}
+              실제 집계 구간은 아래 KPI 라벨("오늘 방문" 등)에 그대로 적혀 있다. */}
         </div>
       </div>
 
@@ -138,6 +152,8 @@ export default async function AdminDashboardPage() {
                 </>
               ) : null}
             </div>
+            {/* [1106] 무엇을 셌는지 한 줄 — 같은 이름(DAU 등)이 화면마다 다른 것을 세던 혼선을 막는다 */}
+            {k.note ? <div className="mt-0.5 text-[12px] text-[#9aa6b8]">{k.note}</div> : null}
           </div>
         ))}
       </div>
@@ -166,12 +182,12 @@ export default async function AdminDashboardPage() {
             ) : null}
           </div>
           {metrics.pending.length === 0 ? (
-            loadError ? (
+            errs.metrics ? (
               <ErrorState
                 tone="admin"
                 title="처리 대기를 불러오지 못했어요"
                 desc="조회가 실패해 실제 대기 건수를 알 수 없습니다. 0건이라는 뜻이 아닙니다."
-                cause={loadError}
+                cause={errs.metrics}
                 action={{ label: "신고 콘솔 열기", href: "/admin/moderation" }}
               />
             ) : (
@@ -210,12 +226,12 @@ export default async function AdminDashboardPage() {
           </div>
           {/* 죽은 파이프라인을 초록불 목업으로 덮으면 장애를 놓친다 — 기록이 없으면 없다고 말한다. */}
           {ops.etl.length === 0 ? (
-            loadError ? (
+            errs.ops ? (
               <ErrorState
                 tone="admin"
                 title="ETL 상태를 불러오지 못했어요"
                 desc="파이프라인이 정상이라는 뜻이 아니라, 상태를 확인하지 못했다는 뜻입니다."
-                cause={loadError}
+                cause={errs.ops}
                 action={{ label: "데이터 콘솔 열기", href: "/admin/data" }}
               />
             ) : (
@@ -303,12 +319,12 @@ export default async function AdminDashboardPage() {
           </div>
           {/* "없거나 불러올 수 없습니다"는 두 상태를 뭉갠 문구였다 — 실패와 0건을 나눠 말한다. */}
           {ops.inquiries.length === 0 ? (
-            loadError ? (
+            errs.ops ? (
               <ErrorState
                 tone="admin"
                 title="문의를 불러오지 못했어요"
                 desc="문의가 없다는 뜻이 아닙니다."
-                cause={loadError}
+                cause={errs.ops}
               />
             ) : (
               <EmptyState
@@ -355,7 +371,7 @@ export default async function AdminDashboardPage() {
               tone="admin"
               title="가입 추이를 불러오지 못했어요"
               desc="profiles 조회가 실패했습니다. 가입이 0명이라는 뜻이 아닙니다."
-              cause={loadError ?? undefined}
+              cause={errs.ops ?? undefined}
             />
           ) : (
             <>
@@ -411,12 +427,12 @@ export default async function AdminDashboardPage() {
             <span className="text-right">가입</span>
           </div>
           {membersData.members.length === 0 ? (
-            membersData.total === null || loadError ? (
+            membersData.total === null || errs.members ? (
               <ErrorState
                 tone="admin"
                 title="회원 데이터를 불러오지 못했어요"
                 desc="DB 연결·권한을 확인해 주세요."
-                cause={loadError ?? undefined}
+                cause={errs.members ?? undefined}
               />
             ) : (
               <EmptyState
@@ -459,7 +475,7 @@ export default async function AdminDashboardPage() {
               tone="admin"
               title="콘텐츠 집계를 불러오지 못했어요"
               desc="Supabase 연결·권한을 확인해 주세요. 0건이라는 뜻이 아닙니다."
-              cause={loadError ?? undefined}
+              cause={errs.kpi ?? undefined}
               action={{ label: "데이터 콘솔 열기", href: "/admin/data" }}
             />
           ) : (
@@ -469,7 +485,8 @@ export default async function AdminDashboardPage() {
                   {
                     label: "임장노트",
                     value: num(kpi?.totalInspections),
-                    sub: `최근 7일 +${num(kpi?.inspectionsThisWeek)}`,
+                    /* [1106] 사람이 쓴 노트만 — 운영진 예시(Lab)는 따로 적는다(하루 3건씩 자동으로 올라와 활동처럼 보였다) */
+                    sub: `최근 7일 +${num(kpi?.inspectionsThisWeek)} · 예시 ${num(kpi?.labInspections)}건 별도`,
                   },
                   {
                     label: "커뮤니티 글",
@@ -545,12 +562,12 @@ export default async function AdminDashboardPage() {
               버튼과 함께 그리던 자리. 없는 일을 처리하려 들게 만들므로 제거하고,
               실제 처리는 /admin/moderation 콘솔로 보낸다. */}
           {ops.reportCounts.length === 0 ? (
-            loadError ? (
+            errs.ops ? (
               <ErrorState
                 tone="admin"
                 title="신고 집계를 불러오지 못했어요"
                 desc="신고가 없다는 뜻이 아니라, 집계를 확인하지 못했다는 뜻입니다."
-                cause={loadError}
+                cause={errs.ops}
                 action={{ label: "신고 콘솔 열기", href: "/admin/moderation" }}
               />
             ) : (
@@ -622,7 +639,7 @@ export default async function AdminDashboardPage() {
               tone="admin"
               title="전문가 심사 현황을 불러오지 못했어요"
               desc="DB 연결·권한을 확인해 주세요. 심사 대기가 없다는 뜻이 아닙니다."
-              cause={loadError ?? undefined}
+              cause={errs.expert ?? undefined}
               action={{ label: "심사 콘솔 열기", href: "/admin/quality" }}
             />
           ) : (

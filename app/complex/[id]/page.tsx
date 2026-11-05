@@ -41,6 +41,7 @@ import { hubFaqPriceAnswer, hubMetaPrice } from "@/lib/complex/hub-meta";
 /* [1009 · C 리뷰] 월별 줄 등락의 기준 달(전월/빈 달 다음은 그 달) — 요약 탭 미리보기 줄은 서버에서 센다 */
 import { monthDeltaView, ymRangeShort, type MonthDeltaView } from "@/lib/complex/month-delta";
 import { formatEokMan } from "@/lib/format/eok-man";
+import { buildSummaryTiles } from "@/lib/complex/summary-tiles";
 /* [1024 · 단지 상세 v2] 네이비 히어로(HubPriceHero)·지표 칸·단지 정보 목록(ComplexInfoGrid)을 걷고 시안(mock1024/complex-d)의
    흰 머리(PageHead) → 개요 스트립 8칸 → 타입 탭·매매|전세|월세·기간 칩·추이 그래프 → 최근 실거래 표 → 전세가율·갭 → 관리비 →
    학교·지하철 → 임장노트 → 인근 단지 순으로 바꿨다. 대표가(hubHeadline)는 제목·공유 카드·JSON-LD·FAQ 에 그대로 쓴다. */
@@ -1858,6 +1859,8 @@ export default async function ComplexHubPage({
               dealsFailed={txFailed}
               tradeDeltas={dealTuples.length === 0 ? tradeDeltaViews(v.trades) : undefined}
               summaryDeals={false}
+              /* [1107] 요약 = 숫자 네 칸(대표가 · 비교 · 12개월 매매 · 전세 중앙) — 준공 · 세대 · 전세가율은 위 개요 · 카드가 말한다 */
+              summaryTiles={buildSummaryTiles({ headline, tradeSummary: facts.tradeSummary, rentSummary: facts.rentSummary })}
             />
           </div>
 

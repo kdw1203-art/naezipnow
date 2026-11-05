@@ -1,5 +1,6 @@
 import { getServiceSupabase } from "@/lib/supabase/service";
 import type { PlatformShell } from "@/lib/platform-shell";
+import { telemetryWritesDisabled } from "@/lib/metrics/telemetry-write";
 
 export async function recordPlatformEvent(input: {
   platform: PlatformShell;
@@ -21,7 +22,7 @@ export async function recordPlatformEvent(input: {
      2건이 signup_step_1 로 쌓여, 7일 퍼널이 "가입 시작 14 · 완료 0" 으로
      읽혔다 — 전부 봇이었다. 합성 서버는 이 플래그를 들고 뜨고, 여기서 접는다.
      지표에 안 쌓는 것이지 실패가 아니다. */
-  if (process.env.PLATFORM_EVENTS_DISABLED === "1") return;
+  if (telemetryWritesDisabled()) return;
   const sb = getServiceSupabase();
   if (!sb) return;
 

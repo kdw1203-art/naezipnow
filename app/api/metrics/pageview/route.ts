@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { getClientIp, rateLimit, tooManyRequests } from "@/lib/rate-limit";
 import { logger } from "@/lib/log";
 import { countRow, isBotAgent, isCrossSite, normalizeRoute, type CountFacts } from "@/lib/metrics/page-count";
+import { telemetryWritesDisabled } from "@/lib/metrics/telemetry-write";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -78,6 +79,8 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 const SESSION_RE = /^[a-f0-9]{16,64}$/i;
 
 export async function POST(req: NextRequest): Promise<Response> {
+  /* [1106] 자동 점검 서버(CI E2E · 운영 키)는 아무것도 쓰지 않는다 — 이유는 lib/metrics/telemetry-write.ts */
+  if (telemetryWritesDisabled()) return NextResponse.json({ ok: true, stored: false });
   /* 무인증 텔레메트리 — 페이지 이동당 2요청. 도배만 막는다. */
   const rl = rateLimit(`pageview:${getClientIp(req)}`, { limit: 120, windowMs: 60_000 });
   if (!rl.ok) return tooManyRequests(rl.retryAfterSec);
