@@ -17,6 +17,8 @@ type Group = NavItem & { icon: string };
  *  결제→구독 관리로 눈이 이어진다). 묶음이 6 → 7 이 되지만 패널은 세로 스크롤
  *  (max-h calc(100dvh-100px) · overflow-y-auto)이라 잘리지 않는다. */
 const CAT_ICON: Record<string, string> = {
+  /* [1108 · 통폐합] 실거래 대분류(nav-data) — 막대(거래량) 아이콘 */
+  실거래: "bar",
   임장노트: "notebook-pen",
   지도: "map",
   "AI 분석": "sparkles",

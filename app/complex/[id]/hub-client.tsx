@@ -349,7 +349,7 @@ export function WatchlistButton({
 }
 
 /* [970 · B-17] "노트" 탭의 내용은 동네이야기(board_posts) 글이라 라벨을 "이야기"로 —
-   임장노트는 아래 ComplexNotesNewsAi 섹션이 따로 그린다. ?tab= id(notes)는 그대로
+   임장노트는 아래 기록 묶음(ComplexRecordsSection · [1108])이 따로 그린다. ?tab= id(notes)는 그대로
    둔다(공유·북마크 호환). */
 /* [1009 · C] "시세" → "실거래" — 이 탭의 숫자는 전부 국토부 실거래 신고분이다(단지 단위 시세 원천 없음, 표기 표준).
    주소 id(price)는 그대로라 공유·북마크(?tab=price)는 계속 이 탭을 연다. */

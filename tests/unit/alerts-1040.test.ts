@@ -253,7 +253,8 @@ test("보관 화면 — 메타 robots 가 머리(X-Robots-Tag)와 같은 noindex
 
 test("색인 대상인데 사이트맵에 없던 화면 — AI 도구는 싣고 결정 카드는 색인하지 않는다", () => {
   const build = read("lib/seo/build-sitemap.ts");
-  assert.match(build, /for \(const tool of AI_TOOL_IDS\) \{\s+entries\.push\(\{ url: `\$\{BASE_URL\}\/analysis\/ai\/\$\{tool\}`/);
+  /* [1109] 살아 있는 4종만 싣는다(통합된 8종은 308) */
+  assert.match(build, /for \(const tool of ACTIVE_AI_TOOL_IDS\) \{\s+entries\.push\(\{ url: `\$\{BASE_URL\}\/analysis\/ai\/\$\{tool\}`/);
   assert.match(read("app/decide/page.tsx"), /noIndex: true,/);
 });
 

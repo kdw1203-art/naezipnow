@@ -141,13 +141,10 @@ test("[1023] 허브 — 계열 머리 \"N종\" 배지는 그 계열 앵커 링�
   const chips = code("app/analysis/tool-cards-client.tsx");
   assert.ok(!chips.includes("이어가기"), "권유 꼬리 없음");
   assert.match(chips, /최근 사용 · \{last\.title\} ›/);
-  /* 예시 계산 고지 한 줄은 배지가 아니라 details 안 첫 줄 */
-  const sim = page.slice(page.indexOf('<details className="hub-sim'), page.indexOf("</details>"));
-  /* [1028] "실연동 전 도구 · … · 의사결정 근거로 쓰지 않는다" → "예시 수치로 계산 · 실데이터 아님"(내부 말·평어체 걷기) */
-  assert.ok(sim.indexOf("</summary>") < sim.indexOf(">예시 수치로 계산</p>"));
+  /* [1109] 예시 계산 접힘 구역은 없다 — 시나리오는 지역 시세 표의 한 줄 · 내부 말(실연동 · 실데이터)은 여전히 없다 */
+  assert.ok(!page.includes('<details className="hub-sim'), "예시 계산 접힘 구역 없음");
   assert.ok(!page.includes("실연동"), "내부 말(실연동)이 화면·설명문에 남았다");
-  assert.match(sim, /실제 자료 아님 · \{SIM_TOOLS\.length\}종/);
-  assert.ok(!/>\s*실데이터 아님/.test(sim), "배지에 내부 말(실데이터)이 남았다");
+  assert.ok(!/>\s*실데이터 아님/.test(page), "내부 말(실데이터)이 남았다");
 });
 
 /* ── ③ 도구 머리 통일 ──────────────────────────────────────────────────────── */
@@ -240,9 +237,9 @@ test("[1028] 허브 머리 — 실거래 건수·단지 수를 못 읽으면(nul
 test("[1028] 허브 설명문·예시 계산 고지 — 줄표 연결·내부 말(실연동)·평어체 없음", () => {
   const page = code("app/analysis/page.tsx");
   const meta = page.slice(page.indexOf("export const metadata"), page.indexOf('path: "/analysis"'));
-  assert.ok(meta.includes("'예시 계산' 표시"), "예시 계산 고지는 설명문에 남는다([1029 · 20] 낱말 꼴)");
+  /* [1109] 예시 계산 구역이 없어져 설명문의 "'예시 계산' 표시"도 뺐다 */
+  assert.ok(!meta.includes("'예시 계산' 표시"));
   assert.doesNotMatch(meta, /—|실연동/);
-  assert.match(page, /<p className="t-sub mt-2 text-text-3">예시 수치로 계산<\/p>/);
   assert.ok(!page.includes("쓰지 않는다"), "평어체 고지가 남았다");
 });
 

@@ -128,7 +128,8 @@ test("문구 — 해라체·구어·기호 → 사실 낱말 (가입·로그인�
   for (const bad of ["순서 싸움", "감 잡기", "평균의 함정", "걸러라", "아직 안 보인다", "발품"]) {
     assert.doesNotMatch(catalog, new RegExp(`heading: "[^"]*${bad}`), bad);
   }
-  assert.match(read("app/complex/[id]/ComplexNotesNewsAi.tsx"), /이 단지·지역 관련 기사 없음/);
+  /* [1108] 관련 기사 칸은 ComplexRelatedNews(동네 묶음)로 — 빈 상태 문장은 그대로 */
+  assert.match(read("app/complex/[id]/ComplexRelatedNews.tsx"), /이 단지·지역 관련 기사 없음/);
 });
 
 test("배치 — KPI 칸 수만큼 열 · 아래 광고 본문 열 안 · 단지 홈 2단 · 단지 열 44% · 0 막대 없음 · 지연만 표시 · 가이드 첫 절 펼침", () => {
@@ -138,10 +139,12 @@ test("배치 — KPI 칸 수만큼 열 · 아래 광고 본문 열 안 · 단지
   assert.match(rr, /\$\{FACT_COLS\[Math\.min\(facts\.length, 5\)\] \?\? "md:grid-cols-5"\}/);
   const reports = strip(read("app/reports/(index)/page.tsx"));
   assert.match(reports, /<div className="mt-6 max-md:mt-4 lg:grid lg:grid-cols-\[minmax\(0,1fr\)_340px\] lg:gap-5">\s*<AdZone placement="page_bottom" seed=\{2\} plan=\{null\} \/>/);
-  const cx = strip(read("app/complex/[id]/ComplexNotesNewsAi.tsx"));
-  assert.match(cx, /lg:grid-cols-2/);
-  assert.doesNotMatch(cx, /lg:grid-cols-3/);
-  assert.equal((cx.match(/이 단지 AI 분석 받기/g) ?? []).length, 1);
+  /* [1108] 임장노트 · AI 분석 · 관련 기사 2단 카드는 걷혔다 — 임장노트는 "기록" 칩 한 줄(ComplexRecordsSection), 기사는 동네 묶음,
+     AI 입구는 다요인 분석 아래 한 곳(page.tsx). 화면에 "이 단지 AI 분석 받기"는 여전히 하나 */
+  const cxPage = strip(read("app/complex/[id]/page.tsx"));
+  assert.doesNotMatch(cxPage, /이 단지 AI 분석 받기/);
+  assert.doesNotMatch(strip(read("app/complex/[id]/ComplexRecordsSection.tsx")), /AI 분석 받기/);
+  assert.equal((read("app/complex/[id]/ComplexInsightView.tsx").match(/이 단지 AI 종합 진단 받기/g) ?? []).length, 1);
   assert.match(read("app/components/ComplexSummaryTable.tsx"), /<th className="py-2 font-medium md:w-\[44%\]">단지<\/th>/);
   assert.match(strip(read("app/components/compact/MiniBar.tsx")), /\{r\.value > 0 && \(/);
   const gs = strip(read("app/analysis/gap/GapScreener.tsx"));

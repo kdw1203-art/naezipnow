@@ -61,7 +61,8 @@ test("C2 후기·토론·글쓰기 키 = canonical_id — v.id === complexId 비
   assert.match(src, /const socialId = rowForFacts\?\.canonical_id \?\? complexId;/);
   assert.match(src, /const socialOk = complexId !== "mock-1" && decodeComplexId\(socialId\) !== null;/);
   assert.match(src, /const talkScope = socialOk \? talkScopeForComplex\(socialId, regionId\) : null;/);
-  assert.match(src, /\{socialOk && \(\s*<section[^>]*>\s*<ComplexReviewsLazy complexId=\{socialId\}/);
+  /* [1108] 후기 칸은 ComplexRecordsSection 의 reviews 슬롯 — 실단지(socialOk)에만, 키는 socialId 그대로 */
+  assert.match(src, /reviews=\{socialOk \? <ComplexReviewsLazy complexId=\{socialId\} complexName=\{v\.name\} \/> : null\}/);
   assert.match(src, /notesWriteHref: `\/town\/write\?complex=\$\{encodeURIComponent\(row\.canonical_id\)\}/, "글쓰기 링크도 정규 id");
   assert.match(src, /getComplexPosts\(\(r \?\? row\)\.canonical_id, 12, budget\.signal\)/, "단지 이야기 조회 키도 정규 id");
   assert.doesNotMatch(src, /encodeURIComponent\(row\.id\)&complexName/);

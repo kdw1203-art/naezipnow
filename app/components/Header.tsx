@@ -49,7 +49,7 @@ export function Header() {
            회원가입"이 16px 넓어 가장 빠듯하다): 1024px 에서 16px 이 모자라 알림 벨(36→29px)·노트 쓰기(78→69px)가
            눌려 찌그러졌다. lg 묶음 간격만 16 → 12px(칸 6개 × 4px = 24px 회수) — 1024px 에 8px 이 남고,
            768·900px(검색 필드 없음)과 xl(24px) 은 그대로다. 라벨·글자 크기는 건드리지 않는다. */
-        className={`header-shell mx-auto flex max-w-[1240px] items-center gap-2 rounded-2xl px-3.5 md:gap-2.5 md:px-5 lg:gap-3 xl:gap-6 ${
+        className={`header-shell mx-auto flex max-w-[1240px] items-center gap-2 rounded-2xl px-3.5 md:gap-2 md:px-5 lg:gap-2.5 xl:gap-6 ${
           /* 모바일3 — 본문 밀도를 줄인 뒤(2026-08-03 토큰 축소) 헤더가 상대적으로
              커 보였다. 모바일만 한 단계 축소: 56px→48px. 44px 는 터치 타깃 하한선이라
              그 밑으로는 내리지 않는다(스크롤 축소도 48×.96=46px 에서 멈춘다). md+ 원복. */
@@ -64,7 +64,10 @@ export function Header() {
         </Link>
 
         {/* 데스크탑 메뉴 — 9m 호버 드롭다운 + 언더라인 인디케이터 */}
-        <nav className="hidden shrink-0 gap-0.5 t-body font-semibold text-text-1 md:flex">
+        {/* [1108] 대분류 6 → 7("실거래") — 운영 실측(Playwright · 비로그인): 7칸이면 1024px 에서 70px · 768px 에서 72px 이 넘쳐 알림 벨이 18px 로 찌그러졌다
+            (6칸 시절에도 각 10 · 15px 이 넘치고 있었다). 라벨은 그대로 두고 **간격만** 한 계단 더: 항목 좌우 패딩 md 4 · lg 6 · xl 14px, 항목 사이 md 0 · lg 2px,
+            묶음 사이 md 8 · lg 10 · xl 24px, 검색칸 lg 180 · xl 252px(HeaderSearch), "노트 쓰기" md 12 · lg 16px. 실측 뒤: 768 · 1024 · 1100 · 1280 넘침 0 · 벨 36px. */}
+        <nav className="hidden shrink-0 gap-0 t-body font-semibold text-text-1 md:flex lg:gap-0.5">
           {NAV.map((item) => {
             const active = activeLabel === item.label;
             return (
@@ -90,8 +93,8 @@ export function Header() {
                      때 라벨이 두 줄로 접히지 않게 한다(접히면 헤더 높이가 흔들린다). */
                   className={
                     active
-                      ? "nav-underline block whitespace-nowrap rounded-lg bg-primary-soft px-2.5 py-[7px] text-primary transition-colors xl:px-3.5"
-                      : "nav-underline block whitespace-nowrap rounded-lg px-2.5 py-[7px] text-text-1 transition-colors hover:bg-[rgba(29,79,216,.07)] hover:text-primary xl:px-3.5"
+                      ? "nav-underline block whitespace-nowrap rounded-lg bg-primary-soft px-1 py-[7px] text-primary transition-colors lg:px-1.5 xl:px-3.5"
+                      : "nav-underline block whitespace-nowrap rounded-lg px-1 py-[7px] text-text-1 transition-colors hover:bg-[rgba(29,79,216,.07)] hover:text-primary lg:px-1.5 xl:px-3.5"
                   }
                 >
                   {item.label}
@@ -157,7 +160,7 @@ export function Header() {
         <Link
           href="/notes/new"
           prefetch={false}
-          className="btn-outline btn-cta press hidden shrink-0 whitespace-nowrap px-4 py-[9px] t-body transition-transform hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-glow)] md:block"
+          className="btn-outline btn-cta press hidden shrink-0 whitespace-nowrap px-3 py-[9px] t-body transition-transform hover:-translate-y-0.5 hover:[box-shadow:var(--shadow-glow)] md:block lg:px-4"
         >
           노트 쓰기
         </Link>

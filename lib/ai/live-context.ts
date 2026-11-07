@@ -304,7 +304,8 @@ async function loadMacro(): Promise<LiveToolContext["macro"]> {
     source: "한국은행 ECOS 기준금리",
     asOf: String((data as { fetched_at?: string }).fetched_at ?? "").slice(0, 10) || null,
     sample: null,
-    href: "/analysis/ai/ai-economy",
+    /* [1109] 경제지표 모니터는 통합 — 기준금리로 상환 부담을 계산하는 시나리오로 */
+    href: "/analysis/scenario",
   };
 }
 

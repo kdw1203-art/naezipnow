@@ -250,12 +250,14 @@ export function verdictNextActions(params: {
 /** 축 점수가 이 값 미만이면 "이어서 볼 도구" 링크를 붙인다 — signature-cards.tsx scoreTone 의 주의 색과 같은 경계 */
 export const RADAR_AXIS_LOW = 50;
 
+/* [1109 · AI 분석 통폐합] 리스크 점검 · 수익률 계산은 통합됐다 — 공급 축은 매수 타이밍(입주 물량 신호등), 금리 축은 시세 예측
+   (대출 비율 · 금리 · 비용 포함 손익분기 — 1022)이 같은 재료를 깊게 본다. 살아 있는 4종 안에서만 잇는다. */
 export const RADAR_AXIS_FOLLOW_UP: Record<string, { tool: AiAnalysisToolId; label: string }> = {
   momentum: { tool: "ai-prediction", label: "시세 예측" },
   liquidity: { tool: "ai-timing", label: "매수 타이밍" },
-  supply: { tool: "ai-risk", label: "리스크 점검" },
+  supply: { tool: "ai-timing", label: "매수 타이밍" },
   field: { tool: "ai-inspection", label: "임장 동선" },
-  macro: { tool: "ai-simulator", label: "수익률 계산" },
+  macro: { tool: "ai-prediction", label: "시세 예측" },
 };
 
 /** 축 키 + 점수 → 이어서 볼 도구 링크. 점수가 없거나 RADAR_AXIS_LOW 이상이면 null(링크를 붙이지 않는다) */

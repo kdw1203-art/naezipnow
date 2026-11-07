@@ -63,6 +63,8 @@ export function HomeTodayLine({
   loanRate,
   loanRateAsOf = null,
   publicNotes,
+  briefing = null,
+  embedded = false,
   shell,
 }: {
   region: KpiRegion | null;
@@ -75,6 +77,11 @@ export function HomeTodayLine({
   /** [1054] 주담대 공시월(YYYY.MM) */
   loanRateAsOf?: string | null;
   publicNotes?: number | null;
+  /** [1108] AI 시장 브리핑 한 문장(lib/newui/home-briefing · 최근 월 등락 집계) — 예전엔 사이드바 AI 입구 판의 한 줄이었다.
+   *  판을 걷고 슬라이드 하나로(AI 진입 12 → 3). 값이 없으면 슬라이드도 없다. */
+  briefing?: { text: string; asOfLabel: string } | null;
+  /** [1108] 네이비 검색 띠(HomeHeroBand) 안에 든 모양 — 제 카드(네이비 배경 · 워터마크)를 그리지 않고 윗선 하나로 잇는다 */
+  embedded?: boolean;
   /** [968 · 8] 어느 벌인지 — 안 보이는 벌은 개인화 조회·회전 타이머를 시작하지 않는다 */
   shell?: Shell;
 }) {
@@ -162,8 +169,15 @@ export function HomeTodayLine({
         text: `공개 임장노트 ${publicNotes.toLocaleString("ko-KR")}편`,
         href: "/notes",
       });
+    /* [1108] AI 시장 브리핑 — 집계 문장 + 기준(asOfLabel). 목적지는 분석 허브(지역 시세 계열) */
+    if (briefing && briefing.text)
+      out.push({
+        key: "briefing",
+        text: `${briefing.text}${briefing.asOfLabel ? ` (${briefing.asOfLabel})` : ""}`,
+        href: "/analysis#tier-market",
+      });
     return out;
-  }, [shown, personalized, temp, saleIndex, baseRate, baseRateAsOf, loanRate, loanRateAsOf, publicNotes]);
+  }, [shown, personalized, temp, saleIndex, baseRate, baseRateAsOf, loanRate, loanRateAsOf, publicNotes, briefing]);
 
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
@@ -246,7 +260,11 @@ export function HomeTodayLine({
       aria-roledescription="배너"
       /* [946 리브랜딩 · 홈 프리뷰 ③] 흰 카드 → 딥 네이비 + 심볼 워터마크.
          글자는 한지색(--on-dark) — 네이비(--brand-navy) 위 ≈ 14:1. */
-      className="brand-navy-card overflow-hidden rounded-2xl px-[18px] py-4"
+      className={
+        embedded
+          ? "relative mt-1 border-t border-on-dark-panel pt-3"
+          : "brand-navy-card overflow-hidden rounded-2xl px-[18px] py-4"
+      }
       onMouseEnter={hold}
       onMouseLeave={release}
       /* [968 · 38] 포인터(마우스·펜·터치 공통)와 포커스 — 닿으면 멈춤, 떼면 3초 뒤 재개 */
@@ -271,22 +289,25 @@ export function HomeTodayLine({
     >
       {/* 심볼 워터마크 — 처마+온점 한지색, 장식(aria-hidden).
           [1009 · H] 색은 토큰으로 — 예전 raw hex 두 곳(한지색)을 currentColor + text-on-dark(같은 값의 토큰)로. */}
-      <svg
-        className="brand-wm text-on-dark"
-        width="150"
-        height="140"
-        viewBox="0 0 120 120"
-        aria-hidden="true"
-      >
-        <path
-          d="M14 46 C 38 64, 82 64, 106 46"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="7"
-          strokeLinecap="round"
-        />
-        <circle cx="60" cy="86" r="8.5" fill="currentColor" />
-      </svg>
+      {/* [1108] 띠 안(embedded)에서는 바깥 띠가 워터마크를 가진다 */}
+      {!embedded && (
+        <svg
+          className="brand-wm text-on-dark"
+          width="150"
+          height="140"
+          viewBox="0 0 120 120"
+          aria-hidden="true"
+        >
+          <path
+            d="M14 46 C 38 64, 82 64, 106 46"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="7"
+            strokeLinecap="round"
+          />
+          <circle cx="60" cy="86" r="8.5" fill="currentColor" />
+        </svg>
+      )}
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <h2 id="home-today" className="t-sub font-bold" style={{ color: "var(--on-dark-muted)" }}>
           오늘의 시장

@@ -14,7 +14,7 @@ import { complexCanonicalPathFromNames } from "@/lib/complex/complex-store";
 import { isArchivedPath } from "@/lib/seo/archived-routes";
 import { weekSlugFor } from "@/lib/applyhome/calendar";
 import { REGION_CATALOG } from "@/lib/region/catalog";
-import { AI_TOOL_IDS } from "@/lib/ai/ai-tools";
+import { ACTIVE_AI_TOOL_IDS } from "@/lib/ai/ai-tools";
 import { complexIndexTier, kstYm, tierInSitemap } from "@/lib/seo/complex-index-policy";
 import { NEWS_TAGS } from "@/lib/news/tags";
 import { GUIDES } from "@/lib/guides/catalog";
@@ -232,7 +232,8 @@ export function loadStaticEntries(): MetadataRoute.Sitemap {
   }));
   /* [1040 · seo.indexable_unsubmitted] AI 분석 도구 화면(/analysis/ai/<도구>) — 색인 대상(canonical 있음)인데 실려 있지
      않았다. 도구 목록 상수(AI_TOOL_IDS)에서 나오므로 조회가 없고, 도구가 늘면 같이 실린다. */
-  for (const tool of AI_TOOL_IDS) {
+  /* [1109] 살아 있는 4종만 — 통합된 8종 주소는 308 이라 사이트맵에 싣지 않는다 */
+  for (const tool of ACTIVE_AI_TOOL_IDS) {
     entries.push({ url: `${BASE_URL}/analysis/ai/${tool}`, priority: 0.6 });
   }
   /* [#53] 주간 청약 아카이브 — 최근 6주 슬러그(순수 날짜 계산, 조회 0회).

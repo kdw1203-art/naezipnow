@@ -11,7 +11,7 @@ import type { Verdict } from "@/lib/ai/verdict";
 import { VerdictCard } from "../../[tool]/VerdictCard";
 import { metricExplain, tileExplain } from "../../[tool]/verdict-explain";
 import { Explain } from "@/app/components/explain/Explain";
-import { isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
+import { isAiAnalysisToolId, retiredAiToolTarget, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { verdictNextActions } from "@/lib/ai/next-action-routing";
 import { decodeNameIdSafe } from "@/lib/seo/complex-slug";
 
@@ -171,9 +171,19 @@ export default async function SharedRunPage({
           참고값이며 투자 권유가 아닙니다.
         </div>
 
-        <Link href={`/analysis/ai/${run.tool}`} className="btn-primary btn-md self-start no-underline">
-          지금 자료로 다시 계산 ›
-        </Link>
+        {/* [1109 · AI 분석 통폐합] 통합된 도구의 옛 결과 — "다시 계산"할 도구 화면이 없다. 같은 일을 하는 화면으로 보낸다(사실 한 줄) */}
+        {retiredAiToolTarget(run.tool) ? (
+          <>
+            <p className="m-0 t-caption text-text-3">이 도구는 다른 화면으로 통합됨 · 옛 결과는 그대로 볼 수 있음</p>
+            <Link href={retiredAiToolTarget(run.tool) ?? "/analysis"} className="btn-outline btn-md self-start no-underline">
+              통합된 화면 열기 ›
+            </Link>
+          </>
+        ) : (
+          <Link href={`/analysis/ai/${run.tool}`} className="btn-primary btn-md self-start no-underline">
+            지금 자료로 다시 계산 ›
+          </Link>
+        )}
       </div>
     </>
   );

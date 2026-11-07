@@ -22,9 +22,10 @@ import { ToolDetailBody } from "./hub-tool-detail";
 import { HubNoteAnalysis } from "./hub-picker";
 import { HubMyNoteTeaser, HubRecordStart } from "./hub-record-start";
 import { CompareTrayCount } from "./tool-cards-client";
-import { ToolCard } from "./hub-tool-card";
 import { ToolRows } from "./hub-tool-rows";
-import { AI_TOOL_COUNT, MARKET_LIVE, RECORD_LIVE, SIM_TOOLS, TIERS, type TierId } from "./tool-catalog";
+import { AI_TOOL_COUNT, MARKET_LIVE, RECORD_LIVE, TIERS, type TierId } from "./tool-catalog";
+import { AI_TOOL_IDS } from "@/lib/ai/ai-tools";
+import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
 
 
 /* ============================================================
@@ -81,14 +82,12 @@ function pickPublicAiPreview(notes: InspectionNote[]): {
   return null;
 }
 
-/* 설명문은 이 화면이 실제로 하는 일만 적는다. SIM_TOOLS 는 아직 실연동이
-   아니므로 "예시 계산"이라는 사실을 description 에도 남긴다 — 검색 결과만
-   보고 실측 분석을 기대하고 들어오면 그게 곧 거짓말이 된다.
-   [1028] 줄표로 잇던 문장을 끊고 내부 말("실연동 전 도구")을 "예시 수치로 계산하는 도구"로 — 뜻은 그대로. */
+/* 설명문은 이 화면이 실제로 하는 일만 적는다. [1109] 예시 계산 구역이 없어져 "예시 계산 표시" 문구도 뺐다 —
+   시나리오 화면은 제 화면 안에서 기준가 없을 때 예시임을 적는다. */
 export const metadata = buildPageMetadata({
   title: "분석 도구",
   description:
-    "AI 분석 · 단지 종합 진단 · 시세 예측 · 매수 타이밍 · 임장 동선 · 지역 시세 · 임장노트 분석 · 국토교통부 실거래 기준 · 예시 수치 도구는 '예시 계산' 표시", /* [1029 · 20] 낱말 꼴 */
+    "AI 분석 · 단지 종합 진단 · 시세 예측 · 매수 타이밍 · 임장 동선 · 지역 시세 · 임장노트 분석 · 국토교통부 실거래 기준", /* [1029 · 20] 낱말 꼴 · [1109] 예시 계산 구역 없음 */
   path: "/analysis",
 });
 
@@ -178,13 +177,16 @@ export default async function AnalysisHubPage() {
             coverage={coverage}
             quota={quota}
             toolCount={AI_TOOL_COUNT + MARKET_LIVE.length + RECORD_LIVE.length}
-            toolTitles={Object.fromEntries([...workbenchCards.core, ...workbenchCards.more].map((c) => [c.id, c.title]))}
+            /* [1109] 최근 실행 결과 3건의 제목 — 통합된 도구의 옛 결과도 이름으로 읽히게 12종 정체성 전부(목록은 살아 있는 4종만) */
+            toolTitles={Object.fromEntries(AI_TOOL_IDS.map((id) => [id, TOOL_IDENTITIES[id].title]))}
           />
 
           {/* [1098 · 배너] 상단 띠 배너 자리 — 히어로 아래 */}
           <TopBanner placement="page_bottom" plan={null} />
 
-          {/* ── 계열 1 · 단지 하나를 깊게 (UI-01·03) ── */}
+          {/* ── 계열 1 · 단지 하나를 깊게 (UI-01·03) — [1109] 살아 있는 4종만(종합 진단 · 시세 예측 · 매수 타이밍 · 임장 동선).
+              "그 밖의 8종" 칸은 없다: 운영 60일 표본에서 그 8종은 열린 적이 0~3회였고 이름이 겹치는 쌍(비교 · 갭 · 포트폴리오 ·
+              시나리오)이 "어떤 게 어느 기능인지"를 흐렸다. 주소는 같은 일을 하는 화면으로 308(lib/ai/ai-tools RETIRED_AI_TOOLS). ── */}
           <section
             id="tier-complex"
             className="rise-in-1 flex scroll-mt-24 flex-col gap-3"
@@ -324,43 +326,8 @@ export default async function AnalysisHubPage() {
             <span className="shrink-0 t-sub font-bold text-primary">열기 ›</span>
           </Link>
 
-          {/* ── 체험 구역 (UI-04) — 실데이터와 섞지 않는다. 기본 접힘 ── */}
-          <details className="hub-sim card rise-in-3 rounded-lg p-4 max-md:p-3.5">
-            <summary className="flex flex-wrap items-center gap-2">
-              {/* [1015 · 규칙 D] "먼저 감 잡기" → 명사 */}
-              <span className="t-section text-ink">예시 계산</span>
-              <span className="t-caption rounded border border-line px-1.5 py-px font-bold text-text-3">
-                실제 자료 아님 · {SIM_TOOLS.length}종
-              </span>
-              <span className="t-sub ml-auto font-bold text-primary">
-                <span className="hub-sim-closed">펼치기</span>
-                <span className="hub-sim-open">접기</span>{" "}
-                <span className="hub-sim-caret" aria-hidden="true">
-                  ▾{/* dead-control-ok: <details><summary> 네이티브 토글의 열림 표시 — summary 전체가 실제 컨트롤이다 */}
-                </span>
-              </span>
-            </summary>
-            {/* [1028] "실제 자료 아님"은 위 배지가 이미 말한다 — 한 번만("실데이터"는 내부 말이라 "실제 자료"로) */}
-            <p className="t-sub mt-2 text-text-3">예시 수치로 계산</p>
-            <div className="mt-3 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-              {SIM_TOOLS.map((t) => (
-                <ToolCard
-                  key={t.href}
-                  t={t}
-                  teaser={
-                    t.teaser && t.teaser in teasers
-                      ? (teasers as Record<string, HubTeaser>)[t.teaser]
-                      : null
-                  }
-                  extra={
-                    <span className="t-caption w-fit rounded border border-line px-1.5 py-px font-bold text-text-3">
-                      예시 계산
-                    </span>
-                  }
-                />
-              ))}
-            </div>
-          </details>
+          {/* [1109 · AI 분석 통폐합] "예시 계산" 접힘 구역은 없앴다 — 자산 배분 시뮬레이터는 지웠고(→ /calculator), 시장·대출 시나리오는
+              지역 시세 표의 다섯째 줄. 화면의 묶음은 셋(단지 · 지역 · 내 노트) + 에이전트 한 줄. */}
         </div>
       </HubPickedProvider>
       {/* [961] 광고 공간 — 허브 맨 아래(도구 입력·결과 사이에는 두지 않는다) */}

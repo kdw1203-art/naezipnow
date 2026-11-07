@@ -93,7 +93,7 @@ test("홈 중복 검토 — 구별 막대는 지역 동향 안 접힘 · 브리�
   const line = code("app/components/home/HomeTodayLine.tsx");
   assert.match(line, /if \(shown && personalized\) out\.push\(\{ key: "region"/);
   assert.match(line, /const tradeText = shown && personalized \? todayTradeSentence\(shown\) : null;/);
-  assert.match(line, /\[shown, personalized, temp, saleIndex, baseRate, baseRateAsOf, loanRate, loanRateAsOf, publicNotes\]/); // [1054] 기준일 포함
+  assert.match(line, /\[shown, personalized, temp, saleIndex, baseRate, baseRateAsOf, loanRate, loanRateAsOf, publicNotes, briefing\]/); // [1054] 기준일 포함 · [1108] 브리핑 슬라이드
   assert.doesNotMatch(line, /"대표 지역"/, "지역 문장이 없으면 대표 지역 배지도 없다");
   assert.match(line, /\{personalized && \(/);
 });

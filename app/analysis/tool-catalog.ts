@@ -1,4 +1,4 @@
-import { AI_TOOL_IDS, CORE_AI_TOOL_IDS, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
+import { ACTIVE_AI_TOOL_IDS, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
 
 /* ============================================================
@@ -77,11 +77,10 @@ export interface HubTool {
   teaser?: "price" | "timing" | "temp" | "baseRate" | "gap" | "notes" | "compare";
 }
 
-/** 워크벤치(단지 1개 스코프) — 많이 쓰는 4개가 앞, 나머지는 접힌다(UI-03). */
-export const WORKBENCH_CORE: readonly AiAnalysisToolId[] = CORE_AI_TOOL_IDS;
-export const WORKBENCH_MORE: readonly AiAnalysisToolId[] = AI_TOOL_IDS.filter(
-  (id) => !CORE_AI_TOOL_IDS.includes(id as (typeof CORE_AI_TOOL_IDS)[number]),
-);
+/** 워크벤치(단지 1개 스코프) — [1109 · AI 분석 통폐합] 살아 있는 4종만(종합 진단 · 시세 예측 · 매수 타이밍 · 임장 동선).
+ *  "그 밖의 8종" 접힘 칸은 없다 — 8종은 같은 일을 하는 화면으로 308(lib/ai/ai-tools RETIRED_AI_TOOLS). */
+export const WORKBENCH_CORE: readonly AiAnalysisToolId[] = ACTIVE_AI_TOOL_IDS;
+export const WORKBENCH_MORE: readonly AiAnalysisToolId[] = [];
 
 /** 워크벤치 12종의 허브용 아이콘 — TOOL_IDENTITIES 는 lucide 컴포넌트를 들고
  *  있어 서버 카드에서 바로 못 쓴다. 같은 뜻의 선형 아이콘 이름으로 잇는다. */
@@ -165,7 +164,9 @@ export const HUB_TOOLS: readonly HubTool[] = [
     tier: "record",
     teaser: "compare",
   },
-  /* ── 체험(예시 계산) 구역 — [UI-04] 실데이터와 섞지 않는다 ── */
+  /* [1109 · AI 분석 통폐합] "예시 계산" 구역(접힘)은 없앴다 — 자산 배분 시뮬레이터(/analysis/portfolio)는 등록 자산 0건 "준비 중"
+     빈 화면(noindex · 30일 2방문)이라 대출·비용 계산기로 301. 시장·대출 시나리오는 실제 기준금리로 계산하는 화면이라 지역 시세
+     계열의 다섯째 줄로 올라왔다(기준가 없을 때 예시 수치를 쓰는 사실은 설명 한 줄 · 화면 안 표기 그대로). */
   {
     href: "/analysis/scenario",
     title: "시장·대출 시나리오",
@@ -175,22 +176,14 @@ export const HUB_TOOLS: readonly HubTool[] = [
     sim: true,
     teaser: "baseRate",
   },
-  {
-    href: "/analysis/portfolio",
-    title: "자산 배분 시뮬레이터",
-    desc: "보유·후보 자산 구성과 갈아타기를 예시로 계산",
-    icon: "briefcase",
-    tier: "record",
-    sim: true,
-  },
   /* [1097 · 통폐합] 갈아타기 추천(/analysis/switch)은 추천 엔진 없이 "준비 중" 빈 화면이라 지웠다 → /analysis/timing 으로 리다이렉트 */
 ] as const;
 
 export const LIVE_TOOLS = HUB_TOOLS.filter((t) => !t.sim);
 export const SIM_TOOLS = HUB_TOOLS.filter((t) => t.sim);
 
-/** 계열별 실데이터 도구 — 화면은 이 순서 그대로 그린다. */
-export const MARKET_LIVE = LIVE_TOOLS.filter((t) => t.tier === "market");
+/** 계열별 도구 — 화면은 이 순서 그대로 그린다. [1109] 지역 시세 계열은 시나리오(sim)까지 한 표(별도 접힘 구역 없음) */
+export const MARKET_LIVE = HUB_TOOLS.filter((t) => t.tier === "market");
 export const RECORD_LIVE = LIVE_TOOLS.filter((t) => t.tier === "record");
 
 /** 선택 단지를 ?complexId= 로 그대로 받는 도구 — 링크에 붙여 보낸다. */
@@ -200,5 +193,5 @@ export const ACCEPTS_COMPLEX: ReadonlySet<string> = new Set([
   "/analysis/timing",
 ]);
 
-/** 워크벤치 도구 총 개수 — 계열 머리글의 "N종" 표기에 쓴다. */
-export const AI_TOOL_COUNT = AI_TOOL_IDS.length;
+/** 워크벤치 도구 개수(살아 있는 4종) — 계열 머리글의 "N종" 표기에 쓴다. */
+export const AI_TOOL_COUNT = ACTIVE_AI_TOOL_IDS.length;

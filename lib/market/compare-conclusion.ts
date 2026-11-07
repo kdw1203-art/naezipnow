@@ -112,18 +112,14 @@ export function compareSteps(count: number, phase: ComparePhase): StepPlan {
 export const COMPARE_DECIDE_HREF = "/decide";
 
 /**
- * 텍스트 링크 — AI 비교 해석(담은 단지 2곳 이상일 때 · 앞 3곳 · 예전 채움 파랑 버튼을 링크로) · 알림 받기(기존 알림함) · 지도.
+ * 텍스트 링크 — 알림 받기(기존 알림함) · 지도.
  * 비교는 지역이 여럿이라 지도에 지역 파라미터를 붙이지 않는다(AnalysisCrossLinks 와 같은 규칙).
+ * [1109 · AI 분석 통폐합] "AI 비교 해석"(/analysis/ai/ai-compare · 앞 3곳) 링크는 뺐다 — 그 도구는 이 비교 표로 통합됐고,
+ * 이 함수를 부르는 화면이 바로 그 표라 자기 자신으로 가는 링크가 된다. ids 인자는 호출부 호환을 위해 남긴다.
  */
-export function compareActionLinks(ids: readonly string[]): ActionLink[] {
-  const out: ActionLink[] = [];
-  if (ids.length >= 2) {
-    /* [1097] 비교함은 5곳 · AI 비교 도구는 3곳(AI-22) — 넷째부터는 조용히 빠졌다. 빠지는 수를 라벨에 적는다("앞 3곳") */
-    out.push({
-      href: `/analysis/ai/ai-compare?ids=${encodeURIComponent(ids.slice(0, 3).join(","))}`,
-      label: ids.length > 3 ? "AI 비교 해석 · 앞 3곳" : "AI 비교 해석",
-    });
-  }
-  out.push({ href: "/notifications", label: "알림 받기" }, { href: "/map", label: "지도에서 보기" });
-  return out;
+export function compareActionLinks(_ids: readonly string[]): ActionLink[] {
+  return [
+    { href: "/notifications", label: "알림 받기" },
+    { href: "/map", label: "지도에서 보기" },
+  ];
 }

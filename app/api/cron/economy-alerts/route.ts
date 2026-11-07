@@ -62,7 +62,8 @@ async function handle(req: Request) {
         userEmail: w.user_email,
         title: `기준금리 ${rate}% — 설정한 임계(${th}% ${w.direction === "above" ? "이상" : "이하"}) 도달`,
         body: "경제지표 모니터에 등록한 조건 · 시뮬레이터로 이자 부담 다시 계산",
-        actionUrl: "/analysis/ai/ai-economy",
+        /* [1109] 경제지표 모니터(ai-economy)는 시장·대출 시나리오로 통합 — 알림 본문의 "시뮬레이터로 이자 부담 다시 계산"이 그 화면이다 */
+        actionUrl: "/analysis/scenario",
       }).catch(() => {});
       await sb
         .from("economy_watches")

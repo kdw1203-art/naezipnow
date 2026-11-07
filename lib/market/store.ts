@@ -514,6 +514,8 @@ export interface RegionTransactionRow {
   dealAmountKrw: number;
   areaM2: number | null;
   floor: number | null;
+  /** [1108] 신고 행의 region_name 그대로("서울 강남구") — 홈 "최근 실거래" 줄에서 단지 주소(encodeComplexId(region, name))를 만드는 재료 */
+  regionName: string | null;
 }
 
 /**
@@ -544,7 +546,7 @@ export async function listRegionTransactions(
   if (!sb) return [];
   let q = sb
     .from("market_transactions")
-    .select("complex_name,address,contract_ym,contract_day,deal_amount_krw,area_m2,floor")
+    .select("complex_name,address,contract_ym,contract_day,deal_amount_krw,area_m2,floor,region_name")
     .in("region_name", transactionNameCandidates(regionId, regionName))
     .eq("transaction_type", "trade")
     .eq("is_cancelled", false)
@@ -564,6 +566,7 @@ export async function listRegionTransactions(
     dealAmountKrw: Number(r.deal_amount_krw),
     areaM2: r.area_m2 === null ? null : Number(r.area_m2),
     floor: r.floor === null ? null : Number(r.floor),
+    regionName: r.region_name ? String(r.region_name) : null,
   }));
 }
 

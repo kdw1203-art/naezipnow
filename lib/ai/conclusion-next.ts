@@ -61,18 +61,19 @@ export function weakestSignal(signals: readonly Signal[]): Signal | null {
 
 const SIGNAL_WORD: Record<Signal["state"], string> = { green: "좋음", yellow: "보통", red: "주의", na: "자료 없음" };
 
-/** 신호 → 그 신호를 깊게 보는 도구(같은 단지). 가격 → 시세 예측 · 거래 → 종합 진단 · 입주 → 리스크 점검 */
+/** 신호 → 그 신호를 깊게 보는 도구(같은 단지). 가격 → 시세 예측 · 거래 → 종합 진단 · 입주 → 종합 진단(공급 여유 축)
+ *  [1109] 리스크 점검은 통합됐다 — 매수 타이밍 화면에서 입주 신호가 약하면 그 단지 종합 진단의 "공급 여유" 축으로 */
 export const SIGNAL_FOLLOW_UP: Record<string, { tool: AiAnalysisToolId; label: string }> = {
   price: { tool: "ai-prediction", label: "시세 예측" },
   volume: { tool: "ai-diagnosis", label: "종합 진단" },
-  supply: { tool: "ai-risk", label: "리스크 점검" },
+  supply: { tool: "ai-diagnosis", label: "종합 진단" },
 };
 
-/** 약한 곳이 없을 때 도구마다 이어서 볼 곳 하나(같은 단지) */
+/** 약한 곳이 없을 때 도구마다 이어서 볼 곳 하나(같은 단지) — [1109] 살아 있는 4종 안에서만(리스크 점검 → 시세 예측) */
 export const TOOL_FOLLOW_UP: Record<"ai-diagnosis" | "ai-prediction" | "ai-inspection" | "ai-timing", { tool: AiAnalysisToolId; label: string }> = {
   "ai-diagnosis": { tool: "ai-inspection", label: "임장 동선에서 함께 볼 단지 확인" },
   "ai-prediction": { tool: "ai-timing", label: "매수 타이밍에서 신호 3개 확인" },
-  "ai-timing": { tool: "ai-risk", label: "리스크 점검에서 위험 신호 5가지 확인" },
+  "ai-timing": { tool: "ai-prediction", label: "시세 예측에서 1~5년 시나리오 확인" },
   "ai-inspection": { tool: "ai-diagnosis", label: "종합 진단에서 5가지 항목 점수 확인" },
 };
 

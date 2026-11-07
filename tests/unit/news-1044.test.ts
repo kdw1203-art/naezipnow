@@ -26,9 +26,10 @@ const code = (p: string) =>
 /* ── ① 내비 ─────────────────────────────────────────────────────────────── */
 
 test("뉴스는 제 대분류 — 동네 다음, 요금제 앞 · 주소는 그대로", () => {
+  /* [1108] 맨 앞에 "실거래"(통폐합). 뉴스는 여전히 동네 다음 · 요금제 앞 */
   assert.deepEqual(
     NAV.map((g) => g.label),
-    ["임장노트", "지도", "AI 분석", "동네", "뉴스", "요금제"],
+    ["실거래", "임장노트", "지도", "AI 분석", "동네", "뉴스", "요금제"],
   );
   const news = NAV.find((g) => g.label === "뉴스");
   assert.ok(news);
@@ -43,8 +44,8 @@ test("뉴스는 제 대분류 — 동네 다음, 요금제 앞 · 주소는 그�
   const town = NAV.find((g) => g.label === "동네");
   assert.deepEqual(
     (town?.children ?? []).map((c) => c.href),
-    /* [1047] 전문가 찾기 — 보관 해제(소유자 지시 2026-10-09) */
-    ["/town", "/apply", "/redevelopment", "/town/experts"],
+    /* [1047] 전문가 찾기 — 보관 해제(소유자 지시 2026-10-09) · [1108] 토론 · 모임 하위 추가(글 · 토론 · 모임) */
+    ["/town", "/talk", "/town/groups", "/apply", "/redevelopment", "/town/experts"],
   );
 });
 

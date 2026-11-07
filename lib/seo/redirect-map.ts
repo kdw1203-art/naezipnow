@@ -210,7 +210,8 @@ const REDIRECT_GROUPS: readonly RedirectGroup[] = [
       ["/ai-analysis/ai-inspection", "/analysis"],
       ["/ai-analysis/ai-risk", "/analysis"],
       ["/ai-analysis/ai-simulator", "/analysis"],
-      ["/ai-analysis/ai-portfolio", "/analysis/portfolio"],
+      /* [1109] /analysis/portfolio 는 지워졌다(아래 1109 묶음) — 2단 홉이 되지 않게 같은 목적지로 */
+      ["/ai-analysis/ai-portfolio", "/calculator"],
     ],
   },
   {
@@ -277,6 +278,14 @@ const REDIRECT_GROUPS: readonly RedirectGroup[] = [
       ["/analysis/switch", "/analysis/timing"],
       ["/data/records", "/data-sources"],
     ],
+  },
+  {
+    /* [1109 · AI 분석 통폐합] 자산 배분 시뮬레이터(/analysis/portfolio)는 등록 자산 0건 "준비 중" 빈 화면(noindex · 30일 2방문)이었고
+       그 화면의 첫 행동이 대출·비용 계산기였다 — 화면을 지우고 거기로 보낸다. AI 도구 8종(/analysis/ai/<도구>)의 통합은 동적
+       라우트 아래라 이 표가 아니라 라우트 안에서 308 한다(app/analysis/ai/[tool]/page.tsx · lib/ai/ai-tools RETIRED_AI_TOOLS). */
+    reason: "[1109] AI 분석 통폐합 — 준비 중 빈 화면을 실제 계산기로",
+    since: "2026-11-07",
+    rules: [["/analysis/portfolio", "/calculator"]],
   },
 ];
 

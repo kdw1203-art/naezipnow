@@ -42,6 +42,8 @@ const SWIPE_CLOSE_PX = 60;
 
 /** 대분류 라벨 → 라인 아이콘 이름 ([1003] 요금제 · [1011] "내 집 마련"은 임장노트 하위로 내려가 표에서 빠졌다 — 사유는 nav-data.ts) */
 const CAT_ICON: Record<string, string> = {
+  /* [1108 · 통폐합] 실거래 대분류(nav-data) — 막대(거래량) 아이콘 */
+  실거래: "bar",
   임장노트: "notebook-pen",
   지도: "map",
   "AI 분석": "sparkles",

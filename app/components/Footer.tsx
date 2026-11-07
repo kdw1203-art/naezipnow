@@ -32,30 +32,22 @@ const LEGAL_LINKS = [
   { label: "카드 결제 수단 안내", href: "/subscription/payment-methods", bold: false, group: "help" },
   /* S20 — 신뢰·데이터 페이지 내부 링크 (전 페이지 크롤 경로 확보) */
   { label: "소개", href: "/about", bold: false, group: "help" },
-  { label: "데이터 방법론", href: "/methodology", bold: false, group: "data" },
-  /* [945 #33] 출처·한계 한 장 — 신뢰 문서의 크롤·도달 경로 */
-  { label: "데이터 출처", href: "/data-sources", bold: false, group: "data" },
-  { label: "용어사전", href: "/glossary", bold: false, group: "data" },
+  /* [1108 · 통폐합] 24 → 18. 푸터에서 뺀 여섯(내 집 마련 여정 · 계약·잔금 일정표 · 월간 리포트 · 실거래 구간 · 동별 실거래 · 시장 온도)은
+     전부 상단 메뉴 하위(nav-data — 임장노트 · 실거래)로 올라가 모든 화면 HTML 에 그대로 있다. 1069 · 1094 가 푸터에 둔 이유는
+     "어디서도 링크되지 않던 묶음의 크롤 경로"였는데, 메뉴 드롭다운이 그 일을 더 앞자리에서 한다(tests/unit/ia-1108 이 두 표의
+     합집합이 예전 24 목적지를 전부 덮는지 잠근다). 묶음은 넷 그대로 — 서비스 5 · 데이터 4 · 회사·고객 4 · 약관·정책 5. */
+  /* [1069 · 끊긴 묶음] "임장"은 이 사이트의 핵심 낱말 — 푸터가 스스로 가리킨다(임장 가이드 200쪽) */
+  { label: "임장 가이드", href: "/imjang", bold: false, group: "service" },
   /* [945 #25] 가이드 허브 — 검색 유입 콘텐츠의 내부 크롤 경로 */
   { label: "실전 가이드", href: "/guides", bold: false, group: "service" },
-  /* [1008 · J] 내 집 마련 여정·계약·잔금 일정표 — 모든 페이지에서 닿는 크롤·도달 경로(GNB 맨 앞 묶음과 같은 목적지) */
-  { label: "내 집 마련 여정", href: "/journey", bold: false, group: "service" },
-  { label: "계약·잔금 일정표", href: "/journey/contract", bold: false, group: "service" },
-  { label: "월간 리포트", href: "/reports", bold: false, group: "data" },
   /* [1025] 시장 12가지 반영 — 결정 카드(⑨)·살까 빌릴까(⑪)·중개사·임대인(③⑫) 입구를 모든 페이지에서 닿게 */
   { label: "결정 카드", href: "/decide", bold: false, group: "service" },
   { label: "살까, 빌릴까", href: "/calculator/rent-vs-buy", bold: false, group: "service" },
   { label: "중개사·임대인", href: "/pro", bold: false, group: "service" },
-  /* [1069 · 끊긴 묶음] 운영 실측 2026-10-15 — 사이트맵에는 있는데 **어디서도 링크되지 않던** 묶음들.
-     /imjang(임장 가이드 200쪽)은 임장노트 목록 한 곳에서만 닿았고, /analysis/temperature(69쪽)와
-     /tx(실거래 구간 1,923쪽)는 홈 한 줄·지역 상세뿐이었다. 검색엔진이 사이트맵으로만 발견하면
-     들어오는 속도도 우선순위도 떨어진다. 위 줄들과 같은 목적(전 페이지 크롤 경로)이라 같은 자리에 둔다.
-     "임장"은 이 사이트의 핵심 낱말인데 사이트가 스스로 가리키지 않고 있었다. */
-  { label: "임장 가이드", href: "/imjang", bold: false, group: "service" },
-  { label: "실거래 구간", href: "/tx", bold: false, group: "data" },
-  /* [1094 · 기능] 동별 실거래 허브(1083 · 동 1,155쪽) — 1069 와 같은 현상: 사이트맵에는 있는데 3D 지도의 뒤로 가기 한 곳에서만 닿았다 */
-  { label: "동별 실거래", href: "/dong", bold: false, group: "data" },
-  { label: "시장 온도", href: "/analysis/temperature", bold: false, group: "data" },
+  { label: "데이터 방법론", href: "/methodology", bold: false, group: "data" },
+  /* [945 #33] 출처·한계 한 장 — 신뢰 문서의 크롤·도달 경로 */
+  { label: "데이터 출처", href: "/data-sources", bold: false, group: "data" },
+  { label: "용어사전", href: "/glossary", bold: false, group: "data" },
   /* N20 — 공개 집계 API 문서. 링크가 없으면 크롤러도 사람도 도달하지 못한다. */
   { label: "공개 API", href: "/developers", bold: false, group: "data" },
 ] as const;

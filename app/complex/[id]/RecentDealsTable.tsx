@@ -18,6 +18,7 @@ export function RecentDealsTable({
   total,
   allHref,
   failed = false,
+  historyHref = null,
 }: {
   rows: readonly RecentDealRow[];
   /** 기간 안 매매 건수(해제 제외) — 모르면 null */
@@ -26,6 +27,8 @@ export function RecentDealsTable({
   allHref: string;
   /** 실거래 조회 실패 — "없음"과 다른 문장 */
   failed?: boolean;
+  /** [1108] 국토부 실거래 이력(/complex/tx/…) — 같은 단지명 매칭이 있을 때만. 예전엔 표 아래 따로 선 카드 한 장이었다 */
+  historyHref?: string | null;
 }) {
   return (
     <section aria-labelledby="recent-deals-title" className="card rise-in-1 mt-3 rounded-2xl px-4 py-3.5 max-md:px-3.5 max-md:py-3">
@@ -108,9 +111,16 @@ export function RecentDealsTable({
       )}
       {rows.length > 0 && (
         <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
-          <Link href={allHref} className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary">
-            전체{total != null ? ` ${total.toLocaleString("ko-KR")}건` : ""} ›
-          </Link>
+          <span className="flex flex-wrap items-center gap-x-3">
+            <Link href={allHref} className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary">
+              전체{total != null ? ` ${total.toLocaleString("ko-KR")}건` : ""} ›
+            </Link>
+            {historyHref && (
+              <Link href={historyHref} className="inline-flex min-h-[24px] items-center t-sub font-bold text-primary">
+                국토부 이력 ›
+              </Link>
+            )}
+          </span>
           {/* [1036 · 밀도] 기준 한 줄은 접는다(글은 그대로) */}
           <Fineprint>국토교통부 실거래가 · 신고가 = 타입별 기간 내 최고가 · 직거래·등기는 2026년 계약분부터 표시</Fineprint>
         </div>

@@ -157,7 +157,14 @@ function PriceCountUp({ price, active }: { price: string; active: boolean }) {
   return <>{parsed ? text : price}</>;
 }
 
-export function RegionPulseCards({ regions }: { regions: HomeRegionCard[] }) {
+export function RegionPulseCards({
+  regions,
+  cols = "auto",
+}: {
+  regions: HomeRegionCard[];
+  /** [1108] "2" = 항상 2열(홈 사이드바 340px — 뷰포트 xl 이라고 4열로 쪼개면 구 이름이 세로로 선다) · "auto" = 폰 2열 · xl 4열 */
+  cols?: "auto" | "2";
+}) {
   const wrapRef = useRef<HTMLDivElement | null>(null);
   const [seen, setSeen] = useState(false);
 
@@ -184,7 +191,7 @@ export function RegionPulseCards({ regions }: { regions: HomeRegionCard[] }) {
   if (regions.length === 0) return null;
 
   return (
-    <div ref={wrapRef} className="rise-in-2 grid grid-cols-2 gap-3 xl:grid-cols-4">
+    <div ref={wrapRef} className={cols === "2" ? "rise-in-2 grid grid-cols-2 gap-3" : "rise-in-2 grid grid-cols-2 gap-3 xl:grid-cols-4"}>
       {regions.map((r) => {
         /* 부동산원 스냅샷이면 "평균 매매가", 국토부 신고 월 집계면 "실거래 평균" — 무엇의 평균인지 적는다.
            [1009 · H 리뷰] 월 집계 카드도 등락은 부동산원 지수(changeBasis "index")라 가격 원천은 stale 로만 가른다 */

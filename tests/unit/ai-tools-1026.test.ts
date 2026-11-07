@@ -59,13 +59,14 @@ const SIGNALS = [
 /* ── 결론 히어로의 다음 행동 한 줄 — 순수 함수 ─────────────────────────────────────── */
 test("[1026] 다음 행동 한 줄 — 종합 진단은 가장 낮은 축(50점 미만) → 기존 축 매핑 도구 · 근거 사실 토막을 그대로", () => {
   const n = conclusionNext({ tool: "ai-diagnosis", complexId: "abc def", radar: RADAR });
+  /* [1109] 리스크 점검은 통합 — 공급 축은 매수 타이밍(입주 물량 신호등) */
   assert.deepEqual(n, {
     lead: "공급 여유 0점",
-    label: "리스크 점검에서 앞으로 입주 4,169세대 확인",
-    href: "/analysis/ai/ai-risk?complexId=abc%20def",
+    label: "매수 타이밍에서 앞으로 입주 4,169세대 확인",
+    href: "/analysis/ai/ai-timing?complexId=abc%20def",
   });
   /* 축 → 도구 매핑은 next-action-routing 그대로(새 매핑 없음) */
-  assert.equal(RADAR_AXIS_FOLLOW_UP.supply.tool, "ai-risk");
+  assert.equal(RADAR_AXIS_FOLLOW_UP.supply.tool, "ai-timing");
   /* 점수 없는 축(이웃 평가 —)은 가장 약한 축이 아니다 */
   assert.equal(weakestAxis(RADAR)?.key, "supply");
   assert.equal(weakestAxis([{ key: "field", label: "이웃 평가", score: null, basis: "" }]), null);
@@ -82,7 +83,8 @@ test("[1026] 다음 행동 한 줄 — 매수 타이밍은 주의 신호 먼저(
   });
   const yellow = SIGNALS.map((s) => (s.key === "supply" ? { ...s, state: "yellow" as const } : { ...s, state: "green" as const }));
   assert.equal(weakestSignal(yellow)?.key, "supply");
-  assert.equal(conclusionNext({ tool: "ai-timing", complexId: "c1", signals: yellow })?.href, "/analysis/ai/ai-risk?complexId=c1");
+  /* [1109] 입주 신호 → 종합 진단(공급 여유 축) */
+  assert.equal(conclusionNext({ tool: "ai-timing", complexId: "c1", signals: yellow })?.href, "/analysis/ai/ai-diagnosis?complexId=c1");
   const allGreen = SIGNALS.map((s) => ({ ...s, state: "green" as const }));
   assert.equal(conclusionNext({ tool: "ai-timing", complexId: "c1", signals: allGreen })?.label, TOOL_FOLLOW_UP["ai-timing"].label);
   assert.deepEqual(Object.keys(SIGNAL_FOLLOW_UP).sort(), ["price", "supply", "volume"]);

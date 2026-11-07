@@ -3,7 +3,6 @@ import { Header } from "./components/Header";
 import { TopBanner } from "@/app/components/ads/TopBanner";
 import { DesktopSideNav } from "./components/DesktopSideNav";
 import { TabBar } from "./components/TabBar";
-import { AIPanel } from "./components/AIPanel";
 import { Fineprint } from "./components/Fineprint";
 /* [1103 · 번들] 이어서 쓰기 팝업은 지연 로더로(초안 파서 · 상대 시각이 홈 첫 로드 번들에서 빠진다 — 서버 HTML 은 원래 비어 있다) */
 import { ResumeDraftPopupLazy as ResumeDraftPopup } from "./components/home/ResumeDraftPopupLazy";
@@ -22,6 +21,9 @@ import { chunkPages } from "./components/home/chunk-pages";
 import { HomeSeoulMoves } from "./components/home/HomeSeoulMoves";
 import { HomeTownBlock } from "./components/home/HomeTownBlock";
 import { HomeHubLinks } from "./components/home/HomeHubLinks";
+import { HomeRecentDeals, toHomeDealRows, type HomeDealRow } from "./components/home/HomeRecentDeals";
+import { listRegionTransactions } from "@/lib/market/store";
+import { complexCanonicalPathFromNames } from "@/lib/complex/complex-store";
 import { getActiveComplexes } from "@/lib/ai/popular-complexes";
 import { HomeTalkSection } from "./components/home/HomeTalkSection";
 import { loadLatestTemperatures } from "./components/MarketTempWidget";
@@ -31,14 +33,8 @@ import { formatCount } from "@/lib/newui/home-coverage";
 import { Explain } from "./components/explain/Explain";
 import { getBaseRate } from "@/lib/market/base-rate";
 import type { Metadata } from "next";
-import type { HomeBriefing } from "@/lib/newui/home-data";
-import {
-  HOME_AI_BRIEFING_LABEL,
-  HOME_AI_GATEWAY_LEAD,
-  HOME_AI_GATEWAY_TITLE,
-  HOME_CTA_AI,
-  HOME_PAGE_H1,
-} from "@/lib/brand/home-copy";
+import { HOME_PAGE_H1 } from "@/lib/brand/home-copy";
+import { logger } from "@/lib/log";
 import { seoAlternates } from "@/lib/seo/alternates";
 
 /* ============================================================
@@ -85,59 +81,9 @@ export const metadata: Metadata = {
 /* [1029 · 2] 낱말 꼴 — 문장 둘을 "무엇 = 누가·어떻게"로 접었다 */
 const LAB_NOTES_CAPTION = "Lab 노트 = 편집부 정리(실거래·통계) · 이웃 노트 = 올라온 순";
 
-function HomeAiGateway({
-  briefing,
-  exampleNoteId,
-}: {
-  briefing: HomeBriefing | null;
-  exampleNoteId: string | null;
-}) {
-  return (
-    <AIPanel
-      title={HOME_AI_GATEWAY_TITLE}
-      cta={{ href: HOME_CTA_AI.href, label: HOME_CTA_AI.label }}
-    >
-      <p className="m-0 t-body t-fit">{HOME_AI_GATEWAY_LEAD}</p>
-      {/* [1015 · 규칙 B] "예: …" 예시 줄(HOME_AI_EXAMPLE_LINE)은 뺐다 — 예시 카드·문장 금지 */}
-      {/* 링크 세 줄 → 한 줄. [958] 분석 허브로 가는 길 · 실제 공개 노트 예시. "로그인 없이 단지 데이터 진단
-          미리보기"([1002])는 검색 아래 문 ② "후보가 있어요 → 단지 종합 진단"이 같은 화면으로 간다(중복 제거).
-          [989] 카드 안에 단독으로 서는 링크 — 위아래 6px 로 31px. */}
-      <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1">
-        <Link href="/analysis" className="tap-line w-fit py-1.5 t-sub font-bold text-ai-accent no-underline">
-          AI 분석 도구 보기 ›
-        </Link>
-        {exampleNoteId && (
-          <Link
-            href={`/notes/${exampleNoteId}`}
-            className="tap-line w-fit py-1.5 t-sub font-bold text-ai-accent no-underline"
-          >
-            정리된 공개 노트 보기 ›
-          </Link>
-        )}
-      </div>
-      <div className="fit mt-2 border-t border-white/15 pt-2">
-        {/* [1036 · 밀도] 기준 설명(briefing.basis)은 라벨 옆 ⓘ 로 — 설명은 ⓘ(design-system) */}
-        <div className="mb-1 flex items-center gap-1 t-caption font-bold text-ai-muted">
-          {HOME_AI_BRIEFING_LABEL}
-          {briefing && <Explain title={HOME_AI_BRIEFING_LABEL} body={briefing.basis} size={12} />}
-        </div>
-        {briefing ? (
-          <div className="t-body t-fit">
-            {briefing.text}
-            <span className="ml-1.5 inline-flex items-center rounded border border-white/20 px-1 py-px align-middle t-caption font-semibold text-ai-muted">
-              {briefing.asOfLabel}
-            </span>
-          </div>
-        ) : (
-          <div className="t-body t-fit">
-            {/* [1052] 문장형 안내 → 사실 낱말("○○ 없음 · 언제") */}
-            오늘 브리핑 없음 · 매매가격지수 갱신 뒤 표시
-          </div>
-        )}
-      </div>
-    </AIPanel>
-  );
-}
+/* [1108 · 홈 A안] 사이드바 "AI 입구" 판(HomeAiGateway · 임장노트 AI 정리 + 오늘의 시장 브리핑)은 걷었다 — AI 진입 12 → 3.
+   브리핑 한 문장은 네이비 띠의 "오늘의 시장" 슬라이드로(HomeTodayLine briefing), 임장노트 AI 정리는 노트 쓰기 화면과 분석 허브
+   (내 임장노트 계열)가 맡는다. 헤더 "AI 분석" 메뉴가 모든 화면에 있다. */
 
 export default async function Home() {
   /* 세 조회는 서로 의존이 없다 — 한 Promise.all 로 임계 경로를 가장 느린 하나로.
@@ -154,6 +100,19 @@ export default async function Home() {
 
   // 실데이터만 사용한다 — 0건이면 빈 상태를 그린다(가짜 카드로 채우지 않는다).
   const regions = data.regions;
+  /* [1108] 최근 실거래 — 대표 지역(regions[0])의 최신 매매 신고 6건. 지역 화면과 같은 함수(한 왕복 · ISR 300초 안에서 굳는다).
+     실패는 실패로(빈 배열로 뭉개지 않는다 — listRegionTransactions 가 던진다) */
+  const dealsRegion = regions[0] ?? null;
+  let recentDeals: HomeDealRow[] = [];
+  let recentDealsFailed = false;
+  if (dealsRegion) {
+    try {
+      recentDeals = toHomeDealRows(await listRegionTransactions(dealsRegion.id, dealsRegion.name, 6), complexCanonicalPathFromNames);
+    } catch (e) {
+      recentDealsFailed = true;
+      logger.warn("[home] 최근 실거래 조회 실패 — 실패로 그린다", e);
+    }
+  }
   const notes = data.notes;
   const failed = data.failed;
   /* [1007] 상대 시각 라벨의 기준 — 렌더당 한 번(ISR 300s 동안 굳는다 — 분 단위라 무방) */
@@ -247,19 +206,26 @@ export default async function Home() {
           {/* 작성 중 노트 복귀 — 우하단 팝업(소유자 지시 2026-08-16) */}
           <ResumeDraftPopup />
 
-          {/* ① 검색 — 질문 한 줄 + 대형 검색 + 실기록 칩. 전폭. */}
-          {/* [1022] 소유자: "검색창 있는 부분을 좀더 심플하고 요즘 트렌드에 맞게" — 부제 삭제, 검색 알약 하나 + 칩 한 줄,
-              커버리지 숫자는 ⓘ 안으로(처음이라면 ⓘ 와 합침). */}
-          <div className="flex flex-col gap-3 pb-3 pt-2 md:gap-4 md:py-7">
-            {/* [1030 · G1] 질문문("어느 단지가 궁금하세요?") → 낱말. 예시는 검색칸 placeholder 가 든다. */}
-            <p className="t-display text-center text-ink">단지 · 동네 검색</p>
+          {/* ① [1108 · 홈 A안] 네이비 검색 띠 — 검색 한 칸 + 바로 보기 칩 + "오늘의 시장" 한 줄이 한 판.
+              예전엔 검색 묶음(흰 바탕) → 띠 배너 → 오늘의 시장(네이비 카드) 세 층이었다. 1012 실측(기준 사이트 4곳: 검색 · 지도 · 목록으로
+              시작)과 1022 "검색 부분을 심플하게"를 한 판으로 잇는다 — 돌아온 사람이 여는 화면이라 첫 줄이 검색, 둘째 줄이 오늘 숫자다.
+              내 동네 숫자 3칸은 따로 두지 않는다: 지역 동향 첫 카드와 같은 숫자가 된다(1050 중복 검토) — 숫자는 "오늘의 시장" 슬라이드
+              (관심 지역이면 그 지역 문장)가 말한다. 첫 화면에는 rise-in·data-reveal 을 쓰지 않는다. */}
+          <section className="brand-navy-card flex flex-col gap-3 rounded-2xl px-4 pb-3 pt-5 md:gap-4 md:px-6 md:pb-4 md:pt-7" aria-label="검색 · 오늘의 시장">
+            <svg className="brand-wm text-on-dark" width="150" height="140" viewBox="0 0 120 120" aria-hidden="true">
+              <path d="M14 46 C 38 64, 82 64, 106 46" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" />
+              <circle cx="60" cy="86" r="8.5" fill="currentColor" />
+            </svg>
+            {/* [1030 · G1] 질문문 → 낱말. 예시는 검색칸 placeholder 가 든다. */}
+            <p className="t-display text-center text-on-dark">단지 · 동네 검색</p>
             {/* [1015 · 규칙 B] "예산으로 찾기" 칩 줄과 "어디서부터 시작할까요?" 문 4개는 뺐다(소유자: "필요 없는 부분 —
                 물음표 칸으로 마우스를 올리면 보이는 정도로"). 네 입구는 ⓘ 하나(hover 미리보기·탭 시트)로 접었다.
                 [1024] 소유자(캡처): "이런건 한줄로 바꿔줘" — "처음이라면 ⓘ" 를 칩 행의 coverage 슬롯으로 넘겨 칩과 같은 줄에 둔다. */}
             <HomeHeroSearch
+              onDark
               regionChips={heroRegionChips}
               coverage={
-                <span className="inline-flex min-h-[24px] shrink-0 items-center gap-1 whitespace-nowrap t-caption text-text-3">
+                <span className="inline-flex min-h-[24px] shrink-0 items-center gap-1 whitespace-nowrap t-caption text-on-dark-muted">
                   처음이라면
                   <Explain
                     title="처음 오신 분께"
@@ -275,14 +241,9 @@ export default async function Home() {
                 </span>
               }
             />
-          </div>
-
-          {/* [1098 · 배너] 상단 띠 배너 자리 — 검색 묶음과 오늘의 시장 사이 한 줄(띠 배너가 없으면 관리자에게만 점선 자리) */}
-          <TopBanner placement="home_feed" plan={null} className="mb-3 md:mb-4" />
-
-          {/* ② 오늘의 시장 — 한 문장. 넷을 동시에 말하면 무엇이 중요한지 사라진다. */}
-          <div className="mb-3 md:mb-4">
+            {/* ② 오늘의 시장 — 한 문장씩(배너형 회전) · 띠 안에 든 모양(embedded). [1108] AI 브리핑도 슬라이드 하나 */}
             <HomeTodayLine
+              embedded
               region={kpiRegion}
               temp={kpiTemp}
               saleIndex={saleIndexSeoul}
@@ -291,8 +252,12 @@ export default async function Home() {
               loanRate={loanRate}
               loanRateAsOf={loanRateAsOf}
               publicNotes={data.publicNotesTotal}
+              briefing={data.briefing ? { text: data.briefing.text, asOfLabel: data.briefing.asOfLabel } : null}
             />
-          </div>
+          </section>
+
+          {/* [1098 · 배너] 상단 띠 배너 자리 — 검색 띠와 본문 사이 한 줄(띠 배너가 없으면 관리자에게만 점선 자리) */}
+          <TopBanner placement="home_feed" plan={null} className="my-3 md:my-4" />
 
           {/* 본문 | 사이드바 — 두 벌을 그리지 않고 한 벌을 재배치하는 것이 이 파일의 전부다.
               [1101 · 첫 화면] 폰은 본문(공개 임장노트 · 지역 동향 …)이 먼저, AI 입구(네이비 판)는 그 뒤다(order).
@@ -303,8 +268,60 @@ export default async function Home() {
               data-autotrim=""
               className="order-2 flex flex-col gap-3 lg:sticky lg:top-[76px] lg:self-start"
             >
-              {/* ④ AI 입구 — 예시 두 칸으로 결과의 모양을 먼저 보인다 */}
-              <HomeAiGateway briefing={data.briefing} exampleNoteId={notes[0]?.id ?? null} />
+              {/* ⑤ 지역 동향 — [1108] 사이드바로(예전 AI 입구 자리). 4장(2열)씩 넘기는 회전판 그대로.
+                  [1009 · H 리뷰] 제목 "지역 시세" → "지역 동향": 서울 3장의 가격은 국토부 신고 실거래 평균이라 "시세" 낱말 규칙에 걸린다. */}
+              <section className="flex flex-col gap-3">
+                <div className="flex items-baseline justify-between gap-2">
+                  <h2 className="t-section text-ink">지역 동향</h2>
+                  <Link
+                    href="/map"
+                    className="tap-line inline-block py-[5px] t-sub font-bold text-primary no-underline"
+                  >
+                    지도에서 전체 보기 ›
+                  </Link>
+                </div>
+                {regions.length === 0 ? (
+                  failed.regions ? (
+                    <ErrorState
+                      title="지역 동향 불러오기 실패"
+                      desc="잠시 후 다시"
+                      action={{ label: "지도에서 찾아보기", href: "/map" }}
+                    />
+                  ) : (
+                    <EmptyState
+                      icon="map"
+                      title="지역 동향 없음"
+                      desc="지역 집계가 준비되면 여기에 표시돼요."
+                      action={{ label: "지도에서 찾아보기", href: "/map" }}
+                    />
+                  )
+                ) : (
+                  <>
+                    {/* [1022] 4장씩 쪽으로 나눠 주식 시세판처럼 아래→위로 넘긴다(RollingPanel). 12곳 = 3쪽 */}
+                    <RollingPanel
+                      label="지역 동향 쪽"
+                      pages={chunkPages(regions, 4).map((page, i) => (
+                        <RegionPulseCards key={i} regions={page} cols="2" />
+                      ))}
+                    />
+                    {/* [1002] 스냅샷 실패 → 월 집계 폴백 카드. 값은 실측이지만 시점이
+                        오래됐다는 사실을 카드 아래 한 줄로 적는다(카드 meta 의 "마지막 집계"
+                        와 같은 말). 실패를 "준비 중"으로도, 오래된 값을 "지금"으로도 위장하지 않는다. */}
+                    {data.regionsStale && (
+                      <p className="m-0 t-caption text-text-3">
+                        실시간 집계 불러오기 실패 · 마지막 월 집계 표시
+                      </p>
+                    )}
+                    {/* [1050 · 중복 검토] 서울 25개 구는 이 칸의 접힘 하나로 — 펼치면 구별 막대 */}
+                    <HomeSeoulMoves data={data.seoulMoves} />
+                    {/* [1036 · 밀도] 카드마다 붙던 범례를 섹션 아래 한 번, 접어서 */}
+                    {/* [1052] 거래 건수 원천은 카드마다 다르다 — 카드 끝에 원천을 적으니 여기서 한쪽으로 단정하지 않는다 */}
+                    <Fineprint label="기준 · 출처">
+                      선 = 최근 주간 매매가격지수(한국부동산원) · 등락 = 지수 전월 대비 · 거래 = 그 달 아파트 매매 건수(카드 끝 표기 · 한국부동산원 월간 또는 국토교통부 신고)
+                    </Fineprint>
+                  </>
+                )}
+              </section>
               {/* 배너/하우스 광고 — 없으면 아무것도 그리지 않는다. plan={null}: 공유 캐시라
                   보는 사람의 플랜을 모른다(광고 제거는 AdFreeGate 가 클라이언트에서). */}
               <AdZone placement="home_feed" seed={0} plan={null} className="hidden lg:block" />
@@ -315,13 +332,23 @@ export default async function Home() {
               {/* ⑥ 내 관심 — 로그인만, 클라이언트 섬. 서버 HTML(공유 캐시)에는 없다.
                   [1101] 사이드바 → 본문 맨 위 — 로그인한 사람에게는 자기 관심 단지가 첫 내용이다(폰 · 데스크톱 같은 자리) */}
               <HomeMyRail />
-              {/* ③ 공개 임장노트 — 증거. 누가 쓴 노트인지(Lab/이웃)를 숨기지 않는다. */}
+
+              {/* ③ [1108] 최근 실거래 — 대표 지역 최신 매매 신고 6건(한 건 금액 그대로 · 단지 화면으로). 홈에 없던 "장부의 첫 줄" */}
+              {dealsRegion && (
+                <HomeRecentDeals
+                  regionName={dealsRegion.name}
+                  rows={recentDeals}
+                  failed={recentDealsFailed}
+                  mapHref={`/map?region=${encodeURIComponent(dealsRegion.name)}`}
+                />
+              )}
+
+              {/* ④ 공개 임장노트 — 증거. 누가 쓴 노트인지(Lab/이웃)를 숨기지 않는다. */}
               <section className="card flex flex-col gap-2 rounded-2xl px-4 py-4">
                 <div className="flex items-center justify-between gap-2">
                   <h2 className="t-section text-ink">공개 임장노트</h2>
                   <span className="flex items-center gap-2">
-                    {/* [1009 · H] 점수 배지의 뜻 — 예전 `title="현장 체크 5개 항목 평균 × 20"`(마우스를 올려야만 보여
-                        휴대폰에선 없던 설명)을 누르면 열리는 ⓘ 시트로. 배지는 링크 행 안이라 ⓘ 는 머리에 한 번만 둔다
+                    {/* [1009 · H] 점수 배지의 뜻 — 누르면 열리는 ⓘ 시트로. 배지는 링크 행 안이라 ⓘ 는 머리에 한 번만 둔다
                         (링크 안 버튼 = 중첩 인터랙티브). 계산은 lib/newui/home-data.ts noteScoreOf ·
                         lib/inspection/store-db.ts inspectionAverageScore 그대로. */}
                     {notes.length > 0 && (
@@ -404,66 +431,7 @@ export default async function Home() {
                 {allLabNotes && <Fineprint label="표시 기준">{LAB_NOTES_CAPTION}</Fineprint>}
               </section>
 
-
-              {/* ⑤ 지역 동향 — 4장(모바일 2열·xl 4열). 스파크라인·딥링크는 카드 안.
-                  [1009 · H 리뷰] 제목 "지역 시세" → "지역 동향": 카드 4장 중 서울 3장의 가격은 국토부 신고 실거래 평균이라
-                  "시세" 낱말 규칙(실거래만 있는 곳에 '시세' 금지)에 걸린다. 등락은 한국부동산원 지수(시세 지수) — 카드가 적는다. */}
-              <section className="flex flex-col gap-3">
-                <div className="flex items-baseline justify-between gap-2">
-                  <h2 className="t-section text-ink">지역 동향</h2>
-                  <Link
-                    href="/map"
-                    className="tap-line inline-block py-[5px] t-sub font-bold text-primary no-underline"
-                  >
-                    지도에서 전체 보기 ›
-                  </Link>
-                </div>
-                {regions.length === 0 ? (
-                  failed.regions ? (
-                    <ErrorState
-                      title="지역 동향 불러오기 실패"
-                      desc="잠시 후 다시"
-                      action={{ label: "지도에서 찾아보기", href: "/map" }}
-                    />
-                  ) : (
-                    <EmptyState
-                      icon="map"
-                      title="지역 동향 없음"
-                      desc="지역 집계가 준비되면 여기에 표시돼요."
-                      action={{ label: "지도에서 찾아보기", href: "/map" }}
-                    />
-                  )
-                ) : (
-                  <>
-                    {/* [1022] 4장씩 쪽으로 나눠 주식 시세판처럼 아래→위로 넘긴다(RollingPanel). 12곳 = 3쪽 */}
-                    <RollingPanel
-                      label="지역 동향 쪽"
-                      pages={chunkPages(regions, 4).map((page, i) => (
-                        <RegionPulseCards key={i} regions={page} />
-                      ))}
-                    />
-                    {/* [1002] 스냅샷 실패 → 월 집계 폴백 카드. 값은 실측이지만 시점이
-                        오래됐다는 사실을 카드 아래 한 줄로 적는다(카드 meta 의 "마지막 집계"
-                        와 같은 말). 실패를 "준비 중"으로도, 오래된 값을 "지금"으로도 위장하지 않는다. */}
-                    {data.regionsStale && (
-                      <p className="m-0 t-caption text-text-3">
-                        실시간 집계 불러오기 실패 · 마지막 월 집계 표시
-                      </p>
-                    )}
-                    {/* [1050 · 중복 검토] 1049 의 "서울 25개 구" 칸은 위 AI 브리핑 한 줄 · 이 카드들과 같은 숫자를 따로 한 칸 더
-                        말했다(소유자: "홈에서는 중복되지 않을까?"). 따로 칸을 없애고 이 칸의 접힘 하나로 — 펼치면 구별 막대 */}
-                    <HomeSeoulMoves data={data.seoulMoves} />
-                    {/* [1036 · 밀도] 카드마다 붙던 범례("선 · 16주 시세 지수")를 섹션 아래 한 번, 접어서 */}
-                    {/* [1052] 거래 건수 원천은 카드마다 다르다(부동산원 월간 · 없으면 국토부 신고 월 집계) — 카드 끝에 원천을 적으니 여기서 한쪽으로 단정하지 않는다 */}
-                    <Fineprint label="기준 · 출처">
-                      선 = 최근 주간 매매가격지수(한국부동산원) · 등락 = 지수 전월 대비 · 거래 = 그 달 아파트 매매 건수(카드 끝 표기 · 한국부동산원 월간 또는 국토교통부 신고)
-                    </Fineprint>
-                  </>
-                )}
-              </section>
-
-              {/* [1015 · 규칙 G → 1101] 폰 광고 자리 1곳(데스크톱은 오른쪽 레일) — 첫 본문 섹션 뒤에서 둘째(지역 동향) 뒤로.
-                  첫 섹션 뒤에 서면 폰 첫 화면의 공개 임장노트와 지역 동향 사이를 자사 안내 카드가 갈랐다(1101 첫 화면 재구성) */}
+              {/* [1015 · 규칙 G → 1101] 폰 광고 자리 1곳(데스크톱은 오른쪽 레일) — 둘째 섹션(공개 임장노트) 뒤 */}
               <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
 
               {/* ⑦ [1007 · P2] 동네이야기(사람의 기록) · 뉴스룸(자동수집) — 1006 의 .story-* / .news-*

@@ -165,6 +165,7 @@ test("[1057·B8] 토론 — readPaged · complexId 필터 · complexHrefFromId �
   const page = code("app/complex/[id]/page.tsx");
   /* [1058 · C2] 범위 키는 URL 파라미터가 아니라 canonical_id(socialId) — kapt 매칭 단지도 정규 name-id 로 해독된다 */
   assert.match(page, /talkScopeForComplex\(socialId, regionId\)/);
+  /* [1108] 토론은 "기록" 칩 줄의 한 칸(ComplexRecordsSection talk) — 지연 조각 · 범위는 그대로 */
   assert.match(page, /<ComplexTalkLazy scope=\{talkScope\} \/>/);
   assert.doesNotMatch(page, /from "@\/app\/components\/talk\/TalkPanel"/, "판 본체는 라우트 번들 밖");
 });

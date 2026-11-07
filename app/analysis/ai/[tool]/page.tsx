@@ -15,12 +15,12 @@
    머리 한 줄(아이콘 칩 · 제목 · identity.useCase · 기준 시점 칩)을 WorkbenchClient 가 그린다(칩은 결과가 선 뒤 값이라 클라이언트).
    페르소나 전제문(persona.premise)은 넣지 않는다(1015 규칙). 나머지 8종은 예전 머리 그대로. 캐시·메타·면책은 그대로. */
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import { ShellBreadcrumb } from "@/app/components/PageShell";
 import { PageHead } from "@/app/components/PageHead";
 import { ToolGlyph, WORKBENCH_GLYPH } from "../../ToolGlyph";
 import { WORKBENCH_ICONS } from "../../tool-catalog";
-import { AI_TOOL_IDS, isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
+import { ACTIVE_AI_TOOL_IDS, isAiAnalysisToolId, isRetiredAiToolId, retiredAiToolTarget, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
 import { TOOL_PERSONAS } from "@/lib/ai/tool-persona";
 import { tuningFields } from "@/lib/ai/tool-tuning-fields";
@@ -66,8 +66,9 @@ const EMPTY_LINE: Partial<Record<AiAnalysisToolId, string>> = {
    라우트 전체를 비운다(12개라 셀 단위로 고를 이유가 없다). */
 export const revalidate = 86_400;
 
+/* [1109 · AI 분석 통폐합] 미리 그리는 것은 살아 있는 4종 — 통합된 8종 주소는 요청 때 같은 일을 하는 화면으로 308 (아래 AiToolPage) */
 export function generateStaticParams() {
-  return AI_TOOL_IDS.map((tool) => ({ tool }));
+  return ACTIVE_AI_TOOL_IDS.map((tool) => ({ tool }));
 }
 
 export async function generateMetadata({
@@ -78,6 +79,8 @@ export async function generateMetadata({
   const { tool } = await params;
   /* [970 · C-25] 접미 없던 제목에 `| 내집나우` */
   if (!isAiAnalysisToolId(tool)) return { title: "AI 분석 도구 | 내집나우" };
+  /* [1109] 통합된 도구 — 본문이 308 로 보내므로 색인 메타는 두지 않는다 */
+  if (isRetiredAiToolId(tool)) return { title: "AI 분석 도구 | 내집나우", robots: { index: false, follow: true } };
   const id = TOOL_IDENTITIES[tool as AiAnalysisToolId];
   return {
     title: `${id.title} — AI 분석 도구 | 내집나우`,
@@ -93,6 +96,11 @@ export default async function AiToolPage({
 }) {
   const { tool } = await params;
   if (!isAiAnalysisToolId(tool)) notFound();
+  /* [1109 · AI 분석 통폐합] 통합된 8종 — 같은 일을 하는 살아 있는 화면으로 308. redirect-map(정확 일치 표)에 넣으면 동적 라우트를
+     가리는 규칙이라 검사가 막는다 — /digest/archive 처럼 라우트 안에서 보낸다. searchParams 는 읽지 않는다(읽으면 이 라우트
+     전체가 동적이 되어 살아 있는 4종의 ISR 이 깨진다 — 1010 "하루 1,512 렌더" 실측). 안에서 잇는 링크(비교 결론 · 금리 알림)는
+     목적지를 직접 바꿨다. */
+  if (isRetiredAiToolId(tool)) permanentRedirect(retiredAiToolTarget(tool) ?? "/analysis");
   const tid = tool as AiAnalysisToolId;
   const identity = TOOL_IDENTITIES[tid];
   /* [980] 도구 성격 — 색·연출·말투를 여기 한 곳에서 꽂고, 안쪽은 전부 CSS 변수를 읽는다.

@@ -119,7 +119,8 @@ test("[1022] 축별 이어서 볼 도구 — 5축 전부 실존 도구 딥링크
   assert.equal(radarAxisFollowUp("liquidity", 50, "x"), null, "50점은 링크 없음");
   assert.equal(radarAxisFollowUp("liquidity", null, "x"), null, "자료 없음은 링크 없음");
   assert.equal(radarAxisFollowUp("nope", 10, "x"), null);
-  assert.equal(radarAxisFollowUp("macro", 10, null)?.href, "/analysis/ai/ai-simulator");
+  /* [1109] 수익률 계산(ai-simulator)은 통합 — 금리 축은 시세 예측(대출 비율 · 금리 · 비용 포함 손익분기) */
+  assert.equal(radarAxisFollowUp("macro", 10, null)?.href, "/analysis/ai/ai-prediction");
   assert.match(sig, /radarAxisFollowUp\(a\.key, a\.score, complexId \?\? null\)/);
 });
 

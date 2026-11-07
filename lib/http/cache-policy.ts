@@ -199,7 +199,6 @@ export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
      없음). 눈금은 그 revalidate 와 같다. 정적/ISR 이 깨지면 check-cache-policy 가 prerender 대조에서 막는다. */
   { path: "/quiz", sMaxAge: 21600, swr: 86400 },
   { path: "/analysis/compare", ...STATIC_DOC },
-  { path: "/analysis/portfolio", ...STATIC_DOC },
   /* /analysis/price 는 이제 지역 선택(?region=)을 읽는 **동적 라우트**라 prerender
      되지 않는다 — 공개 캐시 허용 목록에서 뺀다(사용자별 값은 없지만 정적이 아니므로
      이 목록의 계약을 어긴다). 실거래 집계는 tx-bands 모듈 캐시(10분)로 이미 싸다. */

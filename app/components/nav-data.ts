@@ -18,6 +18,24 @@ export type NavItem = {
 };
 
 export const NAV: NavItem[] = [
+  /* [1108 · 통폐합] "실거래" — 대분류 맨 앞(6 → 7). 11.01~05 첫 화면 수 1,956 가운데 단지 818 · 지역 391 · 비교 107 · 실거래 구간 59,
+     곧 70% 가 실거래 화면인데 상단 메뉴에는 그 머리가 없었다(지역 · 단지 · 구간 · 동별 · 월간 리포트 · 시장 온도가 지도 하위 ·
+     푸터 "데이터" 묶음 · 지역 화면 안 링크로 흩어져 있었다). 머리 화면은 단지 찾기(/complex/browse — 구 → 단지별 실거래 요약,
+     색인 대상). 푸터에서 뺀 실거래 구간 · 동별 · 월간 리포트 · 시장 온도는 여기 하위로 옮겨 모든 화면 HTML 에 그대로 남는다
+     (1069 · 1094 의 "끊긴 묶음" 크롤 경로 보존). 요금제는 토스 심사가 끝날 때까지 그대로(소유자 결정 2026-11-07). */
+  {
+    label: "실거래",
+    href: "/complex/browse",
+    also: ["/tx", "/dong", "/reports", "/region", "/complex", "/analysis/temperature"],
+    children: [
+      { label: "단지 찾기", href: "/complex/browse" },
+      { label: "단지 비교", href: "/complex/compare" },
+      { label: "실거래 구간", href: "/tx" },
+      { label: "동별 실거래", href: "/dong" },
+      { label: "월간 리포트", href: "/reports" },
+      { label: "시장 온도", href: "/analysis/temperature" },
+    ],
+  },
   /* [1008 · J] 내 집 마련 — 여정(/journey)·계약·잔금 일정표·실거래가 게임.
      왜: 도구는 다섯 메뉴에 흩어져 있는데 "지금 어느 단계이고 다음에 뭘 하면 되는지"를 잇는 길이 없었다
      (30일 실측: /calculator·/guides/contract 조회 0, 단지 페이지 착지의 48% 가 다음 페이지 없이 이탈).
@@ -49,9 +67,11 @@ export const NAV: NavItem[] = [
   {
     label: "지도",
     href: "/map",
+    /* [1108 · 통폐합] 단지 찾기는 "실거래" 대분류의 머리로 갔다. 3D 지도(/map/3d · 5일 방문 10)는 지도의 다른 보기라 여기 하위로 —
+       예전엔 메뉴 어디에도 없어 지도 화면 안 단추로만 닿았다. */
     children: [
       { label: "통합 지도 (탐색·실거래·매물)", shortLabel: "통합 지도", href: "/map" },
-      { label: "단지 찾기", href: "/complex/browse" },
+      { label: "3D 지도", href: "/map/3d" },
     ],
   },
   {
@@ -60,14 +80,12 @@ export const NAV: NavItem[] = [
     children: [
       /* [958] 이름은 허브 카드(tool-catalog)와 글자까지 같게 */
       { label: "분석 허브", href: "/analysis" },
-      /* [993] 핵심 4종(lib/ai/ai-tools CORE_AI_TOOL_IDS)을 GNB 에서 바로 — 12종 중 1종만 있어
-         데스크톱에서 도구를 발견할 길이 허브 카드 4장뿐이었다. 이름은 tool-identity 와 같게.
-         [1008] "이 단지 ~" 접두를 뺐다(소유자 지시 — 메뉴에서는 가리킬 단지가 없어 같은 말이
-         네 번 반복될 뿐이었다). 단지 화면 안의 "이 단지 임장노트 쓰기" 같은 문맥 문구는 그대로다. */
-      { label: "종합 진단", href: "/analysis/ai/ai-diagnosis" },
-      { label: "시세 예측", href: "/analysis/ai/ai-prediction" },
-      { label: "매수 타이밍", href: "/analysis/ai/ai-timing" },
-      { label: "임장 동선", href: "/analysis/ai/ai-inspection" },
+      /* [993] 핵심 4종을 GNB 에 바로 두었던 것을 [1108 · 통폐합] 허브의 질문 세 계열(tool-catalog TIERS — 단지 분석 · 지역 시세 ·
+         내 임장노트)로 바꾼다. 12개 도구 이름을 외워야 고를 수 있는 구조였고(AI 진입 12곳), 허브는 이미 2026-08-25 부터
+         이 세 질문으로 짜여 있다(app/analysis/page.tsx #tier-*). 도구 주소는 그대로(허브 카드에서 닿는다). 이름은 TIERS.label 과 같게. */
+      { label: "단지 분석", href: "/analysis#tier-complex" },
+      { label: "지역 시세", href: "/analysis#tier-market" },
+      { label: "내 임장노트 분석", shortLabel: "내 노트 분석", href: "/analysis#tier-record" },
     ],
   },
   {
@@ -78,8 +96,13 @@ export const NAV: NavItem[] = [
        뉴스(뉴스룸)는 그다음 — 동네이야기와 뉴스는 다른 재질의 두 화면이다. */
     /* [1044] 뉴스룸을 뺐다(소유자 지시 2026-10-06: "뉴스랑 동네글을 분리해줘" — 메뉴까지). 동네 = 사람이 쓴 글과
        동네 단위 공공데이터(청약·정비사업), 뉴스 = 자동수집 기사. 뉴스는 바로 아래 제 대분류에 선다. */
+    /* [1108 · 통폐합] 토론(/talk) · 모임(/town/groups)을 하위에 — 사람이 쓰는 글이 글 · 토론 · 모임 세 화면인데 메뉴에는 글 하나만 있어
+       토론은 홈 맨 아래 한 줄과 단지 화면에서만 닿았다. /talk 는 /town 아래가 아니라 also 로 동네를 켠다(탭바 TOWN_TAB_EXTRA 와 같은 판정). */
+    also: ["/talk"],
     children: [
       { label: "동네이야기", href: "/town" },
+      { label: "토론", href: "/talk" },
+      { label: "모임", href: "/town/groups" },
       { label: "청약", href: "/apply" },
       { label: "정비사업", href: "/redevelopment" },
       /* [1047] 전문가 — 보관 해제(소유자 지시 2026-10-09 "전문가 등록 · 카테고리 · 숨고처럼 홍보"). 주소가 /town 아래라 동네가 켜진다 */

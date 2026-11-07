@@ -49,14 +49,18 @@ test("동 화면 '단지 비교' · 단지 화면 '○○ 비교' 칩(폰 블록
   assert.match(dong, /className="tile inline-flex min-h-10 items-center gap-1\.5 rounded-full border border-border px-3 py-1\.5 t-sub font-bold text-ink no-underline md:min-h-8"/);
   const page = strip(read("app/complex/[id]/page.tsx"));
   assert.match(page, /return dec \? loadComplexPairLinks\(dec\.region, dec\.name\) : Promise\.resolve\(\[\]\);/);
-  assert.match(page, /\{pairLinks\.length > 0 && \(\s*<section className="cv-auto rise-in-5 mt-4 max-md:mt-3 lg:hidden" aria-label="단지 비교">\s*<ComplexPairChips pairs=\{pairLinks\} \/>/, "인근 단지와 독립(인근 단지가 비어도 선다)");
-  assert.match(page, /pairs=\{pairLinks\}/);
-  const chips = strip(read("app/complex/[id]/ComplexPairChips.tsx"));
-  assert.doesNotMatch(chips, /"use client"/, "서버 조각");
-  assert.match(chips, /<span>\{p\.other\} 비교<\/span>/);
-  assert.match(chips, /min-h-10 [^"]*md:min-h-8/);
+  /* [1108] 비교 칩 카드는 인근 단지 목록과 한 조각(ComplexNearby)이 됐다 — 조합이 있는 상대 단지 줄 끝의 "비교" 단추,
+     목록에 없는 상대는 아래 칩. "인근 단지가 비어도 선다"는 그대로(nearby 0 · pairs 1 이면 칩만 선다) */
+  assert.match(page, /\{\(v\.nearby\.length > 0 \|\| pairLinks\.length > 0\) && \(\s*<section id="nearby-complexes"/, "인근 단지가 비어도 선다");
+  assert.match(page, /<ComplexNearby nearby=\{v\.nearby\} pairs=\{pairLinks\} label=\{v\.nearbyLabel\} \/>/);
+  const near = strip(read("app/complex/[id]/ComplexNearby.tsx"));
+  assert.doesNotMatch(near, /"use client"/, "서버 조각");
+  assert.match(near, /<span>\{p\.other\} 비교<\/span>/);
+  assert.match(near, /min-h-10 [^"]*md:min-h-8/);
+  assert.match(near, /const restPairs = pairs\.filter\(\(p\) => !shownNames\.has\(p\.other\)\);/, "링크 손실 0");
   const rail = strip(read("app/complex/[id]/ComplexRail.tsx"));
-  assert.match(rail, /\{pairs\.length > 0 && \(\s*<section className="card rise-in-2 rounded-2xl px-4 py-3\.5" aria-label="단지 비교">\s*<ComplexPairChips pairs=\{pairs\} \/>/);
+  assert.match(rail, /\{\(nearby\.length > 0 \|\| pairs\.length > 0\) && \(/);
+  assert.match(rail, /<ComplexNearby nearby=\{nearby\} pairs=\{pairs\} label=\{nearbyLabel\} max=\{5\} dense \/>/);
 });
 
 test("홈 — 지역 동향 상태 줄은 사실 낱말", () => {

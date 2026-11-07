@@ -331,7 +331,8 @@ export function HeaderSearch() {
       {/* 폭 실측(2026-08-16 캡처): w-[200px]에서 입력부 가용폭이 ~125px 인데
           플레이스홀더가 ~150px 라 "검색"이 글자 중간에서 잘렸다. 문구가 온전히
           들어가는 폭으로 넓히고, 그래도 좁아지는 상황은 말줄임(…)으로 접는다. */}
-      <div className="field-focus flex w-[232px] items-center gap-2 rounded-xl bg-[var(--glass-bg)] px-3.5 py-2 t-body text-text-3 xl:w-[252px]">
+      {/* [1108] lg 232 → 180px(대분류 7칸 가로 예산 · Header.tsx 주석) — 입력부가 좁아지면 플레이스홀더는 말줄임. xl 252 그대로 */}
+      <div className="field-focus flex w-[180px] items-center gap-2 rounded-xl bg-[var(--glass-bg)] px-3 py-2 t-body text-text-3 xl:w-[252px] xl:px-3.5">
         <span aria-hidden>⌕</span>
         <span className="relative min-w-0 flex-1">
         <input

@@ -2,7 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { AI_TOOL_IDS, CORE_AI_TOOL_IDS } from "../../lib/ai/ai-tools.ts";
+import { AI_TOOL_IDS, CORE_AI_TOOL_IDS, RETIRED_AI_TOOLS } from "../../lib/ai/ai-tools.ts";
 import { TOOL_IDENTITIES } from "../../lib/ai/tool-identity.ts";
 import { sparklinePath } from "../../app/analysis/sparkline-path.ts";
 import {
@@ -56,13 +56,15 @@ test("UI-02 — 제목은 각 목록 안에서도 유일하다", () => {
   assert.equal(new Set(hub).size, hub.length, "허브 도구 제목 중복");
 });
 
-test("UI-03 — 워크벤치는 CORE + MORE 로 정확히 한 번씩 덮인다", () => {
+test("UI-03 → [1109] 워크벤치는 살아 있는 4종(CORE)만 — MORE 는 비었고 나머지 8종은 통합 주소표에 있다", () => {
   const all = [...WORKBENCH_CORE, ...WORKBENCH_MORE];
-  assert.equal(all.length, AI_TOOL_IDS.length);
-  assert.equal(new Set(all).size, all.length, "중복 노출");
-  assert.deepEqual([...all].sort(), [...AI_TOOL_IDS].sort(), "누락된 도구");
+  assert.equal(all.length, CORE_AI_TOOL_IDS.length);
+  assert.equal(WORKBENCH_MORE.length, 0);
   assert.deepEqual([...WORKBENCH_CORE], [...CORE_AI_TOOL_IDS]);
-  assert.equal(AI_TOOL_COUNT, AI_TOOL_IDS.length);
+  assert.equal(AI_TOOL_COUNT, CORE_AI_TOOL_IDS.length);
+  /* 12종 = 살아 있는 4 + 통합 8 — 빠지는 도구 없음 */
+  const retired = Object.keys(RETIRED_AI_TOOLS);
+  assert.deepEqual([...WORKBENCH_CORE, ...retired].sort(), [...AI_TOOL_IDS].sort());
 });
 
 test("UI-06 — 카드 아이콘 이름이 전부 Icon.tsx 에 실존한다", () => {
@@ -89,12 +91,14 @@ test("UI-06 — 이모지 아이콘이 카탈로그에 남아 있지 않다", ()
   }
 });
 
-test("UI-04 — 실데이터 도구와 예시 계산 도구가 완전히 갈린다", () => {
-  assert.ok(SIM_TOOLS.length > 0 && LIVE_TOOLS.length > 0);
-  assert.ok(SIM_TOOLS.every((t) => t.sim === true));
+test("UI-04 → [1109] 예시 계산 구역 없음 — 시나리오(sim 표식)는 지역 시세 표의 한 줄 · 설명이 예시임을 말한다", () => {
+  assert.ok(SIM_TOOLS.length === 1 && LIVE_TOOLS.length > 0);
+  assert.equal(SIM_TOOLS[0].href, "/analysis/scenario");
+  assert.match(SIM_TOOLS[0].desc, /예시/);
   assert.ok(LIVE_TOOLS.every((t) => !t.sim));
   assert.equal(SIM_TOOLS.length + LIVE_TOOLS.length, HUB_TOOLS.length);
-  assert.equal(MARKET_LIVE.length + RECORD_LIVE.length, LIVE_TOOLS.length);
+  assert.equal(MARKET_LIVE.length + RECORD_LIVE.length, HUB_TOOLS.length, "지역 시세 표가 시나리오까지 품는다");
+  assert.ok(!HUB_TOOLS.some((t) => t.href === "/analysis/portfolio"), "자산 배분 시뮬레이터는 지웠다(→ /calculator)");
 });
 
 test("UI-01 — 모든 도구가 계열 3개 중 하나에 속하고 href 는 유일하다", () => {

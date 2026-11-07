@@ -76,7 +76,8 @@ test("C3 화면 제목 하나의 단계 — h1 은 t-title", () => {
 
 test("C4 헤더 '노트 쓰기' — 한 줄 고정 · 줄지 않음", () => {
   const h = read("app/components/Header.tsx");
-  assert.match(h, /className="btn-outline btn-cta press hidden shrink-0 whitespace-nowrap px-4 py-\[9px\] t-body/);
+  /* [1108] md 좌우 패딩 12px · lg 16px(대분류 7칸 가로 예산) — 한 줄 고정(whitespace-nowrap · shrink-0)은 그대로 */
+  assert.match(h, /className="btn-outline btn-cta press hidden shrink-0 whitespace-nowrap px-3 py-\[9px\] t-body[^"]*lg:px-4"/);
 });
 
 test("C5 푸터 — 묶음 4개 · 링크·목적지 그대로 · 사업자 고지·수익 보장 문구는 보인다", () => {
@@ -85,10 +86,10 @@ test("C5 푸터 — 묶음 4개 · 링크·목적지 그대로 · 사업자 고�
   for (const g of ['{ id: "service", title: "서비스" }', '{ id: "data", title: "데이터" }', '{ id: "help", title: "회사 · 고객" }', '{ id: "policy", title: "약관 · 정책" }']) {
     assert.ok(f.includes(g), g);
   }
-  /* 링크 24개(1094 동별 실거래 추가) 모두 묶음이 있다 */
+  /* 링크 18개([1108] 24 → 18 — 여섯은 상단 메뉴 하위로) 모두 묶음이 있다 */
   const links = f.match(/\{ label: "[^"]+", href: "[^"]+", bold: (true|false), group: "(service|data|help|policy)" \}/g) ?? [];
-  assert.equal(links.length, 24);
-  for (const href of ["/legal/terms", "/legal/privacy", "/subscription", "/subscription/payment-methods", "/support", "/imjang", "/tx", "/dong", "/analysis/temperature", "/developers"]) {
+  assert.equal(links.length, 18);
+  for (const href of ["/legal/terms", "/legal/privacy", "/subscription", "/subscription/payment-methods", "/support", "/imjang", "/developers"]) {
     assert.ok(f.includes(`href: "${href}"`), href);
   }
   /* 개인정보처리방침은 여전히 굵게 */

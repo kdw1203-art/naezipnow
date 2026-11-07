@@ -288,7 +288,9 @@ test("[1024] 단지 상세 — 시안 섹션 순서·흰 머리·번들 규칙(�
     "<MgmtFeeCard",
     "<ComplexNearbyPoi",
     "<ComplexHubTabs",
-    "<ComplexNotesNewsAi",
+    /* [1108] <ComplexNotesNewsAi → 기록 칩 줄 + 관련 기사 */
+    "<ComplexRecordsSection",
+    "<ComplexRelatedNews",
     'id="nearby-complexes"',
     "<ComplexFactsCard",
     "<ComplexRail",
@@ -340,7 +342,8 @@ test("[1024] 단지 상세 부품 — 램프 유틸만(text-[px] 없음) · 흰 
     assert.doesNotMatch(s, /font-extrabold|font-black/, `${f}: 굵기 800`);
     assert.doesNotMatch(s, /rounded(?:-[a-z]{1,2})?-\[\d+px\]/, `${f}: 임의 반경`);
   }
-  assert.match(code("app/complex/[id]/ComplexRail.tsx"), /divide-y p-0" data-tone="plain"/);
+  /* [1108] 레일의 인근 단지 목록은 ComplexNearby 조각(같은 plain 톤) */
+  assert.match(code("app/complex/[id]/ComplexNearby.tsx"), /divide-y p-0" data-tone="plain"/);
   assert.match(code("app/complex/[id]/ComplexNearbyPoi.tsx"), /data-tone="plain"/);
   const mgmt = code("app/complex/[id]/MgmtFeeCard.tsx");
   assert.match(mgmt, /getComplexMgmtFeeSummary\(kaptCode\)/);

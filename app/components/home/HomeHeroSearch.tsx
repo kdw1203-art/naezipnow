@@ -79,11 +79,14 @@ const searchHref = (k: string) => `/search?q=${encodeURIComponent(k)}`;
 export function HomeHeroSearch({
   regionChips = [],
   coverage,
+  onDark = false,
   shell,
 }: {
   regionChips?: HeroRegionChip[];
   /** [963] 커버리지 한 줄(서버 컴포넌트)을 칩 행 **안에** 받는다 — 아래 §칩 행 주석 참조 */
   coverage?: ReactNode;
+  /** [1108] 네이비 검색 띠 위 — 칩 줄의 글자("바로 보기")만 한지 톤으로(칩 · 검색칸은 흰 면이라 그대로) */
+  onDark?: boolean;
   /** [968 · 8] 어느 벌인지 — 안 보이는 벌은 타이머·조회·리스너를 시작하지 않는다 */
   shell?: Shell;
 }) {
@@ -398,7 +401,7 @@ export function HomeHeroSearch({
             <>
               {/* [950] "열린 지역 · 수요 순 확장 중" 은 전국 218개 시군구를 다루는 지금과
                   맞지 않는 문구였다. 바로 눌러 볼 수 있는 지역(시세 카드와 같은 곳)만 보인다. */}
-              <span className="t-sub shrink-0 font-semibold text-text-3 max-md:hidden">바로 보기</span>
+              <span className={`t-sub shrink-0 font-semibold max-md:hidden ${onDark ? "text-on-dark-muted" : "text-text-3"}`}>바로 보기</span>
               {regionChips.map((r) => (
                 <Link
                   key={r.label}

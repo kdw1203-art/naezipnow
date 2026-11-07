@@ -133,12 +133,13 @@ import { ComplexNearbyPoi } from "./ComplexNearbyPoi";
 import { KakaoShareButton } from "@/app/components/KakaoShareButton";
 import { dongPath } from "@/lib/dong/format";
 import { loadComplexPairLinks } from "@/lib/dong/landing";
-import { ComplexPairChips } from "./ComplexPairChips";
 import { complexHrefFromNames } from "@/lib/seo/complex-slug";
 import { map3dPath, map3dSupported } from "@/lib/map3d/geo";
 import { ComplexReadMore } from "./ComplexReadMore";
 import { ShareLinkButton } from "@/app/components/ShareLinkButton";
-import { ComplexNotesNewsAi } from "./ComplexNotesNewsAi";
+import { ComplexRecordsSection } from "./ComplexRecordsSection";
+import { ComplexRelatedNews } from "./ComplexRelatedNews";
+import { ComplexNearby } from "./ComplexNearby";
 /* [1008 · Q] 브리핑 본체는 누를 때 받는다(번들 상쇄) · 호가 점검 펼침 버튼 */
 import { AskingCheckToggle } from "./AskingCheckToggle";
 import { SEOUL_BROWSE_REGIONS, buildComplexTxSlug } from "@/lib/market/complex-transactions";
@@ -529,7 +530,8 @@ interface HubView {
   /** 실거래 월별 평균 시계열 (차트용 · 실데이터만) */
   priceSeries: PricePoint[];
   /** 내부 링크 그물(#34) — 같은 동 다른 단지 (0건이면 섹션 미표시) */
-  nearby: { id: string; name: string; meta: string }[];
+  /** [1108] recent = 최근 6개월 매매 신고 건수(매트뷰 열 · 없으면 null) — 인근 단지 줄의 사실 하나 */
+  nearby: { id: string; name: string; meta: string; recent: number | null }[];
   /** 국토부 실거래 이력 상세(/complex/tx) — 동일 단지명 매칭 시에만 링크 */
   txHref: string | null;
   /** 지도 좌표 — 거리뷰·JSON-LD geo 용 (목업 폴백은 없음 → 거리뷰 자동 숨김) */
@@ -616,6 +618,7 @@ function toNearby(rows: ComplexRow[], selfId: string, selfCanonicalId?: string):
         id: c.id,
         name: c.name,
         meta: parts.length > 0 ? parts.join(" · ") : axisRegionName(c.city, c.district),
+        recent: typeof c.recent_trade_count === "number" ? c.recent_trade_count : null,
       };
     });
 }
@@ -1497,7 +1500,7 @@ export default async function ComplexHubPage({
     return `/notes/new?${params.toString()}`;
   })();
   /* [992 · A1] 하단 바 세 번째 칸: 전문가 상담(/town/experts, 보관) → 이 단지 AI 분석.
-     ComplexNotesNewsAi 의 analysisHref 와 같은 목적지(분석 허브가 complexId 를 받는다). */
+     다요인 분석 아래 "이 단지 AI 분석 받기"([1108] · 예전 ComplexNotesNewsAi)와 같은 목적지(분석 허브가 complexId 를 받는다). */
   const analysisHref = `/analysis?complexId=${encodeURIComponent(complexId)}`;
 
   /* [1008 · Q] 호가 점검 — 실거래가 있거나(없음이 확인되지 않았거나) 할 때만 입구를 둔다.
@@ -1748,6 +1751,8 @@ export default async function ComplexHubPage({
             total={txFailed ? null : dealsForV2.length}
             allHref={`${rowForFacts ? complexCanonicalPath(rowForFacts) : `/complex/${encodeURIComponent(complexId)}`}?tab=price`}
             failed={txFailed}
+            /* [1108] 국토부 실거래 이력 — 표 아래 링크 한 줄(예전엔 본문 중간의 카드 한 장) */
+            historyHref={v.txHref ?? null}
           />
 
           {/* [1006 · E] 인용 가능한 요약(GEO) — 서버 HTML 에 "어디의 무엇이 언제 기준 얼마"가 완결 문장으로 있어야 AI 검색이
@@ -1809,19 +1814,6 @@ export default async function ComplexHubPage({
             </section>
           )}
 
-          {/* 국토부 실거래 이력 상세 — 동일 단지명 매칭 시에만 노출 */}
-          {v.txHref && (
-            <div className="rise-in-1 mt-3">
-              <Link
-                href={v.txHref}
-                className="card tile flex items-center justify-between rounded-xl px-4 py-3 max-md:px-3.5 max-md:py-2.5"
-              >
-                <span className="t-body font-bold text-ink">{v.name} 국토부 실거래 이력 보기</span>
-                <span className="t-body font-bold text-primary">→</span>
-              </Link>
-            </div>
-          )}
-
           {/* 데이터 신선도 캡션(#21) — market_ingest_log 최근 성공 기준 */}
           <MarketFreshnessLine label={freshness} className="rise-in-1 mt-1.5" />
 
@@ -1833,6 +1825,8 @@ export default async function ComplexHubPage({
             regionName={axisRegionName(v.city, v.dong)}
             series={trend ? { yms: trend.yms, counts: trend.all.counts, mainValues: trend.types[0]?.values } : null}
           />
+          {/* [1108] 이 단지 AI 입구는 위 결과 요약 머리의 "이 단지 AI 종합 진단 받기 ›"(ComplexInsightView) 하나 — 예전엔 아래 임장노트 카드 안
+              "AI 분석" 소제목 + 단추가 하나 더 섰다(AI 진입 12 → 3 · 화면당 입구 하나). 폰 하단 바의 AI 칸(analysisHref)은 그대로. */}
 
           {/* 요약·이야기·매물·실거래·내 기록 탭 — [1024] 그래프·최근 실거래 목록은 위 본문이 맡는다(priceChart null · summaryDeals false).
               실거래 탭(면적대 필터·정렬·월별 표·계산기)은 그대로. */}
@@ -1864,69 +1858,55 @@ export default async function ComplexHubPage({
             />
           </div>
 
-          {/* 이 단지 임장노트 · AI 분석 · 관련 기사 */}
-          <ComplexNotesNewsAi complexId={complexId} name={v.name} region={v.dong} />
-
-          {/* 인근 단지(#34) — lg 에서는 오른쪽 레일이 같은 목록을 보인다(폰·태블릿만). [995] #nearby-complexes 앵커 */}
-          {v.nearby.length > 0 && (
-            <section id="nearby-complexes" className="cv-auto rise-in-5 mt-6 scroll-mt-24 max-md:mt-3 lg:hidden">
-              <div className="mb-2 flex items-center justify-between px-1">
-                <h2 className="t-section text-ink">인근 단지</h2>
-                <span className="t-sub text-text-3">
-                  {v.nearbyLabel} · {v.nearby.length}곳
-                </span>
-              </div>
-              <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
-                {v.nearby.map((n) => (
-                  <Link
-                    key={n.id}
-                    href={complexHrefFromId(n.id)}
-                    className="card tile rounded-2xl px-3.5 py-3 max-md:px-3 max-md:py-2.5"
-                  >
-                    <div className="truncate t-body font-bold text-ink">{n.name}</div>
-                    <div className="mt-0.5 truncate t-sub text-text-3">{n.meta}</div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          )}
-          {/* [1095] 단지 비교 칩 — 인근 단지와 독립(인근 단지가 비어도 선다 · lg 는 레일) */}
-          {pairLinks.length > 0 && (
-            <section className="cv-auto rise-in-5 mt-4 max-md:mt-3 lg:hidden" aria-label="단지 비교">
-              <ComplexPairChips pairs={pairLinks} />
-            </section>
-          )}
-
-          {/* [1083] 읽을거리 · 용어 — 가이드 4·용어 4(서버 조각) */}
-          <ComplexReadMore />
-
-          {/* 거주민 후기 — 실단지(정규 name-id 로 해독되는 단지)에만. [1058 · C2] 키는 socialId(canonical_id) */}
-          {socialOk && (
-            <section className="cv-auto rise-in-5 mt-6 max-md:mt-3">
-              <ComplexReviewsLazy complexId={socialId} complexName={v.name} />
-            </section>
-          )}
-
-          {/* [1057 · B8] 단지 토론 — 수도권 토론 지역의 해독 가능한 단지만(서버 판정 · 아니면 자리 자체가 없다) */}
-          {talkScope && (
-            <section id="complex-talk" aria-labelledby="complex-talk-title" className="cv-auto rise-in-5 mt-6 scroll-mt-24 max-md:mt-3">
-              <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2 px-1">
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                  <h2 id="complex-talk-title" className="t-section text-ink">
-                    단지 토론
-                  </h2>
-                  <span className="t-caption text-text-3">이 단지 토론 · 새 글 30초마다</span>
-                </div>
-                <Link href={`/talk?region=${encodeURIComponent(talkScope.regionId)}`} className="tap-line t-sub font-bold text-primary no-underline">
-                  {talkScope.regionName} 토론 ›
-                </Link>
-              </div>
-              <ComplexTalkLazy scope={talkScope} />
-            </section>
-          )}
-
-          {/* [#94 잔여] 전월세 실거래 이력(월별 표) */}
+          {/* [1108 · 단지 상세 A안] 아래쪽 묶음 순서 — 실거래(위) → 분석(다요인 · AI 입구 하나) → 전월세 → 기록(임장노트 · 후기 · 토론 한 자리)
+              → 동네(관련 기사 · 인근 단지+비교 · 정비사업 · 입주물량 · 전문가) → 읽을거리 → 출처. 예전엔 임장노트 카드 · 거주민 후기 ·
+              단지 토론이 세 머리로 흩어져 각각 "없음"으로 비었고, 인근 단지와 비교 칩이 같은 상대 단지를 두 번 말했다. */}
+          {/* [#94 잔여] 전월세 실거래 이력(월별 표) — 실거래 묶음의 끝 */}
           <ComplexRentSection region={region} name={v.name} />
+
+          {/* 기록 — 임장노트(서버 HTML) · 거주민 후기 · 단지 토론(지연 조각)을 칩 한 줄로.
+              후기는 실단지(정규 name-id 로 해독되는 단지)에만([1058 · C2] 키는 socialId) · 토론은 수도권 토론 지역의 해독 가능한 단지만([1057 · B8]) */}
+          <ComplexRecordsSection
+            complexId={complexId}
+            name={v.name}
+            region={v.dong}
+            reviews={socialOk ? <ComplexReviewsLazy complexId={socialId} complexName={v.name} /> : null}
+            talk={
+              talkScope ? (
+                <div id="complex-talk" className="flex scroll-mt-24 flex-col gap-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 px-1">
+                    <span className="t-caption text-text-3">이 단지 토론 · 새 글 30초마다</span>
+                    <Link href={`/talk?region=${encodeURIComponent(talkScope.regionId)}`} className="tap-line t-sub font-bold text-primary no-underline">
+                      {talkScope.regionName} 토론 ›
+                    </Link>
+                  </div>
+                  <ComplexTalkLazy scope={talkScope} />
+                </div>
+              ) : null
+            }
+          />
+
+          {/* 동네 — 관련 기사(자동수집 · 1044 분리 유지) */}
+          <ComplexRelatedNews name={v.name} region={v.dong} />
+
+          {/* 인근 단지 + 단지 비교(#34 · 1095 → 1108 한 목록) — lg 에서는 오른쪽 레일이 같은 조각을 보인다(폰·태블릿만). [995] #nearby-complexes 앵커 */}
+          {(v.nearby.length > 0 || pairLinks.length > 0) && (
+            <section id="nearby-complexes" className="cv-auto rise-in-5 mt-6 scroll-mt-24 max-md:mt-3 lg:hidden" aria-labelledby="nearby-complexes-title">
+              <div className="mb-2 flex items-center justify-between px-1">
+                <h2 id="nearby-complexes-title" className="t-section text-ink">
+                  인근 단지
+                </h2>
+                {v.nearby.length > 0 && (
+                  <span className="t-sub text-text-3">
+                    {v.nearbyLabel} · {v.nearby.length}곳
+                  </span>
+                )}
+              </div>
+              <div className="card rounded-2xl px-4 py-3.5 max-md:px-3.5 max-md:py-2.5">
+                <ComplexNearby nearby={v.nearby} pairs={pairLinks} label={v.nearbyLabel} />
+              </div>
+            </section>
+          )}
 
           {/* [1047] 위치 · 주변 지도 — 폰·태블릿(데스크톱은 오른쪽 레일 맨 위). 숨은 쪽은 지도를 만들지 않는다(media) */}
           {typeof v.lat === "number" && typeof v.lng === "number" && (
@@ -1940,6 +1920,9 @@ export default async function ComplexHubPage({
           <UpcomingSupply area={v.dong} city={v.city} />
           {/* [1047] 이 지역 인증 전문가 — 승인된 사람이 없으면 그리지 않는다 */}
           <NearbyExperts sigungu={v.dong} city={v.city} />
+
+          {/* [1083] 읽을거리 · 용어 — 가이드 2 · 용어 2([1108] 4 · 4 → 2 · 2 — 단지 화면 끝의 안내 링크는 둘씩이면 길이 난다) */}
+          <ComplexReadMore />
 
           {/* [1015 · 규칙 J] 페이지 맨 끝 "데이터 출처" 접힘 하나 */}
           {(() => {

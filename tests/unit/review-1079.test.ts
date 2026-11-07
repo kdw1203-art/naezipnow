@@ -98,7 +98,8 @@ test("S5 폰 탭 — 손수 만든 알약 40px · 텍스트 단추 .tap-line · 
   assert.match(r, /press ml-auto inline-flex min-h-10 items-center gap-1 rounded-full border border-line bg-surface px-3 py-2 t-sub font-semibold text-text-2 md:min-h-9/);
   assert.match(read("app/notes/new/NoteMapPick.tsx"), /className="tap-line shrink-0 py-\[5px\] t-sub font-bold text-primary"/);
   assert.match(read("app/notes/new/NoteForm.tsx"), /className="tap-line shrink-0 py-1 t-sub font-bold text-primary"\s*>\s*지금 시간대/);
-  assert.match(read("app/page.tsx"), /className="tap-line w-fit py-1\.5 t-sub font-bold text-ai-accent no-underline"\s*>\s*정리된 공개 노트 보기/);
+  /* [1108] 홈 AI 입구 판("정리된 공개 노트 보기")은 걷혔다 — 그 줄의 tap-line 검사는 뺀다 */
+  assert.doesNotMatch(read("app/page.tsx"), /정리된 공개 노트 보기/);
   const f = read("app/forgot-password/page.tsx");
   assert.match(f, /<Link href=\{loginHref\} className="-mr-\[12px\] -mt-\[12px\] inline-flex h-10 w-10 items-center justify-center text-\[15px\] text-text-3" aria-label="닫기">/);
   assert.match(f, /<Link href=\{loginHref\} className="tap-line font-bold text-primary">\s*로그인/);

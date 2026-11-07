@@ -109,6 +109,9 @@ export interface ComplexRow {
   manage_type?: string | null;
   /** [1024] 분양형태("분양"·"임대") — K-apt metadata.saleType */
   sale_type?: string | null;
+  /** [1108] 최근 6개월 매매 신고 건수(해제 제외) — 단지 통계 매트뷰(complex_tx_stats_base.recent_trade_count)로 만든 행에만.
+   *  단지 상세 "인근 단지" 줄의 사실 하나. 다른 생성자(대장 · 지오코드)에는 없다(선택 필드). */
+  recent_trade_count?: number | null;
 }
 
 export interface ComplexTransactionRow {
@@ -244,10 +247,12 @@ function splitRegion(region: string): { city: string; district: string } {
 function toComplexRow(
   region: string,
   name: string,
-  sample: { address?: string | null; build_year?: number | null } = {},
+  sample: { address?: string | null; build_year?: number | null; recent_trade_count?: number | null } = {},
 ): ComplexRow {
   const { city, district } = splitRegion(region);
   return {
+    /* [1108] 매트뷰 행이 준 최근 6개월 건수만 싣는다 — 없으면 키 자체를 두지 않는다(옛 호출자의 deepEqual 을 깨지 않게) */
+    ...(typeof sample.recent_trade_count === "number" ? { recent_trade_count: sample.recent_trade_count } : {}),
     id: encodeComplexId(region, name),
     /* canonical 은 여기서 한 번만 정해지고 이후 누구도 덮어쓰지 않는다.
        (id 는 kapt 매칭 시 바뀐다 — 위 canonical_id 주석 참고) */
@@ -1039,7 +1044,8 @@ async function listComplexesInStatsBase(
 
   let q = sb
     .from("complex_tx_stats_base")
-    .select("complex_name, region_name, address, build_year")
+    /* [1108] recent_trade_count — 같은 행의 열 하나(인근 단지 줄 "6개월 N건"). 비용 0 */
+    .select("complex_name, region_name, address, build_year, recent_trade_count")
     .in("region_name", hit.slice(0, REGION_IN_MAX));
   /* [995] 읍면동 필터 — 부분 일치라 "잠실동" 이 "신잠실동" 에도 걸릴 수 있지만
      region_name 으로 이미 같은 구 안이라 옆 단지 추천으로 틀리진 않는다. */
@@ -1060,6 +1066,7 @@ async function listComplexesInStatsBase(
           region_name: string;
           address: string | null;
           build_year: number | null;
+          recent_trade_count?: number | string | null;
         }[]
       | null) ?? [];
   const out: ComplexRow[] = [];
@@ -1069,7 +1076,15 @@ async function listComplexesInStatsBase(
     const key = `${r.region_name}${SEP}${r.complex_name}`;
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push(toComplexRow(r.region_name, r.complex_name, r));
+    /* bigint 열은 문자열로 올 수 있다 — 숫자로 */
+    const recent = r.recent_trade_count == null ? null : Number(r.recent_trade_count);
+    out.push(
+      toComplexRow(r.region_name, r.complex_name, {
+        address: r.address,
+        build_year: r.build_year,
+        ...(recent != null && Number.isFinite(recent) ? { recent_trade_count: recent } : {}),
+      }),
+    );
   }
   return out;
 }

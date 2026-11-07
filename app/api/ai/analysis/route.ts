@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { isAiAnalysisToolId, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
+import { isAiAnalysisToolId, isRetiredAiToolId, RETIRED_AI_TOOLS, type AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { detectShellFromUserAgent } from "@/lib/platform-shell";
 import {
   analysisReferenceData,
@@ -167,6 +167,10 @@ export async function POST(req: Request) {
   const tool = body.tool;
   if (!isAiAnalysisToolId(tool as string)) {
     return NextResponse.json({ error: "유효하지 않은 도구입니다." }, { status: 400 });
+  }
+  /* [1109 · AI 분석 통폐합] 통합된 8종은 더 실행하지 않는다 — 화면이 308 로 보내므로 여기 닿는 건 옛 북마크 · 스크립트뿐. 갈 곳을 적어 준다 */
+  if (isRetiredAiToolId(tool as string)) {
+    return NextResponse.json({ error: "통합된 도구입니다.", redirectTo: RETIRED_AI_TOOLS[tool as keyof typeof RETIRED_AI_TOOLS] }, { status: 410 });
   }
 
   const tid = tool as AiAnalysisToolId;

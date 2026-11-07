@@ -86,8 +86,9 @@ test("AI 분석 — 온도 지도는 네 값만(slimTemperatureLatest) · 비교
   assert.doesNotMatch(client, /\bTemperatureLatest\b(?!Slim)/);
   const card = strip(read("app/analysis/temperature/TempRegionCard.tsx"));
   assert.match(card, /current: TemperaturePoint;\s*previous: Pick<TemperatureSnapshot, "score"> \| null;/);
-  assert.equal(compareActionLinks(["a", "b", "c", "d", "e"])[0]?.label, "AI 비교 해석 · 앞 3곳");
-  assert.equal(compareActionLinks(["a", "b"])[0]?.label, "AI 비교 해석");
+  /* [1109] AI 비교 도구는 비교 표로 통합 — 링크 자체가 없다(알림 · 지도만) */
+  assert.deepEqual(compareActionLinks(["a", "b", "c", "d", "e"]).map((l) => l.href), ["/notifications", "/map"]);
+  assert.deepEqual(compareActionLinks(["a", "b"]).map((l) => l.href), ["/notifications", "/map"]);
 });
 
 test("설정 — 알림 설정 훅은 화면에 한 벌 · 탭은 props 로 받는다", () => {

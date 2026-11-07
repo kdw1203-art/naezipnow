@@ -280,5 +280,4 @@ export const HUB_GLYPH: Record<string, ToolGlyphId> = {
   "/notes": "notebook",
   "/analysis/compare": "table",
   "/analysis/scenario": "rate",
-  "/analysis/portfolio": "donut",
 };

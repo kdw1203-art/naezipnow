@@ -45,10 +45,12 @@ test("검색 — 동 줄은 두 갈래(단지 보기 · 실거래 ›) · 주소
   assert.match(read("lib/dong/format.ts"), /export function dongPath\(region: string, dong: string\): string \{\s*return `\/dong\/\$\{encodeURIComponent\(regionSlugOf\(region\)\)\}\/\$\{encodeURIComponent\(dong\)\}`;/);
 });
 
-test("푸터 — 데이터 묶음에 동별 실거래(/dong) · 묶음 4개 그대로", () => {
+test("동별 실거래(/dong) 입구 — [1108] 푸터에서 상단 메뉴 실거래 하위로(실거래 구간 바로 다음) · 푸터 묶음 4개 그대로", () => {
+  const nav = read("app/components/nav-data.ts");
+  assert.match(nav, /\{ label: "실거래 구간", href: "\/tx" \},\s*\{ label: "동별 실거래", href: "\/dong" \}/);
   const f = read("app/components/Footer.tsx");
-  assert.match(f, /\{ label: "동별 실거래", href: "\/dong", bold: false, group: "data" \}/);
-  assert.match(f, /\{ label: "실거래 구간", href: "\/tx", bold: false, group: "data" \},\s*(\/\*[\s\S]*?\*\/\s*)?\{ label: "동별 실거래"/);
+  assert.doesNotMatch(f, /href: "\/dong"/);
+  assert.match(f, /const LINK_GROUPS = \[/);
 });
 
 test("문구 — 공개 화면의 빈 상태 · 실패 안내는 사실 낱말(권유 · 구어 없음)", () => {
