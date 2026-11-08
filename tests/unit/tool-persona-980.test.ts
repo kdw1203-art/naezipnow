@@ -155,8 +155,9 @@ test("다음 행동은 자기 자신으로 보내지 않는다", () => {
   }
 });
 
-test("지역·시장 4종은 경로로도 찾을 수 있다", () => {
-  assert.equal(Object.keys(MARKET_TOOL_BY_HREF).length, 4);
+test("지역·시장 화면은 경로로도 찾을 수 있다 — [1110] 면적대별(/analysis/price)은 지워 셋", () => {
+  assert.equal(Object.keys(MARKET_TOOL_BY_HREF).length, 3);
+  assert.equal(marketPersonaByHref("/analysis/price"), null);
   for (const [href, id] of Object.entries(MARKET_TOOL_BY_HREF)) {
     assert.equal(marketPersonaByHref(href)?.id, id);
   }
@@ -220,7 +221,8 @@ test("[1028] premise 16종 — 명사형 사실 한 줄: 해요체·합니다체
   assert.equal(TOOL_PERSONAS["ai-inspection"].premise, "같은 지역 거래 많은 단지로 하루 임장 순서");
   assert.equal(TOOL_PERSONAS["ai-timing"].premise, "가격 흐름 · 거래 열기 · 입주 물량 신호 3개");
   assert.equal(TOOL_PERSONAS["market:price"].premise, "면적대별 실거래가 · 호가 제외");
-  assert.equal(TOOL_PERSONAS["market:timing"].premise, "12개월 매매가격지수 · 거래량 흐름");
+  /* [1110] /analysis/timing = 지역 시세 분석(고르는 자리) — 지수 · 거래량 흐름은 지역 종합 화면의 시세 흐름 카드 */
+  assert.equal(TOOL_PERSONAS["market:timing"].premise, "시 · 구 · 동 검색 → 지역 종합 화면");
   assert.equal(TOOL_PERSONAS["market:temperature"].premise, "매주 기록한 0~100점 추세");
   assert.equal(TOOL_PERSONAS["market:gap"].premise, "시군구별 전세가율 · 갭 순위");
 });

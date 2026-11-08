@@ -16,10 +16,8 @@
 import type { AiAnalysisToolId } from "@/lib/ai/ai-tools";
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
 import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
-import { WORKBENCH_CORE, WORKBENCH_MORE, WORKBENCH_ICONS } from "./tool-catalog";
+import { WORKBENCH_CORE, WORKBENCH_ICONS } from "./tool-catalog";
 import { WORKBENCH_GLYPH, type ToolGlyphId } from "./ToolGlyph";
-import { SIGNAL_FACTOR_META } from "@/lib/signals/engine";
-import { stageStep } from "@/lib/ai/tool-stage-steps";
 
 export type WorkbenchCardDto = {
   id: AiAnalysisToolId;
@@ -37,15 +35,8 @@ export type WorkbenchCardDto = {
   vars: Record<string, string>;
 };
 
-/** [1050 · 펼침] 펼치면 보이는 분석 순서 4단계 — 실행 중 문구(tool-persona runStages)를 단계 이름으로(stageStep).
-    로딩 화면과 같은 순서 · 같은 점검이다(없는 단계를 지어내지 않는다). 서버 조각(hub-tool-detail)이 그린다 */
-export function workbenchSteps(id: AiAnalysisToolId): string[] {
-  return TOOL_PERSONAS[id].runStages.map(stageStep).filter(Boolean);
-}
-
-/** [1050 · 펼침] 함께 보는 시장 신호(1048 다요인 신호 8가지) — 단지·지역이 있는 실행에 붙는다(app/api/ai/analysis signalsForInput) */
-export const WORKBENCH_SIGNAL_LABELS: readonly string[] = Object.values(SIGNAL_FACTOR_META).map((m) => m.label);
-
+/* [1110 · AI 분석 2차 통폐합] 펼침 칸(분석 순서 4단계 · 시장 신호 8칩 — workbenchSteps · WORKBENCH_SIGNAL_LABELS · hub-tool-detail)은
+   걷었다(소유자 2026-11-07 "1, 2 같은 문구는 필요없어"). 표의 줄은 바로 도구를 연다(hub-tiers). */
 
 function build(id: AiAnalysisToolId): WorkbenchCardDto {
   const idn = TOOL_IDENTITIES[id];
@@ -66,12 +57,9 @@ function build(id: AiAnalysisToolId): WorkbenchCardDto {
   };
 }
 
-/** 자주 쓰는 4개(앞) + 나머지 8개(접힘) — 순서는 tool-catalog 가 정한다 */
-export function workbenchCardData(): { core: WorkbenchCardDto[]; more: WorkbenchCardDto[] } {
-  return {
-    core: WORKBENCH_CORE.map(build),
-    more: WORKBENCH_MORE.map(build),
-  };
+/** 살아 있는 4종(1109) — 순서는 tool-catalog 가 정한다 */
+export function workbenchCardData(): { core: WorkbenchCardDto[] } {
+  return { core: WORKBENCH_CORE.map(build) };
 }
 
 /** 아이콘 이름은 글리프가 없는 자리의 대비책 — 카드 DTO 밖에서 쓸 일이 있어 남긴다 */

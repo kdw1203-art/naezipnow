@@ -48,8 +48,7 @@ export default function robots(): MetadataRoute.Robots {
           "/payment",
           "/reset-password",
           "/forgot-password",
-          // noIndex 데모·시뮬레이션 (사이트맵에서도 제외)
-          "/analysis/price",
+          // noIndex 데모·시뮬레이션 (사이트맵에서도 제외) — [1110] /analysis/price 는 지웠다(→ /analysis/timing 301)
           "/analysis/scenario",
           // 기계용 엔드포인트 (OG 이미지는 위 allow 로 예외)
           "/api",

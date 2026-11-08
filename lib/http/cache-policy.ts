@@ -127,9 +127,7 @@ export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
   /* 2026-08-10 ISR — region/status/sort 필터는 GroupsClient(클라이언트).
      statusKey(시각 파생)는 builtAtMs 로 하이드레이션 후 재계산. 실측 0행 */
   { path: "/town/groups", sMaxAge: 86_400, swr: 86400 },
-  /* 2026-08-11 ISR — 기본 지역만 프리렌더, 62개 지역 전환은 /api/timing
-     (CDN 1800초) fetch. auctions 삼분할 선례 */
-  /* [1010] 600 → 86400 — 라우트 revalidate 와 같은 눈금. 지역 전환은 /api/timing(CDN 1800초). */
+  /* [1110] 지역 시세 분석(고르는 자리 · 쿼리는 클라이언트만 읽는다) — 라우트 revalidate 86400 과 같은 눈금. 예전 /api/timing 은 지웠다. */
   { path: "/analysis/timing", sMaxAge: 86400, swr: 86400 },
   /* `/town/market` 은 공개 캐시 목록에서 뺐다(2026-07-27). 화면이 아니라
      `/town/groups` 로 넘기는 리다이렉트 스텁이고, searchParams 를 읽어 쿼리를
@@ -153,6 +151,8 @@ export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
   /* /notes — 공개 첫 페이지만 서버 렌더(ISR 300). ?tab=mine(내 노트, 비공개 포함)은
      NotesFeedClient 가 /api/inspection/notes/mine 으로 받는다 — 서버 HTML 에 사용자별 값 없음. */
   { path: "/notes", sMaxAge: 86_400, swr: 86400 },
+  /* [1110] 임장노트 분석(AI 분석 허브의 내 임장노트 묶음 · 에이전트가 온 자리) — 서버 렌더에 사용자별 값 없음(/analysis 와 같은 구조) */
+  { path: "/notes/analysis", sMaxAge: 86_400, swr: 86400 },
   /* /subscription — 비회원 기준 카드·FAQ·JSON-LD(토스 심사가 보는 화면). 로그인 조각은 클라이언트 */
   { path: "/subscription", sMaxAge: 86_400, swr: 86400 },
   { path: "/digest", sMaxAge: 86_400, swr: 86400 },
@@ -199,9 +199,6 @@ export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
      없음). 눈금은 그 revalidate 와 같다. 정적/ISR 이 깨지면 check-cache-policy 가 prerender 대조에서 막는다. */
   { path: "/quiz", sMaxAge: 21600, swr: 86400 },
   { path: "/analysis/compare", ...STATIC_DOC },
-  /* /analysis/price 는 이제 지역 선택(?region=)을 읽는 **동적 라우트**라 prerender
-     되지 않는다 — 공개 캐시 허용 목록에서 뺀다(사용자별 값은 없지만 정적이 아니므로
-     이 목록의 계약을 어긴다). 실거래 집계는 tx-bands 모듈 캐시(10분)로 이미 싸다. */
   /* [1010] 라우트 revalidate 86400 과 눈금을 맞춘다(STATIC_DOC 은 3600). */
   { path: "/analysis/scenario", sMaxAge: 86400, swr: 86400 },
 

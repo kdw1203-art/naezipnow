@@ -148,7 +148,7 @@ export function HomeTodayLine({
       out.push({
         key: "trade",
         text: tradeText,
-        href: "/analysis/price",
+        href: "/analysis/timing",
       });
     if (saleIndex && saleIndex !== "—")
       out.push({

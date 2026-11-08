@@ -31,7 +31,7 @@ test("S1 말투 2차 — 짧은 라벨·제목", () => {
     ["app/notes/new/FieldBriefCard.tsx", ">이 지역 현황<", "지금 이 지역은"],
     ["app/notes/new/FieldBriefCard.tsx", ">이 지역 중점 확인 항목<", ">이 지역에서 특히 볼 것<"],
     ["app/complex/[id]/AiBriefingCard.tsx", ">현장 확인 사항<", "현장에서 확인할 것"],
-    ["app/analysis/temperature/page.tsx", "현재 시장 온도 보기 ›", "지금 이 순간의 시장 온도 보기"],
+    ["app/analysis/temperature/page.tsx", "지역 시세 분석 ›", "지금 이 순간의 시장 온도 보기"], /* [1110] 시세·타이밍 → 지역 시세 분석 */
     ["lib/guides/catalog.ts", 'heading: "전세가율이 높을 때 — 두 가지 해석"', "두 가지 얼굴"],
     ["lib/guides/catalog.ts", '"아파트 임장 체크리스트 — 현장 확인 사항"', "꼭 확인할 것들"],
     ["app/imjang/(index)/page.tsx", "데이터로 확인되지 않는 항목", "데이터로는 알 수 없는 것"],

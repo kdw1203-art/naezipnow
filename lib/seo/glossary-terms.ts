@@ -110,7 +110,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     category: "거래·시세",
     related: ["sijang-ondo"],
     href: "/analysis/timing",
-    hrefLabel: "지역 지수 추세 보기",
+    hrefLabel: "지역 시세 분석에서 지수 추세 보기",
   },
   {
     slug: "sigogonggae",

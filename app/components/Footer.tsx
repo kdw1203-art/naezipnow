@@ -50,6 +50,13 @@ const LEGAL_LINKS = [
   { label: "용어사전", href: "/glossary", bold: false, group: "data" },
   /* N20 — 공개 집계 API 문서. 링크가 없으면 크롤러도 사람도 도달하지 못한다. */
   { label: "공개 API", href: "/developers", bold: false, group: "data" },
+  /* [1110] 상단 메뉴의 "실거래" 대분류를 뺐다(소유자 2026-11-08 "실거래 현황은 지도에서 · 메인 카테고리에서는 제외") — 그 하위에 있던
+     실거래 구간 · 동별 실거래 · 월간 리포트 · 시장 온도 허브 넷은 여기 데이터 묶음으로 돌아온다(1069 · 1094 "끊긴 묶음" 크롤 경로 보존).
+     단지 찾기(/complex/browse) · 단지 비교는 지도 · 홈 · 지역 화면이 잇는다. 푸터 18 → 22. */
+  { label: "실거래 구간", href: "/tx", bold: false, group: "data" },
+  { label: "동별 실거래", href: "/dong", bold: false, group: "data" },
+  { label: "월간 리포트", href: "/reports", bold: false, group: "data" },
+  { label: "시장 온도", href: "/analysis/temperature", bold: false, group: "data" },
 ] as const;
 
 /* [1073 · 전 페이지 공통 틀] 링크 23개가 한 덩어리로 흘러 7줄(폰)·2줄(PC)이었다 — 어디에 무엇이 있는지 훑을 수 없었다.

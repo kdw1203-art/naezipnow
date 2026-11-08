@@ -9,13 +9,16 @@ import { test, expect } from "@playwright/test";
 
 // ---------- 홈 / 전역 내비게이션 ----------
 
-test("1. home renders with GNB labels 임장노트·지도·AI 분석·동네이야기", async ({ page }) => {
+/* [1110] 대분류 여섯 — 임장노트 · 지도 · AI 분석 · 동네 · 뉴스 · 요금제(nav-data). "동네이야기"는 1044 에 "동네"가 됐고,
+   1108 의 "실거래" 대분류는 1110 에 뺐다(실거래 현황은 지도가 머리). 라벨이 바뀌면 이 검사와 nav-data 를 함께 고친다. */
+test("1. home renders with GNB labels 임장노트·지도·AI 분석·동네·뉴스·요금제", async ({ page }) => {
   await page.goto("/");
   const nav = page.locator("header nav");
-  await expect(nav.getByRole("link", { name: "임장노트", exact: true })).toBeVisible();
-  await expect(nav.getByRole("link", { name: "지도", exact: true })).toBeVisible();
-  await expect(nav.getByRole("link", { name: "AI 분석", exact: true })).toBeVisible();
-  await expect(nav.getByRole("link", { name: "동네이야기", exact: true })).toBeVisible();
+  for (const name of ["임장노트", "지도", "AI 분석", "동네", "뉴스", "요금제"]) {
+    await expect(nav.getByRole("link", { name, exact: true })).toBeVisible();
+  }
+  await expect(nav.getByRole("link", { name: "실거래", exact: true })).toHaveCount(0);
+  await expect(nav.getByRole("link", { name: "동네이야기", exact: true })).toHaveCount(0);
 });
 
 test("2. home header has 노트 쓰기 CTA linking to /notes/new", async ({ page }) => {
@@ -25,19 +28,20 @@ test("2. home header has 노트 쓰기 CTA linking to /notes/new", async ({ page
   await expect(cta).toHaveAttribute("href", "/notes/new");
 });
 
-test("3. GNB hover dropdown shows child links (동네이야기 → 임장 모임)", async ({ page }) => {
+test("3. GNB hover dropdown shows child links (동네 → 모임)", async ({ page }) => {
   await page.goto("/");
   const parent = page
     .locator("header nav")
-    .getByRole("link", { name: "동네이야기", exact: true });
+    .getByRole("link", { name: "동네", exact: true });
   await parent.hover();
   /* GNB 드롭다운을 보는 테스트이므로 헤더 안으로 범위를 좁힌다.
      예전에는 페이지 전체에서 "임장 모임" 링크를 찾았는데, 홈 본문에도
      "임장 모임 보기 ›"(예정된 모임이 0건일 때만 렌더)가 있어서 이름이
      부분 일치로 두 개 잡혔다 — strict mode 위반으로 실패했다.
      즉 모임 데이터 유무에 따라 붙었다 떨어졌다 하는 테스트였다. */
+  /* [1108] 하위 라벨은 "모임"(/town/groups) — nav-data 와 글자까지 같게 */
   await expect(
-    page.locator("header nav").getByRole("link", { name: "임장 모임", exact: true }),
+    page.locator("header nav").getByRole("link", { name: "모임", exact: true }),
   ).toBeVisible();
 });
 
@@ -68,7 +72,8 @@ test("7. /notes/compare renders honestly in both states", async ({ page }) => {
      정직한 화면인지 확인한다. */
   await page.goto("/notes/compare");
   await expect(page.getByRole("heading", { level: 1, name: /노트 다회차 비교/ })).toBeVisible();
-  const loginGate = page.getByText("로그인이 필요해요").first();
+  /* [1077] 해요체 걷기 — 비로그인 문구는 "로그인 필요"(사실 낱말). 면책 문구는 그대로 */
+  const loginGate = page.getByText("로그인 필요").first();
   const disclaimer = page.getByText("참고용이며 투자 판단의 책임은 이용자에게").first();
   await expect(loginGate.or(disclaimer)).toBeVisible();
 });
@@ -94,9 +99,8 @@ test("9. /map renders map shell (title + zoom controls, no tile wait)", async ({
 
 test("10. /search renders with search input", async ({ page }) => {
   await page.goto("/search");
-  await expect(
-    page.getByPlaceholder("단지·매물·임장노트·뉴스 통합 검색"),
-  ).toBeVisible();
+  /* [1026d] 검색어 읽기(지역 · 조건) 뒤 안내 문구가 바뀌었다 — 문구 전체 대신 역할(searchbox)과 앞머리("단지·지역")로 본다 */
+  await expect(page.getByPlaceholder(/^단지·지역/)).toBeVisible();
 });
 
 // ---------- AI 분석 ----------
@@ -141,37 +145,35 @@ test("15. /town/news renders with h1 뉴스 · 자료", async ({ page }) => {
    거짓 빨강이 된다(2026-08-02 run 30725419638 이 그렇게 죽었다). */
 test("16. /subscription renders plan CTAs (결제 개통 여부에 맞는 상태)", async ({ page }) => {
   await page.goto("/subscription");
-  /* [1012] 히어로 슬로건("기록은 무료, 판단은 더 깊게") → 왼쪽 정렬 제목 "멤버십 요금제"(디자인 시스템 v3 규칙 6·7) */
-  await expect(page.getByRole("heading", { level: 1, name: /멤버십 요금제/ })).toBeVisible();
+  /* 요금제 화면은 토스 심사 동안 동결(scripts/check-toss-review-freeze.mjs) — 제목은 그 화면 그대로 "기록은 무료, 판단은 더 깊게".
+     화면이 바뀌는 날 이 줄도 같이 바뀐다(검사가 화면을 끌고 가지 않는다). */
+  await expect(page.getByRole("heading", { level: 1, name: /기록은 무료, 판단은 더 깊게/ })).toBeVisible();
   /* [1004] 카드 CTA 는 버튼이 아니라 링크다(2단계 확인 제거 — checkout-href 직행).
      role 을 link 로 고치지 않으면 CI(토스 env 없음)에서는 preorder 분기로 빠져 늘 초록이고,
      결제가 열린 환경에서만 거짓 빨강이 난다 — 즉 아무것도 지키지 못한다.
      [1012] "플러스 시작하기" → "플러스 결제하기(월 2,900원)" — 금지 문구 "시작하기" 제거, 가격은
      billing-periods 주입값이라 여기서는 앞머리만 본다. */
   const checkout = page.getByRole("link", { name: /^플러스 결제하기/ });
-  const preorder = page.getByRole("button", { name: "오픈 알림 받기" });
-  await expect(checkout.or(preorder).first()).toBeVisible();
+  /* [970 · A-38] 게스트에게는 "오픈 알림 받기" 단추를 그리지 않는다(PreOrderCta) — 미개통 상태의 게스트 화면은 사실 고지 문구만 */
+  const notOpen = page.getByText("아직 결제가 열리지 않").first();
+  await expect(checkout.or(notOpen).first()).toBeVisible();
   if ((await checkout.count()) > 0) {
     // 결제 개통 상태 — 두 유료 티어(플러스·프로) 링크가 모두 있어야 한다
     await expect(page.getByRole("link", { name: /^프로 결제하기/ })).toBeVisible();
   } else {
-    // 미개통 상태 — 사전 등록 버튼(PRO·EXPERT 카드 각 1개) + 사실 고지 문구
-    expect(await preorder.count()).toBeGreaterThanOrEqual(1);
-    /* [v4 · 규칙 3] PreOrderCta 안내 문장 → 사실 한 줄("결제 준비 중 · 아직 결제가 열리지 않음") — 앞머리로 본다 */
-    await expect(page.getByText("아직 결제가 열리지 않").first()).toBeVisible();
+    // 미개통 상태 — 사실 고지 문구(게스트에겐 등록 단추 없음)
+    await expect(notOpen).toBeVisible();
   }
 });
 
 test("17. 비로그인으로 플랜 CTA 를 누르면 체크아웃 화면으로 간다", async ({ page }) => {
   await page.goto("/subscription");
-  const checkout = page.getByRole("link", { name: "플러스 시작하기" });
+  /* [1012] "플러스 시작하기" → "플러스 결제하기(월 2,900원)" — 16번과 같은 앞머리 */
+  const checkout = page.getByRole("link", { name: /^플러스 결제하기/ });
   if ((await checkout.count()) === 0) {
-    /* 결제 미개통 상태 — 결제 버튼 자체가 없으므로 로그인 리다이렉트 흐름이
-       존재하지 않는다. 대신 사전 등록 버튼이 눌리는지(죽은 컨트롤 아님)만
-       확인한다. 등록 결과 문구는 DB 유무에 따라 다르므로 단정하지 않는다. */
-    const preorder = page.getByRole("button", { name: "오픈 알림 받기" }).first();
-    await expect(preorder).toBeVisible();
-    await preorder.click();
+    /* 결제 미개통 상태 — 결제 링크 자체가 없으므로 체크아웃 흐름이 존재하지 않는다.
+       게스트에겐 사전 등록 단추도 없다(970 · A-38) — 사실 고지 문구만 확인한다. */
+    await expect(page.getByText("아직 결제가 열리지 않").first()).toBeVisible();
     return;
   }
   await checkout.click();
@@ -218,9 +220,10 @@ test("18. /login shows exactly the configured social buttons + 비밀번호 찾�
 
   // 이메일 로그인은 provider 구성과 무관하게 항상 있어야 하는 경로
   await expect(page.getByRole("button", { name: /이메일로 로그인|로그인 중/ })).toBeVisible();
-  const forgot = page.getByRole("link", { name: "비밀번호를 잊으셨나요?" });
+  /* [1039 · 1040] 링크 글자 "비밀번호 찾기" · href 는 가려던 곳(callbackUrl)을 이어 붙일 수 있어 앞머리로 본다 */
+  const forgot = page.getByRole("link", { name: "비밀번호 찾기", exact: true });
   await expect(forgot).toBeVisible();
-  await expect(forgot).toHaveAttribute("href", "/forgot-password");
+  await expect(forgot).toHaveAttribute("href", /^\/forgot-password/);
 });
 
 test("19. /signup renders with h1", async ({ page }) => {
@@ -280,8 +283,9 @@ test("25. /calculator, /apply, /digest render", async ({ page }) => {
      자체는 7ms). 설치 프롬프트 스위트와 같은 원인이라 같은 처방을 쓴다. */
   test.slow();
   await page.goto("/calculator");
+  /* 제목은 "대출 계산기"(app/calculator/page.tsx metadata · calculator-client PageShell title) */
   await expect(
-    page.getByRole("heading", { level: 1, name: /대출·수익률 계산기/ }),
+    page.getByRole("heading", { level: 1, name: /대출 계산기/ }),
   ).toBeVisible();
   await page.goto("/apply");
   await expect(page.locator("main")).toBeVisible();
@@ -308,11 +312,13 @@ test("27. middleware redirects /pricing → /subscription", async ({ request }) 
 
 // ---------- 404 ----------
 
-test("28. unknown route shows 404 page (이 집은 이사 갔어요)", async ({ page }) => {
+test("28. unknown route shows 404 page (페이지 없음)", async ({ page }) => {
   const response = await page.goto("/no-such-page-xyz");
   expect(response?.status()).toBe(404);
   await expect(page.getByText("404").first()).toBeVisible();
-  await expect(page.getByText("이 집은 이사 갔어요")).toBeVisible();
+  /* [1015 · 1077] 제목 "페이지 없음." · 사실 한 줄 "주소가 바뀌었거나 삭제된 페이지"(NotFoundBody) */
+  await expect(page.getByRole("heading", { level: 1, name: /페이지 없음/ })).toBeVisible();
+  await expect(page.getByText("주소가 바뀌었거나 삭제된 페이지")).toBeVisible();
 });
 
 // ---------- API / 정적 엔드포인트 ----------
@@ -346,12 +352,13 @@ test("30. mobile viewport shows bottom tab bar with 홈·지도 labels", async (
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
   const tabBar = page.getByRole("navigation", { name: "하단 내비게이션" });
-  /* 모바일6(2026-08-03) — 쿠키 결정 전에는 탭바를 접어 하단을 배너 한 층으로
-     유지한다. 첫 방문 흐름 그대로 검증: 결정 전 미노출 → 결정 즉시 복원. */
+  /* [968 · 40] 탭바는 쿠키 결정 전에도 늘 그린다(동의 배너가 탭바 **위**에 선다 — 모바일6 의 "결정 전 접기"는 폐기).
+     첫 방문 흐름: 동의 배너와 탭바가 함께 보이고, 결정 뒤에도 탭바는 그대로. */
   const consent = page.getByRole("region", { name: "쿠키 사용 동의" });
   await expect(consent).toBeVisible();
-  await expect(tabBar).toHaveCount(0);
+  await expect(tabBar).toBeVisible();
   await page.getByRole("button", { name: "필수만 허용" }).click();
+  await expect(consent).toHaveCount(0);
   await expect(tabBar).toBeVisible();
   // 탭 레이블은 아이콘 문자와 같은 링크 요소 안에 있어 exact 텍스트 매칭 불가
   await expect(tabBar).toContainText("홈");
@@ -412,9 +419,10 @@ test("36. /notes/templates renders template marketplace (공식 템플릿)", asy
 test("37. template detail links to /notes/new?tpl", async ({ page }) => {
   await page.goto("/notes/templates/official-basic", { waitUntil: "domcontentloaded" });
   await expect(page.locator("main").first()).toBeVisible({ timeout: 15000 });
-  await expect(
-    page.getByRole("link", { name: /이 템플릿으로 노트 쓰기/ }),
-  ).toBeVisible({ timeout: 15000 });
+  /* 단추 글자는 "항목 N개로 노트 쓰기"(N 은 템플릿 항목 수) — 목적지(/notes/new?tpl=)로 본다 */
+  const cta = page.locator('main a[href^="/notes/new?tpl="]').first();
+  await expect(cta).toBeVisible({ timeout: 15000 });
+  await expect(cta).toContainText(/노트 쓰기/);
 });
 
 test("38. /qna renders 단지 Q&A list", async ({ page }) => {
@@ -426,9 +434,13 @@ test("38. /qna renders 단지 Q&A list", async ({ page }) => {
 });
 
 test("39. /my/saved-searches renders (login prompt when logged out)", async ({ page }) => {
+  /* [994] /my/saved-searches → /my/watchlist?tab=searches(301) · 관심 단지 화면은 로그인 필수라 비로그인은 /login 으로(callbackUrl 보존).
+     E2E 는 비로그인 — 로그인 화면에 닿는지만 본다(로그인 상태라면 "저장 검색" 탭). */
   await page.goto("/my/saved-searches", { waitUntil: "domcontentloaded" });
   await expect(page.locator("main").first()).toBeVisible({ timeout: 15000 });
-  await expect(page.getByText(/저장 검색/).first()).toBeVisible({ timeout: 15000 });
+  await expect(page).toHaveURL(/\/login\?callbackUrl=|\/my\/watchlist/);
+  const loginHeading = page.getByRole("heading", { level: 1, name: /로그인/ });
+  await expect(loginHeading.or(page.getByText(/저장 검색/).first())).toBeVisible({ timeout: 15000 });
 });
 
 // ---------- 정비사업 지도 (재개발·재건축 사업장) ----------
@@ -465,8 +477,8 @@ test("42. /notes/new prefills 단지 from query and shows location search", asyn
   });
   // 프리필된 단지명이 위치 카드에 반영(클라이언트 하이드레이션 후)
   await expect(page.getByText("은마아파트").first()).toBeVisible({ timeout: 15000 });
-  // 위치 카드 클릭 → 검색 입력 노출
-  await page.getByText(/눌러서 변경/).first().click();
+  // 위치 카드 클릭 → 검색 입력 노출 — [1015] 카드 둘째 줄은 "{지역} · 변경"(단지가 있을 때) 또는 "단지명 또는 주소 검색"
+  await page.getByText(/· 변경$|^단지명 또는 주소 검색$/).first().click();
   await expect(page.getByPlaceholder(/단지명 또는 주소/)).toBeVisible({ timeout: 10000 });
 });
 

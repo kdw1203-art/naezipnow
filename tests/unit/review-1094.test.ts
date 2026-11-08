@@ -45,11 +45,11 @@ test("검색 — 동 줄은 두 갈래(단지 보기 · 실거래 ›) · 주소
   assert.match(read("lib/dong/format.ts"), /export function dongPath\(region: string, dong: string\): string \{\s*return `\/dong\/\$\{encodeURIComponent\(regionSlugOf\(region\)\)\}\/\$\{encodeURIComponent\(dong\)\}`;/);
 });
 
-test("동별 실거래(/dong) 입구 — [1108] 푸터에서 상단 메뉴 실거래 하위로(실거래 구간 바로 다음) · 푸터 묶음 4개 그대로", () => {
-  const nav = read("app/components/nav-data.ts");
-  assert.match(nav, /\{ label: "실거래 구간", href: "\/tx" \},\s*\{ label: "동별 실거래", href: "\/dong" \}/);
+test("동별 실거래(/dong) 입구 — [1110] 푸터 데이터 묶음(실거래 구간 바로 다음) · 푸터 묶음 4개 그대로", () => {
+  /* [1108] 상단 메뉴 실거래 하위 → [1110] 그 대분류를 빼며 푸터로 복귀(크롤 경로 보존) */
   const f = read("app/components/Footer.tsx");
-  assert.doesNotMatch(f, /href: "\/dong"/);
+  assert.match(f, /\{ label: "실거래 구간", href: "\/tx", bold: false, group: "data" \},\s*\{ label: "동별 실거래", href: "\/dong", bold: false, group: "data" \}/);
+  assert.doesNotMatch(read("app/components/nav-data.ts"), /label: "실거래",/);
   assert.match(f, /const LINK_GROUPS = \[/);
 });
 

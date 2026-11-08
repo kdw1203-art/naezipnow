@@ -11,15 +11,17 @@ import { readFileSync } from "node:fs";
 
 const read = (p: string) => readFileSync(p, "utf8");
 
-test("T1 한 가지 꼴 — 시장·기록 계열도 같은 표", () => {
+test("T1 한 가지 꼴 — [1110] 기록 계열 표는 임장노트 분석 화면에 · 지역 시세는 고르는 자리(표는 시/도 필터 안)", () => {
   const page = read("app/analysis/page.tsx");
-  assert.match(page, /<ToolRows\s+tools=\{MARKET_LIVE\}\s+nowLabel="지금 값"/);
-  assert.match(page, /<ToolRows\s+tools=\{RECORD_LIVE\}\s+nowLabel="내 기록"/);
-  /* 시장·기록 계열에 카드가 남아 있지 않다(예시 계산 접힌 칸의 카드는 그대로) */
-  const market = page.slice(page.indexOf('id="tier-market"'), page.indexOf('id="tier-record"'));
-  assert.ok(!market.includes("<ToolCard"), "시장 계열에 카드가 남았다");
-  const record = page.slice(page.indexOf('id="tier-record"'), page.indexOf('href="/agent"'));
-  assert.ok(!record.includes("<ToolCard"), "기록 계열에 카드가 남았다");
+  assert.doesNotMatch(page, /<ToolRows/, "허브에는 시장·기록 표가 없다(1110)");
+  assert.match(page, /<RegionSiseEntry data=\{regionSise\} \/>/);
+  const notes = read("app/notes/analysis/page.tsx");
+  assert.match(notes, /<ToolRows tools=\{RECORD_LIVE\} nowLabel="내 기록"/);
+  assert.ok(!page.includes("<ToolCard") && !notes.includes("<ToolCard"), "카드가 남았다");
+  /* 지역 시세 표도 같은 칸 폭(tool-cols) · 줄은 링크 */
+  const entry = read("app/analysis/region-sise-entry.tsx");
+  assert.match(entry, /from "\.\/tool-cols"/);
+  assert.match(entry, /\$\{TOOL_COL_NAME\}/);
   /* 줄 전체가 눌린다 — 단지 분석 표와 같은 손맛 */
   const rows = read("app/analysis/hub-tool-rows.tsx");
   assert.match(rows, /<ClickRow/);
@@ -40,25 +42,25 @@ test("T2 칸 맞춤 — 세 표가 같은 칸 폭 상수를 쓴다", () => {
   assert.doesNotMatch(read("app/analysis/hub-tiers.tsx"), /from "[^"]*(tool-persona|hub-tool-rows)"/);
 });
 
-test("T3 사실 보존 — 카드에 있던 것이 표 칸으로", () => {
+test("T3 사실 보존 — [1110] 지금 값은 지역 시세 표의 칸으로(평균 매매가 · 전세가율 · 온도) · 기록 칸은 임장노트 분석 화면으로", () => {
   const rows = read("app/analysis/hub-tool-rows.tsx");
-  assert.match(rows, /teaser\.deltaPct != null/);
-  assert.match(rows, /\{teaser\.caption\}/);
-  assert.match(rows, /<Sparkline values=\{spark\}/);
+  assert.doesNotMatch(rows, /teaser\.|<Sparkline/, "티저 · 추세선 배선은 지역 시세 분석으로 넘어갔다");
   assert.match(rows, /marketPersonaByHref\(t\.href\)/);
   assert.match(rows, /ACCEPTS_COMPLEX\.has\(t\.href\)/);
-  const page = read("app/analysis/page.tsx");
-  assert.match(page, /"\/notes": <HubMyNoteTeaser bare \/>/);
-  assert.match(page, /"\/analysis\/compare": <CompareTrayCount bare \/>/);
-  assert.match(page, /<HubNoteAnalysis \/>/);
+  const entry = read("app/analysis/region-sise-entry.tsx");
+  for (const needle of ["평균 매매가", "전세가율", "시장 온도", "formatKrwShort(r.avgSaleKrw)", "r.jeonseRatio.toFixed(1)", "r.temp.score"]) assert.ok(entry.includes(needle), needle);
+  const notes = read("app/notes/analysis/page.tsx");
+  assert.match(notes, /"\/analysis\/compare": <CompareTrayCount bare \/>/);
+  assert.match(notes, /<HubNoteAnalysis \/>/);
 });
 
-test("T4 조용하게 — 남색 띠 걷음 · 게스트 블록 단추 하나", () => {
+test("T4 조용하게 — [1110] 에이전트는 임장노트 분석 표의 한 줄 · 게스트 블록 단추 하나", () => {
   const page = read("app/analysis/page.tsx");
-  const agent = page.slice(page.indexOf('href="/agent"') - 40, page.indexOf("에이전트</span>") + 20);
-  assert.doesNotMatch(agent, /ai-panel/);
-  assert.match(agent, /className="card press/);
-  const guest = page.slice(page.indexOf("공개된 AI 정리 없음") - 300, page.indexOf("임장노트 쓰고 AI 받기") + 40);
+  assert.ok(!page.includes('href="/agent"'), "허브에 에이전트 줄 없음(1110)");
+  const cat = read("app/analysis/tool-catalog.ts");
+  assert.match(cat, /href: "\/agent",\s*title: "에이전트",[\s\S]{0,200}tier: "record"/);
+  const notes = read("app/notes/analysis/page.tsx");
+  const guest = notes.slice(notes.indexOf("공개된 AI 정리 없음") - 300, notes.indexOf("임장노트 쓰고 AI 받기") + 40);
   assert.equal((guest.match(/className="btn-/g) ?? []).length, 1, "게스트 블록의 단추는 하나");
   assert.match(guest, /공개 노트 보기 ›/);
   assert.match(guest, /로그인 ›/);
@@ -78,11 +80,10 @@ test("T5 임장노트 AI 분석 — 표와 같은 머리줄 · 할 일 하나 ·
   /* 자리표시자도 같은 머리줄 — 바꿔 끼울 때 덜컹거리지 않게 */
   assert.match(read("app/analysis/hub-picker.tsx"), /<div className="flex min-h-11 items-center gap-2\.5">/);
   assert.doesNotMatch(read("app/analysis/hub-picker.tsx"), /btn-cta/);
-  /* 에이전트 칩은 흰 판에서 보이는 색 */
-  const page = read("app/analysis/page.tsx");
-  const agent = page.slice(page.indexOf('href="/agent"'), page.indexOf("에이전트</span>"));
-  assert.match(agent, /bg-primary-soft text-primary/);
-  assert.doesNotMatch(agent, /className="[^"]*ai-chip/);
+  /* [1110] 에이전트는 임장노트 분석 표의 한 줄 — 칩은 계열 색(TIERS.record iconClass) · ai-chip(어두운 판 전용) 아님 */
+  const rows = read("app/analysis/hub-tool-rows.tsx");
+  assert.match(rows, /TIERS\[t\.tier\]\.iconClass/);
+  assert.doesNotMatch(rows, /ai-chip/);
   /* 시작 상자 최소 높이 — 데스크톱 한 줄 높이로(뒤에 덧붙인 규칙) */
   assert.match(read("app/globals.css"), /\[1071 · AI 분석 한 가지 꼴\][\s\S]{0,400}\.hub-start \{\s*min-height: 4\.5rem;/);
 });

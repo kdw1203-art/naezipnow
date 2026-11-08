@@ -224,7 +224,7 @@ export function invalidateRebChangedRegions(
  * 동적 세그먼트가 아닌데 SOURCE_MAP 이 아직 비우지 않는 집계 화면들.
  *
  * lib/cache/invalidate.ts 의 SOURCE_MAP.molit 은 `/ · /analysis · /analysis/accuracy ·
- * /analysis/price · /analysis/gap · /analysis/temperature · /tx · /map ·
+ * /analysis/gap · /analysis/temperature · /tx · /map ·
  * /data/records · /reports` 를 비운다. 그 목록에 없지만 같은 원천(실거래·집계)으로
  * 그려지는 화면이 아래다. 그 파일은 이번 작업에서 수정 금지(통합자 소유)라
  * 여기서 대신 부른다 — 통합자가 SOURCE_MAP 에 합치면 이 함수는 지워도 된다.

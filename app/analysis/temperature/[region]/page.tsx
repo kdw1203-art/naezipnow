@@ -192,8 +192,8 @@ export default async function TemperatureRegionPage({
             매매가격지수 시계열이 4구간 이상 모여야 온도를 계산할 수 있고, 그 뒤부터 매주
             기록이 쌓입니다.
             <br />
-            <Link href="/analysis/timing" className="font-bold text-primary underline">
-              현재 시장 온도 보기
+            <Link href={`/region/${region.id}`} className="font-bold text-primary underline">
+              {region.name} 지역 종합 보기
             </Link>
           </p>
         </section>
@@ -428,17 +428,12 @@ export default async function TemperatureRegionPage({
       <QaBlock title={`${region.label} 시장 온도 Q&A`} items={qa} />
 
       <section className="rise-in-3 mb-8 flex flex-wrap gap-2">
-        <Link
-          href={`/analysis/timing?region=${encodeURIComponent(region.id)}`}
-          className="rounded-xl bg-primary px-5 py-3 t-body font-bold text-white shadow-[var(--shadow-cta)]"
-        >
-          {region.name} 지수·거래량 원본 보기
-        </Link>
+        {/* [1110] 시세·타이밍 화면(지수·거래량 원본)은 지역 종합 화면의 "시세 흐름" 카드로 합쳤다 — 채움 단추가 그 화면으로 */}
         <Link
           href={`/region/${region.id}`}
-          className="card tile px-5 py-3 t-body font-bold text-ink"
+          className="rounded-xl bg-primary px-5 py-3 t-body font-bold text-white shadow-[var(--shadow-cta)]"
         >
-          {region.name} 지역 허브
+          {region.name} 지수·거래량 · 지역 종합 보기
         </Link>
         {/* [1081 · #15] 월간 리포트 · 동네이야기 — 온도 69쪽에서 지역 축의 다른 화면으로 */}
         <Link

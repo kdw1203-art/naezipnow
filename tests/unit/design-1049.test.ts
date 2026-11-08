@@ -10,7 +10,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { districtMovesFromIndexRows } from "@/lib/newui/home-briefing";
 import { buildMyActivity } from "@/lib/me/my-activity";
 
@@ -66,16 +66,17 @@ test("임장노트 목록 — 표(데스크톱 기본) · 피드는 전환 · �
   assert.match(f, /\(r\.count \/ top\) \* 100/, "지역 레일 막대");
 });
 
-test("AI 분석 — 도구 12종 판 한 장(4종 표 + 8종 칸) · 왼쪽 색 띠 걷음 · 지도 서랍 동작 그대로", () => {
+test("AI 분석 — 도구 판 한 장(표) · 왼쪽 색 띠 걷음 · 지도 서랍 동작 그대로", () => {
   const t = code("app/analysis/hub-tiers.tsx");
-  /* [1071] 칸 폭을 지역 시세·내 임장노트 표와 맞추려고 데스크톱에서 table-fixed 를 더했다(tool-cols) */
+  /* [1071] 칸 폭을 지역 시세 표와 맞추려고 데스크톱에서 table-fixed 를 더했다(tool-cols) */
   assert.match(t, /<table className="w-full border-collapse(?: md:table-fixed)?">/);
   assert.match(t, /<tbody>\{core\.map\(row\)\}<\/tbody>/);
-  assert.match(t, /그 밖의 도구 \{more\.length\}/);
-  assert.match(t, /grid-cols-2 gap-x-2 p-0 md:grid-cols-4/, "그 밖의 8종은 촘촘한 칸(화면 길이)");
+  /* [1109 · 1110] "그 밖의 8종" 칸(촘촘한 격자)은 없다 — 살아 있는 4종만 · 카드 파일(hub-tool-card)도 지웠다 */
+  assert.doesNotMatch(t, /그 밖의 도구/);
+  assert.doesNotMatch(t, /md:grid-cols-4/);
   assert.match(t, /openMap\(\{/);
   assert.doesNotMatch(t, /tool-rail/);
-  assert.doesNotMatch(code("app/analysis/hub-tool-card.tsx"), /tool-rail/);
+  assert.ok(!existsSync("app/analysis/hub-tool-card.tsx"));
 });
 
 test("마이 — 월별 기록 막대 · 평균 점수 · 사용량 표", () => {

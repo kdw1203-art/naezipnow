@@ -58,7 +58,8 @@ export function catalogNameKeys(info: SeoulDistrictInfo): Set<string> {
  *  뉴스 region 값의 미매핑 상위 실측(2026-08-23)에서 확실한 것만 넣는다 —
  *  틀린 연결은 미연결보다 나쁘다. 모호한 지명(위례·광교 등 복수 행정구 걸침)은
  *  대표 행정구가 사회적으로 합의된 경우만 포함. */
-const REGION_ALIASES: Record<string, string> = {
+/** [1110] 지역 시세 분석 검색칸이 통용 지명(판교 · 목동 · 송도 …)도 받게 읽기 전용으로 연다 — 값은 그대로 */
+export const REGION_ALIASES: Readonly<Record<string, string>> = {
   평촌: "anyang-dongan",
   평촌신도시: "anyang-dongan",
   판교: "seongnam-bundang",

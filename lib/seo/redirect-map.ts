@@ -287,6 +287,14 @@ const REDIRECT_GROUPS: readonly RedirectGroup[] = [
     since: "2026-11-07",
     rules: [["/analysis/portfolio", "/calculator"]],
   },
+  {
+    /* 면적대별 실거래가 화면(noindex · 30일 6방문)은 지역 종합 화면(/region/[id] "면적대·가격대별 실거래" · 실거래 구간 탭)이 같은 사실을
+       보여 줘 지웠다. 지역 시세 분석(/analysis/timing — 시 · 구 · 동 고르는 자리)으로. ?region= 는 넘어가지 않는다(정확 일치 표) —
+       그 화면이 지역을 다시 고르게 한다. */
+    reason: "[1110] AI 분석 2차 통폐합 — 지역 시세 도구 5 → 지역 시세 분석 하나",
+    since: "2026-11-08",
+    rules: [["/analysis/price", "/analysis/timing"]],
+  },
 ];
 
 /* 규칙을 평탄화하면서 from 중복을 즉시 터뜨린다.

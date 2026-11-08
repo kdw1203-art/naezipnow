@@ -35,7 +35,7 @@ export function NoteToolsRow({
      빈 도구 화면으로 보내느니 아무것도 안 그린다. */
   if (!apt && !reg) return null;
 
-  const { core, more } = workbenchCardData();
+  const { core } = workbenchCardData();
   /* 질문은 이 노트의 사실로만 만든다 — 없는 단지명을 넣어 "그럴듯한" 질문을
      지어내지 않는다. 단지명이 없으면 지역으로 묻는다. */
   const subject = apt || reg;
@@ -73,13 +73,13 @@ export function NoteToolsRow({
           </Link>
         ))}
       </div>
-      {/* 나머지는 허브로 — 노트 화면에 12칸을 다 펼치면 노트가 안 읽힌다.
-          noteId 를 실어 보내면 허브가 이 노트를 컨텍스트로 잡는다. */}
+      {/* [1110] 노트 AI 분석 카드는 임장노트 분석 화면(/notes/analysis)에 있다 — noteId 를 실어 보내면 그 카드가 이 노트를 고른 채 열린다.
+          (예전 "나머지 N개 도구 보기 ›"는 1109 뒤 N=0 이 돼 있었다 — 도구는 위 네 칸이 전부다.) */}
       <Link
-        href={`/analysis?noteId=${encodeURIComponent(noteId)}`}
+        href={`/notes/analysis?noteId=${encodeURIComponent(noteId)}`}
         className="tap-line w-fit t-sub font-bold text-primary"
       >
-        나머지 {more.length}개 도구 보기 ›
+        이 노트로 AI 분석 ›
       </Link>
 
       {/* [986 · 24] 이 노트에 묻기 — 도구는 정해진 한 가지를 계산하고, 에이전트는

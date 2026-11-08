@@ -11,9 +11,10 @@ import Link from "@/app/components/IntentLink";
  * region 을 모르면(비교·온도 등) 파라미터 없이 보낸다.
  */
 
+/* [1110] 면적대별 실거래가(/analysis/price)는 지웠고, /analysis/timing 은 "지역 시세 분석"(시 · 구 · 동 → 지역 종합 화면)이다 —
+   ?region= 를 받으면 그 지역 종합 화면으로 넘긴다(legacy-region-param). */
 const DESTS = [
-  { id: "price", href: "/analysis/price", label: "면적대별 실거래가" },
-  { id: "timing", href: "/analysis/timing", label: "시세·타이밍 분석" },
+  { id: "timing", href: "/analysis/timing", label: "지역 시세 분석" },
   { id: "scenario", href: "/analysis/scenario", label: "시장·대출 시나리오" },
   { id: "temperature", href: "/analysis/temperature", label: "지역별 시장 온도" },
   { id: "compare", href: "/analysis/compare", label: "후보 단지 비교" },
@@ -23,7 +24,7 @@ const DESTS = [
 export type AnalysisToolId = (typeof DESTS)[number]["id"];
 
 /* 지역 어휘가 도구마다 다르다는 사실을 API 가 그대로 드러낸다:
-   price 는 slug, timing·scenario 는 지역 id(gangnam…), map 은 한글 지역명.
+   timing·scenario 는 지역 id(gangnam…), map 은 한글 지역명.
    보내는 쪽은 자기가 **정확히 아는 값만** 채운다 — 잘못된 어휘로 보내면
    받는 쪽이 400/빈 화면이 되므로(타이밍 실측), 모르는 칸은 비워 파라미터
    없이 보낸다. */
@@ -37,7 +38,7 @@ export function AnalysisCrossLinks({
   /** 지금 화면인 도구 — 목록에서 뺀다 */
   current: AnalysisToolId;
   /** 목적지별 region 파라미터 값 (그 도구의 어휘로) — 아는 것만 채운다 */
-  regionFor?: Partial<Record<"price" | "timing" | "scenario" | "map", string>>;
+  regionFor?: Partial<Record<"timing" | "scenario" | "map", string>>;
   /** 캡션용 지역 표기(예: "강남구") — 없으면 캡션에 지역을 안 쓴다 */
   regionLabel?: string | null;
   /** 강조 행동 1개(예: 이 지역 노트 쓰기·알림 설정) — 첫 칩으로 프라이머리 스타일 */

@@ -240,7 +240,6 @@ test("[1009 · A] 온도 주간 기록 — 빠진 주는 칸을 비워(null) 선
 import { loanCalc, scenarioYields } from "@/lib/ai/loan-calc";
 import { YIELD_FORMULA_LINE } from "@/app/analysis/ai/[tool]/verdict-explain";
 import { monthSlots } from "@/app/components/viz/price-chart-geometry";
-import { monthWord, reportingDeadlineLabel, volumeCompare } from "@/app/analysis/timing/volume-window";
 
 test("[1009 · A · 리뷰] 수익률(가정) ⓘ — 코드와 같은 복리 연환산(단순 평균 아님)", () => {
   /* 리뷰 실측 조건: 5억 · LTV 60% · 4.2% · 30년 · 5년 보유 · 낙관(연 +5%) */
@@ -278,27 +277,5 @@ test("[1009 · A · 리뷰] 첫 프레임 머리 — 폭을 재기 전에도 달
   assert.notEqual(idleSlot(before), null, "거래가 있는 기간이면 첫 프레임부터 값이 있다(예전: '이 기간 거래 없음')");
 });
 
-test("[1009 · A · 리뷰] 월 거래량 등락 — 신고 기한(말일 + 30일)이 지난 달끼리만", () => {
-  /* 리뷰 실측 모양(강남): 8월은 9/30 까지 신고 중(80건), 7월 189건 — 가짜 숫자(테스트 전용) */
-  const rows = [
-    { month: "202606", count: 150 },
-    { month: "202607", count: 189 },
-    { month: "202608", count: 80 },
-  ];
-  const now = new Date("2026-09-22T03:00:00Z");
-  const vc = volumeCompare(rows, now);
-  assert.deepEqual(vc.open.map((r) => r.month), ["202608"], "8월분은 아직 신고 기한 전");
-  assert.equal(vc.closedLast?.month, "202607");
-  assert.equal(vc.closedPrev?.month, "202606");
-  assert.equal(vc.closedDeltaPct, 26, "7월 vs 6월(+26%) — 8월(신고 중) vs 7월(−57.7%)이 아니다");
-  assert.equal(reportingDeadlineLabel("202608"), "9/30");
-  assert.equal(reportingDeadlineLabel("202607"), "8/30");
-  assert.equal(monthWord("202607"), "7월");
-  /* 10/1 이 되면 8월도 마감 — 8월 vs 7월 */
-  const later = volumeCompare(rows, new Date("2026-10-01T03:00:00Z"));
-  assert.equal(later.open.length, 0);
-  assert.equal(later.closedLast?.month, "202608");
-  assert.equal(later.closedDeltaPct, -57.7);
-  /* 마감된 달이 하나뿐이면 등락 없음 */
-  assert.equal(volumeCompare([{ month: "202608", count: 80 }], now).closedDeltaPct, null);
-});
+/* [1110] "[1009 · A · 리뷰] 월 거래량 등락 — 신고 기한이 지난 달끼리만"(app/analysis/timing/volume-window)은 시세·타이밍 화면과 함께 지웠다 —
+   같은 규칙은 지역 종합 화면이 region-overview splitByReporting 으로 지킨다(journey · region 검사). */

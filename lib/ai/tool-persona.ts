@@ -46,7 +46,6 @@ export const PERSONA_IDS: readonly ToolPersonaId[] = [...AI_TOOL_IDS, ...MARKET_
 
 /** 지역·시장 4종의 경로 ↔ 페르소나 id */
 export const MARKET_TOOL_BY_HREF: Record<string, MarketToolId> = {
-  "/analysis/price": "market:price",
   "/analysis/timing": "market:timing",
   "/analysis/temperature": "market:temperature",
   "/analysis/gap": "market:gap",
@@ -460,12 +459,13 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
       weak: "거래가 적어 값이 튀어요. 평균보다 중앙값을 보세요.",
       thin: "이 조건의 실거래가 모자라요. 기간이나 면적대를 넓혀 보세요.",
     },
-    nextAction: { label: "이 지역 흐름 보기", href: "/analysis/timing" },
+    nextAction: { label: "지역 시세 분석 보기", href: "/analysis/timing" },
   },
   "market:timing": {
     id: "market:timing",
-    character: "흐름",
-    premise: "12개월 매매가격지수 · 거래량 흐름",
+    character: "지역",
+    /* [1110] /analysis/timing = 지역 시세 분석(시 · 구 · 동 → 지역 종합 화면). 지수 · 거래량 흐름은 그 종합 화면의 시세 흐름 카드 */
+    premise: "시 · 구 · 동 검색 → 지역 종합 화면",
     composition: "trajectory",
     palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
     runMotion: "draw",
@@ -506,7 +506,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
       weak: "식는 쪽으로 이어집니다.",
       thin: "쌓인 주가 모자랍니다. 추세로 읽기에는 이릅니다.",
     },
-    nextAction: { label: "면적대별 실거래로 확인", href: "/analysis/price" },
+    nextAction: { label: "지역 시세 분석에서 확인", href: "/analysis/timing" },
   },
   "market:gap": {
     id: "market:gap",

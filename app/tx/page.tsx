@@ -261,7 +261,7 @@ export default async function TxIndexPage() {
           {[
             ["/complex/browse", "단지 실거래 보기"],
             ["/complex/compare", "단지 vs 단지 비교"],
-            ["/analysis/timing", "지역 거래 흐름 · 타이밍 분석"],
+            ["/analysis/timing", "지역 시세 분석"],
             ["/imjang", "임장 가이드"],
           ].map(([href, label]) => (
             <Link key={href} href={href} className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">

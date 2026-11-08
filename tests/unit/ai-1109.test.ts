@@ -79,9 +79,10 @@ test("③ 허브 — 그 밖의 도구 칸 없음 · 예시 계산 구역 없음
   const hub = strip(read("app/analysis/page.tsx"));
   assert.doesNotMatch(hub, /hub-sim|SIM_TOOLS|<ToolCard/);
   assert.match(hub, /toolTitles=\{Object\.fromEntries\(AI_TOOL_IDS\.map\(\(id\) => \[id, TOOL_IDENTITIES\[id\]\.title\]\)\)\}/, "옛 결과 제목은 12종 전부");
-  /* 메뉴의 AI 분석 하위는 1108 의 질문 3 계열 그대로 */
+  /* 메뉴의 AI 분석 하위 — [1110] 단지 분석(허브 앵커) · 지역 시세(지역 시세 분석 화면). 내 임장노트 분석은 임장노트 하위(/notes/analysis) */
   const nav = read("app/components/nav-data.ts");
-  for (const h of ["/analysis#tier-complex", "/analysis#tier-market", "/analysis#tier-record"]) assert.ok(nav.includes(`"${h}"`), h);
+  for (const h of ["/analysis#tier-complex", "/analysis/timing", "/notes/analysis"]) assert.ok(nav.includes(`"${h}"`), h);
+  assert.ok(!nav.includes("#tier-record"), "내 임장노트 분석은 AI 분석 하위가 아니다");
 });
 
 test("④ /analysis/portfolio 삭제 → /calculator — 표 1홉 · 옛 /ai-analysis/ai-portfolio 도 같은 곳 · 참조 정리", () => {

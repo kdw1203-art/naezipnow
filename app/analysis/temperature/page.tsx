@@ -226,7 +226,7 @@ export default async function TemperatureHubPage() {
             </div>
             <p className="mt-3 t-body text-text-2">쌓인 주 없음</p>
             <Link href="/analysis/timing" className="inline-flex min-h-10 items-center t-sub font-bold text-primary no-underline">
-              현재 시장 온도 보기 ›
+              지역 시세 분석 ›
             </Link>
           </section>
         ) : (
@@ -248,7 +248,6 @@ export default async function TemperatureHubPage() {
                     regionFor={
                       hottest
                         ? {
-                            price: hottest.current.regionLabel,
                             timing: hottest.current.regionId,
                             scenario: hottest.current.regionId,
                             map: hottest.current.regionLabel,
@@ -276,7 +275,7 @@ export default async function TemperatureHubPage() {
         {/* [998] mb-8 제거 — 본문 pb-16 + 푸터 pt-6 과 겹쳐 데스크톱에서 빈 띠(빈 공간 게이트). 도구 간 이어가기 칩은 [1021] 레일로 */}
         <nav aria-label="관련 화면" className="flex flex-wrap gap-1.5">
           <Link href="/analysis/timing" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
-            시세·타이밍 분석 ›
+            지역 시세 분석 ›
           </Link>
           <Link href="/methodology" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
             데이터 방법론 ›

@@ -54,7 +54,7 @@ export function PriceTab({
   complexName?: string;
   /** 서버가 그린 실거래 추이 차트(PriceTrendChart) — 2개월 미만이면 null */
   priceChart: ReactNode;
-  /** [970 · B-39] 이 단지의 지역("서울 중랑구") — /analysis/price?region= 프리필 */
+  /** [970 · B-39] 이 단지의 지역("서울 중랑구") — [1110] /analysis/timing?region= 으로 넘기면 그 지역 종합 화면으로 간다 */
   region?: string;
   /** [1008] 계산기 지역(regulated·capital·other) — 서버가 정한 값, 없으면 계산기에서 고른다 */
   loanRegion?: string;
@@ -204,14 +204,13 @@ export function PriceTab({
           최근 달 평균 매매가(만원)를 그대로 넘긴다. 값이 없으면 링크를
           만들지 않는다(빈손으로 보내면 예시 숫자가 자기 단지인 척한다). */}
       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {/* [970 · B-39] 지역을 실어 보낸다 — 빈손이면 /analysis/price 가 첫 지역(강남구)으로 열렸다.
-            D62 매칭이 "서울 강남구" 꼴을 받는다. */}
+        {/* [970 · B-39] 지역을 실어 보낸다. [1110] 면적대별 실거래가 화면은 지역 종합 화면(/region/[id] "면적대·가격대별 실거래")으로 합쳤다 —
+            /analysis/timing 이 ?region=(한글 표기 · 카탈로그 id 둘 다)을 그 화면으로 넘긴다. 지역을 모르면 고르는 자리. */}
         <Link
-          href={region ? `/analysis/price?region=${encodeURIComponent(region)}` : "/analysis/price"}
+          href={region ? `/analysis/timing?region=${encodeURIComponent(region)}` : "/analysis/timing"}
           className="btn-soft rounded-xl p-3 text-center t-body"
         >
-          {/* [1053] "시세" 낱말 금지 — 이 탭의 숫자는 국토부 실거래뿐이다 */}
-          AI 가격 분석 보기
+          이 지역 시세 분석 보기
         </Link>
         {latestAvgManwon > 0 && (
           <Link

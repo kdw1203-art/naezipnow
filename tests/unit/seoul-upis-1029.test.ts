@@ -386,7 +386,7 @@ test("[1030 · 2차] 단지 비교 목록 — 지역 바로가기 + 첫 지역�
 
 test("[1030 · 2차] 열린 면적 구간 화면 이름 — /tx 셀·면적대별 실거래가 선반·노트 상세도 같은 함수", () => {
   assert.ok(src1030("lib/market/tx-bands.ts").includes("bandLabel: areaBandDisplayLabel(label),"));
-  assert.ok(src1030("app/analysis/price/page.tsx").includes("label: areaBandDisplayLabel(c.bandLabel),"));
+  /* [1110] 면적대별 실거래가 선반(/analysis/price)은 지웠다 — 지역 종합 화면 · 실거래 구간이 같은 함수를 쓴다 */
   assert.ok(src1030("app/notes/[id]/(index)/page.tsx").includes("bandLabel: areaBandDisplayLabel(r.price.bandLabel),"));
 });
 
@@ -459,7 +459,6 @@ test("[1030 · 4차] 굵기 600 없음 — semibold 토큰 700 · 칩 500 · 활
 });
 
 test("[1030 · 4차] 면적대 선반 막대는 가로(width) · 정비사업 탭 활성은 chip-active · 청약 캘린더 알약 제거 · measure", () => {
-  assert.ok(src1030("app/analysis/price/BandShelf.tsx").includes("style={{ width: `${c.barPct}%` }}"));
   const r = src1030("app/redevelopment/RedevelopmentMap.tsx");
   assert.ok(r.includes('active ? "chip-active" : "text-text-2"') && !r.includes('style={active ? { color: "#fff" } : undefined}'));
   assert.equal((src1030("app/apply/(index)/page.tsx").match(/청약 캘린더\n/g) ?? []).length, 0);

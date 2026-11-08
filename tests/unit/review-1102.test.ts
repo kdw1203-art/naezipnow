@@ -113,7 +113,6 @@ test("잔여 화면 — 동 화면 순서 · 계산기 · 검색 · 단지 목�
     ["app/decide/DecideClient.tsx", "나와요"],
     ["app/decide/DecideClient.tsx", "그려요"],
     ["app/notes/compare/page.tsx", "비교할 수 있어요"],
-    ["app/analysis/timing/TimingClient.tsx", "계산할 수 없어요"],
     ["app/journey/JourneyBoard.tsx", "완료 →"],
   ] as const) assert.ok(!read(p).includes(s), `${p} ${s}`);
 });

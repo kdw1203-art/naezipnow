@@ -24,34 +24,16 @@ test("Z1 고지 — 데스크톱 두 단 · 문단은 단 폭을 따른다 · �
   ]) assert.ok(src.includes(needle), needle);
 });
 
-test("Z2·Z3 표 — 펼쳐도 칸 폭 고정 · 상태는 캐럿 하나", () => {
+test("Z2·Z3 표 — [1110] 펼침 없음 · 칸 폭 고정 · 줄 끝은 › 하나", () => {
   const src = read("app/analysis/hub-tiers.tsx");
-  /* 폭이 상태에 따라 갈리던 자리가 없다 */
-  assert.doesNotMatch(src, /isOpen \? "w-16/);
-  /* [1071] 칸 폭은 세 표가 같이 쓰는 상수(tool-cols)로 — 머리·몸이 같은 값을 쓴다 */
+  /* 폭이 상태에 따라 갈리던 자리가 없다 · 펼침 상태 자체가 없다(1110) */
+  assert.doesNotMatch(src, /isOpen/);
+  /* [1071] 칸 폭은 표들이 같이 쓰는 상수(tool-cols)로 — 머리·몸이 같은 값을 쓴다 */
   assert.match(src, /<td className=\{`px-3 text-right t-body text-text-3 \$\{TOOL_COL_GO\}`\}/);
-  assert.match(src, /\{isOpen \? "▴" : "▾"\}/);
   assert.equal((src.match(/TOOL_COL_RESULT\}/g) ?? []).length, 2);
   assert.match(read("app/analysis/tool-cols.ts"), /TOOL_COL_GO = "w-10"/);
-  /* 표 줄·칸 목록이 상태에 따라 "열기 ›" 글자를 내지 않는다(펼친 칸의 단추가 이름까지 붙여 말한다) */
-  assert.doesNotMatch(src, /isOpen \? "열기 ›"/);
-  assert.doesNotMatch(src, /isOpen && <span[^>]*>열기/);
-  /* 촘촘한 칸(그 밖의 도구)에는 상태 글리프를 두지 않는다 — 여덟 개가 줄지어 서면 더 어수선했다(실측) */
-  assert.doesNotMatch(src, /shrink-0 t-caption text-text-3" aria-hidden/);
-  assert.match(src, /열기 ›`/); // 펼친 칸 단추는 그대로
+  assert.doesNotMatch(src, /"열기 ›"/);
 });
 
-test("Z4 시장 신호 — 낱말 칩 + 모수·링크 한 줄", () => {
-  const src = read("app/analysis/hub-tool-detail.tsx");
-  assert.match(src, /signalLabels\.map/);
-  /* [1068] 순서 칩과 신호 칩이 같은 꼴 — 펼친 칸 바탕(bg-bg) 위에서 칩으로 읽히려면 흰 바탕이어야 한다 */
-  assert.equal((src.match(/rounded-full border border-line bg-surface/g) ?? []).length, 2);
-  /* 라벨 칸은 한 폭으로 고정 — 줄마다 내용이 같은 x 에서 시작한다 */
-  assert.match(src, /grid-cols-\[72px_minmax\(0,1fr\)\]/);
-  assert.match(src, /aria-label="시장 신호"/);
-  /* 이어 붙이던 join 은 사라졌다 */
-  assert.doesNotMatch(src, /signalLabels\.join/);
-  /* 개수와 링크는 그대로 */
-  assert.match(src, /\{signalLabels\.length\}가지/);
-  assert.match(src, /\/methodology#signals/);
-});
+/* [1110] Z4(시장 신호 칩 줄 — hub-tool-detail)는 펼침 칸과 함께 걷었다(소유자 "1, 2 같은 문구는 필요없어"). */
+

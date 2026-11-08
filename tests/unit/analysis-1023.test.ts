@@ -9,7 +9,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 
 const read = (p: string) => readFileSync(new URL(`../../${p}`, import.meta.url), "utf8");
 /** 주석은 걷고 본다 */
@@ -93,44 +93,26 @@ test("[1023] 허브 — 최근 실행 결과 3건은 history-store 를 마운트
   assert.match(hero, /useEffect\(\(\) => \{\s*if \(!pickedId\)/);
 });
 
-test("[1023] 허브 — 시장 카드 티저는 대표 지역 8곳을 서버가 적재(hub-teasers)하고 카드가 고른 단지의 regionId 로 바꾼다(없으면 강남 한 벌)", () => {
-  const teasers = code("app/analysis/hub-teasers.ts");
-  assert.match(teasers, /export const HUB_TEASER_REGIONS/);
-  const list = teasers.slice(teasers.indexOf("HUB_TEASER_REGIONS"), teasers.indexOf("];", teasers.indexOf("HUB_TEASER_REGIONS")));
-  assert.equal((list.match(/\{ id: "/g) ?? []).length, 8, "8곳까지");
-  assert.match(teasers, /export async function loadHubTeasers\(regionId: string = HUB_REGION_ID\)/);
-  assert.match(teasers, /export async function loadHubTeasersByRegion\(\)/);
-  /* 적재 함수는 regionId 인자를 받는다(캐시 키에 실린다) — 강남 고정 호출이 남아 있지 않다 */
-  assert.match(teasers, /getRegionSnapshot\(regionId\)/);
-  assert.match(teasers, /getRegionSeries\(regionId, "sale_index", "monthly", SPARK_POINTS\)/);
-  assert.match(teasers, /listRegionTemperatureHistory\(regionId, SPARK_POINTS\)/);
-  assert.ok(!teasers.includes("getRegionSnapshot(HUB_REGION_ID)"));
-  /* 다른 지역은 온도 행이 없으면 첫 행으로 물러서지 않는다 */
-  assert.match(teasers, /regionId === HUB_REGION_ID \? \(tempRes\.value\.rows\[0\] \?\? null\) : null/);
-
-  const swap = code("app/analysis/hub-region-teaser.tsx");
-  assert.match(swap, /"use client"/);
-  assert.match(swap, /picked\?\.regionId/);
-  assert.match(swap, /\(rid && byRegion\[rid\]\) \|\| fallback/);
-  const card = code("app/analysis/hub-tool-card.tsx");
-  assert.match(card, /teaserByRegion\?: Record<string, HubTeaser> \| null/);
-  assert.match(card, /<RegionTeaser slot="spark"/);
-  assert.match(card, /<RegionTeaser slot="value"/);
+/* [1110] 시장 카드 티저(hub-teasers · hub-region-teaser · hub-tool-card)는 없어졌다 — 지역 시세는 도구 5줄이 아니라 "지역 시세 분석" 하나
+   (region-sise-entry: 검색 + 시/도 필터 → 지역 종합 화면). 허브는 그 조각의 데이터(스냅샷 전 지역 · 이번 주 온도)를 한 번 적재한다. */
+test("[1110] 허브 — 티저 파일 없음 · 지역 시세 분석 조각을 적재한다", () => {
+  for (const f of ["app/analysis/hub-teasers.ts", "app/analysis/hub-region-teaser.tsx", "app/analysis/hub-tool-card.tsx"]) {
+    assert.ok(!existsSync(f), `${f} 는 1110 에 지웠다`);
+  }
   const page = code("app/analysis/page.tsx");
-  assert.match(page, /loadHubTeasersByRegion\(\)/);
-  /* [1071] 시장 계열은 카드 대신 표(hub-tool-rows)로 그린다 — 지역 바꿔 보기는 표의 "지금 값" 칸이 같은
-     RegionTeaser 로 한다. 지킬 것은 그대로: 시장 계열만 지역별 티저를 받는다(기록·예시는 받지 않는다). */
-  assert.equal((page.match(/teasersByRegion=\{/g) ?? []).length, 1);
-  const rows = code("app/analysis/hub-tool-rows.tsx");
-  assert.match(rows, /<RegionTeaser slot="value" variant="row"/);
-  assert.match(rows, /<RegionTeaser slot="spark" variant="row"/);
+  assert.match(page, /loadRegionSiseData\("\[\/analysis\]"\)/);
+  assert.match(page, /<RegionSiseEntry data=\{regionSise\} \/>/);
+  assert.ok(!page.includes("teasersByRegion"), "지역별 티저 배선 없음");
 });
 
 test("[1023] 허브 — 계열 머리 \"N종\" 배지는 그 계열 앵커 링크(24px) · 기록 시작 카드는 게스트·로그인 같은 .hub-start · 최근 사용 칩은 권유 꼬리 없음", () => {
   const page = code("app/analysis/page.tsx");
-  assert.match(page, /href=\{`#tier-\$\{id\}`\}[\s\S]{0,200}\{count\}종/);
+  /* [1110] 배지 단위는 계열마다("4종" · "107곳") — {count}{unit} */
+  assert.match(page, /href=\{`#tier-\$\{id\}`\}[\s\S]{0,200}\{count\}\{unit\}/);
   assert.match(page, /min-h-\[24px\][^"]*tabular-nums/);
-  assert.equal((page.match(/hub-start/g) ?? []).length, 2, "게스트 카드 2벌");
+  /* [1110] 기록 시작 카드(게스트 2벌)는 임장노트 분석 화면으로 옮겼다 */
+  assert.equal((page.match(/hub-start/g) ?? []).length, 0, "허브에는 기록 시작 카드 없음");
+  assert.equal((code("app/notes/analysis/page.tsx").match(/hub-start/g) ?? []).length, 2, "게스트 카드 2벌 — /notes/analysis");
   assert.match(code("app/analysis/hub-record-start.tsx"), /card tile hub-start/);
   const css = read("app/globals.css");
   const at = css.lastIndexOf("/* [1023 · AI 분석]");
@@ -148,11 +130,10 @@ test("[1023] 허브 — 계열 머리 \"N종\" 배지는 그 계열 앵커 링�
 });
 
 /* ── ③ 도구 머리 통일 ──────────────────────────────────────────────────────── */
-test("[1023] 도구 4종 머리(price·gap·timing·temperature)는 PageHead(t-title) — t-display h1·손 마크업(.pxs-head) 없음, 오른쪽 칩은 actions", () => {
+test("[1023] 도구 머리(gap·temperature)는 PageHead(t-title) — t-display h1·손 마크업(.pxs-head) 없음, 오른쪽 칩은 actions", () => {
+  /* [1110] price 는 지웠고 timing 은 고르는 자리(PageHead 는 쓰되 오른쪽 칩 없음) — 이 검사는 남은 두 화면만 */
   for (const p of [
-    "app/analysis/price/page.tsx",
     "app/analysis/gap/page.tsx",
-    "app/analysis/timing/TimingClient.tsx",
     "app/analysis/temperature/TempMapClient.tsx",
   ]) {
     const src = code(p);
@@ -163,12 +144,10 @@ test("[1023] 도구 4종 머리(price·gap·timing·temperature)는 PageHead(t-t
     assert.match(src, /actions=\{/, `${p} 오른쪽 칩은 actions 슬롯`);
   }
   /* 머리 오른쪽의 기존 조작은 그대로 */
-  assert.match(code("app/analysis/price/page.tsx"), /<RegionSelect regions=\{selectRegions\} current=\{target\.slug\} \/>/);
-  assert.match(code("app/analysis/timing/TimingClient.tsx"), /<TimingComplexPicker[\s\S]*<TimingRegionSelect/);
   assert.match(code("app/analysis/temperature/TempMapClient.tsx"), /aria-label="기준 주"/);
   assert.match(code("app/analysis/gap/page.tsx"), /실측 갭 \{measured\}곳/);
   /* 페이지 정책은 그대로 */
-  for (const p of ["app/analysis/price/page.tsx", "app/analysis/gap/page.tsx"]) {
+  for (const p of ["app/analysis/timing/page.tsx", "app/analysis/gap/page.tsx"]) {
     assert.match(read(p), /export const revalidate = 86_400;/);
   }
 });

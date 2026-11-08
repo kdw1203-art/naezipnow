@@ -37,36 +37,26 @@ function navHrefs(): string[] {
   return out;
 }
 
-test("① 메뉴 — 실거래 맨 앞 · 하위 6 · AI 3 계열 · 동네에 토론 · 모임 · 요금제 그대로", () => {
+/* [1110] ① 1108 의 "실거래" 대분류는 다시 뺐다(소유자 2026-11-08 "실거래 현황은 지도에서 · 메인 카테고리에서는 제외") — 여섯 묶음.
+   AI 분석 하위는 둘(단지 분석 · 지역 시세 = /analysis/timing), 내 임장노트 분석은 임장노트 하위(/notes/analysis). 지도는 실거래 화면에서 켜진다(also). */
+test("① 메뉴 — 여섯 묶음 · 실거래 대분류 없음 · 지도가 실거래 화면을 켠다 · AI 2 계열 · 동네에 토론 · 모임 · 요금제 그대로", () => {
   assert.deepEqual(
     NAV.map((g) => g.label),
-    ["실거래", "임장노트", "지도", "AI 분석", "동네", "뉴스", "요금제"],
+    ["임장노트", "지도", "AI 분석", "동네", "뉴스", "요금제"],
   );
-  const tx = NAV[0];
-  assert.equal(tx.href, "/complex/browse");
-  assert.deepEqual(
-    (tx.children ?? []).map((c) => [c.label, c.href]),
-    [
-      ["단지 찾기", "/complex/browse"],
-      ["단지 비교", "/complex/compare"],
-      ["실거래 구간", "/tx"],
-      ["동별 실거래", "/dong"],
-      ["월간 리포트", "/reports"],
-      ["시장 온도", "/analysis/temperature"],
-    ],
-  );
-  /* 단지 · 지역 · 구간 · 동별 · 리포트 · 온도 화면에서 "실거래"가 켜진다(가장 긴 접두) */
-  assert.deepEqual([...(tx.also ?? [])].sort(), ["/analysis/temperature", "/complex", "/dong", "/region", "/reports", "/tx"].sort());
   const map = NAV.find((g) => g.label === "지도");
   assert.deepEqual((map?.children ?? []).map((c) => c.href), ["/map", "/map/3d"]);
+  assert.deepEqual([...(map?.also ?? [])].sort(), ["/complex", "/dong", "/region", "/reports", "/tx"].sort());
   const ai = NAV.find((g) => g.label === "AI 분석");
   assert.deepEqual(
     (ai?.children ?? []).map((c) => c.href),
-    ["/analysis", "/analysis#tier-complex", "/analysis#tier-market", "/analysis#tier-record"],
+    ["/analysis", "/analysis#tier-complex", "/analysis/timing"],
   );
-  /* 허브 앵커가 실재한다 */
+  /* 허브 앵커가 실재한다 — 기록 계열 앵커는 없다(임장노트 분석 화면으로) */
   const hub = read("app/analysis/page.tsx");
-  for (const id of ["tier-complex", "tier-market", "tier-record"]) assert.ok(hub.includes(`id="${id}"`), id);
+  for (const id of ["tier-complex", "tier-market"]) assert.ok(hub.includes(`id="${id}"`), id);
+  assert.ok(!hub.includes('id="tier-record"'));
+  assert.ok((NAV[0].children ?? []).some((c) => c.href === "/notes/analysis" && c.label === "노트 분석·비교"));
   const town = NAV.find((g) => g.label === "동네");
   assert.deepEqual(town?.also, ["/talk"]);
   assert.ok((town?.children ?? []).some((c) => c.href === "/talk" && c.label === "토론"));
@@ -75,23 +65,23 @@ test("① 메뉴 — 실거래 맨 앞 · 하위 6 · AI 3 계열 · 동네에 �
   const pay = NAV[NAV.length - 1];
   assert.equal(pay.label, "요금제");
   assert.equal((pay.children ?? []).length, 3);
-  /* 아이콘 표 두 곳에 실거래 */
+  /* 아이콘 표 두 곳에 실거래 없음 */
   for (const f of ["app/components/DesktopSideNavGroups.tsx", "app/components/MobileMenu.tsx"]) {
-    assert.match(read(f), /실거래: "bar",/, f);
+    assert.doesNotMatch(read(f), /실거래: "bar",/, f);
   }
 });
 
-test("② 푸터 24 → 18 — 묶음 4 · 뺀 여섯은 메뉴 하위에 · 심사 줄(요금제 · 카드 결제 수단 안내)은 그대로", () => {
+test("② 푸터 22 — 묶음 4 · 여정 · 일정표는 메뉴 하위에 · 구간 · 동별 · 리포트 · 온도는 데이터 묶음 · 심사 줄(요금제 · 카드 결제 수단 안내)은 그대로", () => {
   const hrefs = footerHrefs();
-  assert.equal(hrefs.length, 18);
+  assert.equal(hrefs.length, 22);
   const f = read("app/components/Footer.tsx");
   const groups = [...f.matchAll(/group: "(service|data|help|policy)"/g)].map((m) => m[1]);
   assert.deepEqual(
     { service: groups.filter((g) => g === "service").length, data: groups.filter((g) => g === "data").length, help: groups.filter((g) => g === "help").length, policy: groups.filter((g) => g === "policy").length },
-    { service: 5, data: 4, help: 4, policy: 5 },
+    { service: 5, data: 8, help: 4, policy: 5 },
   );
-  const removed = ["/journey", "/journey/contract", "/reports", "/tx", "/dong", "/analysis/temperature"];
-  for (const h of removed) assert.ok(!hrefs.includes(h), `푸터에 남음: ${h}`);
+  for (const h of ["/journey", "/journey/contract"]) assert.ok(!hrefs.includes(h), `푸터에 남음: ${h}`);
+  for (const h of ["/reports", "/tx", "/dong", "/analysis/temperature"]) assert.ok(hrefs.includes(h), `푸터 데이터 묶음에 없음: ${h}`);
   const union = new Set([...hrefs, ...navHrefs()]);
   for (const h of OLD_FOOTER_HREFS) assert.ok(union.has(h), `크롤 경로 끊김: ${h}`);
   for (const keep of ['label: "요금제·결제 수단", href: "/subscription"', 'label: "카드 결제 수단 안내", href: "/subscription/payment-methods"', 'label: "법적 고지", href: "/legal"']) {

@@ -454,7 +454,7 @@ export default async function SeasonReportPage({
           </Link>
           {" · "}
           <Link href="/analysis/timing" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
-            매수·매도 타이밍 분석
+            지역 시세 분석
           </Link>
           {" · "}
           <Link href="/tx" className="inline-flex min-h-[24px] items-center font-bold text-primary underline">
@@ -482,7 +482,7 @@ export default async function SeasonReportPage({
             월간 실거래 리포트 <span aria-hidden="true" className="text-text-3">›</span>
           </Link>
           <Link href="/analysis/timing" className="flex min-h-[40px] items-center justify-between gap-2 border-b border-divider py-2 t-sub font-bold text-ink no-underline">
-            매수·매도 타이밍 분석 <span aria-hidden="true" className="text-text-3">›</span>
+            지역 시세 분석 <span aria-hidden="true" className="text-text-3">›</span>
           </Link>
           <Link href="/tx" className="flex min-h-[40px] items-center justify-between gap-2 py-2 t-sub font-bold text-ink no-underline">
             지역별 실거래 상세 <span aria-hidden="true" className="text-text-3">›</span>

@@ -9,7 +9,7 @@
  * 지도 SDK 가 안 뜨면 OSM 대체 지도에는 마커 자체가 없다 — 그때 고를 길이 검색뿐이었다. */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { PICK_DEFAULT_LEVEL, POINT_MODE_MIN_ZOOM, approxBounds, isPointZoom, levelToZoom } from "@/lib/map/pick-zoom";
 
 const read = (p: string) => readFileSync(p, "utf8");
@@ -55,20 +55,10 @@ test("W1b 단지가 없을 때는 없다고 말하고 다음 할 일을 준다",
   assert.match(src, /mapDown \? "max-h-\[78%\]" : "max-h-\[46%\]"/);
 });
 
-test("W3 펼친 칸 — 모수·링크가 칩 줄 끝에 붙어 한 줄이 준다", () => {
-  const src = read("app/analysis/hub-tool-detail.tsx");
-  assert.match(src, /<li className="ml-1 t-caption text-text-3">고른 실행에 \{signalLabels\.length\}가지<\/li>/);
-  assert.match(src, /\/methodology#signals/);
-  /* 칩 줄 아래에 따로 서 있던 줄은 없다 */
-  assert.doesNotMatch(src, /flex flex-col gap-1\.5 text-text-2/);
-  /* 순서도 같은 칩 꼴 그대로(1068) */
-  assert.equal((src.match(/rounded-full border border-line bg-surface/g) ?? []).length, 2);
-});
-
-test("W4 행동 줄 — 주 단추 왼쪽 · 접기는 오른쪽 끝의 조용한 글자", () => {
+/* [1110] W3(펼친 칸의 모수·링크 줄) · W4(행동 줄 — 주 단추 · 접기)는 펼침 칸과 함께 걷었다(hub-tool-detail 삭제 · hub-tiers 는 줄 = 바로 도구). */
+test("W3·W4 — [1110] 펼침 칸 없음", () => {
+  assert.ok(!existsSync("app/analysis/hub-tool-detail.tsx"));
   const src = read("app/analysis/hub-tiers.tsx");
-  assert.match(src, /<div className="flex items-center justify-between gap-2">/);
-  assert.match(src, /aria-label=\{`\$\{c\.title\} 접기`\}[\s\S]{0,160}t-caption text-text-3/);
-  /* 주 단추는 그대로 btn-soft 하나 */
-  assert.match(src, /className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold no-underline"/);
+  assert.doesNotMatch(src, /접기/);
+  assert.doesNotMatch(src, /btn-soft/);
 });

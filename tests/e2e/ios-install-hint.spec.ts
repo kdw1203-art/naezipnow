@@ -169,23 +169,7 @@ test.describe("iOS 사파리", () => {
     expect(Number(await page.evaluate((k) => localStorage.getItem(k), VISIT_KEY))).toBeGreaterThanOrEqual(2);
   });
 
-  test("베타 공지가 아직 안 닫혔으면 순서를 양보한다", async ({ page }) => {
-    test.slow();
-    await page.emulateMedia({ reducedMotion: "reduce" });
-    await page.addInitScript(() => {
-      localStorage.setItem(
-        "nz_cookie_consent",
-        JSON.stringify({ analytics: false, decidedAt: new Date().toISOString() }),
-      );
-    });
-    for (let i = 0; i < 3; i++) {
-      await page.goto("/", { waitUntil: "domcontentloaded" });
-      await page.waitForLoadState("load");
-      await page.waitForTimeout(900);
-    }
-    await page.waitForTimeout(1500);
-    await expect(page.locator(HINT)).toHaveCount(0);
-  });
+  /* [1077] 클로즈 베타 공지 모달은 걷었다 — "베타 공지가 안 닫혔으면 양보" 케이스도 함께 뺀다(양보할 상대가 없다). */
 
   test("이미 앱으로 실행 중이면(standalone) 뜨지 않는다", async ({ page }) => {
     test.slow();

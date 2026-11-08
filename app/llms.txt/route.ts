@@ -72,7 +72,7 @@ ${complexLine}
 - 주제별 부동산 뉴스 허브 (요약·동일 사건 묶음): https://naezipnow.com/town/news/tag/{주제} — 예: https://naezipnow.com/town/news/tag/jaegeonchug
 - 주간 청약 접수·마감 아카이브: https://naezipnow.com/apply/calendar/{yyyy-wNN}
 - 지도 (실거래·매물): https://naezipnow.com/map
-- 시세·타이밍 분석 (시장 온도): https://naezipnow.com/analysis/timing
+- 지역 시세 분석 (시 · 구 · 동 → 지역 종합): https://naezipnow.com/analysis/timing
 - 임장노트 (공개): https://naezipnow.com/notes
 - 청약센터: https://naezipnow.com/supply
 - 데이터 방법론: https://naezipnow.com/methodology

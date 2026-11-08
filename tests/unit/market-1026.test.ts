@@ -183,9 +183,8 @@ const raw = (p: string) => readFileSync(p, "utf8");
 /** 주석은 걷고 본다 — 규칙 기록 문장까지 잡지 않게 */
 const code = (p: string) => raw(p).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
+/* [1110] 면적대별(price)은 지웠고 시세·타이밍(timing)은 "지역 시세 분석"(고르는 자리 — 결론 카드 · 하단 바가 없는 화면)이 됐다 — 1025 표준 검사는 남은 두 화면만 */
 const SCREENS = {
-  price: ["app/analysis/price/page.tsx", "app/analysis/price/BandShelf.tsx", "app/analysis/price/CompareComplexes.tsx", "app/analysis/price/RegionSelect.tsx"],
-  timing: ["app/analysis/timing/page.tsx", "app/analysis/timing/TimingClient.tsx"],
   temperature: ["app/analysis/temperature/page.tsx", "app/analysis/temperature/TempMapClient.tsx", "app/analysis/temperature/OpenOnDesktop.tsx"],
   gap: ["app/analysis/gap/page.tsx", "app/analysis/gap/GapScreener.tsx", "app/analysis/gap/RankTable.tsx", "app/analysis/gap/RankCards.tsx"],
 } as const;
@@ -205,12 +204,10 @@ test("[1026] 네 화면 — StepLine 한 번 · 결론 카드 · 폰 하단 바 
     assert.ok(!/note=\{\{/.test(all), `${name} 이어서 칩의 채움 파랑 "노트 쓰기" 없음(다음 행동 카드의 텍스트 링크로)`);
     assert.ok(raw(files[0]).includes("[1026"), `${name} page 표식`);
   }
-  for (const p of ["app/analysis/price/BandShelf.tsx", "app/analysis/timing/TimingClient.tsx", "app/analysis/temperature/TempMapClient.tsx", "app/analysis/gap/GapScreener.tsx", VERDICT, "lib/market/region-conclusion.ts", "app/analysis/gap/RankCards.tsx", "app/analysis/temperature/OpenOnDesktop.tsx"]) {
+  for (const p of ["app/analysis/temperature/TempMapClient.tsx", "app/analysis/gap/GapScreener.tsx", VERDICT, "lib/market/region-conclusion.ts", "app/analysis/gap/RankCards.tsx", "app/analysis/temperature/OpenOnDesktop.tsx"]) {
     assert.ok(raw(p).includes("[1026"), `${p} 표식`);
   }
-  /* 섹션 점 파랑 하나 — 네 화면 모두 .nz-dot-blue 안 */
-  assert.ok(raw("app/analysis/price/page.tsx").includes('className="nz-dot-blue'));
-  assert.ok(raw("app/analysis/timing/page.tsx").includes('className="nz-dot-blue"'));
+  /* 섹션 점 파랑 하나 — 두 화면 모두 .nz-dot-blue 안 */
   assert.ok(raw("app/analysis/temperature/page.tsx").includes('className="nz-dot-blue"'));
   assert.ok(raw("app/analysis/gap/page.tsx").includes('className="nz-dot-blue'));
 });
@@ -248,29 +245,7 @@ test("[1026] region-verdict — 채움 파랑은 공용 버튼 하나(레일 · 
   assert.ok(!/server-only|supabase|fetch\(/.test(lib), "순수 — 새 조회 없음");
 });
 
-test("[1026] 면적대별 — 결론은 선반이 고른 칸을 따른다 · 숫자 줄은 폰 2칸 · 빈 상태 회색 견본 · 데이터 정책 그대로", () => {
-  const shelf = code("app/analysis/price/BandShelf.tsx");
-  assert.ok(shelf.includes("priceConclusion(regionName, band, band.slug === busiestSlug)"), "고른 칸(band)으로 결론");
-  assert.ok(shelf.includes("priceSteps(regionName, band)"), "고른 칸으로 절차");
-  assert.ok(shelf.indexOf("<VerdictCard") < shelf.indexOf('className="pxs-shelf'), "결론 → 선반(대표 그림) 순서");
-  assert.ok(shelf.includes("{facts}"));
-  const page = code("app/analysis/price/page.tsx");
-  assert.ok(page.includes("max-md:hidden") && page.includes("phone: true"), "폰 숫자 칸 줄이기");
-  assert.ok(page.includes("border-dashed"), "빈 상태 회색 견본");
-  assert.ok(!/text-\[\d+px\]/.test(page), "램프 글자만");
-  assert.ok(page.includes("export const revalidate = 86_400;") && page.includes("noIndex: true"), "캐시·색인 정책 그대로");
-  assert.ok(page.includes('listBandComplexes(target.name, "area", c.bandSlug, 8)'), "새 조회 없음 — 기존 조회 그대로");
-});
-
-test("[1026] 시세·타이밍 — 불러오는 동안 결론 자리만 · 폰은 결론과 겹치는 칸 숨김 · 알림 카드 = 다음 행동(스파크 유지) · 섹션 제목 h2", () => {
-  const t = code("app/analysis/timing/TimingClient.tsx");
-  assert.ok(t.includes("loading ? <SkBlock h={76} /> : conclusion && <VerdictCard"), "이전 지역 값이 결론에 섞이지 않게");
-  assert.ok(t.includes('k.phone ? "min-w-0" : "min-w-0 max-md:hidden"'));
-  assert.ok(t.includes("<RegionActionCard") && t.includes("<Spark"), "스파크는 다음 행동 카드 안으로");
-  assert.ok(!t.includes("알림 설정"), "흐린 '알림 설정' 버튼은 채움 파랑 '이 지역 알림 받기'로");
-  assert.ok(/<h2[^>]*t-section[^>]*>\s*시장 온도/.test(t) && /<h2 className="t-section text-ink">월 거래량<\/h2>/.test(t), "섹션 제목 = h2.t-section(점)");
-  assert.ok(t.indexOf("<StepLine") > t.indexOf("<PageHead") && t.indexOf("<StepLine") < t.indexOf("<VerdictCard"), "머리 → 절차 → 결론");
-});
+/* [1110] "[1026] 면적대별 …" · "[1026] 시세·타이밍 …" 검사는 그 화면들과 함께 뺐다(price 삭제 · timing 은 지역 시세 분석 고르는 자리). */
 
 test("[1026] 시장 온도 — 결론은 주·시도를 따른다 · 폰은 가장 뜨거운·차가운 칸 숨김 · Q&A·인용은 폰 <details>(데스크톱 펼침) · JSON-LD 그대로", () => {
   const c = code("app/analysis/temperature/TempMapClient.tsx");

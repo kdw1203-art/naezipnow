@@ -203,7 +203,6 @@ test("TTL 을 올린 라우트가 되돌아가지 않는다(비움 배선과 짝
     ["app/analysis/page.tsx", "86_400"],
     ["app/analysis/accuracy/page.tsx", "86_400"],
     ["app/analysis/gap/page.tsx", "86_400"],
-    ["app/analysis/price/page.tsx", "86_400"],
     ["app/analysis/scenario/page.tsx", "86_400"],
     ["app/analysis/timing/page.tsx", "86_400"],
     ["app/analysis/temperature/page.tsx", "86_400"],

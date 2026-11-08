@@ -73,6 +73,8 @@ const STATIC_ROUTES: Array<{ path: string; priority: number }> = [
   { path: "/analysis/compare", priority: 0.6 },
   /* cycle/price/scenario/portfolio/switch 는 noIndex 데모·시뮬레이션 — 사이트맵에서 제외 */
   { path: "/analysis/timing", priority: 0.6 },
+  /* [1110] 임장노트 분석 — AI 분석 허브의 내 임장노트 묶음이 온 자리 */
+  { path: "/notes/analysis", priority: 0.5 },
   { path: "/analysis/temperature", priority: 0.6 },
   { path: "/analysis/gap", priority: 0.6 }, // [3차] 전세가율·갭 스크리너 — 실데이터
 

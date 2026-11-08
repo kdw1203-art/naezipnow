@@ -4,26 +4,17 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { AdZone } from "@/app/components/ads/AdZone";
 import { TopBanner } from "@/app/components/ads/TopBanner";
-import Link from "@/app/components/IntentLink";
 import { Icon } from "@/app/components/Icon";
-import type { InspectionNote } from "@/lib/inspection/store-db";
-import { listPublicNotesWithFallback } from "@/lib/inspection/public-notes-cached";
-import { listPublicNotes } from "@/lib/inspection/store-db";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
-import { loadHubTeasers, loadHubTeasersByRegion, type HubTeaser, type HubTeasers } from "./hub-teasers";
 import { loadHomeCoverage } from "@/lib/newui/home-coverage";
 import { FEATURE_RULES } from "@/lib/subscriptions/access";
 import { isTierOnSale } from "@/lib/subscriptions/sell-config";
 import { HubPickedProvider } from "./hub-context";
 import { HubHero } from "./hub-hero";
 import { WorkbenchGrid } from "./hub-tiers";
-import { workbenchCardData, workbenchSteps, WORKBENCH_SIGNAL_LABELS } from "./workbench-cards";
-import { ToolDetailBody } from "./hub-tool-detail";
-import { HubNoteAnalysis } from "./hub-picker";
-import { HubMyNoteTeaser, HubRecordStart } from "./hub-record-start";
-import { CompareTrayCount } from "./tool-cards-client";
-import { ToolRows } from "./hub-tool-rows";
-import { AI_TOOL_COUNT, MARKET_LIVE, RECORD_LIVE, TIERS, type TierId } from "./tool-catalog";
+import { workbenchCardData } from "./workbench-cards";
+import { loadRegionSiseData, RegionSiseEntry } from "./region-sise-entry";
+import { AI_TOOL_COUNT, TIERS, type TierId } from "./tool-catalog";
 import { AI_TOOL_IDS } from "@/lib/ai/ai-tools";
 import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
 
@@ -52,42 +43,23 @@ import { TOOL_IDENTITIES } from "@/lib/ai/tool-identity";
      [에이전트] 여러 데이터를 물어보는 자리 (계열을 가로지르는 하나)
      [체험]    예시 계산 4종 — 접힘. 실데이터와 섞지 않는다 (UI-04)
 
+   [1110 · AI 분석 2차 통폐합] 소유자 2026-11-07 ~ 08 지시로 화면은 **둘**이 됐다 —
+     [계열 1]  단지 분석 4줄 — 펼침 문구 없이 바로 열기
+     [계열 2]  지역 시세 분석 하나 — 시 · 구 · 동 검색 + 시/도 필터 → 그 지역의 종합 화면(/region/[id])
+   내 임장노트(임장노트 분석 · 후보 단지 비교 · 노트 AI 실행)와 에이전트는 임장노트 카테고리(/notes/analysis)로 옮겼다 —
+   "임장노트 카테고리에서 끝낼 수 있도록 · AI 분석에서는 제외". 예시 계산 구역은 1109 에서 없어졌다.
+
    글자 크기는 램프 유틸(.t-display/.t-title/.t-section/.t-sub/.t-caption)만
    쓴다 — 이 화면에 있던 t-display·[15px]·[13.5px]·[11.5px]·[10.5px]·[9px]
    같은 임의값을 전부 걷어냈다(UI-07).
    ============================================================ */
-
-/** 공개 노트에서 AI(또는 규칙) 요약 문구가 있는 첫 건 — 게스트 미리보기용 */
-function pickPublicAiPreview(notes: InspectionNote[]): {
-  id: string;
-  title: string;
-  teaser: string;
-  badge: string;
-} | null {
-  for (const n of notes) {
-    const ai = n.aiAnalysis;
-    if (!ai) continue;
-    const teaser = [ai.narrativeSummary, ai.summary, ai.detailedConclusion].find(
-      (x): x is string => typeof x === "string" && x.trim().length > 0,
-    );
-    if (!teaser) continue;
-    const engine = typeof ai.engine === "string" ? ai.engine : "";
-    const badge = engine.startsWith("rule-based") ? "규칙 기반 분석" : "AI 생성";
-    const title =
-      n.aptName && !n.title.includes(n.aptName)
-        ? `${n.aptName} — ${n.title}`
-        : n.title;
-    return { id: n.id, title, teaser: teaser.trim().slice(0, 160), badge };
-  }
-  return null;
-}
 
 /* 설명문은 이 화면이 실제로 하는 일만 적는다. [1109] 예시 계산 구역이 없어져 "예시 계산 표시" 문구도 뺐다 —
    시나리오 화면은 제 화면 안에서 기준가 없을 때 예시임을 적는다. */
 export const metadata = buildPageMetadata({
   title: "분석 도구",
   description:
-    "AI 분석 · 단지 종합 진단 · 시세 예측 · 매수 타이밍 · 임장 동선 · 지역 시세 · 임장노트 분석 · 국토교통부 실거래 기준", /* [1029 · 20] 낱말 꼴 · [1109] 예시 계산 구역 없음 */
+    "AI 분석 · 단지 종합 진단 · 시세 예측 · 매수 타이밍 · 임장 동선 · 지역 시세 분석(시 · 구 · 동) · 국토교통부 실거래 기준", /* [1029 · 20] 낱말 꼴 · [1110] 임장노트 분석은 /notes/analysis */
   path: "/analysis",
 });
 
@@ -97,7 +69,7 @@ const TIER_ICON: Record<TierId, string> = {
   record: "notebook-pen",
 };
 
-function TierHead({ id, count }: { id: TierId; count: number }) {
+function TierHead({ id, count, unit = "종" }: { id: TierId; count: number; unit?: string }) {
   const t = TIERS[id];
   return (
     <div className="hub-tier-head">
@@ -115,7 +87,7 @@ function TierHead({ id, count }: { id: TierId; count: number }) {
           href={`#tier-${id}`}
           className="tap-line t-caption ml-auto inline-flex min-h-[24px] min-w-[24px] shrink-0 items-center justify-end text-text-3 tabular-nums no-underline hover:underline"
         >
-          {count}종
+          {count}{unit}
         </a>
       </div>
     </div>
@@ -137,23 +109,13 @@ function TierHead({ id, count }: { id: TierId; count: number }) {
 export const revalidate = 86_400;
 
 export default async function AnalysisHubPage() {
-  /* 카드별 실측 티저 + 12구간 추세선. 실패/없음이면 해당 키가 아예 없고,
-     카드에서는 그 줄이 빠질 뿐이다(가짜 수치·"—" 채움 없음). */
-  const [teasers, teasersByRegion, coverage, publicRows] = await Promise.all([
-    loadHubTeasers().catch(() => ({})),
-    /* [1023] 대표 지역 8곳의 시장 티저 — 고른 단지의 지역으로 카드가 바뀐다(hub-region-teaser). 실패는 빈 객체(강남 한 벌 그대로) */
-    loadHubTeasersByRegion().catch(() => ({}) as Record<string, HubTeasers>),
+  /* [1110] 지역 시세 분석 입구의 지금 값(스냅샷 전 지역 · 이번 주 온도)과 히어로 커버리지 — 실패/없음은 그 칸이 "—" 또는 빠질 뿐(가짜 수치 없음) */
+  const [regionSise, coverage] = await Promise.all([
+    loadRegionSiseData("[/analysis]"),
     /* [958] 히어로 커버리지 — 홈과 같은 6시간 캐시 실측값(0이면 0, 실패면 —) */
     loadHomeCoverage().catch(() => ({ txCount: null, complexCount: null, regionCount: null })),
-    /* 게스트 미리보기 — 공개 노트의 실제 AI 요약. [949] 모두에게 같은 값이라 페이지 캐시(ISR)에
-       실린다. [967 · 29a] DB 가 밀리는 시간대의 TimeoutError 는 마지막 정상본으로 받는다.
-       실패는 null(빈 안내 카드) — 샘플로 채우지 않는다. */
-    listPublicNotesWithFallback(24, (n) => listPublicNotes(n, { withAi: true }))
-      .then((r) => r.notes)
-      .catch(() => [] as InspectionNote[]),
   ]);
-  /* [980] 12칸 카드는 서버에서 조립한다 — 클라이언트가 tool-identity·tool-persona 를
-     직접 import 하면 번들 예산을 넘긴다(workbench-cards.ts 주석 참고). */
+  /* [980] 카드는 서버에서 조립한다 — 클라이언트가 tool-identity·tool-persona 를 직접 import 하면 번들 예산을 넘긴다(workbench-cards.ts 주석 참고). */
   const workbenchCards = workbenchCardData();
   const aiLimit = FEATURE_RULES.ai_analysis.monthlyLimit ?? {};
   /* [993] 무료는 992 부터 누적 3회(lifetimeLimit) — 월 한도(null)를 0회로 적고 있었다 */
@@ -166,8 +128,6 @@ export default async function AnalysisHubPage() {
     proOnSale: isTierOnSale("expert"),
   };
 
-  const publicPreview = pickPublicAiPreview(publicRows);
-
   return (
     <>
       <HubPickedProvider>
@@ -176,7 +136,7 @@ export default async function AnalysisHubPage() {
           <HubHero
             coverage={coverage}
             quota={quota}
-            toolCount={AI_TOOL_COUNT + MARKET_LIVE.length + RECORD_LIVE.length}
+            toolCount={AI_TOOL_COUNT + 1}
             /* [1109] 최근 실행 결과 3건의 제목 — 통합된 도구의 옛 결과도 이름으로 읽히게 12종 정체성 전부(목록은 살아 있는 4종만) */
             toolTitles={Object.fromEntries(AI_TOOL_IDS.map((id) => [id, TOOL_IDENTITIES[id].title]))}
           />
@@ -192,142 +152,21 @@ export default async function AnalysisHubPage() {
             className="rise-in-1 flex scroll-mt-24 flex-col gap-3"
           >
             <TierHead id="complex" count={AI_TOOL_COUNT} />
-            <WorkbenchGrid
-              core={workbenchCards.core}
-              more={workbenchCards.more}
-              details={Object.fromEntries(
-                [...workbenchCards.core.map((c) => [c, true] as const), ...workbenchCards.more.map((c) => [c, false] as const)].map(([c, fromTable]) => [
-                  c.id,
-                  <ToolDetailBody key={c.id} c={c} steps={workbenchSteps(c.id)} signalLabels={WORKBENCH_SIGNAL_LABELS} fromTable={fromTable} />,
-                ]),
-              )}
-            />
+            {/* [1110] 줄을 누르면 바로 도구 — 펼침 칸(분석 순서 · 시장 신호)은 걷었다(소유자 "1, 2 같은 문구는 필요없어") */}
+            <WorkbenchGrid core={workbenchCards.core} />
           </section>
 
-          {/* ── 계열 2 · 지역·시장 흐름 (UI-09 실측 티저 + 추세선) ── */}
+          {/* ── 계열 2 · 지역 시세 분석 — [1110] 도구 5줄(면적대별 · 시세·타이밍 · 시장 온도 · 갭 스크리너 · 시나리오) → 하나.
+              검색(시 · 구 · 동) + 시/도 필터 → 그 지역의 종합 화면(/region/[id] 탭 여섯). 같은 조각이 /analysis/timing 에도 선다. ── */}
           <section
             id="tier-market"
             className="rise-in-2 flex scroll-mt-24 flex-col gap-3"
           >
-            <TierHead id="market" count={MARKET_LIVE.length} />
-            {/* [1071 · 한 가지 꼴] 큰 카드 4장(두 장만 숫자 상자가 있어 들쭉날쭉) → 단지 분석과 같은 표.
-                실측 값 · 출처 줄 · 추세선 · 지역 바꿔 보기는 "지금 값" 칸으로 그대로 옮겼다(hub-tool-rows). */}
-            <ToolRows
-              tools={MARKET_LIVE}
-              nowLabel="지금 값"
-              teasers={teasers as Partial<Record<string, HubTeaser>>}
-              teasersByRegion={teasersByRegion as Record<string, Partial<Record<string, HubTeaser>>>}
-            />
+            <TierHead id="market" count={regionSise.regions.length} unit="곳" />
+            <RegionSiseEntry data={regionSise} />
           </section>
 
-          {/* ── 계열 3 · 내가 쓴 기록 ── */}
-          <section
-            id="tier-record"
-            className="rise-in-2 flex scroll-mt-24 flex-col gap-3"
-          >
-            <TierHead id="record" count={RECORD_LIVE.length} />
-
-            {/* 시작 지점: 로그인=내 노트 실카운트 / 게스트=공개 노트 실 요약.
-                [1007] 로그인 카드는 HubRecordStart(클라이언트)가 세션 판정 뒤 바꿔 끼운다 —
-                게스트 카드는 여기 서버 JSX 그대로(ISR HTML 에 실리고 클라이언트 번들엔 안 들어간다). */}
-            <HubRecordStart
-              guest={
-                publicPreview ? (
-                  /* [1023] .hub-start — 게스트·로그인 카드 같은 최소 높이(세션 판정 뒤 바꿔 끼울 때 레이아웃 점프를 줄인다) */
-                  <div className="card hub-start flex flex-col gap-2.5 rounded-lg p-4">
-                    <span className="t-section text-ink">공개 노트 AI 정리 미리보기</span>
-                    <div className="ai-panel flex flex-col gap-1.5 rounded-lg p-3.5">
-                      <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="t-caption inline-flex items-center rounded border border-line px-1.5 py-px font-semibold text-ai-muted">
-                          {publicPreview.badge}
-                        </span>
-                        <span className="t-sub font-bold text-ai-text">
-                          {publicPreview.title}
-                        </span>
-                      </div>
-                      <p className="t-sub text-ai-text">
-                        {publicPreview.teaser}
-                        {publicPreview.teaser.length >= 160 ? "…" : ""}
-                      </p>
-                    </div>
-                    {/* [1015 · 규칙 B·J] 기능 설명("로그인하면 내 노트도 같은 방식으로…")은 걷고, 채움 파랑은 outline 으로
-                        (이 화면의 채움 파랑은 노트 AI 분석 카드의 "분석 실행" 하나) */}
-                    <div className="flex shrink-0 flex-wrap gap-2">
-                      <Link
-                        href={`/notes/${publicPreview.id}`}
-                        className="btn-outline btn-md no-underline"
-                      >
-                        전체 AI 요약 보기
-                      </Link>
-                      <Link href="/notes/new" className="btn-soft btn-md no-underline">
-                        내 노트 쓰기
-                      </Link>
-                    </div>
-                  </div>
-                ) : (
-                  /* [1071] 같은 무게의 단추 셋이 한 줄에 서 있어 무엇부터 누르는지 흐렸다 — 할 일 하나(단추)와
-                     갈 곳 둘(글자 링크)로 나눈다. 목적지·문구는 그대로. */
-                  <div className="card hub-start flex flex-wrap items-center justify-between gap-x-4 gap-y-2.5 rounded-2xl p-4">
-                    {/* 공개 AI 미리보기 0건 — 샘플 리포트로 채우지 않는다. [1015 · 규칙 B·D] 빈 화면은 한 줄 */}
-                    <span className="flex min-w-0 flex-col gap-0.5">
-                      <span className="t-section text-ink">공개된 AI 정리 없음</span>
-                      <span className="flex flex-wrap items-center gap-x-3 t-sub text-text-3">
-                        <Link href="/notes" className="tap-line font-semibold text-text-2 no-underline hover:underline">
-                          공개 노트 보기 ›
-                        </Link>
-                        <Link href="/login" className="tap-line font-semibold text-text-2 no-underline hover:underline">
-                          로그인 ›
-                        </Link>
-                      </span>
-                    </span>
-                    <Link href="/notes/new" className="btn-outline btn-md shrink-0 no-underline">
-                      임장노트 쓰고 AI 받기
-                    </Link>
-                  </div>
-                )
-              }
-            />
-
-            {/* [1071 · 한 가지 꼴] 도구 카드 2장 → 위 두 계열과 같은 표. 내 노트 수 · 비교 후보 수는
-                "내 기록" 칸으로(세션 판정 뒤 클라이언트가 붙인다 — HubMyNoteTeaser · CompareTrayCount). */}
-            <ToolRows
-              tools={RECORD_LIVE}
-              nowLabel="내 기록"
-              extras={{
-                "/notes": <HubMyNoteTeaser bare />,
-                "/analysis/compare": <CompareTrayCount bare />,
-              }}
-            />
-            {/* 히어로에서 고른 단지를 컨텍스트로 받는다 — ?noteId=·로그인 여부는 카드가 스스로 읽는다 */}
-            <HubNoteAnalysis />
-          </section>
-
-          {/* ── 계열을 가로지르는 하나: 에이전트 ──
-              예전엔 도구 카드 8장 사이에 끼어 있어 "9번째 도구"처럼 보였다.
-              하는 일이 다르다 — 도구는 한 대상을 깊게, 에이전트는 여러 데이터를
-              검색·조합해 질문에 답한다. 그래서 자리를 따로 준다. */}
-          {/* [1071] 남색 띠(ai-panel)가 이 화면에서 혼자 어두운 덩어리라 눈이 가장 먼저 거기로 갔다 — 도구 표와 같은
-              흰 판 · 같은 칩 크기(36px) · 같은 글자 단계로 맞춘다. 에이전트라는 성격은 칩 색(ai-chip)이 말한다. */}
-          <Link
-            href="/agent"
-            className="card press rise-in-3 flex min-h-11 items-center gap-2.5 rounded-2xl px-3 py-3 no-underline hover:bg-bg"
-          >
-            {/* .ai-chip 은 어두운 판 위 전용(글자색 = on-dark)이라 흰 판에서는 아이콘이 사라졌다(캡처) — 표의 칩과 같은 옅은 바탕 */}
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-soft text-primary" aria-hidden="true">
-              <Icon name="bot" size={18} />
-            </span>
-            {/* [1015 · 규칙 B·D] 물음형 제목·예시 질문은 걷고 명사 제목 + 사실 한 줄 */}
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="t-body font-bold text-ink">에이전트</span>
-              <span className="t-sub text-text-2">
-                내 임장노트·실거래 조회 · 참고한 자료 목록 표시 · 수도권 실거래 기준
-              </span>
-            </span>
-            <span className="shrink-0 t-sub font-bold text-primary">열기 ›</span>
-          </Link>
-
-          {/* [1109 · AI 분석 통폐합] "예시 계산" 접힘 구역은 없앴다 — 자산 배분 시뮬레이터는 지웠고(→ /calculator), 시장·대출 시나리오는
-              지역 시세 표의 다섯째 줄. 화면의 묶음은 셋(단지 · 지역 · 내 노트) + 에이전트 한 줄. */}
+          {/* [1110] 내 임장노트 묶음 · 에이전트 · 예시 계산은 이 화면에 없다 — 임장노트 분석(/notes/analysis)과 1109 참고. 화면의 묶음은 둘(단지 · 지역). */}
         </div>
       </HubPickedProvider>
       {/* [961] 광고 공간 — 허브 맨 아래(도구 입력·결과 사이에는 두지 않는다) */}

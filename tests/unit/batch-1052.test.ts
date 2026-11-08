@@ -161,16 +161,17 @@ test("노트 상세 — 감각 축(채광·소음·주차)을 다른 축 점수�
   assert.match(code("app/notes/[id]/NoteToolsRow.tsx"), /\.\.\.\(cid \? \{ complexId: cid \} : \{\}\)/);
 });
 
-test("AI 허브 — 펼침 단추가 할 일을 말한다 · 분석 순서 ㄹ 탈락 동사 · 쓰지 않는 좁은 화면 상태 제거", () => {
+test("AI 허브 — [1110] 펼침 칸 없음(줄이 바로 도구) · 분석 순서 ㄹ 탈락 동사 · 쓰지 않는 좁은 화면 상태 제거", () => {
   const tiers = code("app/analysis/hub-tiers.tsx");
-  assert.match(tiers, /picked \? `\$\{picked\.name\} \$\{c\.title\} 열기 ›` : `단지 고르고 \$\{c\.title\} 열기 ›`/);
-  assert.match(tiers, /role="region"/);
+  /* [1110] 펼침("단지 고르고 ○○ 열기" · role=region 내용 칸)은 걷었다 — 줄 누름 = 단지 있으면 그 도구 · 없으면 지도 서랍 */
+  assert.doesNotMatch(tiers, /단지 고르고 \$\{c\.title\}/);
+  assert.doesNotMatch(tiers, /role="region"/);
+  assert.match(tiers, /if \(picked\) router\.push\(`\$\{c\.href\}\$\{query\}`\);\s*else launch\(c\);/);
   assert.doesNotMatch(code("app/analysis/hub-hero.tsx"), /setNarrow/);
   assert.equal(stageStep("추정값에 표시를 다는 중"), "추정값에 표시 달기");
   assert.equal(stageStep("목록을 만드는 중"), "목록 만들기");
   assert.equal(stageStep("신호등 3개를 켜는 중"), "신호등 3개 켜기");
   assert.equal(stageStep("국토부 실거래 불러오는 중 — 점수의 기준을 잡아요"), "국토부 실거래 불러오기");
-  assert.match(code("app/analysis/hub-tool-detail.tsx"), /key=\{`\$\{i\}-\$\{st\}`\}/);
 });
 
 test("계산기 — 최대 대출 계산식 카드는 따로 받는 청크(서버 렌더 유지)", () => {
@@ -202,7 +203,7 @@ test("번들 — 모든 화면 레이아웃의 기록기는 가입 경로 규칙
 test("반응형 누름 면 — 전역 .min-h-10(40px · md+ 포함) 때문에 md:/lg:min-h-* 와 함께 쓰는 곳은 min-h-[40px]", () => {
   const files = [
     "app/components/ExpertBadge.tsx", "app/components/signals/SignalBoard.tsx", "app/components/viz/DivergingBars.tsx",
-    "app/components/talk/TalkPanel.tsx", "app/notes/notes-feed-client.tsx", "app/complex/[id]/ComplexAreaMap.tsx", "app/analysis/hub-tool-detail.tsx",
+    "app/components/talk/TalkPanel.tsx", "app/notes/notes-feed-client.tsx", "app/complex/[id]/ComplexAreaMap.tsx",
   ];
   for (const f of files) {
     const bad = code(f).split("\n").filter((l) => /\bmin-h-10\b/.test(l) && /(?:md|lg):min-h-\d/.test(l));

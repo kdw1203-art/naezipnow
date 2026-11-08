@@ -9,7 +9,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import {
   SIGNAL_FACTOR_ORDER,
   SIGNAL_FORMULA_VERSION,
@@ -311,9 +311,6 @@ test("S6 · 요인 이름 → /methodology#signal-<key> · 줄마다 출처·기
   for (const key of SIGNAL_FACTOR_ORDER) assert.match(m, new RegExp(`\\n  ${key}:\\s*\\n?\\s*"`), `요인 설명 ${key}`);
   assert.match(m, /\.\.\.\(s\.items \?\? \[\]\)\.map/, "FAQ JSON-LD 도 같은 배열(본문과 내용 일치)");
 
-  const hub = read("app/analysis/hub-tool-detail.tsx");
-  assert.match(hub, /href="\/methodology#signals"/);
-  assert.match(hub, /계산 방법 ›/);
-  assert.match(hub, /min-h-\[40px\][^"]*md:min-h-6/);
-  assert.ok(!/^"use client"/m.test(hub), "서버 조각 그대로");
+  /* [1110] 허브의 펼침 칸("계산 방법 ›" — hub-tool-detail)은 걷었다. 요인별 계산 방법 링크는 결과 화면의 신호 판(SignalBoard)과 /methodology 가 맡는다 */
+  assert.ok(!existsSync("app/analysis/hub-tool-detail.tsx"));
 });

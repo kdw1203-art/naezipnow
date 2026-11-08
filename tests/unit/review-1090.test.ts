@@ -78,9 +78,11 @@ test("동네이야기 · 분석 — 셸은 layout 한 벌 · page · loading 은
   assert.doesNotMatch(strip(read("app/town/[region]/page.tsx")), /ShellNarrow/, "동네 홈은 넓은 벌 그대로");
   assert.doesNotMatch(strip(read("app/town/page.tsx")), /ShellNarrow/);
   /* 도구 색 화면 — .tool-scope 판(변수 · 자손 규칙뿐이라 main 에 있던 것과 같다) */
-  for (const f of ["app/analysis/gap/page.tsx", "app/analysis/timing/page.tsx", "app/analysis/temperature/page.tsx"]) {
+  /* [1110] 시세·타이밍은 지역 시세 분석(고르는 자리 — 도구 색 판 없음)이 됐다 — 남은 두 화면만 */
+  for (const f of ["app/analysis/gap/page.tsx", "app/analysis/temperature/page.tsx"]) {
     assert.match(strip(read(f)), /<div className="tool-scope" style=\{personaVars\(TOOL_PERSONAS\["market:[a-z]+"\]\)\}>\s*<ShellBreadcrumb>/, f);
   }
+  assert.match(strip(read("app/analysis/timing/page.tsx")), /<ShellBreadcrumb>분석 › 지역 시세 분석<\/ShellBreadcrumb>/);
   assert.match(strip(read("app/analysis/temperature/[region]/page.tsx")), /<ShellBreadcrumb>[^\n]*<\/ShellBreadcrumb>\s*<ShellTitle>\{`\$\{region\.label\} 시장 온도 주간 기록`\}<\/ShellTitle>/);
   /* 모임 채팅 — 셸 위 고정 판 */
   const chat = strip(read("app/town/groups/[id]/chat/page.tsx"));

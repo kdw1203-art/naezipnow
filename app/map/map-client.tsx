@@ -4158,12 +4158,9 @@ export function MapClient({
         >
           목록으로 보기 ›
         </button>
-        {/* [1053] "시세" 낱말 금지 — /analysis/price 는 면적대별 **실거래가**, /analysis/timing 은 매매가격지수·거래량 흐름 */}
-        <Link href="/analysis/price" className="chip chip-soft px-3 py-1.5 t-sub no-underline">
-          면적대별 실거래가 ›
-        </Link>
+        {/* [1110] 면적대별 실거래가 · 가격 흐름 두 칩 → 지역 시세 분석 하나(시 · 구 · 동 → 지역 종합 화면). "시세" 낱말은 통계 화면 이름 */}
         <Link href="/analysis/timing" className="chip chip-soft px-3 py-1.5 t-sub no-underline">
-          가격 흐름·타이밍 ›
+          지역 시세 분석 ›
         </Link>
       </div>
     </div>

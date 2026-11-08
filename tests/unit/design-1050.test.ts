@@ -13,7 +13,7 @@
  */
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { stageStep } from "@/lib/ai/tool-stage-steps";
 import { TOOL_PERSONAS } from "@/lib/ai/tool-persona";
 import { AI_TOOL_IDS } from "@/lib/ai/ai-tools";
@@ -55,26 +55,19 @@ test("임장노트 — 표 · 폰 격자: 첫 누름 펼침(피드 카드) · �
   assert.match(f, /노트 열기 ›/, "펼친 줄 · 펼친 타일에 다음 동작");
 });
 
-test("AI 분석 — 첫 누름 내용 · 다시 누름 예전 동작 · 내용은 서버 조립", () => {
+/* [1110] 1050 의 "첫 누름 = 펼침(분석 순서 · 시장 신호) · 다시 누름 = 도구"는 소유자 2026-11-07 "1, 2 같은 문구는 필요없어"로 걷었다 —
+   줄을 누르면 바로 도구다. 번들 규칙(서버 조립 · 클라이언트는 tool-persona · tool-identity · 신호 엔진을 import 하지 않는다)은 그대로 지킨다. */
+test("AI 분석 — [1110] 줄 누름 = 바로 도구(펼침 없음) · 번들은 서버 조립 그대로", () => {
   const t = code("app/analysis/hub-tiers.tsx");
-  assert.match(t, /if \(openId === c\.id\) return open\(c\)\(e\);/, "다시 누름 = 예전 동작(지도 서랍 · 도구)");
+  assert.doesNotMatch(t, /openId|setOpenId|details\[c\.id\]|<td colSpan=\{4\}|단지 고르고 \$\{c\.title\}/, "펼침 상태 · 내용 칸 없음");
   assert.match(t, /if \(e\.metaKey \|\| e\.ctrlKey \|\| e\.shiftKey \|\| e\.altKey \|\| e\.button !== 0\) return;/);
-  assert.match(t, /setOpenId\(c\.id\)/);
-  assert.match(t, /\{details\[c\.id\]\}/, "내용은 서버 조각");
-  const d = read("app/analysis/hub-tool-detail.tsx");
-  assert.ok(!d.trimStart().startsWith('"use client"') && !/^"use client"/m.test(d), "서버 조각(클라이언트 JS 0)");
-  assert.match(d, /steps\.map\(/, "분석 순서 4단계");
-  assert.match(d, /분석 순서/);
-  assert.match(d, /시장 신호/);
-  /* [1052] 단추가 할 일을 말한다 — 고른 단지 이름 · 없으면 "단지 고르고" */
-  assert.match(t, /\$\{c\.title\} 열기 ›/);
-  assert.match(t, /grid-flow-row-dense grid-cols-2/, "그 밖의 8종 — 누른 줄 아래");
-  assert.match(t, /<td colSpan=\{4\}/);
+  assert.match(t, /if \(picked\) router\.push\(`\$\{c\.href\}\$\{query\}`\);\s*else launch\(c\);/, "줄 누름 = 단지 있으면 그 도구 · 없으면 지도 서랍");
   assert.doesNotMatch(t, /from "@\/lib\/ai\/tool-persona"|from "@\/lib\/ai\/tool-identity"|from "@\/lib\/signals\//, "번들 — 서버에서 조립");
+  assert.ok(!existsSync("app/analysis/hub-tool-detail.tsx"), "펼침 서버 조각 파일 없음");
   const w = code("app/analysis/workbench-cards.ts");
-  assert.match(w, /return TOOL_PERSONAS\[id\]\.runStages\.map\(stageStep\)\.filter\(Boolean\)/);
-  assert.match(w, /WORKBENCH_SIGNAL_LABELS: readonly string\[\] = Object\.values\(SIGNAL_FACTOR_META\)/);
-  assert.match(code("app/analysis/page.tsx"), /<ToolDetailBody key=\{c\.id\} c=\{c\} steps=\{workbenchSteps\(c\.id\)\} signalLabels=\{WORKBENCH_SIGNAL_LABELS\}/);
+  assert.doesNotMatch(w, /workbenchSteps|WORKBENCH_SIGNAL_LABELS|SIGNAL_FACTOR_META|stageStep/);
+  assert.match(w, /export function workbenchCardData\(\): \{ core: WorkbenchCardDto\[\] \}/);
+  assert.match(code("app/analysis/page.tsx"), /<WorkbenchGrid core=\{workbenchCards\.core\} \/>/);
   assert.ok(!read("app/analysis/workbench-cards.ts").trimStart().startsWith('"use client"'), "서버 모듈");
 });
 

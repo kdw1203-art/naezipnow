@@ -1,6 +1,5 @@
 "use client";
 
-import { Fragment, useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { ToolGlyph } from "./ToolGlyph";
@@ -9,56 +8,25 @@ import { useHubPicked } from "./hub-context";
 import { TOOL_COL_GO, TOOL_COL_NAME, TOOL_COL_RESULT } from "./tool-cols";
 
 /* ============================================================
-   워크벤치 그리드 — [UI-03 · UI-06 · UI-08 · UI-10 · 958]
+   워크벤치 표 — [UI-03 · UI-06 · UI-08 · UI-10 · 958]
 
-   예전: 12장이 한꺼번에 펼쳐졌고 전부 같은 문장을 달고 있었다. 지금: 자주
-   쓰는 4종만 펼치고 8종은 접는다. 958 에서 카드마다 **결과물 모양 글리프**와
-   "무엇이 나오는지"(metricLabel) 한 줄을 붙였다 — 이름만으로는 열두 도구가
-   서로 뭐가 다른지 알 수 없었다.
+   [1110 · AI 분석 2차 통폐합] 소유자(2026-11-07 캡처 "1, 2 같은 문구는 필요없어"): 줄을 누르면 아래에 펼쳐지던
+   "분석 순서 4단계 · 시장 신호 8칩 · 계산 방법 · 단지 고르고 ○○ 열기" 칸(1050 펼침)을 걷었다. 표의 네 줄은 **한 번 누르면
+   바로 그 도구**다 — 단지를 골랐으면 그 단지로, 안 골랐으면 지도 서랍(975)에서 단지부터. 하는 일 · 결과 칸은 그대로.
+   ("그 밖의 8종" 칸은 1109 에서 없어졌다 — core 네 줄만 그린다.)
 
-   [975] **카드를 누르면 지도가 함께 뜬다.** 예전엔 단지를 안 고른 채 카드를
-   누르면 빈 도구 화면이 열렸고, 거기서 단지명을 정확히 알아야 시작할 수 있었다.
-   이제 고른 단지가 없으면 카드 클릭이 지도 서랍을 열고(검색도 그 안에 있다),
-   거기서 고른 단지로 **그 도구를** 곧장 연다. 새 탭/가운데 클릭 같은 수식 클릭은
-   가로채지 않고, 서랍 안에 "단지 없이 먼저 보기" 길도 남긴다.
+   [975] **줄을 누르면 지도가 함께 뜬다.** 단지를 안 고른 채 누르면 빈 도구 화면이 아니라 지도 서랍(검색 포함)이 열리고,
+   거기서 고른 단지로 **그 도구를** 곧장 연다. 새 탭/가운데 클릭 같은 수식 클릭은 가로채지 않고, 서랍 안에
+   "단지 없이 먼저 보기" 길도 남긴다.
+   [980] 카드 내용은 서버가 조립해 준다(app/analysis/workbench-cards.ts) — tool-identity·tool-persona 를 여기서
+   import 하면 /analysis 예산(490KB)을 넘긴다.
+   [1049 · 표] 자주 쓰는 도구는 판 한 장(글리프 · 이름 · 하는 일 · 결과).
    ============================================================ */
 
-export function WorkbenchGrid({
-  core,
-  more,
-  details = {},
-}: {
-  core: WorkbenchCardDto[];
-  more: WorkbenchCardDto[];
-  /** [1050 · 펼침] 도구 id → 펼친 내용(서버 조각 hub-tool-detail · 하는 일 · 결과 · 분석 순서 · 시장 신호) */
-  details?: Partial<Record<string, ReactNode>>;
-}) {
+export function WorkbenchGrid({ core }: { core: WorkbenchCardDto[] }) {
   const { picked, query, openMap } = useHubPicked();
   const router = useRouter();
-  /* [1050 · 펼침] 소유자 지시(2026-10-09): "ai분석에서도 해당 기능을 누르면 펼쳐지기가 되어서 기능의 내용이 보이고
-     한 번 더 누르면 기능을 사용할 수 있도록". 첫 누름 = 그 도구 아래에 내용(하는 일 · 결과 · 분석 순서 4단계 ·
-     함께 보는 시장 신호)이 펼쳐진다. 같은 도구를 다시 누름(또는 펼친 칸의 "도구 열기") = 예전 동작 그대로
-     (단지를 골랐으면 그 도구 · 안 골랐으면 지도 서랍). 새 탭·가운데 클릭은 가로채지 않는다. 펼침은 한 번에 하나. */
-  const [openId, setOpenId] = useState<string | null>(null);
-  /* [1052] 펼친 칸이 화면 안에 들어오게 · 접으면 그 도구 줄로 초점(키보드로 접은 뒤 위치를 잃지 않게) */
-  const lastOpenRef = useRef<string | null>(null);
-  useEffect(() => {
-    if (openId) {
-      lastOpenRef.current = openId;
-      window.requestAnimationFrame(() => document.getElementById(`tool-open-${openId}`)?.scrollIntoView({ block: "nearest" }));
-    } else if (lastOpenRef.current) {
-      const id = lastOpenRef.current;
-      lastOpenRef.current = null;
-      window.requestAnimationFrame(() => document.querySelector<HTMLElement>(`a[data-tool="${CSS.escape(id)}"]`)?.focus({ preventScroll: true }));
-    }
-  }, [openId]);
 
-  /* [980] 카드 내용은 서버가 조립해 준다(app/analysis/workbench-cards.ts).
-     여기서 tool-identity·tool-persona 를 직접 import 하면 두 모듈이 통째로
-     브라우저 번들에 실려 /analysis 예산(490KB)을 넘긴다 — 실측 502KB. */
-  /* [1049 · 표] 소유자 지시(2026-10-09) "AI 분석 디자인 개선과 간결화 · 표 적극 도입" — 카드 4장(왼쪽 색 띠) + 칩 한 줄로
-     갈려 있던 12종을 **판 한 장**으로. 자주 쓰는 4종은 표(글리프 · 이름 · 하는 일 · 결과), 그 밖의 8종은 같은 판 아래 촘촘한 칸.
-     누르는 동작은 그대로(단지를 안 골랐으면 지도 서랍 → 그 도구). */
   /* 지도 서랍 → 고른 단지로 그 도구 */
   const launch = (c: WorkbenchCardDto) =>
     openMap({
@@ -73,66 +41,21 @@ export function WorkbenchGrid({
     e.preventDefault();
     launch(c);
   };
-  const tap = (c: WorkbenchCardDto) => (e: React.MouseEvent<HTMLAnchorElement>) => {
-    if (openId === c.id) return open(c)(e);
-    if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-    e.preventDefault();
-    setOpenId(c.id);
-  };
-  /* 펼친 칸 — 내용은 서버 조각(details), 여기는 "열기"(예전 동작)와 "접기"만 */
-  const detail = (c: WorkbenchCardDto) => (
-    <div
-      id={`tool-open-${c.id}`}
-      role="region"
-      aria-label={`${c.title} 내용`}
-      className="tool-scope flex flex-col gap-2.5"
-      style={c.vars}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") {
-          e.stopPropagation();
-          setOpenId(null);
-        }
-      }}
-    >
-      {details[c.id]}
-      {/* [1070] 할 일 하나와 되돌리기 하나가 나란히 붙어 있어 어느 쪽이 주된 행동인지 흐렸다
-          (소유자 2026-10-16). 주 단추는 왼쪽에 그대로 두고 "접기"는 줄 오른쪽 끝으로 — 눈이 왼쪽만 보면 된다. */}
-      <div className="flex items-center justify-between gap-2">
-        {/* [1052] 누르면 무엇이 일어나는지 단추에 — 단지를 골랐으면 그 단지로, 안 골랐으면 지도에서 단지부터 */}
-        <Link href={`${c.href}${query}`} onClick={open(c)} className="btn-soft inline-flex min-h-10 items-center px-4 t-sub font-bold no-underline">
-          {picked ? `${picked.name} ${c.title} 열기 ›` : `단지 고르고 ${c.title} 열기 ›`}
-        </Link>
-        <button
-          type="button"
-          onClick={() => setOpenId(null)}
-          aria-label={`${c.title} 접기`}
-          className="inline-flex min-h-10 shrink-0 items-center rounded-full px-3 t-caption text-text-3 hover:bg-surface hover:text-text-2"
-        >
-          접기 ▴
-        </button>
-      </div>
-    </div>
-  );
-  const row = (c: WorkbenchCardDto) => {
-    const isOpen = openId === c.id;
-    return (
-    <Fragment key={c.id}>
+  const row = (c: WorkbenchCardDto) => (
     <tr
-      className={`cursor-pointer border-b border-line last:border-b-0 ${isOpen ? "bg-bg" : ""}`}
+      key={c.id}
+      className="cursor-pointer border-b border-line last:border-b-0 hover:bg-bg"
       onClick={(e) => {
-        /* 링크 밖(하는 일 · 결과 · › 칸)을 눌러도 같은 순서 — 링크 안은 링크가 처리한다 */
+        /* 링크 밖(하는 일 · 결과 · › 칸)을 눌러도 같은 동작 — 링크 안은 링크가 처리한다 */
         if ((e.target as HTMLElement).closest("a,button")) return;
-        if (!isOpen) setOpenId(c.id);
-        else if (picked) router.push(`${c.href}${query}`);
+        if (picked) router.push(`${c.href}${query}`);
         else launch(c);
       }}
     >
       <td className="px-3 py-1.5">
         <Link
           href={`${c.href}${query}`}
-          onClick={tap(c)}
-          aria-expanded={isOpen}
-          aria-controls={isOpen ? `tool-open-${c.id}` : undefined}
+          onClick={open(c)}
           className="tool-scope press flex min-h-11 min-w-0 items-center gap-2.5 no-underline"
           style={c.vars}
           data-tool={c.id}
@@ -148,29 +71,18 @@ export function WorkbenchGrid({
       </td>
       <td className="hidden px-2 py-1.5 t-sub text-text-2 md:table-cell">{c.premise}</td>
       <td className={`hidden px-2 py-1.5 t-caption text-text-3 lg:table-cell ${TOOL_COL_RESULT}`}>{c.result ?? "—"}</td>
-      {/* [1067 · 칸 흔들림] 펼치면 이 칸이 w-8 → w-16("열기 ›")로 넓어져 **표 전체의 칸 자리가 밀렸다**
-          (결과 칸이 줄마다 다른 x 로 보인다 — 소유자 캡처 2026-10-13). 폭을 한 값으로 고정하고 상태는 캐럿 방향으로만
-          말한다. "열기"는 펼친 칸 안의 단추가 이미 이름까지 붙여 말하고 있다(중복). */}
+      {/* [1067 · 칸 흔들림] 폭은 한 값으로 고정 — 지역 시세 표의 › 칸과 같은 자리 */}
       <td className={`px-3 text-right t-body text-text-3 ${TOOL_COL_GO}`} aria-hidden="true">
-        {/* dead-control-ok: 줄 전체가 펼침 단추(tr onClick · 첫 칸 링크의 첫 누름) — 캐럿은 그 상태 표시 */}
-        {isOpen ? "▴" : "▾"}
+        {/* dead-control-ok: 줄 전체가 링크(tr onClick · 첫 칸 링크) — 화살표는 그 표시 */}
+        ›
       </td>
     </tr>
-    {isOpen && (
-      <tr className="border-b border-line bg-bg last:border-b-0">
-        <td colSpan={4} className="px-3 pb-3 pt-1 md:pl-[60px]">
-          {detail(c)}
-        </td>
-      </tr>
-    )}
-    </Fragment>
-    );
-  };
+  );
 
   return (
     <div className="flex flex-col gap-2.5">
       <div className="card overflow-hidden rounded-2xl">
-        {/* [1071] 칸 폭을 지역 시세·내 임장노트 표와 같은 숫자로(tool-cols) — 세 표의 칸이 위아래로 줄을 맞춘다 */}
+        {/* [1071] 칸 폭을 지역 시세 표와 같은 숫자로(tool-cols) — 두 표의 칸이 위아래로 줄을 맞춘다 */}
         <table className="w-full border-collapse md:table-fixed">
           <thead className="max-md:hidden">
             <tr className="border-b border-line bg-bg text-left t-caption text-text-3">
@@ -178,57 +90,15 @@ export function WorkbenchGrid({
               <th scope="col" className="px-2 py-2 font-bold">하는 일</th>
               <th scope="col" className={`hidden px-2 py-2 font-bold lg:table-cell ${TOOL_COL_RESULT}`}>결과</th>
               <th scope="col" className={`px-3 py-2 ${TOOL_COL_GO}`}>
-                <span className="sr-only">펼치기</span>
+                <span className="sr-only">열기</span>
               </th>
             </tr>
           </thead>
           <tbody>{core.map(row)}</tbody>
         </table>
-        {/* 그 밖의 8종 — 같은 판 아래 촘촘한 칸(글리프 · 이름). 폰 2열 · 데스크톱 4열 — 표 한 줄씩이면 화면이 길어진다 */}
-        {more.length > 0 && (
-          <div className="border-t border-line bg-bg/60 px-3 py-2">
-            {/* [1067] 같은 판 안인데 이 줄만 표 머리와 꼴이 달랐다 — 표 머리(t-caption · text-text-3 · 굵게)와 맞춘다 */}
-            <p className="m-0 pb-1.5 t-caption font-bold text-text-3">그 밖의 도구 {more.length}</p>
-            {/* [1050 · 펼침] 누른 칸 줄 바로 아래에 내용 — 같은 줄의 나머지 칸은 dense 로 제 줄에 남는다 */}
-            <ul className="m-0 grid list-none grid-flow-row-dense grid-cols-2 gap-x-2 p-0 md:grid-cols-4">
-              {more.map((c) => {
-                const isOpen = openId === c.id;
-                return (
-                <Fragment key={c.id}>
-                <li className="min-w-0">
-                  <Link
-                    href={`${c.href}${query}`}
-                    onClick={tap(c)}
-                    aria-expanded={isOpen}
-                    aria-controls={isOpen ? `tool-open-${c.id}` : undefined}
-                    className={`tool-scope press flex min-h-10 min-w-0 items-center gap-2 rounded-md px-1 no-underline ${isOpen ? "bg-surface" : ""}`}
-                    style={c.vars}
-                    data-tool={c.id}
-                    title={c.premise}
-                  >
-                    <span className="tool-ink inline-flex shrink-0" aria-hidden="true">
-                      <ToolGlyph id={c.glyph} size={18} />
-                    </span>
-                    <span className="min-w-0 flex-1 truncate t-sub font-bold text-text-1">{c.title}</span>
-                    {/* [1067] 열렸을 때만 "열기 ›" 를 붙이던 자리 — 글자 폭만큼 이름 칸이 줄어 말줄임 자리가 줄마다 달랐다.
-                        캐럿을 늘 그려 봤더니(실측 캡처) 여덟 칸에 화살표가 줄지어 서서 더 어수선했다 — 아무것도 두지 않는다.
-                        펼친 칸은 배경색(bg-surface)과 바로 아래 열리는 내용이 이미 말한다. */}
-                  </Link>
-                </li>
-                {isOpen && (
-                  <li className="col-span-2 mb-1.5 rounded-lg border border-line bg-surface px-3 py-2.5 md:col-span-4">
-                    {detail(c)}
-                  </li>
-                )}
-                </Fragment>
-                );
-              })}
-            </ul>
-          </div>
-        )}
       </div>
 
-      {/* [1015 · 규칙 B] 사용법 문장("카드를 누르면 지도가 떠요 …")은 걷었다 — 고른 단지가 있을 때만 그 사실 한 줄 */}
+      {/* [1015 · 규칙 B] 사용법 문장은 걷었다 — 고른 단지가 있을 때만 그 사실 한 줄 */}
       {picked && (
         <div className="flex flex-wrap items-center gap-2">
           <span className="t-sub text-text-3">

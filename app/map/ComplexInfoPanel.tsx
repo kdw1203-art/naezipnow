@@ -637,8 +637,9 @@ export function ComplexInfoPanel({
     }
     return `/notes/new?${params.toString()}`;
   })();
+  /* [1110] 노트가 있으면 임장노트 분석(노트 AI 실행 카드가 그 노트를 고른 채 열린다) · 없으면 단지 분석 허브 */
   const analysisHref = focusNoteId
-    ? `/analysis?noteId=${encodeURIComponent(focusNoteId)}`
+    ? `/notes/analysis?noteId=${encodeURIComponent(focusNoteId)}`
     : `/analysis?complexId=${encodeURIComponent(complexId)}`;
   const focusNoteHref = focusNoteId
     ? `/notes/${encodeURIComponent(focusNoteId)}`

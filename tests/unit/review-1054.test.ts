@@ -273,7 +273,8 @@ test("D8 오류·빈 상태·권유 문구", () => {
   const town = read("app/components/home/HomeTownBlock.tsx");
   assert.match(town, /이웃 글 불러오기 실패 · 잠시 후 다시/);
   assert.match(town, /뉴스 불러오기 실패 · 잠시 후 다시/);
-  assert.match(read("app/analysis/price/page.tsx"), /실거래 집계 불러오기 실패 · 잠시 후 다시/);
+  /* [1110] 면적대별 실거래가 화면은 지웠다 — 같은 꼴의 실패 문구는 지역 시세 분석 입구가 쓴다(LOAD_FAILED_LINE) */
+  assert.match(read("app/analysis/region-sise-entry.tsx"), /LOAD_FAILED_LINE/);
   assert.match(read("app/analysis/error.tsx"), /분석 화면 불러오기 실패 · 잠시 후 다시/);
   assert.match(read("app/digest/[week]/page.tsx"), /이 주 시장 온도 스냅샷 없음/);
   assert.match(read("app/tx/[region]/[kind]/[band]/page.tsx"), /이 구간 단지별 내역 없음/);
@@ -281,7 +282,6 @@ test("D8 오류·빈 상태·권유 문구", () => {
     "app/analysis/compare/MyCriteriaRank.tsx",
     "app/analysis/error.tsx",
     "app/notes/[id]/deck/DeckViewer.tsx",
-    "app/components/home/HomeToolPick.tsx",
   ]) {
     assert.doesNotMatch(read(f), /해 보세요/, f);
   }

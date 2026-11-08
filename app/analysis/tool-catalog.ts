@@ -71,10 +71,8 @@ export interface HubTool {
   /** 선형 아이콘 이름 (app/components/Icon.tsx) — 이모지 금지 */
   icon: string;
   tier: TierId;
-  /** 실데이터가 아니라 예시 계산이면 true → 별도 "체험" 구역으로 내려간다 */
+  /** 실데이터가 아니라 예시 계산이면 true */
   sim?: boolean;
-  /** 티저 키 — hub-teasers 의 실측 숫자와 연결 (없으면 숫자 줄이 빠진다) */
-  teaser?: "price" | "timing" | "temp" | "baseRate" | "gap" | "notes" | "compare";
 }
 
 /** 워크벤치(단지 1개 스코프) — [1109 · AI 분석 통폐합] 살아 있는 4종만(종합 진단 · 시세 예측 · 매수 타이밍 · 임장 동선).
@@ -109,28 +107,22 @@ export function workbenchCard(id: AiAnalysisToolId) {
   };
 }
 
-/* 지역·시장 / 내 기록 도구.
-   [UI-02] 중복은 **워크벤치 쪽 이름에 대상("이 단지"·"내")을 넣어** 풀었다.
-   그래서 여기 제목은 도착 페이지가 스스로 쓰는 이름을 그대로 쓴다 — 카드에서
-   본 이름과 열린 화면의 이름이 다르면 그게 다시 "어떤 게 어느 기능인지"를
-   흐린다. 대상(지역/전국/내 기록)은 제목이 아니라 **계열 머리글**이 말한다. */
+/* 지역·시장 / 내 기록 화면.
+   [UI-02] 중복은 **워크벤치 쪽 이름에 대상("이 단지"·"내")을 넣어** 풀었다. 제목은 도착 페이지가 스스로 쓰는 이름 그대로.
+   [1110 · AI 분석 2차 통폐합] 소유자 2026-11-07 ~ 08:
+     · 지역 시세 도구 5줄(면적대별 실거래가 · 시세·타이밍 · 지역별 시장 온도 · 갭 스크리너 · 시나리오) → **지역 시세 분석 하나**
+       (/analysis/timing — 시 · 구 · 동 검색 + 시/도 필터 → 그 지역의 종합 화면 /region/[id]). 면적대별 실거래가(/analysis/price)는 지웠다 →
+       /analysis/timing 301(그 일은 지역 종합 화면의 "면적대·가격대별 실거래" · 실거래 구간 탭이 한다). 온도 지도 · 갭 순위 · 시나리오는
+       **지역 비교 화면**으로 남아 지역 시세 분석 아래 글자 링크 — 허브 표의 줄이 아니다.
+     · 내 임장노트 묶음(임장노트 분석 · 후보 단지 비교 · 노트 AI 실행)과 에이전트는 AI 분석에서 빼고 임장노트 카테고리(/notes/analysis)로.
+   허브(/analysis)는 이 배열을 더는 표로 그리지 않는다 — 임장노트 분석 화면이 RECORD_LIVE 를, 글리프 · 페르소나 표가 href 를 읽는다. */
 export const HUB_TOOLS: readonly HubTool[] = [
   {
-    href: "/analysis/price",
-    /* [1015] "시세" 낱말은 실거래만 있는 곳에서 쓰지 않는다 → "면적대별 실거래가" */
-    title: "면적대별 실거래가",
-    desc: "지역·면적대 평단가와 중앙값, 면적 프리미엄을 실거래로",
-    icon: "bar",
-    tier: "market",
-    teaser: "price",
-  },
-  {
     href: "/analysis/timing",
-    title: "시세·타이밍 분석",
-    desc: "12개월 지수·모멘텀으로 지역 단위 흐름 판단",
+    title: "지역 시세 분석",
+    desc: "시 · 구 · 동 검색 → 개요 · 실거래 구간 · 전월세 · 시장 온도 · 동네 · 월간 리포트",
     icon: "trending-up",
     tier: "market",
-    teaser: "timing",
   },
   {
     href: "/analysis/temperature",
@@ -138,7 +130,6 @@ export const HUB_TOOLS: readonly HubTool[] = [
     desc: "매주 쌓은 온도 기록으로 지금 값이 아니라 추세를 확인",
     icon: "flame",
     tier: "market",
-    teaser: "temp",
   },
   {
     href: "/analysis/gap",
@@ -146,27 +137,7 @@ export const HUB_TOOLS: readonly HubTool[] = [
     desc: "시군구 전세가율 순위와 실측 우선 갭 — 공표 통계 기반",
     icon: "landmark",
     tier: "market",
-    teaser: "gap",
   },
-  {
-    href: "/notes",
-    title: "임장노트 분석",
-    desc: "내 기록을 점수화하고 장단점·다음 체크를 정리",
-    icon: "notebook-pen",
-    tier: "record",
-    teaser: "notes",
-  },
-  {
-    href: "/analysis/compare",
-    title: "후보 단지 비교",
-    desc: "담아 둔 후보 단지를 같은 기준의 표로 나란히",
-    icon: "scale",
-    tier: "record",
-    teaser: "compare",
-  },
-  /* [1109 · AI 분석 통폐합] "예시 계산" 구역(접힘)은 없앴다 — 자산 배분 시뮬레이터(/analysis/portfolio)는 등록 자산 0건 "준비 중"
-     빈 화면(noindex · 30일 2방문)이라 대출·비용 계산기로 301. 시장·대출 시나리오는 실제 기준금리로 계산하는 화면이라 지역 시세
-     계열의 다섯째 줄로 올라왔다(기준가 없을 때 예시 수치를 쓰는 사실은 설명 한 줄 · 화면 안 표기 그대로). */
   {
     href: "/analysis/scenario",
     title: "시장·대출 시나리오",
@@ -174,7 +145,20 @@ export const HUB_TOOLS: readonly HubTool[] = [
     icon: "calculator",
     tier: "market",
     sim: true,
-    teaser: "baseRate",
+  },
+  {
+    href: "/analysis/compare",
+    title: "후보 단지 비교",
+    desc: "담아 둔 후보 단지를 같은 기준의 표로 나란히",
+    icon: "scale",
+    tier: "record",
+  },
+  {
+    href: "/agent",
+    title: "에이전트",
+    desc: "내 임장노트·실거래 조회 · 참고한 자료 목록 표시 · 수도권 실거래 기준",
+    icon: "bot",
+    tier: "record",
   },
   /* [1097 · 통폐합] 갈아타기 추천(/analysis/switch)은 추천 엔진 없이 "준비 중" 빈 화면이라 지웠다 → /analysis/timing 으로 리다이렉트 */
 ] as const;
@@ -182,7 +166,7 @@ export const HUB_TOOLS: readonly HubTool[] = [
 export const LIVE_TOOLS = HUB_TOOLS.filter((t) => !t.sim);
 export const SIM_TOOLS = HUB_TOOLS.filter((t) => t.sim);
 
-/** 계열별 도구 — 화면은 이 순서 그대로 그린다. [1109] 지역 시세 계열은 시나리오(sim)까지 한 표(별도 접힘 구역 없음) */
+/** 계열별 화면 — 지역 시세 계열(시나리오 포함) · 기록 계열(임장노트 분석 화면의 표) */
 export const MARKET_LIVE = HUB_TOOLS.filter((t) => t.tier === "market");
 export const RECORD_LIVE = LIVE_TOOLS.filter((t) => t.tier === "record");
 
@@ -190,7 +174,6 @@ export const RECORD_LIVE = LIVE_TOOLS.filter((t) => t.tier === "record");
 export const ACCEPTS_COMPLEX: ReadonlySet<string> = new Set([
   "/analysis/scenario",
   "/analysis/compare",
-  "/analysis/timing",
 ]);
 
 /** 워크벤치 도구 개수(살아 있는 4종) — 계열 머리글의 "N종" 표기에 쓴다. */

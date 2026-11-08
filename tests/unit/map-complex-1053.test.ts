@@ -178,10 +178,11 @@ test("④ 검색 — 굳은 검색어(settledQuery)를 replaceState 로 주소�
 test("⑤ 실거래만 있는 자리에 '시세' 낱말 없음 — 지도 폴백 링크 · 단지 시세 탭 링크", () => {
   assert.ok(!mapClient.includes("면적대별 시세 ›"));
   assert.ok(!mapClient.includes("시세·타이밍 ›"));
-  assert.ok(mapClient.includes("면적대별 실거래가 ›"));
-  assert.ok(mapClient.includes("가격 흐름·타이밍 ›"));
+  /* [1110] 두 칩(면적대별 실거래가 · 가격 흐름·타이밍) → 지역 시세 분석 하나(통계 화면 이름 — 실거래만 있는 자리가 아니다) */
+  assert.ok(!mapClient.includes("면적대별 실거래가 ›"));
+  assert.ok(mapClient.includes("지역 시세 분석 ›"));
   assert.ok(!priceTab.includes("AI 시세 분석 보기"));
-  assert.ok(priceTab.includes("AI 가격 분석 보기"));
+  assert.ok(priceTab.includes("이 지역 시세 분석 보기"));
 });
 
 test("⑥ 단지 상세 — 실거래 조회 실패(오류·예산 초과)면 던진다 · 기존 4/5 임계 뒤 · 캐시 7일 유지", () => {

@@ -479,13 +479,13 @@ test("홈 입구 — 문 넷은 ⓘ 로 접혔고, 목적지 넷은 실재 화�
    이 테스트가 그 계약(주소는 그대로, 자리만 이동)을 잠근다. */
 test("내비 — '내 집 마련' 세 줄이 임장노트 하위에, 주소는 그대로 · 푸터 링크", () => {
   /* [1044] 대분류 5 → 6: "뉴스"가 동네에서 떨어져 나왔다(소유자 지시 2026-10-06). "내 집 마련"은 여전히 대분류가 아니다 */
-  /* [1108] 대분류 6 → 7: "실거래"가 맨 앞에 섰다(통폐합 — 단지 · 지역 · 구간 · 동별 · 월간 리포트의 머리). 임장노트는 둘째 */
-  assert.equal(NAV.length, 7);
-  assert.equal(NAV[0].label, "실거래");
-  assert.equal(NAV[1].label, "임장노트");
-  assert.equal(NAV[1].href, "/notes");
-  const kids = (NAV[1].children ?? []).map((c) => c.href);
-  assert.deepEqual(kids, ["/notes/new", "/notes", "/journey", "/journey/contract", "/quiz"]);
+  /* [1108] 대분류 6 → 7: "실거래"가 맨 앞에 섰다가 [1110] 다시 뺐다(실거래 현황은 지도가 머리 · 소유자 2026-11-08). 임장노트가 첫째 */
+  assert.equal(NAV.length, 6);
+  assert.equal(NAV[0].label, "임장노트");
+  assert.equal(NAV[0].href, "/notes");
+  const kids = (NAV[0].children ?? []).map((c) => c.href);
+  /* [1110] 노트 분석·비교(/notes/analysis — AI 분석 허브의 내 임장노트 묶음이 온 자리)가 공개 노트 다음 */
+  assert.deepEqual(kids, ["/notes/new", "/notes", "/notes/analysis", "/journey", "/journey/contract", "/quiz"]);
   /* 대분류 어디에도 "내 집 마련"이 남아 있지 않다 */
   assert.equal(
     NAV.some((n) => n.label === "내 집 마련"),

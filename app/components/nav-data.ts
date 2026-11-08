@@ -18,24 +18,11 @@ export type NavItem = {
 };
 
 export const NAV: NavItem[] = [
-  /* [1108 · 통폐합] "실거래" — 대분류 맨 앞(6 → 7). 11.01~05 첫 화면 수 1,956 가운데 단지 818 · 지역 391 · 비교 107 · 실거래 구간 59,
-     곧 70% 가 실거래 화면인데 상단 메뉴에는 그 머리가 없었다(지역 · 단지 · 구간 · 동별 · 월간 리포트 · 시장 온도가 지도 하위 ·
-     푸터 "데이터" 묶음 · 지역 화면 안 링크로 흩어져 있었다). 머리 화면은 단지 찾기(/complex/browse — 구 → 단지별 실거래 요약,
-     색인 대상). 푸터에서 뺀 실거래 구간 · 동별 · 월간 리포트 · 시장 온도는 여기 하위로 옮겨 모든 화면 HTML 에 그대로 남는다
-     (1069 · 1094 의 "끊긴 묶음" 크롤 경로 보존). 요금제는 토스 심사가 끝날 때까지 그대로(소유자 결정 2026-11-07). */
-  {
-    label: "실거래",
-    href: "/complex/browse",
-    also: ["/tx", "/dong", "/reports", "/region", "/complex", "/analysis/temperature"],
-    children: [
-      { label: "단지 찾기", href: "/complex/browse" },
-      { label: "단지 비교", href: "/complex/compare" },
-      { label: "실거래 구간", href: "/tx" },
-      { label: "동별 실거래", href: "/dong" },
-      { label: "월간 리포트", href: "/reports" },
-      { label: "시장 온도", href: "/analysis/temperature" },
-    ],
-  },
+  /* [1108 · 통폐합] "실거래" 대분류(단지 찾기 · 단지 비교 · 실거래 구간 · 동별 실거래 · 월간 리포트 · 시장 온도)를 맨 앞에 두었다가
+     [1110] 소유자 2026-11-08 "실거래 현황은 지도에서 표시할 수 있도록 해주고 메인 카테고리에서는 제외해줘" — 다시 뺐다(7 → 6).
+     단지별 실거래 현황은 지도(/map — 단지 마커 · 목록)가 머리고, 실거래 구간 · 동별 · 월간 리포트 · 시장 온도 허브는 푸터 데이터 묶음으로
+     돌아갔다(크롤 경로 보존). 주소는 전부 그대로(/complex/browse 는 색인 유입용으로 남는다 — 메뉴에서만 뺐다). 단지 · 지역 · 구간 · 동별 ·
+     리포트 화면에서는 "지도"가 켜진다(also). */
   /* [1008 · J] 내 집 마련 — 여정(/journey)·계약·잔금 일정표·실거래가 게임.
      왜: 도구는 다섯 메뉴에 흩어져 있는데 "지금 어느 단계이고 다음에 뭘 하면 되는지"를 잇는 길이 없었다
      (30일 실측: /calculator·/guides/contract 조회 0, 단지 페이지 착지의 48% 가 다음 페이지 없이 이탈).
@@ -59,6 +46,8 @@ export const NAV: NavItem[] = [
     children: [
       { label: "노트 쓰기", href: "/notes/new" },
       { label: "공개 노트", href: "/notes" },
+      /* [1110] 임장노트 분석 · 후보 단지 비교 · 에이전트 — AI 분석 허브의 "내 임장노트" 묶음이 이리로 왔다(/notes/analysis) */
+      { label: "노트 분석·비교", href: "/notes/analysis" },
       { label: "내 집 마련 여정", href: "/journey" },
       { label: "계약·잔금 일정표", href: "/journey/contract" },
       { label: "실거래가 게임", href: "/quiz" },
@@ -67,8 +56,9 @@ export const NAV: NavItem[] = [
   {
     label: "지도",
     href: "/map",
-    /* [1108 · 통폐합] 단지 찾기는 "실거래" 대분류의 머리로 갔다. 3D 지도(/map/3d · 5일 방문 10)는 지도의 다른 보기라 여기 하위로 —
-       예전엔 메뉴 어디에도 없어 지도 화면 안 단추로만 닿았다. */
+    /* [1110] 실거래 화면(단지 · 지역 · 구간 · 동별 · 리포트)은 지도 대분류가 켜진다 — 실거래 현황의 머리가 지도다(소유자 2026-11-08).
+       3D 지도(/map/3d · 5일 방문 10)는 지도의 다른 보기라 하위로 — 예전엔 메뉴 어디에도 없어 지도 화면 안 단추로만 닿았다. */
+    also: ["/complex", "/region", "/tx", "/dong", "/reports"],
     children: [
       { label: "통합 지도 (탐색·실거래·매물)", shortLabel: "통합 지도", href: "/map" },
       { label: "3D 지도", href: "/map/3d" },
@@ -84,8 +74,9 @@ export const NAV: NavItem[] = [
          내 임장노트)로 바꾼다. 12개 도구 이름을 외워야 고를 수 있는 구조였고(AI 진입 12곳), 허브는 이미 2026-08-25 부터
          이 세 질문으로 짜여 있다(app/analysis/page.tsx #tier-*). 도구 주소는 그대로(허브 카드에서 닿는다). 이름은 TIERS.label 과 같게. */
       { label: "단지 분석", href: "/analysis#tier-complex" },
-      { label: "지역 시세", href: "/analysis#tier-market" },
-      { label: "내 임장노트 분석", shortLabel: "내 노트 분석", href: "/analysis#tier-record" },
+      /* [1110] 지역 시세 = 지역 시세 분석 화면(시 · 구 · 동 검색 → 지역 종합). 내 임장노트 분석은 임장노트 카테고리(/notes/analysis)로 —
+         소유자 2026-11-07 "임장노트 카테고리에서 끝낼 수 있도록 · AI 분석에서는 제외". */
+      { label: "지역 시세", href: "/analysis/timing" },
     ],
   },
   {

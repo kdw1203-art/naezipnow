@@ -995,13 +995,14 @@ export default async function NoteDetailPage({
             buttonTitle="노트 보기"
           />
         )}
-        {/* [993] "카드 덱"(/notes/[id]/deck) 버튼 제거 — 노트 출력 3종 중 card 만 남기고 보관(992) */}
+        {/* [993] "카드 덱"(/notes/[id]/deck) 버튼 제거 — 노트 출력 3종 중 card 만 남기고 보관(992)
+            [1110] 노트 AI 실행 카드는 임장노트 분석 화면(/notes/analysis)에 */}
         {isOwner && !hasLlmAi && (
           <Link
-            href={`/analysis?noteId=${encodeURIComponent(id)}`}
+            href={`/notes/analysis?noteId=${encodeURIComponent(id)}`}
             className="btn-soft px-3.5 py-2 t-body no-underline"
           >
-            AI 분석 허브
+            노트 AI 분석
           </Link>
         )}
         {/* 지역 컨텍스트를 넘겨 지도 비교 루프가 끊기지 않게 한다.
@@ -1690,13 +1691,13 @@ export default async function NoteDetailPage({
                   { label: "지도에서 비교", href: mapCompareHref },
                   {
                     label: "심화 AI 분석",
-                    href: `/analysis?noteId=${encodeURIComponent(id)}`,
+                    href: `/notes/analysis?noteId=${encodeURIComponent(id)}`,
                   },
                 ]
               : [
                   {
                     label: "AI 분석 실행",
-                    href: `/analysis?noteId=${encodeURIComponent(id)}`,
+                    href: `/notes/analysis?noteId=${encodeURIComponent(id)}`,
                   },
                   { label: "지도에서 비교", href: mapCompareHref },
                 ]),

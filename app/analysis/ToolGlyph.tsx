@@ -273,7 +273,6 @@ export const WORKBENCH_GLYPH: Record<string, ToolGlyphId> = {
 
 /** 지역·기록 도구(href) → 글리프 */
 export const HUB_GLYPH: Record<string, ToolGlyphId> = {
-  "/analysis/price": "bars",
   "/analysis/timing": "trend",
   "/analysis/temperature": "thermo",
   "/analysis/gap": "ranking",

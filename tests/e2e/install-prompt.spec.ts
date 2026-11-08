@@ -62,6 +62,10 @@ async function open(page: Page, path: string) {
       JSON.stringify({ analytics: false, decidedAt: new Date().toISOString() }),
     );
     localStorage.setItem("nuguzip:beta-notice-v1", new Date().toISOString());
+    /* [개선 #14 · 2026-08-22] 배너는 3일째 방문부터(engagedEnoughForInstall — lib/client/pwa-install VISIT_DAYS_KEY).
+       이 스위트는 배너의 동작이 대상이라 이미 사흘 다녀간 상태로 시작한다(안 하면 배너가 영영 안 떠 모든 케이스가 거짓 빨강). */
+    const d = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+    localStorage.setItem("nuguzip:visit-days", JSON.stringify([d(2), d(1), d(0)]));
   });
   await page.goto(path, { waitUntil: "domcontentloaded" });
   await page.waitForLoadState("load");
@@ -162,7 +166,7 @@ test("설치 프롬프트: 추가하기 → prompt() 호출 · 배너 종료 · 
   await fireInstallPrompt(page, "accepted");
   await expect(page.locator(BANNER)).toBeVisible();
 
-  await page.getByRole("button", { name: "추가하기" }).click();
+  await page.getByRole("button", { name: "홈 화면에 추가" }).click();
   await expect(page.locator(BANNER)).toHaveCount(0);
   expect(await page.evaluate(() => (window as unknown as { __prompted?: boolean }).__prompted)).toBe(
     true,
@@ -178,7 +182,7 @@ test("설치 프롬프트: 브라우저 다이얼로그에서 취소하면 닫�
   await fireInstallPrompt(page, "dismissed");
   await expect(page.locator(BANNER)).toBeVisible();
 
-  await page.getByRole("button", { name: "추가하기" }).click();
+  await page.getByRole("button", { name: "홈 화면에 추가" }).click();
   await expect(page.locator(BANNER)).toHaveCount(0);
   await expect
     .poll(async () => page.evaluate((k) => localStorage.getItem(k), DISMISS_KEY))

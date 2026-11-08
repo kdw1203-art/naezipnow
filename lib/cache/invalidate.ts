@@ -39,7 +39,6 @@ const SOURCE_MAP: Record<string, { tags: string[]; paths: string[]; pageRoutes?:
       "/",
       "/analysis",
       "/analysis/accuracy",
-      "/analysis/price",
       "/analysis/gap",
       "/analysis/scenario",
       "/analysis/timing",

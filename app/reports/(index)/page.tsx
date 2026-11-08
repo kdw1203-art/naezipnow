@@ -227,7 +227,7 @@ export default async function ReportsIndexPage() {
                 지역별 실거래 상세 <span aria-hidden="true" className="text-text-3">›</span>
               </Link>
               <Link href="/analysis/timing" className={`${railLinkCls} border-b border-divider`}>
-                매수·매도 타이밍 분석 <span aria-hidden="true" className="text-text-3">›</span>
+                지역 시세 분석 <span aria-hidden="true" className="text-text-3">›</span>
               </Link>
               <Link href="/developers" className={railLinkCls}>
                 공개 집계 API <span aria-hidden="true" className="text-text-3">›</span>

@@ -34,7 +34,7 @@ import { findLastRun } from "@/lib/ai/history-store";
 
 /* [1015 · 규칙 B] 사용법 스텝퍼("1 단지 고르기 → 2 숫자·그래프로 결과")는 걷었다 — 검색칸 하나면 무엇을 하는 화면인지 보인다. */
 
-const TIER_ORDER: readonly TierId[] = ["complex", "market", "record"];
+const TIER_ORDER: readonly TierId[] = ["complex", "market"];
 
 export type HubCoverage = {
   txCount: number | null;
@@ -46,7 +46,7 @@ export type HubCoverage = {
 /* [993] 무료는 누적(lifetime) 한도, 유료는 월 한도 — 라벨이 다르다. pro(프로 플랜)는 판매 중일 때만(sell-config). */
 export type HubQuota = { free: number; freeLifetime: boolean; plus: number; pro: number | null; proOnSale: boolean };
 
-/** 계열 3개로 바로 가는 내비 — 이 페이지의 뼈대가 질문 3개라는 걸 상단에서 알린다. */
+/** 계열로 바로 가는 내비 — [1110] 질문은 둘(단지 분석 · 지역 시세). 내 임장노트는 임장노트 카테고리(/notes/analysis)로 옮겼다. */
 function TierNav() {
   const [active, setActive] = useState<TierId | null>(null);
 
@@ -116,9 +116,8 @@ export function HubHero({
 }) {
   const { picked, setPicked, query: q, openMap } = useHubPicked();
   /* [1052] 좁은 화면 판정(970 · B-28)은 걷었다 — 두 갈래 placeholder 가 같은 글("단지명 검색")이 된 뒤로 하는 일 없는 상태였다 */
-  const regionHref = picked?.regionId
-    ? `/analysis/timing?region=${encodeURIComponent(picked.regionId)}`
-    : `/analysis/timing${q}`;
+  /* [1110] 고른 단지의 지역 → 그 지역의 종합 화면(/region/[id]). 지역을 모르면 지역 시세 분석(고르는 자리) */
+  const regionHref = picked?.regionId ? `/region/${encodeURIComponent(picked.regionId)}` : "/analysis/timing";
   /* [1023] 실행 4칸의 "마지막 실행 N일 전" — 고른 단지 id 로 history-store 조회(기록이 있는 칸만). picked 는 마운트 뒤에만 생긴다 */
   const pickedId = picked?.id ?? null;
   const [lastRun, setLastRun] = useState<Record<string, string>>({});
@@ -151,7 +150,7 @@ export function HubHero({
         title="AI 분석"
         sub={
           <>
-            단지 하나로 종합 진단 · 시세 예측 · 임장 동선 · 매수 타이밍
+            단지 하나로 종합 진단 · 시세 예측 · 임장 동선 · 매수 타이밍 · 지역 시세 분석
             {/* [1028] 실거래 건수·단지 수를 못 읽었으면(null) 그 조각을 통째로 뺀다 — "실거래 —건" 으로 그리지 않는다 */}
             <span className="max-md:hidden">
               {coverage.txCount !== null && (
@@ -240,7 +239,7 @@ export function HubHero({
 
           <div className="flex flex-wrap gap-1.5">
             <Link href={regionHref} className="chip chip-soft t-sub px-3 py-1.5 no-underline">
-              이 지역 시세·타이밍 ›
+              {picked.regionLabel ? `${picked.regionLabel} 지역 시세 ›` : "지역 시세 분석 ›"}
             </Link>
             <Link
               href={`/analysis/scenario${q}`}
@@ -254,9 +253,10 @@ export function HubHero({
             >
               후보 단지 비교에 담기 ›
             </Link>
-            <a href="#ai-note-analysis" className="chip chip-soft t-sub px-3 py-1.5 no-underline">
+            {/* [1110] 노트 AI 실행 카드는 임장노트 분석 화면(/notes/analysis)에 있다 — 고른 단지를 그대로 넘긴다 */}
+            <Link href={`/notes/analysis${q}`} className="chip chip-soft t-sub px-3 py-1.5 no-underline">
               내 임장노트와 함께 보기 ›
-            </a>
+            </Link>
           </div>
         </div>
       )}

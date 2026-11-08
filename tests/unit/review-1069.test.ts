@@ -13,12 +13,11 @@ import { readFileSync } from "node:fs";
 const read = (p: string) => readFileSync(p, "utf8");
 
 test("V1 끊긴 묶음 — 푸터가 모든 화면에서 세 묶음으로 길을 낸다", () => {
-  /* [1108] 세 묶음의 길은 그대로 — 임장 가이드는 푸터, 실거래 구간 · 시장 온도는 상단 메뉴 "실거래" 하위(모든 화면 HTML) */
+  /* [1108] 실거래 구간 · 시장 온도는 상단 메뉴 "실거래" 하위였다가 [1110] 그 대분류를 빼며 푸터 데이터 묶음으로 돌아왔다 — 세 묶음의 길은 푸터(모든 화면 HTML) */
   const src = read("app/components/Footer.tsx");
   assert.ok(src.includes('href: "/imjang"'), "푸터에 /imjang 없음");
-  const nav = read("app/components/nav-data.ts");
   for (const href of ['href: "/tx"', 'href: "/analysis/temperature"']) {
-    assert.ok(nav.includes(href), `메뉴에 ${href} 없음`);
+    assert.ok(src.includes(href), `푸터에 ${href} 없음`);
   }
   /* 라벨은 목적지를 그대로 — 기능 이름이 아니라 그 묶음의 이름 */
   assert.match(src, /label: "임장 가이드", href: "\/imjang"/);
