@@ -51,7 +51,7 @@ test("[1036] 결과 요약 — VerdictCard fold(출처 줄 + 근거 + 반례 →
 
 test("[1036] 홈·분석·푸터 — 범례는 섹션 아래 한 번 · 브리핑 기준은 ⓘ · 한도 캡션·푸터 설명 문단은 접힘 · 면책은 그대로", () => {
   const home = read("app/page.tsx");
-  assert.match(home, /<Fineprint label="기준 · 출처">\s*선 = 최근 주간 매매가격지수/);
+  assert.match(home, /<Fineprint label="기준 · 출처">\s*가격 = 평균 매매가/); /* [1114] 표 범례 */
   /* [1108] AI 입구 판은 걷혔다 — 브리핑은 "오늘의 시장" 슬라이드 하나(HomeTodayLine briefing) */
   assert.match(home, /briefing=\{data\.briefing \? \{ text: data\.briefing\.text, asOfLabel: data\.briefing\.asOfLabel \} : null\}/);
   assert.match(home, /<Fineprint label="표시 기준">\{LAB_NOTES_CAPTION\}<\/Fineprint>/);

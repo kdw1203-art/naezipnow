@@ -13,15 +13,15 @@ import { Footer } from "./components/Footer";
 import { HomeHeroSearch } from "./components/home/HomeHeroSearch";
 import { CoverImage } from "./components/CoverImage";
 import { HomeMyRail } from "./components/home/HomeMyRail";
-import type { KpiRegion, KpiTemp } from "./components/home/HomeKpiRow";
+import type { KpiTemp } from "./components/home/HomeKpiRow";
 import { HomeTodayLine } from "./components/home/HomeTodayLine";
-import { RegionPulseCards } from "./components/home/RegionPulseCards";
 import { RollingPanel } from "./components/home/RollingPanel";
 import { chunkPages } from "./components/home/chunk-pages";
-import { HomeSeoulMoves } from "./components/home/HomeSeoulMoves";
 import { HomeTownBlock } from "./components/home/HomeTownBlock";
 import { HomeHubLinks } from "./components/home/HomeHubLinks";
 import { HomeRecentDeals, toHomeDealRows, type HomeDealRow } from "./components/home/HomeRecentDeals";
+import { HomeMarketBoard } from "./components/home/HomeMarketBoard";
+import { HomeRegionTable } from "./components/home/HomeRegionTable";
 import { listRegionTransactions } from "@/lib/market/store";
 import { complexCanonicalPathFromNames } from "@/lib/complex/complex-store";
 import { getActiveComplexes } from "@/lib/ai/popular-complexes";
@@ -107,12 +107,14 @@ export default async function Home() {
   let recentDealsFailed = false;
   if (dealsRegion) {
     try {
-      recentDeals = toHomeDealRows(await listRegionTransactions(dealsRegion.id, dealsRegion.name, 6), complexCanonicalPathFromNames);
+      recentDeals = toHomeDealRows(await listRegionTransactions(dealsRegion.id, dealsRegion.name, 20), complexCanonicalPathFromNames);
     } catch (e) {
       recentDealsFailed = true;
       logger.warn("[home] 최근 실거래 조회 실패 — 실패로 그린다", e);
     }
   }
+  /* [1114] 지역 동향 표 — 대표 지역은 위 "시장 한눈에"가 말한다(같은 숫자 두 곳 금지) */
+  const tableRegions = dealsRegion ? regions.filter((r) => r.id !== dealsRegion.id) : regions;
   const notes = data.notes;
   const failed = data.failed;
   /* [1007] 상대 시각 라벨의 기준 — 렌더당 한 번(ISR 300s 동안 굳는다 — 분 단위라 무방) */
@@ -121,9 +123,10 @@ export default async function Home() {
   const allLabNotes = notes.length > 0 && notes.every((n) => n.kind === "lab");
   /* [950] 검색 아래 지역 칩 — 시세 카드와 같은 지역(실데이터). 지역 카드가 비면 칩도 없다. */
   /* [1081 · #26] 칩 4 → 8 — 폰은 가로 스크롤 줄, PC 는 접힘(HomeHeroSearch 컨테이너) */
+  /* [1113 · 중복 제거] 아래 "지역 · 단지 바로가기"의 지역 줄(같은 이름 · /region)과 합쳤다 — 칩이 지역 종합 화면으로 간다(지도는 옆 "지도에서 내 동네 찾기") */
   const heroRegionChips = regions.slice(0, 8).map((r) => ({
     label: r.name,
-    href: `/map?region=${encodeURIComponent(r.name)}`,
+    href: `/region/${encodeURIComponent(r.id)}`,
   }));
 
   /* 오늘의 한 문장 재료 — 전부 실측, 없으면 그 항목이 빠진다(가짜 숫자·"—" 채움 없음) */
@@ -164,27 +167,8 @@ export default async function Home() {
   ]
     .filter(Boolean)
     .join(" · ");
-  const kpiRegion: KpiRegion | null = regions[0]
-    ? {
-        name: regions[0].name,
-        price: regions[0].price,
-        delta: regions[0].delta,
-        tone: regions[0].tone,
-        /* [1009 · H 리뷰] 건수는 trades(제 달·원천이 함께 있다)만 — meta 의 "N건"은 달을 모른다 */
-        tradeLabel:
-          typeof regions[0].trades === "number" ? `${regions[0].trades.toLocaleString("ko-KR")}건` : null,
-        href: `/map?region=${encodeURIComponent(regions[0].name)}`,
-        periodLabel: regions[0].periodLabel,
-        /* [1009 · H] 문장이 변동의 기준(지수/평균가)과 "변동 미상"을 가를 수 있게 원값을 넘긴다 */
-        changePct: regions[0].changePct ?? null,
-        changeBasis: regions[0].changeBasis,
-        /* [1009 · H 리뷰] 등락의 달 · 거래 건수의 제 달과 원천 · 가격 원천(월 집계 카드 = 국토부 실거래 평균) */
-        changeYm: regions[0].changeYm ?? null,
-        tradesYm: regions[0].tradesYm ?? null,
-        tradesSource: regions[0].tradesSource,
-        priceKind: regions[0].stale ? "molit" : "reb",
-      }
-    : null;
+  /* [1114] 오늘의 시장 띠의 대표 지역 슬라이드(가격 · 등락 · 거래)는 걷었다 — 아래 "시장 한눈에" 숫자 칸이 같은 지역 · 같은 숫자다.
+     로그인해 관심 지역이 있으면 그 지역 문장은 HomeTodayLine 이 클라이언트에서 그대로 띄운다. */
 
   return (
     <>
@@ -244,7 +228,7 @@ export default async function Home() {
             {/* ② 오늘의 시장 — 한 문장씩(배너형 회전) · 띠 안에 든 모양(embedded). [1108] AI 브리핑도 슬라이드 하나 */}
             <HomeTodayLine
               embedded
-              region={kpiRegion}
+              region={null}
               temp={kpiTemp}
               saleIndex={saleIndexSeoul}
               baseRate={baseRate}
@@ -257,20 +241,33 @@ export default async function Home() {
           </section>
 
           {/* [1098 · 배너] 상단 띠 배너 자리 — 검색 띠와 본문 사이 한 줄(띠 배너가 없으면 관리자에게만 점선 자리) */}
-          <TopBanner placement="home_feed" plan={null} className="my-3 md:my-4" />
+          <TopBanner placement="home_feed" plan={null} className="mt-3 md:mt-4" />
 
-          {/* 본문 | 사이드바 — 두 벌을 그리지 않고 한 벌을 재배치하는 것이 이 파일의 전부다.
-              [1101 · 첫 화면] 폰은 본문(공개 임장노트 · 지역 동향 …)이 먼저, AI 입구(네이비 판)는 그 뒤다(order).
-              예전엔 사이드바가 DOM 먼저라 폰 첫 화면이 검색 · 오늘의 시장 띠 · AI 판으로 끝나 숫자 · 목록이 0줄이었다
-              (운영 캡처 2026-11-02 · 소유자 "기능적 디자인적 복합적으로 검토"). lg 는 그대로 왼쪽 본문 | 오른쪽 340px. */}
-          <div className="grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-4">
-            <aside
-              data-autotrim=""
-              className="order-2 flex flex-col gap-3 lg:sticky lg:top-[76px] lg:self-start"
-            >
-              {/* ⑤ 지역 동향 — [1108] 사이드바로(예전 AI 입구 자리). 4장(2열)씩 넘기는 회전판 그대로.
-                  [1009 · H 리뷰] 제목 "지역 시세" → "지역 동향": 서울 3장의 가격은 국토부 신고 실거래 평균이라 "시세" 낱말 규칙에 걸린다. */}
-              <section className="flex flex-col gap-3">
+          {/* ⑥ 내 관심 — 로그인만, 클라이언트 섬(서버 HTML 에는 없다). 로그인한 사람에게는 자기 관심 단지가 첫 내용이다 */}
+          <div className="mt-3 flex flex-col gap-3 empty:hidden md:mt-4">
+            <HomeMyRail />
+          </div>
+
+          {/* [1114 · 홈 벤토] 소유자 2026-11-09 시안 A 선택 — 지역 화면 형식(숫자 칸 · 시세 흐름 그래프 · 표)을 홈에 그대로.
+              lg 12칸: 왼쪽 8 = 대표 지역 시장 한눈에(숫자 칸) + 시세 흐름(지표 탭 그래프) · 오른쪽 4 = 실거래 금액 순위 배너 + 지역 동향 표
+              · 아래 = 공개 임장노트(7) | 거래 많은 단지(5) · 동네이야기 · 뉴스룸(전폭). 폰은 같은 순서 1열(DOM 순서 = 읽는 순서). */}
+          <div className="mt-3 grid grid-cols-1 gap-3 md:mt-4 lg:grid-cols-12 lg:gap-4">
+            <div data-autotrim="" className="flex min-w-0 flex-col gap-3 lg:col-span-8 lg:gap-4">
+              {dealsRegion && <HomeMarketBoard id={dealsRegion.id} name={dealsRegion.name} />}
+            </div>
+
+            <aside data-autotrim="" className="flex min-w-0 flex-col gap-3 lg:col-span-4 lg:gap-4">
+              {/* ③ [1114] 실거래 금액 순위 — 옅은 파랑 판이 아래에서 위로 넘어가는 배너(소유자 지시) */}
+              {dealsRegion && (
+                <HomeRecentDeals
+                  regionName={dealsRegion.name}
+                  rows={recentDeals}
+                  failed={recentDealsFailed}
+                  mapHref={`/map?region=${encodeURIComponent(dealsRegion.name)}`}
+                />
+              )}
+              {/* ⑤ 지역 동향 — [1114] 표 */}
+              <section className="card flex flex-col gap-2 rounded-2xl p-[var(--pad-card)]">
                 <div className="flex items-baseline justify-between gap-2">
                   <h2 className="t-section text-ink">지역 동향</h2>
                   <Link
@@ -297,13 +294,8 @@ export default async function Home() {
                   )
                 ) : (
                   <>
-                    {/* [1022] 4장씩 쪽으로 나눠 주식 시세판처럼 아래→위로 넘긴다(RollingPanel). 12곳 = 3쪽 */}
-                    <RollingPanel
-                      label="지역 동향 쪽"
-                      pages={chunkPages(regions, 4).map((page, i) => (
-                        <RegionPulseCards key={i} regions={page} cols="2" />
-                      ))}
-                    />
+                    {/* [1114 · 홈 벤토] 회전 카드(4장씩) → 표 하나 — 등락 큰 순 · 이름 아래 막대. 대표 지역(위 시장 한눈에)은 뺀다 */}
+                    <HomeRegionTable regions={tableRegions} />
                     {/* [1002] 스냅샷 실패 → 월 집계 폴백 카드. 값은 실측이지만 시점이
                         오래됐다는 사실을 카드 아래 한 줄로 적는다(카드 meta 의 "마지막 집계"
                         와 같은 말). 실패를 "준비 중"으로도, 오래된 값을 "지금"으로도 위장하지 않는다. */}
@@ -312,39 +304,21 @@ export default async function Home() {
                         실시간 집계 불러오기 실패 · 마지막 월 집계 표시
                       </p>
                     )}
-                    {/* [1050 · 중복 검토] 서울 25개 구는 이 칸의 접힘 하나로 — 펼치면 구별 막대 */}
-                    <HomeSeoulMoves data={data.seoulMoves} />
+                    {/* [1113 · 중복 제거] 서울 25개 구 막대(최고 · 최저 · 펼치면 구별)는 뺐다 — 아래 실시간 토론의 지역 순위(지수 전월비 상승 · 하락)가 같은 값이다 */}
                     {/* [1036 · 밀도] 카드마다 붙던 범례를 섹션 아래 한 번, 접어서 */}
                     {/* [1052] 거래 건수 원천은 카드마다 다르다 — 카드 끝에 원천을 적으니 여기서 한쪽으로 단정하지 않는다 */}
                     <Fineprint label="기준 · 출처">
-                      선 = 최근 주간 매매가격지수(한국부동산원) · 등락 = 지수 전월 대비 · 거래 = 그 달 아파트 매매 건수(카드 끝 표기 · 한국부동산원 월간 또는 국토교통부 신고)
+                      가격 = 평균 매매가(한국부동산원) 또는 실거래 평균(국토교통부 신고 월 집계 · 줄 아래 표기) · 전월 대비 = 매매가격지수 전월 대비 · 막대 = 등락 크기
                     </Fineprint>
                   </>
                 )}
               </section>
-              {/* 배너/하우스 광고 — 없으면 아무것도 그리지 않는다. plan={null}: 공유 캐시라
-                  보는 사람의 플랜을 모른다(광고 제거는 AdFreeGate 가 클라이언트에서). */}
               <AdZone placement="home_feed" seed={0} plan={null} className="hidden lg:block" />
               <AdSenseUnit />
             </aside>
 
-            <div data-autotrim="" className="order-1 flex flex-col gap-3 lg:gap-4">
-              {/* ⑥ 내 관심 — 로그인만, 클라이언트 섬. 서버 HTML(공유 캐시)에는 없다.
-                  [1101] 사이드바 → 본문 맨 위 — 로그인한 사람에게는 자기 관심 단지가 첫 내용이다(폰 · 데스크톱 같은 자리) */}
-              <HomeMyRail />
-
-              {/* ③ [1108] 최근 실거래 — 대표 지역 최신 매매 신고 6건(한 건 금액 그대로 · 단지 화면으로). 홈에 없던 "장부의 첫 줄" */}
-              {dealsRegion && (
-                <HomeRecentDeals
-                  regionName={dealsRegion.name}
-                  rows={recentDeals}
-                  failed={recentDealsFailed}
-                  mapHref={`/map?region=${encodeURIComponent(dealsRegion.name)}`}
-                />
-              )}
-
               {/* ④ 공개 임장노트 — 증거. 누가 쓴 노트인지(Lab/이웃)를 숨기지 않는다. */}
-              <section className="card flex flex-col gap-2 rounded-2xl px-4 py-4">
+              <section className="card flex flex-col gap-2 rounded-2xl px-4 py-4 lg:col-span-7">
                 <div className="flex items-center justify-between gap-2">
                   <h2 className="t-section text-ink">공개 임장노트</h2>
                   <span className="flex items-center gap-2">
@@ -431,17 +405,16 @@ export default async function Home() {
                 {allLabNotes && <Fineprint label="표시 기준">{LAB_NOTES_CAPTION}</Fineprint>}
               </section>
 
-              {/* [1015 · 규칙 G → 1101] 폰 광고 자리 1곳(데스크톱은 오른쪽 레일) — 둘째 섹션(공개 임장노트) 뒤 */}
-              <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
-
-              {/* ⑦ [1007 · P2] 동네이야기(사람의 기록) · 뉴스룸(자동수집) — 1006 의 .story-* / .news-*
-                  재질 규칙을 홈에서도 쓴다. 두 칸은 같은 조회(readRelatedTownPosts, 5분 캐시)에서
-                  isStoryPost 로 갈라 만든 것이라 추가 왕복이 없고, 클라이언트 JS 도 없다.
-                  0건은 0건으로(가짜 카드 없음), 실패는 실패로 말한다. */}
-              <HomeTownBlock stories={data.stories} news={data.news} failed={failed.town} now={renderedAt} />
-
-              {/* [1081 · #27] 지역·단지 바로가기 — 홈에서 지역 상세·단지 상세로 가는 직행 링크(크롤 경로) */}
+            <div className="flex min-w-0 flex-col gap-3 lg:col-span-5">
+              {/* [1081 · #27] 거래 많은 단지 — 단지 상세로 가는 직행 링크(크롤 경로) */}
               <HomeHubLinks regions={regions} complexes={activeComplexes} />
+              {/* [1015 · 규칙 G → 1101] 폰 광고 자리 1곳(데스크톱은 오른쪽 열) */}
+              <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
+            </div>
+
+            {/* ⑦ [1007 · P2] 동네이야기 · 뉴스룸 — 전폭 */}
+            <div className="min-w-0 lg:col-span-12">
+              <HomeTownBlock stories={data.stories} news={data.news} failed={failed.town} now={renderedAt} />
             </div>
           </div>
           {/* [1051] 홈 맨 아래 — 실시간 토론(지역 · 단지 한 줄). 전폭. 판은 화면 가까이 오면 받는다 */}

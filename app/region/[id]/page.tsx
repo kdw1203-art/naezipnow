@@ -707,8 +707,10 @@ export default async function RegionHubPage({
     transactionsR.ok && transactions.length > 0
       ? { href: "#recent-tx", label: `최근 실거래 ${transactions.length.toLocaleString("ko-KR")}건` }
       : null;
-  const primaryJump = complexJump ?? txJump;
-  const secondaryJump = complexJump ? txJump : null;
+  /* [1113 · 중복 제거] "최근 실거래 N건" 칸은 뺐다(아래 단지별 현황의 "가장 최근 신고 1건"과 같은 줄들) — 보조 링크도 없다 */
+  void txJump;
+  const primaryJump = complexJump;
+  const secondaryJump = null as { href: string; label: string } | null;
 
   // JSON-LD(BreadcrumbList + Place) — 실데이터 스냅샷, 존재 필드만
   // (FAQPage 는 QaBlock 이 화면에 보이는 items 로 직접 생성한다)
@@ -923,49 +925,8 @@ export default async function RegionHubPage({
 
       {/* [1101 · 같은 사실 한 번] "시장 흐름 요약" 카드(문장 넷 · 위 칸과 같은 수가 섞임)는 따로 칸을 두지 않고 바로 위 시세 흐름 카드의
           그래프 아래 줄로 합쳤다(RegionTrendCard after). 알림 구독 · 월간 리포트 아카이브 링크도 함께 그 자리로. */}
-      {/* 최근 실거래 5건 — [1009 · H] 한 건의 가격은 정밀 표기("12억 4,500만", 네이버 부동산 관례)
-          [1063] id="recent-tx" — 머리 아래 보조 링크가 여기로 온다 */}
-      <section id="recent-tx" className="rise-in-2 card mb-6 scroll-mt-[72px] p-[var(--pad-card)]">
-        <h2 className="t-section text-ink">
-          최근 실거래{" "}
-          <span className="t-sub font-medium text-text-3">
-            아파트 매매 · 국토부 실거래가
-          </span>
-        </h2>
-        {!transactionsR.ok ? (
-          <LoadFailed what="최근 실거래를" />
-        ) : transactions.length === 0 ? (
-          <p className="py-6 text-center t-body text-text-3">
-            이 지역에서 수집된 아파트 매매 실거래가 아직 없습니다.
-          </p>
-        ) : (
-          /* [1015 · 규칙 I] 실거래 목록 = blue 리퀴드 판 */
-          <ul className="lq-panel mt-2 flex flex-col divide-y" data-tone="blue">
-            {transactions.map((t, i) => (
-              <li
-                key={`${t.complexName}-${t.contractYm}-${i}`}
-                className="flex items-center justify-between gap-3 py-3"
-              >
-                <div className="min-w-0">
-                  <div className="t-body font-bold text-ink break-words">
-                    {t.complexName}
-                  </div>
-                  <div className="mt-0.5 t-sub tabular-nums text-text-3">
-                    {formatYm(t.contractYm)}
-                    {t.contractDay ? `.${String(t.contractDay).padStart(2, "0")}` : ""}
-                    {t.areaM2 !== null ? ` · ${t.areaM2.toFixed(1)}㎡` : ""}
-                    {t.floor !== null ? ` · ${t.floor}층` : ""}
-                  </div>
-                </div>
-                <div className="shrink-0 t-section t-num">
-                  {formatEokMan(t.dealAmountKrw / 10_000)}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
+      {/* [1113 · 중복 제거] "최근 실거래 5건" 칸은 뺐다 — 단지별 현황(최근 거래순 · 오른쪽 = 가장 최근 신고 1건)의 첫 줄들과 같은 거래였다(운영 캡처 2026-11-08).
+          가장 최근 신고 한 건은 Q&A(FAQ JSON-LD)에 그대로 남는다. */}
       {/* 단지별 현황 — market_transactions 그룹 요약. [1009 · H] 표(가로 스크롤) → 누르는 목록 행(RegionComplexList)
           [1054] id="complexes" — 서울 밖 단지 실거래 화면의 "다른 단지"가 여기로 온다(/complex/browse 는 서울 25구만). */}
       <section id="complexes" className="rise-in-2 card mb-6 scroll-mt-[72px] p-[var(--pad-card)]">
@@ -1311,8 +1272,13 @@ export default async function RegionHubPage({
           [1006 · E] data-ai-summary — 위 WebPage JSON-LD 의 speakable.cssSelector 가 이 블록을
           가리킨다(문단은 그대로, 껍데기만 section 으로). 새 요약 블록을 따로 만들지 않는다.
           [1009 · H] 결론·숫자는 위 카드가 먼저 말한다 — 이 문단은 그 아래 한 단계 옅게(요약 전문). */}
+      {/* [1113 · 중복 제거] 요약 문장은 위 머리 · 그래프 · 표가 말한 수를 다시 적는 글이라 접어 둔다(닫힌 details — HTML · speakable 셀렉터 그대로) */}
       <section data-ai-summary="" id="ai-summary" aria-labelledby="ai-summary-h" className="card mb-6 p-[var(--pad-card)] max-md:mb-3">
+        <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2">
         <h2 id="ai-summary-h" className="t-section text-ink">{name} 요약 문장</h2>
+        <span className="t-caption text-text-3 transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+        </summary>
         {/* [1074] 화면 폭 한 줄(89자/줄 실측) → 읽는 폭 */}
         <p className="max-w-[72ch] t-sub text-text-2">{lead}</p>
         {/* [1081 · #14] 데이터로만 쓴 서술 — 위 lead 가 이미 말한 수가 든 문장은 뺀다(같은 수 두 번 금지 · narrativeComplement).
@@ -1327,6 +1293,7 @@ export default async function RegionHubPage({
             {overview.citeLine}
           </p>
         )}
+        </details>
       </section>
 
       </div>

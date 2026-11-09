@@ -21,9 +21,17 @@ type Item = { key: string; label: string; sub: string; href: string };
 export function RegionSearchBox({
   regions,
   autoFocus = false,
+  onMapClick,
+  pickIds,
+  onPick,
 }: {
   regions: RegionSiseRegion[];
   autoFocus?: boolean;
+  /** [1111] "지도로 찾기" — 있으면 화면을 떠나지 않고 지도 보기로(없으면 /map 링크) */
+  onMapClick?: () => void;
+  /** [1112] 이 화면에서 바로 바꿀 수 있는 지역 — 고르면 onPick(id), 목록 밖 지역 · 동은 href 로 이동 */
+  pickIds?: string[];
+  onPick?: (id: string) => void;
 }) {
   const router = useRouter();
   const listId = useId();
@@ -106,6 +114,16 @@ export function RegionSearchBox({
     return () => document.removeEventListener("mousedown", h);
   }, []);
 
+  const choose = (it: { key: string; href: string }) => {
+    const id = it.key.startsWith("r:") ? it.key.slice(2) : null;
+    if (id && onPick && pickIds?.includes(id)) {
+      setOpen(false);
+      setRaw("");
+      onPick(id);
+      return;
+    }
+    go(it.href);
+  };
   const go = (href: string) => {
     setOpen(false);
     router.push(href);
@@ -126,7 +144,7 @@ export function RegionSearchBox({
     } else if (e.key === "Enter") {
       if (active >= 0 && items[active]) {
         e.preventDefault();
-        go(items[active].href);
+        choose(items[active]);
       } else if (nothing) {
         e.preventDefault();
         go(`/search?q=${encodeURIComponent(q)}`);
@@ -136,7 +154,8 @@ export function RegionSearchBox({
 
   return (
     <div ref={boxRef} className="relative flex flex-col gap-1.5">
-      <span className="t-sub font-bold text-text-2">지역 검색</span>
+      {/* [1112] 대시보드 머리에 설 때(pickIds)는 라벨 · 지도 단추 없이 검색칸 하나 */}
+      {!pickIds && <span className="t-sub font-bold text-text-2">지역 검색</span>}
       <div className="flex items-stretch gap-1.5">
         <input
           value={raw}
@@ -155,17 +174,28 @@ export function RegionSearchBox({
           autoComplete="off"
           autoFocus={autoFocus}
           enterKeyHint="search"
-          placeholder="시 · 구 · 동 이름"
+          placeholder={pickIds ? "다른 지역 검색 (시 · 구 · 동)" : "시 · 구 · 동 이름"}
           aria-label="지역 검색"
-          className="w-0 min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink outline-none focus:border-primary"
+          className="w-0 min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 t-sub font-bold text-ink outline-none focus:border-primary"
         />
-        <Link
-          href="/map"
-          className="flex shrink-0 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 t-sub font-bold text-primary no-underline hover:border-primary"
-          aria-label="지도에서 지역 찾기"
-        >
-          <Icon name="map" size={14} /> 지도로 찾기
-        </Link>
+        {pickIds ? null : onMapClick ? (
+          <button
+            type="button"
+            onClick={onMapClick}
+            className="press flex shrink-0 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 t-sub font-bold text-primary hover:border-primary"
+            aria-label="지도에서 지역 찾기"
+          >
+            <Icon name="map" size={14} /> 지도로 찾기
+          </button>
+        ) : (
+          <Link
+            href="/map"
+            className="flex shrink-0 items-center gap-1 rounded-lg border border-line bg-surface px-2.5 t-sub font-bold text-primary no-underline hover:border-primary"
+            aria-label="지도에서 지역 찾기"
+          >
+            <Icon name="map" size={14} /> 지도로 찾기
+          </Link>
+        )}
       </div>
 
       {showList && (
@@ -181,7 +211,7 @@ export function RegionSearchBox({
                   onMouseEnter={() => setActive(i)}
                   onMouseDown={(e) => {
                     e.preventDefault();
-                    go(it.href);
+                    choose(it);
                   }}
                   className={`flex min-h-10 cursor-pointer flex-col justify-center gap-0.5 rounded-lg px-3 py-1.5 ${i === active ? "bg-bg" : ""}`}
                 >

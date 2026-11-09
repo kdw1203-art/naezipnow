@@ -19,7 +19,6 @@
 import Link from "@/app/components/IntentLink";
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
 import { PageHead } from "@/app/components/PageHead";
-import { StepLine } from "@/app/components/StepLine";
 import { regionActionLinks, temperatureConclusion, temperatureSteps } from "@/lib/market/region-conclusion";
 import { RegionActionCard, RegionPrimaryBar, VerdictCard } from "../timing/region-verdict";
 import { Explain } from "@/app/components/explain/Explain";
@@ -287,7 +286,7 @@ export function TempMapClient({
       />
 
       {/* [1026] 절차 한 줄 — 화면당 한 번 */}
-      <StepLine className="mt-3" steps={plan.steps} current={plan.current} />
+      {/* [1112 · 중복 제거] 절차 칩 줄은 뺐다 — 결론 카드가 같은 말을 한 줄로 */}
 
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
         <div className="flex min-w-0 flex-col gap-3">

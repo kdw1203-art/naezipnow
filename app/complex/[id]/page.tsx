@@ -1556,14 +1556,7 @@ export default async function ComplexHubPage({
       sub: `${median3.count}건 · ${repType.areaM2}㎡`,
     });
   }
-  if (facts.jeonseRatio) {
-    railStats.push({
-      key: "jeonse",
-      label: "전세가율",
-      value: `${facts.jeonseRatio.pct}%`,
-      sub: `전 타입 · 최근 ${facts.jeonseRatio.windowMonths}개월`,
-    });
-  }
+  /* [1115 · 같은 사실 한 번] 레일 "전세가율" 칸은 뺐다 — 본문 전세가율 · 갭 카드(JeonseGapCards)가 같은 값(같은 재료 facts.jeonseRatio)을 계산식과 함께 말한다 */
   if (dealsThisYear > 0) {
     railStats.push({ key: "year", label: `${thisYear} 거래`, value: `${dealsThisYear.toLocaleString("ko-KR")}건`, sub: "매매 · 해제 제외" });
   }
@@ -1854,7 +1847,10 @@ export default async function ComplexHubPage({
               tradeDeltas={dealTuples.length === 0 ? tradeDeltaViews(v.trades) : undefined}
               summaryDeals={false}
               /* [1107] 요약 = 숫자 네 칸(대표가 · 비교 · 12개월 매매 · 전세 중앙) — 준공 · 세대 · 전세가율은 위 개요 · 카드가 말한다 */
-              summaryTiles={buildSummaryTiles({ headline, tradeSummary: facts.tradeSummary, rentSummary: facts.rentSummary })}
+              summaryTiles={buildSummaryTiles({ headline, tradeSummary: facts.tradeSummary, rentSummary: facts.rentSummary }).filter(
+                /* [1115 · 같은 사실 한 번] "최근 실거래가"(대표가)는 위 결과 요약 첫 칸 · 그래프 머리가 같은 값을 말한다 — 요약 탭은 그 밖의 칸만 */
+                (t) => t.key !== "price",
+              )}
             />
           </div>
 

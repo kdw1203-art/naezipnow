@@ -11,6 +11,10 @@ import { AdZone } from "../components/ads/AdZone";
 import { TownCategoryNav } from "./TownCategoryNav";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { groupRegionsByCity } from "@/lib/town/region-groups";
+import { REGION_CATALOG } from "@/lib/region/catalog";
+import { townMapMarkers } from "@/lib/town/town-map";
+import type { RegionMapMarker } from "@/lib/region/region-map";
+import { RegionMapPicker } from "@/app/components/region/RegionMapPicker";
 
 /* [1069 · 검색어] 운영 실측 2026-10-15 — 허브 제목이 전부 우리끼리 쓰는 이름이라 검색에 걸릴 말이 없었다
    (홈은 1066 에서 고쳤다). "동네이야기"는 사람이 치는 말이 아니다. 설명도 25자뿐이라 발췌가 비었다.
@@ -41,74 +45,53 @@ export const metadata = buildPageMetadata({
    (뉴스 적재). 시간 TTL 은 그 비움을 놓쳤을 때의 안전망이다. */
 export const revalidate = 86_400;
 
-/* [#64] 동네 홈 바로가기 — 노트·글이 실제로 있는 지역 위주 8곳 (수동 선정).
-   [970 · C-17] 나머지 전체는 아래 "전체 지역" 인덱스(시·도별 접기)에서 닿는다. */
-const TOWN_HOME_SHORTCUTS = [
-  { id: "gangnam", name: "강남구" },
-  { id: "nowon", name: "노원구" },
-  { id: "mapo", name: "마포구" },
-  { id: "songpa", name: "송파구" },
-  { id: "seongnam-bundang", name: "성남 분당구" },
-  { id: "suwon-yeongtong", name: "수원 영통구" },
-  { id: "goyang-deogyang", name: "고양 덕양구" },
-  { id: "incheon-yeonsu", name: "인천 연수구" },
-] as const;
+/* [#64 · B25] 수동 선정 바로가기 8곳 + 활동량 세기(shortcutActivity)는 [1111] 지도 고르기(107곳 전부 · lib/town/town-map 이 같은 규칙으로 센다)로 합쳤다. */
 
-/* [B25] 동네별 활동량 — 8개 칩이 전부 같은 모양이라 "어디에 사람이 있는지"가
-   안 보였다. 눌러 봐야 빈 동네인 걸 알게 되는 순서가 반복된다.
-   여기서 세는 모수는 **이 피드에 실린 글**(커뮤니티 글)이지
-   그 동네의 전체 글이 아니다 — 그래서 화면에도 "최근 글 기준"이라고 적는다.
-   숫자를 정확히 부르지 못할 바엔 무엇을 센 건지 밝히는 편이 낫다. */
-function shortcutActivity(cards: FeedCard[], name: string): number {
-  /* "성남 분당구" 처럼 두 토막인 이름은 두 토막이 **모두** 들어가야 그 동네다
-     ("분당구"만 보면 다른 시의 동명 구가 섞이고, "성남"만 보면 수정구도 걸린다). */
-  const parts = name.split(/\s+/).filter(Boolean);
-  return cards.filter((c) => {
-    const r = (c.region ?? "").replace(/\s+/g, "");
-    return r.length > 0 && parts.every((p) => r.includes(p));
-  }).length;
-}
-
-/* [970 · C-17] 시·도별 동네 홈 인덱스(서버 조각 — 상태 없음, details 는 브라우저가 연다) */
-function TownIndex({ first = false }: { first?: boolean }) {
+/* [970 · C-17] 시·도별 동네 홈 인덱스 → [1111 · 지도 중심 개편] **지도에서 고르기**.
+   소유자 2026-11-08(이 화면 캡처): "지도를 통해 호갱노노 · 재개발닷컴처럼 디자인을 변경해줘 너무 나열식이야" · "항목이 5개를 넘으면 필터식".
+   시/도별로 펼치던 107개 칩 벽 대신 실지도(RegionMapPicker) 위 말풍선 — 값은 이 피드의 이웃 글 수(0건이면 이름만) · 시/도 칩이 화면 범위 ·
+   검색칸이 필터. 107개 링크는 크롤 경로(970 · C-17 "고아 페이지" 방지)로 닫힌 <details> 하나에 그대로 남긴다 — 눈에는 한 줄, HTML 에는 전부. */
+function TownIndex({ first = false, markers }: { first?: boolean; markers: RegionMapMarker[] }) {
   const groups = groupRegionsByCity();
+  const total = groups.reduce((n, g) => n + g.items.length, 0);
+  const withPosts = markers.filter((m) => m.value).length;
   return (
     /* [1101] 맨 앞에 설 때(이웃 글 0건)는 위 카테고리 줄과 같은 간격 — 바로가기 칩 줄이 빠진 자리가 32px 빈 띠로 남지 않게 */
     <section id="town-index" className={`${first ? "mt-0" : "mt-8"} scroll-mt-24`} aria-labelledby="town-index-title">
       <div className="mb-2 flex items-baseline justify-between px-1">
         <h2 id="town-index-title" className="t-section text-ink">
-          동네 홈 전체
+          동네 홈 고르기
         </h2>
         <span className="t-caption text-text-3">
-          {groups.reduce((n, g) => n + g.items.length, 0)}곳 · 시·도별
+          {total}곳{withPosts > 0 ? ` · 최근 글 있는 동네 ${withPosts}곳` : ""}
         </span>
       </div>
-      <div className="card flex flex-col divide-y divide-line rounded-2xl px-4">
-        {groups.map((g) => (
-          <details key={g.key} className="group py-2.5" open={g.city === "서울"}>
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-1 t-body font-bold text-ink">
-              <span>
-                {g.city}
-                <span className="ml-1.5 t-caption font-semibold text-text-3">{g.items.length}곳</span>
-              </span>
-              <span className="shrink-0 text-text-3 transition-transform group-open:rotate-45" aria-hidden="true">
-                +
-              </span>
-            </summary>
-            <div className="flex flex-wrap gap-1.5 pb-1.5 pt-1">
+      <RegionMapPicker
+        markers={markers}
+        label="동네 홈 고르기 지도"
+        valueLabel={withPosts > 0 ? "말풍선 = 이 피드의 최근 이웃 글 수" : null}
+        defaultSido="서울"
+        searchPlaceholder="동네 이름(시 · 구)"
+      />
+      {/* 크롤 경로 — 107곳 링크 전부(닫힘). 시/도 묶음 순서 · 글자는 예전 인덱스 그대로 */}
+      <details className="group mt-2 px-1">
+        <summary className="flex cursor-pointer list-none items-center gap-2 py-1.5 t-caption font-bold text-text-3">
+          시·도별 전체 목록 {total}곳
+          <span className="transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+        </summary>
+        <div className="flex flex-col gap-2 pb-1 pt-1">
+          {groups.map((g) => (
+            <div key={g.key} className="flex flex-wrap items-center gap-1.5">
+              <span className="mr-1 t-caption font-bold text-text-3">{g.city}</span>
               {g.items.map((r) => (
-                <Link
-                  key={r.id}
-                  href={`/town/${r.id}`}
-                  className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline"
-                >
+                <Link key={r.id} href={`/town/${r.id}`} className="tap-line t-caption text-text-2 no-underline hover:underline">
                   {r.name}
                 </Link>
               ))}
             </div>
-          </details>
-        ))}
-      </div>
+          ))}
+        </div>
+      </details>
     </section>
   );
 }
@@ -129,12 +112,11 @@ export default async function TownPage() {
   const firstPage: FeedCard[] = cards.slice(0, TOWN_FEED_FIRST_PAGE);
   const hasMore = cards.length > TOWN_FEED_FIRST_PAGE;
 
-  /* [B25] 활동이 있는 동네를 앞으로. 같은 수면 원래 순서를 지킨다(임의 재배열 금지). */
-  const shortcuts = TOWN_HOME_SHORTCUTS.map((r, i) => ({
-    ...r,
-    count: shortcutActivity(cards, r.name),
-    order: i,
-  })).sort((a, b) => b.count - a.count || a.order - b.order);
+  /* [1111] 지도 말풍선 값(이 피드의 이웃 글 수) — 가장 많은 동네 하나는 머리 아래 캡션 한 줄로 */
+  const markers = townMapMarkers(REGION_CATALOG, cards);
+  const hottestMarker = markers
+    .map((m) => ({ id: m.id, name: m.name, count: Number((m.value ?? "글 0").replace(/[^\d]/g, "")) || 0 }))
+    .sort((a, b) => b.count - a.count)[0];
 
   /* 공작 등 가짜 예시 카드는 쓰지 않는다 — 0건이면 정직한 empty+CTA.
      (예시 배너 분기(exampleOnly)는 상수 false 로 영구 죽은 코드였다 — 제거) */
@@ -143,7 +125,7 @@ export default async function TownPage() {
   const now = Date.now();
   const todayCount = cards.filter((c) => now - c.createdAt < 24 * 3600_000).length;
   const weekCount = cards.filter((c) => now - c.createdAt < 7 * 24 * 3600_000).length;
-  const hottest = shortcuts[0]?.count > 0 ? shortcuts[0] : null;
+  const hottest = hottestMarker && hottestMarker.count > 0 ? hottestMarker : null;
   /* [1043] 피드가 이웃 글만이라 "이웃 글 n · 임장노트 n · Lab 노트 n" 가름은 없어졌다 — 이 피드 n건이 곧 이웃 글 수다 */
 
   return (
@@ -199,42 +181,13 @@ export default async function TownPage() {
           목록은 lib/town/category-links.ts 단일 소스. 하위 페이지도 같은 것을 쓴다. */}
       <TownCategoryNav />
 
-      {/* [#64] 동네 홈 진입 — ?region= 필터 대신 지역별 정식 페이지로 */}
-      {/* 지역 칩 — 줄바꿈으로 두 줄이 되면 카테고리 격자와 붙어 경계가 흐려진다.
-          한 줄 가로 레일(스냅)로 고정한다.
-          [1101 · 조작 다이어트] 이웃 글이 0건이면 이 줄을 그리지 않는다 — 그때는 바로 아래 동네 홈 전체 인덱스(서울 펼침 · 25칩)가
-          먼저 서므로(1078 순서) 같은 동네 이름 칩이 한 화면에 두 벌(8 + 25)이었다. 글이 생기면 "최근 글 기준" 바로가기로 돌아온다. */}
-      {cards.length > 0 && (
-      <div className="mb-4 flex items-center gap-2" data-reveal="">
-        <span className="shrink-0">
-          <span className="t-sub font-bold text-text-3">우리 동네 홈</span>
-          {/* [970 · C-11] 칩 숫자는 이 피드의 글을 센 값 — 무엇을 센 건지 그대로 적는다. [1043] 글이 없으면 기준 줄도 없다(셀 것이 없다) */}
-          {cards.length > 0 && <span className="ml-1 t-caption text-text-3">최근 글 기준</span>}
-        </span>
-        <div className="rail-x -mx-1 px-1 py-0.5">
-          {shortcuts.map((r, i) => (
-            <Link
-              key={r.id}
-              href={`/town/${r.id}`}
-              className={`chip tile border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline ${
-                i === 0 && r.count > 0 ? "chip-heat" : ""
-              }`}
-            >
-              {r.name}
-              {r.count > 0 && (
-                <span className="t-num ml-1 font-bold text-primary">{r.count}</span>
-              )}
-            </Link>
-          ))}
-          {/* [970 · C-17] "전체 지역" 은 실거래(/tx)가 아니라 아래 동네 홈 인덱스로 — 같은 화면 안 앵커 */}
-          <a
-            href="#town-index"
-            className="chip tile border border-line bg-surface px-3 py-1.5 t-sub font-bold text-primary no-underline"
-          >
-            전체 지역 ›
-          </a>
-        </div>
-      </div>
+      {/* [#64 · B25] "우리 동네 홈" 바로가기 칩 8개(최근 글 기준) → [1111] 지도 고르기(TownIndex · 말풍선에 같은 글 수)로 합쳤다 —
+          같은 동네 이름이 두 벌 서지 않게 · 8개는 "5개를 넘으면 필터식" 규칙 밖. 활동이 가장 많은 동네는 아래 캡션 한 줄로 */}
+      {hottest && (
+        <p className="mb-3 px-1 t-caption text-text-3">
+          최근 글이 가장 많은 동네 <Link href={`/town/${hottest.id}`} className="tap-line font-bold text-text-2 no-underline hover:underline">{hottest.name} {hottest.count}건 ›</Link>
+          {" "}· <a href="#town-index" className="tap-line font-bold text-text-2 no-underline hover:underline">지도에서 고르기 ›</a>
+        </p>
       )}
 
       {/* [992 · A1] 오늘의 글감(TownPromptCard)·전문가 띠(TownExpertBand) 제거 — 글감 스레드와
@@ -259,12 +212,10 @@ export default async function TownPage() {
       />
       </div>
 
-      {/* [970 · C-17] 동네 홈 전체 인덱스 — 카탈로그 전량을 시·도별 <details> 로 접어 둔다.
-          예전엔 위 바로가기 8곳 + 각 동네 홈의 "다른 동네" 16곳만 UI 로 닿았고 나머지는
-          고아 페이지였다. 피드 아래에 두어 첫 화면(LCP)에는 끼어들지 않는다. 서울만 기본
-          펼침 — 노트·글이 가장 많은 곳이고, 전부 펼치면 100여 칩이 한 번에 쏟아진다. */}
+      {/* [970 · C-17] 동네 홈 전체 인덱스 → [1111] 지도에서 고르기(RegionMapPicker) + 닫힌 전체 목록(크롤 경로).
+          피드 아래에 두어 첫 화면(LCP)에는 끼어들지 않는다(글이 0건이면 앞 — 1078). */}
       <div className={!loadFailed && firstPage.length === 0 ? "order-1" : ""}>
-      <TownIndex first={!loadFailed && firstPage.length === 0} />
+      <TownIndex first={!loadFailed && firstPage.length === 0} markers={markers} />
       </div>
       </div>
 

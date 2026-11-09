@@ -39,8 +39,8 @@ test("홈 구별 전월비 — 가장 많은 구가 가진 최신 달 · 바로 
 
 test("홈 — 지역 동향 아래 서울 구별 막대 · 서버 조각 · 홈 데이터의 같은 행", () => {
   const page = code("app/page.tsx");
-  assert.ok(page.indexOf("<HomeSeoulMoves") > page.indexOf("지역 동향"), "지역 동향 다음");
-  assert.ok(page.indexOf("<HomeSeoulMoves") < page.indexOf("<HomeTownBlock"), "동네이야기 앞");
+  /* [1113 · 중복 제거] 홈에서는 뺐다 — 실시간 토론의 지역 순위가 같은 값. 조각 자체는 남는다 */
+  assert.equal(page.indexOf("<HomeSeoulMoves"), -1);
   const comp = read("app/components/home/HomeSeoulMoves.tsx");
   assert.doesNotMatch(comp, /"use client"/);
   assert.match(comp, /DivergingBars/);

@@ -7,11 +7,12 @@ import { complexCanonicalPathFromNames } from "@/lib/complex/complex-store";
    **직접** 가는 링크가 없었다(시세 카드는 /map?region=). 지역 카드 12곳 → /region/<id>, 거래 많은 단지(도시당 1곳) → 단지 상세.
    사용자 경로이자 크롤 경로. 둘 다 비면 아무것도 그리지 않는다(빈 약속 금지). */
 export function HomeHubLinks({ regions, complexes }: { regions: HomeRegionCard[]; complexes: ActiveComplex[] }) {
-  if (regions.length === 0 && complexes.length === 0) return null;
+  void regions;
+  if (complexes.length === 0) return null;
   const row = (title: string, items: Array<{ key: string; label: string; href: string; sub?: string }>) =>
     items.length === 0 ? null : (
       <div className="flex flex-col gap-1.5">
-        <p className="m-0 t-caption text-text-3">{title}</p>
+        {title ? <p className="m-0 t-caption text-text-3">{title}</p> : null}
         <ul className="m-0 flex list-none flex-wrap gap-x-3 gap-y-1.5 p-0">
           {items.map((it) => (
             <li key={it.key}>
@@ -26,15 +27,12 @@ export function HomeHubLinks({ regions, complexes }: { regions: HomeRegionCard[]
     );
   return (
     <section aria-labelledby="home-hub-links" className="card mt-4 flex flex-col gap-3 rounded-2xl p-4 max-md:mt-3">
+      {/* [1113 · 중복 제거] 지역 줄(강남구 · 마포구 …)은 검색 띠의 "바로 보기" 칩과 같은 목록이라 뺐다 — 단지 줄만 */}
       <h2 id="home-hub-links" className="t-section text-ink">
-        지역 · 단지 바로가기
+        최근 6개월 거래 많은 단지
       </h2>
       {row(
-        "지역 실거래 · 지역 분석",
-        regions.map((r) => ({ key: r.id, label: r.name, href: `/region/${encodeURIComponent(r.id)}` })),
-      )}
-      {row(
-        "최근 6개월 거래 많은 단지",
+        "",
         complexes.map((c) => ({
           key: c.id,
           label: c.name,

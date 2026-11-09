@@ -35,7 +35,7 @@ test("P2 실거래 구간 — 이름 밑줄 없음(손 올리면) · 폰 40px ·
 
 test("P3 단지 목록 — 구 칩 폰 40px · 사이트 꼴 화살표", () => {
   const s = read("app/complex/browse/page.tsx");
-  assert.match(s, /inline-flex min-h-\[40px\] items-center rounded-full px-3 py-1\.5 t-sub font-bold transition md:min-h-0/);
+  assert.match(s, /flex min-h-10 items-center justify-center rounded-lg px-2 t-sub font-bold no-underline/); /* [1115] 구 바꾸기 판 안 칸도 40px */
   assert.match(s, /지역별 면적대·가격대 실거래 보기 ›/);
   assert.doesNotMatch(s, /실거래 보기 →/);
 });

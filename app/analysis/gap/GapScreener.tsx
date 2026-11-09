@@ -12,7 +12,6 @@
    조건은 URL 쿼리에 남긴다 — 서버는 searchParams 를 읽지 않고(ISR 캐시 정책 유지) 전체 목록을 내려 주며,
    여기서 history.replaceState 로만 반영하고 필터·정렬·예산은 클라이언트 계산(screener-model). 폰: 조건 패널이 위(접이식), 표는 가로 스크롤. */
 import { useEffect, useMemo, useState } from "react";
-import { StepLine } from "@/app/components/StepLine";
 import { formatKrwShort } from "@/lib/market/format";
 import { GAP_CARD_PAGE, gapConclusion, gapSteps, nextCardCount, regionActionLinks } from "@/lib/market/region-conclusion";
 import { RegionActionCard, RegionPrimaryBar, VerdictCard } from "../timing/region-verdict";
@@ -269,7 +268,7 @@ export function GapScreener({
   return (
     <>
       {/* [1026] 절차 한 줄 — 화면당 한 번 */}
-      <StepLine steps={plan.steps} current={plan.current} />
+      {/* [1112 · 중복 제거] 절차 칩 줄은 뺐다 — 결론 카드가 같은 말을 한 줄로 */}
 
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
         <div className="flex min-w-0 flex-col gap-3">

@@ -38,8 +38,11 @@ export function RegionTrendCard({
   heading,
   datasets,
   after,
+  className = "mb-6",
 }: {
   heading: string;
+  /** [1114] 바깥 여백 — 지역 화면은 mb-6, 홈은 gap 이 맡는다("") */
+  className?: string;
   datasets: RegionTrendDataset[];
   /** 카드 끝(차트 아래) 서버 조각 — 시장 온도 링크 등 */
   after?: React.ReactNode;
@@ -48,7 +51,7 @@ export function RegionTrendCard({
   const cur = datasets.find((d) => d.key === key) ?? datasets[0];
   if (!cur) return null;
   return (
-    <section aria-labelledby="region-trend-h" className="card mb-6 p-[var(--pad-card)]">
+    <section aria-labelledby="region-trend-h" className={`card p-[var(--pad-card)] ${className}`}>
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
         <div className="flex items-center gap-0.5">
           <h2 id="region-trend-h" className="t-section text-ink">

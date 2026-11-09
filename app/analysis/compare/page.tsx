@@ -13,7 +13,6 @@ import { withJosa } from "@/lib/format/josa";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { ShellBreadcrumb } from "../../components/PageShell";
-import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
 import type { PickedComplex } from "../ComplexPicker";
 import { VerdictCard } from "../timing/region-verdict";
 import { useDesktop } from "../scenario/use-desktop";
@@ -29,7 +28,6 @@ import {
   type CompareTrayItem,
 } from "@/lib/newui/compare-tray";
 import { hasSession } from "@/lib/client/has-session";
-import { StepLine } from "@/app/components/StepLine";
 import { PageHead } from "@/app/components/PageHead";
 import { Icon } from "@/app/components/Icon";
 import { MobilePrimaryBar } from "@/app/components/MobilePrimaryBar";
@@ -274,7 +272,7 @@ export default function ComparePage() {
         </ul>
       </section>
       {/* #411 — 도구 간 이어가기 (비교는 지역 컨텍스트가 없어 링크만). [1026b] 파란 "노트 쓰러 가기" 칩은 걷었다(채움 파랑 하나) */}
-      <AnalysisCrossLinks current="compare" />
+{/* [1112 · 중복 제거] "이어서 분석" 칩 카드는 뺐다(메뉴 · 허브와 같은 목적지) */}
     </>
   );
 
@@ -287,7 +285,7 @@ export default function ComparePage() {
         <PageHead icon="scale" title="후보 단지 비교" sub={`국토교통부 실거래 · 최대 ${COMPARE_TRAY_MAX}곳`} />
 
         {/* [1026b] 절차 한 줄 — 화면당 한 번 */}
-        <StepLine className="mt-3" steps={plan.steps} current={plan.current} />
+        {/* [1112 · 중복 제거] 절차 칩 줄은 뺐다 — 결론 카드가 같은 말을 한 줄로 */}
 
         {count === 0 ? (
           /* [1026b] 빈 상태 — 카드 하나 + 회색 표 윤곽 + 한 문장 + 단지 검색 */

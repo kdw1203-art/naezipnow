@@ -15,7 +15,7 @@ import { logger } from "@/lib/log";
 
 /* ============================================================
    서울 단지 브라우즈 — /complex/browse?district=서울+강남구
-   구 선택 칩(강남4구 우선) → 해당 구 단지별 실거래 요약.
+   구 고르기(제목 옆 접힘 · [1115]) → 해당 구 단지별 실거래 요약.
    국토부 실거래가(market_transactions) 기반 — 매물 호가 아님.
    비로그인 열람 허용(index 대상).
    ============================================================ */
@@ -105,37 +105,42 @@ export default async function ComplexBrowsePage({
         </Link>
       </p>
 
-      {/* 구 선택 칩 — 강남4구 우선
-          [1102 · 조작 다이어트] 폰은 한 줄 가로 밀기(25칸이 다섯 줄로 접혀 목록이 첫 화면 밖이었다) · 고른 구는 줄 맨 앞(폰) */}
-      <div className="scroll-x-hidden-bar rise-in-1 mb-5 flex gap-1.5 max-md:-mx-3.5 max-md:mb-3 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3.5 md:flex-wrap [&>*]:shrink-0">
-        {SEOUL_BROWSE_REGIONS.map((r) => {
-          const active = r.id === region.id;
-          return (
-            <Link
-              key={r.id}
-              href={`/complex/browse?district=${encodeURIComponent(regionDisplayName(r))}`}
-              /* [1074] 폰 31px → 40px(눌리는 칩의 하한) · PC 는 그대로 */
-              className={`inline-flex min-h-[40px] items-center rounded-full px-3 py-1.5 t-sub font-bold transition md:min-h-0 ${
-                /* [970 · B-06] 네이비 칩 글자 text-surface → text-on-dark(다크에서 안 보였다) */
-                active
-                  ? "bg-brand-navy text-on-dark max-md:order-first"
-                  : "card tile text-text-2"
-              }`}
-            >
-              {r.name}
-            </Link>
-          );
-        })}
-      </div>
-
       {/* 해당 구 단지 요약 */}
       <section className="rise-in-2 mb-6 max-md:mb-3">
-        <h2 className="mb-1.5 px-0.5 t-section text-ink">
-          {label} 단지별 현황{" "}
-          <span className="t-sub font-medium text-text-3">
-            최신 거래순 · 상위 {summaries.length}개
-          </span>
-        </h2>
+        {/* [1115 · 5개 넘으면 필터] 25개 구 칩 벽(PC 두 줄 · 폰 가로 밀기) → 제목 옆 "구 바꾸기" 접힘 하나(JS 없음 · 25개 링크는 펼친 판 안 = 크롤 경로 그대로) */}
+        <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2 px-0.5">
+          <h2 className="t-section text-ink">
+            {label} 단지별 현황{" "}
+            <span className="t-sub font-medium text-text-3">
+              최신 거래순 · 상위 {summaries.length}개
+            </span>
+          </h2>
+          <details className="group relative">
+            <summary className="press flex min-h-10 cursor-pointer list-none items-center gap-1 rounded-lg border border-line bg-surface px-3 t-sub font-bold text-text-2">
+              {region.name} · 구 바꾸기
+              <span aria-hidden="true" className="text-text-3 transition-transform group-open:rotate-180">
+                {/* dead-control-ok: summary 가 눌리는 자리 — 꺾쇠는 열림 표시 */}⌄
+              </span>
+            </summary>
+            <div className="card absolute right-0 z-20 mt-1 grid w-[min(92vw,420px)] grid-cols-3 gap-1 rounded-xl p-2 md:grid-cols-5">
+              {SEOUL_BROWSE_REGIONS.map((r) => {
+                const active = r.id === region.id;
+                return (
+                  <Link
+                    key={r.id}
+                    href={`/complex/browse?district=${encodeURIComponent(regionDisplayName(r))}`}
+                    aria-current={active ? "page" : undefined}
+                    className={`flex min-h-10 items-center justify-center rounded-lg px-2 t-sub font-bold no-underline ${
+                      active ? "bg-primary-soft text-primary" : "text-text-2 hover:bg-bg"
+                    }`}
+                  >
+                    {r.name}
+                  </Link>
+                );
+              })}
+            </div>
+          </details>
+        </div>
         {/* [1015 · 규칙 I] 실거래 표 껍데기 = blue 리퀴드 판(스크롤 상자는 표 부품 안쪽) */}
         <div className="lq-panel pb-2" data-tone="blue">
           <ComplexSummaryTable

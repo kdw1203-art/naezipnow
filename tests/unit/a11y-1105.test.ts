@@ -31,7 +31,8 @@ test("2) 가로 밀기 줄 — 칩 · 틀 자신의 포커스 링을 안쪽으�
   assert.match(cmp, /aria-label="지역 바로가기"\s*className="[^"]*overflow-x-auto[^"]*"\s*data-hscroll=""/);
   /* 칩 줄 셋이 실제로 그 틀 안에 있다 — /calculator(HScroll) · /complex/browse(.scroll-x-hidden-bar) · /complex/compare(data-hscroll) */
   assert.match(read("app/calculator/CalculatorNav.tsx"), /<HScroll hint=\{null\} className="mb-4">/);
-  assert.match(read("app/complex/browse/page.tsx"), /className="scroll-x-hidden-bar rise-in-1 /);
+  /* [1115] /complex/browse 칩 줄은 "구 바꾸기" 접힘으로 바뀌어 가로 밀기 줄이 없다 */
+  assert.doesNotMatch(read("app/complex/browse/page.tsx"), /className="scroll-x-hidden-bar rise-in-1 /);
   const css = read("app/globals.css");
   const tail = css.slice(css.indexOf("[1105 · 접근성]"));
   assert.ok(css.indexOf("[1105 · 접근성]") > css.indexOf("[1104 · 속도] 위 리퀴드 판"), "파일 끝에 덧붙임");

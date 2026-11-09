@@ -254,7 +254,8 @@ test("내부 링크 — 임장 가이드 → 지역(#15) · 리포트 지역 링
   const hub = read("app/components/home/HomeHubLinks.tsx");
   assert.doesNotMatch(hub, /"use client"/, "서버 조각(클라이언트 JS 0)");
   assert.match(hub, /complexCanonicalPathFromNames\(/);
-  assert.match(hub, /\/region\/\$\{/);
+  /* [1113] 지역 링크(/region)는 검색 띠의 바로 보기 칩이 맡는다(같은 이름 두 줄 → 한 줄) */
+  assert.match(home, /href: `\/region\/\$\{encodeURIComponent\(r\.id\)\}`/);
 });
 
 test("카카오톡 공유(#23) — 키 이름 둘 다 · 키 없으면 안 그림 · 단지·리포트에 꽂힘 · CSP", () => {

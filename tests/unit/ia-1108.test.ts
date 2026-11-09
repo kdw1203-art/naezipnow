@@ -127,7 +127,7 @@ test("③ 단지 상세 — 기록 한 자리 · 인근 단지+비교 한 목록
   assert.match(rm, /const TERM_SLUGS = \["silgeoraega", "jeonse-garyul"\];/);
 });
 
-test("④ 홈 — 네이비 검색 띠 · 최근 실거래 6건 · AI 입구 판 없음 · 지역 동향은 사이드바 · 폰 순서(본문 → 사이드바)", () => {
+test("④ 홈 — 네이비 검색 띠 · 최근 실거래 순위 · AI 입구 판 없음 · 지역 동향은 사이드바 · 폰 순서(본문 → 사이드바)", () => {
   const home = strip(read("app/page.tsx"));
   assert.doesNotMatch(home, /AIPanel|HomeAiGateway\(|HOME_AI_GATEWAY_TITLE/);
   assert.match(home, /<section className="brand-navy-card flex flex-col gap-3 rounded-2xl[^"]*" aria-label="검색 · 오늘의 시장">/);
@@ -136,19 +136,12 @@ test("④ 홈 — 네이비 검색 띠 · 최근 실거래 6건 · AI 입구 판
   assert.match(band, /<HomeTodayLine\s+embedded/);
   assert.match(band, /briefing=\{data\.briefing \? \{ text: data\.briefing\.text, asOfLabel: data\.briefing\.asOfLabel \} : null\}/);
   assert.equal((home.match(/brand-navy-card/g) ?? []).length, 1, "네이비 판은 하나");
-  assert.match(home, /listRegionTransactions\(dealsRegion\.id, dealsRegion\.name, 6\)/);
+  /* [1114 · 벤토] 최근 신고 20건 → 금액 순위 배너 · 배치는 ia-1114 가 잠근다 */
+  assert.match(home, /listRegionTransactions\(dealsRegion\.id, dealsRegion\.name, 20\)/);
   assert.match(home, /<HomeRecentDeals\s+regionName=\{dealsRegion\.name\}\s+rows=\{recentDeals\}\s+failed=\{recentDealsFailed\}/);
-  /* 본문 순서: 내 관심 → 최근 실거래 → 공개 임장노트 → (폰 광고) → 동네 · 뉴스 → 바로가기 · 사이드바: 지역 동향 → 광고 */
-  const main = home.slice(home.indexOf('className="order-1 flex flex-col gap-3 lg:gap-4"'), home.indexOf("<HomeTalkSection"));
-  let last = -1;
-  for (const k of ["<HomeMyRail", "<HomeRecentDeals", "공개 임장노트", '<AdZone placement="home_feed" seed={1}', "<HomeTownBlock", "<HomeHubLinks"]) {
-    const i = main.indexOf(k);
-    assert.ok(i > last, `본문 순서: ${k}`);
-    last = i;
-  }
-  const aside = home.slice(home.indexOf('className="order-2 flex flex-col gap-3 lg:sticky'), home.indexOf('className="order-1 flex flex-col gap-3 lg:gap-4"'));
+  const aside = home.slice(home.indexOf('<aside data-autotrim=""'), home.indexOf("</aside>"));
   assert.match(aside, /지역 동향/);
-  assert.match(aside, /<HomeSeoulMoves data=\{data\.seoulMoves\} \/>/);
+  assert.doesNotMatch(aside, /<HomeSeoulMoves/, "[1113] 중복 제거");
   assert.match(aside, /<AdSenseUnit \/>/);
   /* 오늘의 시장 — embedded 는 제 카드 · 워터마크 없음 · 브리핑 슬라이드 */
   const line = strip(read("app/components/home/HomeTodayLine.tsx"));
@@ -160,7 +153,7 @@ test("④ 홈 — 네이비 검색 띠 · 최근 실거래 6건 · AI 입구 판
   assert.doesNotMatch(deals, /"use client"/);
   assert.match(deals, /최근 실거래 불러오기 실패 · 잠시 후 다시/);
   assert.match(deals, /신고된 매매 실거래 없음/);
-  assert.match(deals, /data-tone="blue"/);
+  assert.match(strip(read("app/components/home/RankTicker.tsx")), /data-tone="blue"/, "[1114] 옅은 파랑 판은 순위 배너로");
   /* 지역 신고 행에 region_name 이 실려 단지 주소를 만든다 */
   const store = read("lib/market/store.ts");
   assert.match(store, /\.select\("complex_name,address,contract_ym,contract_day,deal_amount_krw,area_m2,floor,region_name"\)/);

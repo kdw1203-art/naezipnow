@@ -99,7 +99,7 @@ test("Y4 이미지 설명 — 색인되는 목록 썸네일에 alt 가 비어 �
   for (const [p, re] of CASES) assert.match(read(p), re, p);
   /* 노트 피드의 두 자리 — 44px·36px 모두 */
   const feed = read("app/notes/notes-feed-client.tsx");
-  assert.equal((feed.match(/alt=\{`\$\{n\.title\} 노트 커버`\}/g) ?? []).length, 2);
+  assert.equal((feed.match(/alt=\{`\$\{n\.title\} 노트 커버`\}/g) ?? []).length, 1); /* [1115] 오른쪽 "최근 임장" 36px 줄은 표와 같은 노트라 뺐다 */
   /* 장식 그림(Illust)은 alt 를 비운 채 둔다 — 읽기 보조기기에 잡음을 늘리지 않는다 */
   assert.match(read("app/components/Illust.tsx"), /alt=""/);
 });

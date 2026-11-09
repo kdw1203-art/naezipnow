@@ -779,40 +779,11 @@ function LeftRail({
   );
 }
 
-/* ── [1016] 데스크톱 오른쪽 레일(페이스북 오른쪽 목록) — 최근 임장(스토리 줄의 세로판) · 광고 ── */
-function RightRail({ notes, ad }: { notes: FeedNote[]; ad: ReactNode }) {
+/* ── [1016] 데스크톱 오른쪽 레일 — 광고 자리.
+   [1115 · 같은 사실 한 번] "최근 임장" 8줄(지역 · 제목)은 뺐다 — 가운데 표의 첫 여덟 줄과 같은 노트 · 같은 순서였다(운영 캡처 2026-11-09). ── */
+function RightRail({ ad }: { ad: ReactNode }) {
   return (
-    <aside className="hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-[76px] lg:self-start" aria-label="최근 임장">
-      {notes.length > 0 && (
-        <div className="card rounded-2xl p-2">
-          <p className="px-2.5 pb-1 pt-1 t-caption font-bold text-text-3">최근 임장</p>
-          <ul className="m-0 flex list-none flex-col p-0">
-            {notes.slice(0, 8).map((n) => (
-              <li key={n.id}>
-                <Link href={noteHref(n)} className="flex min-h-[44px] items-center gap-2.5 rounded-lg px-2 py-1 no-underline hover:bg-bg">
-                  <span className="h-9 w-9 shrink-0 overflow-hidden rounded-full bg-bg">
-                    <CoverImage
-                      src={n.coverUrl}
-                      alt={`${n.title} 노트 커버`}
-                      sizes="36px"
-                      imgClassName="h-full w-full object-cover"
-                      fallback={
-                        <span className="flex h-full w-full items-center justify-center t-caption font-bold text-ink" style={{ background: seedGradient(n.id) }}>
-                          {shortLabel(n).slice(0, 2)}
-                        </span>
-                      }
-                    />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate t-sub font-bold text-ink">{shortLabel(n)}</span>
-                    <span className="block truncate t-caption text-text-3">{n.title}</span>
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+    <aside className="hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-[76px] lg:self-start" aria-label="광고">
       {ad}
     </aside>
   );
@@ -1574,7 +1545,7 @@ export function NotesFeedClient({
           </Link>
         </div>
       </div>
-      <RightRail notes={mine ? [] : visible} ad={mine ? null : adSide} />
+      <RightRail ad={mine ? null : adSide} />
       </div>
 
       {/* [1101 · 조작 다이어트] 폰 노트 쓰기 FAB(네이비 + 원)는 뺐다 — 바로 아래 탭바 가운데 "+ 기록" 과 같은 단추가 한 화면에 둘이었다. */}

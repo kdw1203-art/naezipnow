@@ -102,7 +102,7 @@ test("잔여 화면 — 동 화면 순서 · 계산기 · 검색 · 단지 목�
   assert.match(search, /\{hasQuery && results\.complexes\.length === 0 && \(/);
   assert.ok(!search.includes("⌕"));
   const browse = strip(read("app/complex/browse/page.tsx"));
-  assert.match(browse, /max-md:flex-nowrap max-md:overflow-x-auto/);
+  assert.match(browse, /\{region\.name\} · 구 바꾸기/); /* [1115] 칩 줄 → 접힘 */
   assert.doesNotMatch(browse, /지도에서 보기|임장노트 쓰기/);
   assert.doesNotMatch(strip(read("app/reports/(index)/page.tsx")), /최신 \{formatYmKo\(latest\.ym\)\}/);
   assert.doesNotMatch(strip(read("app/reports/[ym]/page.tsx")), /srContext="같은 지역 전월보다"/);

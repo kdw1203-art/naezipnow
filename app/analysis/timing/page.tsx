@@ -1,40 +1,86 @@
-/* [1110 · AI 분석 2차 통폐합] /analysis/timing = **지역 시세 분석** — 고르는 자리.
-   소유자 2026-11-07: 지역 시세 도구 5줄 → 하나, "눌렀을 때 지역을 검색하거나 지역(시 · 구 · 동) 단위로 분석해서 종합적으로".
-   예전 이 주소의 화면(시세·타이밍 — 기본 지역 한 곳의 12개월 지수 · 거래량 · 온도, 지역 전환은 /api/timing)은 지역 종합 화면
-   (/region/[id] 시세 흐름 카드 · 시장 온도 탭)이 같은 사실을 더 넓게 보여 주고 있어 지웠다 — 같은 사실 두 곳 금지.
-   주소는 그대로 둔다(색인 · 리다이렉트 표 6규칙 · 앱 안 링크 30여 곳이 "지역 흐름 보기"로 이 주소를 가리킨다 — 이제 전부 이 고르는 자리로
-   온다). ?region= 가 붙은 옛 링크는 클라이언트가 그 지역 종합 화면으로 넘긴다(legacy-region-param). 서버는 쿼리를 읽지 않는다(ISR 1일).
-   본문 조각(region-sise-entry)은 허브(/analysis #tier-market)와 같다. */
+/* [1112] 1110 의 "고르는 자리"(검색 + 시/도 표)는 허브(/analysis)에만 — 이 주소는 다시 대시보드다(소유자 "이런 식으로 해줘"). 검색은 머리에.
+   [1026 · 지역 시세] 본문(TimingClient)을 .nz-dot-blue 로 감싼다 — 섹션 제목 점은 파랑 하나(1025 표준 "한 모양").
+   절차·결론·다음 행동·폰 하단 바는 TimingClient(지역 전환이 클라이언트 상태라 결론도 거기서 바뀐다). ISR·캐시 그대로. */
 import { ShellBreadcrumb } from "../../components/PageShell";
-import { PageHead } from "@/app/components/PageHead";
+import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
+import {
+  TEMPERATURE_REGIONS,
+  computeRegionTemperature,
+  currentYyyymm,
+} from "@/lib/market/temperature";
+import { TimingWithSearch } from "./timing-with-search";
+import { REGION_ALIASES, REGION_CATALOG } from "@/lib/region/catalog";
+import { listRegionSiseRegions } from "@/lib/region/region-sise";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
-import { loadRegionSiseData, RegionSiseEntry } from "../region-sise-entry";
-import { LegacyRegionParam } from "./legacy-region-param";
+import { getServiceSupabase } from "@/lib/supabase/service";
+import { logger } from "@/lib/log";
 
-/* [1010] 하루 — 원천(부동산원 스냅샷 · 주간 온도)은 하루 1회 · 주 1회 갱신. 이 경로는 lib/region/invalidate-market.ts
-   invalidateMarketAnalysisRoutes() 가 하루 1회 비운다(예전 그대로). */
+/* ── ISR 전환 (사용량 절감 13차, 2026-08-11) ────────────────────────────────
+   예전에는 force-dynamic + ?region= 서버 재렌더(요청·지역 전환마다 함수 실행
+   + 지수/거래량 쿼리)였다. 지역이 62개라 전량을 페이지에 실으면 재생성마다
+   124회 쿼리가 되므로, auctions 선례의 삼분할을 쓴다:
+   ① 기본 지역(첫 항목) 하나만 ISR 로 계산·프리렌더
+   ② 지역 전환은 /api/timing?region= — 지역별 CDN 캐시(s-maxage 1800)
+   ③ ?region/?complexId/?apt 는 TimingClient 가 마운트 후 location.search 로
+   지수·월별 거래량 원천이라 10분(600초)이면 충분히 신선하고, 하위 로더가
+   실패를 null/[] 로 삼키는 기존 설계(스냅샷 크론과 공유)라 실패 화면이
+   생기더라도 이 주기 이상 눌러앉지 않는다. */
+/* [1010] 600초 → 1일. 위 판단("10분이면 충분히 신선")의 근거는 원천의 갱신 주기였는데,
+   실제 비용을 정한 건 크롤러였다 — 10분 눈금은 크롤러 방문마다 100% 재렌더를 뜻한다.
+   원천(지수·월별 거래량)은 하루 1회 갱신이고, 이 경로는 SOURCE_MAP 목록에 없어서
+   lib/region/invalidate-market.ts invalidateMarketAnalysisRoutes() 가 하루 1회 비운다.
+   지역 전환은 원래부터 /api/timing(지역별 CDN 1800초)이라 이 TTL 과 무관하다. */
 export const revalidate = 86_400;
 
+/* N7 — ?region=·?complexId=·?apt= 조합마다 별개 URL 로 색인되지 않도록 canonical 을
+   파라미터 없는 경로로 고정한다. 지역별 랜딩은 /region/[id] 가 따로 맡는다. */
+/* [1112] 이름 = 지역 시세 분석(1110) — 화면은 소유자가 고른 대시보드(결론 · 숫자 두 칸 · 지수+거래량 그림 · 온도 · 거래량 · 다음 행동) */
 export const metadata = buildPageMetadata({
-  title: "지역 시세 분석 — 시 · 구 · 동으로 찾는 지역 종합",
+  title: "지역 시세 분석 — 매매가격지수 · 거래량 · 시장 온도",
   description:
-    "시 · 구 · 동 이름으로 지역을 고르면 개요 · 실거래 구간 · 전월세 · 시장 온도 · 동네 · 월간 리포트를 한 화면에서 봅니다. 시/도별 평균 매매가 · 전세가율 · 시장 온도 비교. 한국부동산원 공표 통계 · 국토교통부 실거래 기준.",
+    "시 · 구 · 동을 검색해 지역 매매가격지수 추세, 월별 실거래 거래량, 시장 온도를 한 화면에서 봅니다. 모든 수치는 실측 자료로만 그리고, 없는 구간은 없다고 표시합니다.",
   path: "/analysis/timing",
 });
 
-export default async function RegionSisePage() {
-  const data = await loadRegionSiseData("[/analysis/timing]");
+/* ============================================================
+   시세·타이밍 분석 — 전 구간 실데이터.
+   예전의 하드코딩 사이클 그림·"매수 신호 62/100"은 제거했다 — 구체적인
+   숫자는 실측처럼 읽히므로, 실측이 아니면 그리지 않는다.
+   지역 목록·추세 판정·시장 온도 계산은 lib/market/temperature.ts 한 곳
+   (이 화면·지역 전환 API·주간 스냅샷 크론이 같은 함수를 부른다).
+   ============================================================ */
+const REGION_OPTIONS = TEMPERATURE_REGIONS;
+
+export default async function TimingPage() {
+  const defaultRegion = REGION_OPTIONS[0];
+  const { trend, volume, temp } = await computeRegionTemperature(defaultRegion);
+  if (!trend && !temp && volume.length === 0) {
+    /* 전부 빈 값 = 십중팔구 "조회 실패/키 부재"지 "데이터 없음"이 아니다
+       (기본 지역 강남은 지수·거래량이 실존한다 — 2026-08-16 실측).
+       어느 쪽인지 로그로 가른다: serviceClient=null 이면 정적 생성 컨텍스트에
+       서비스 키가 없는 것이고, ok 인데 비었으면 조회 자체가 실패한 것이다. */
+    logger.warn(
+      `[timing] 기본 지역(${defaultRegion.id}) SSR 전부 빈 값 — serviceClient=${getServiceSupabase() ? "ok" : "null"}`,
+    );
+  }
+
   return (
-    <div className="flex flex-col gap-4 max-md:gap-3">
+    <div className="tool-scope" style={personaVars(TOOL_PERSONAS["market:timing"])}>
       <ShellBreadcrumb>분석 › 지역 시세 분석</ShellBreadcrumb>
-      <LegacyRegionParam regions={data.regions} />
-      <PageHead
-        icon="trending-up"
-        title="지역 시세 분석"
-        sub={`시 · 구 · 동 검색 → 개요 · 실거래 구간 · 전월세 · 시장 온도 · 동네 · 월간 리포트 · 지역 ${data.regions.length}곳`}
-        subOnPhone
-      />
-      <RegionSiseEntry data={data} autoFocus />
+      <div className="nz-dot-blue">
+        <TimingWithSearch
+          searchRegions={listRegionSiseRegions(REGION_CATALOG, REGION_ALIASES)}
+          regions={REGION_OPTIONS.map((r) => ({ id: r.id, label: r.label }))}
+          defaultRegionId={defaultRegion.id}
+          initialData={{ trend, volume, temp }}
+          builtYyyymm={currentYyyymm()}
+          builtAt={Date.now()}
+        />
+      </div>
+
+      {/* 15h-44 분석→행동 카드는 TimingClient 안의 AnalysisCrossLinks 로 이동
+          (#411) — 지역 전환이 클라이언트 상태라, 서버 카드로는 "보던 지역
+          그대로" 링크를 만들 수 없었다. */}
     </div>
   );
 }

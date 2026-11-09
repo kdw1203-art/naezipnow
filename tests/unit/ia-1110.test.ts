@@ -76,8 +76,13 @@ test("①② 허브 — 단지 분석은 바로 열기 · 지역 시세는 조�
   for (const f of ["app/analysis/hub-tool-detail.tsx", "app/analysis/hub-teasers.ts", "app/analysis/hub-region-teaser.tsx", "app/analysis/hub-tool-card.tsx"]) assert.ok(!existsSync(f), f);
   /* 지역 시세 분석 조각 — 검색칸(클라이언트 · 카탈로그 import 없음) · 시/도 필터(클라이언트 · 판은 서버) · 비교 화면 글자 링크 3 */
   const entry = strip(read("app/analysis/region-sise-entry.tsx"));
-  assert.match(entry, /<RegionSearchBox regions=\{data\.regions\} autoFocus=\{autoFocus\} \/>/);
-  assert.match(entry, /<SidoFilter sidos=\{data\.groups\.map\(\(g\) => g\.sido\)\}/);
+  /* [1111] 검색칸 · 시/도 표 · 지도 보기는 클라이언트 묶음(region-sise-client)이 하나로 — 판(표)은 서버가 그려 넘긴다 */
+  assert.match(entry, /<RegionSiseClient\s+regions=\{data\.regions\}\s+markers=\{data\.markers\}/);
+  assert.match(entry, /panels=\{data\.groups\.map\(\(g\) => <Panel key=\{g\.sido\} g=\{g\} \/>\)\}/);
+  const client = strip(read("app/analysis/region-sise-client.tsx"));
+  assert.match(client, /<RegionSearchBox regions=\{regions\} autoFocus=\{autoFocus\} onMapClick=\{\(\) => setView\("map"\)\} \/>/);
+  assert.match(client, /<SidoFilter sidos=\{sidos\} counts=\{counts\} panels=\{panels\} \/>/);
+  assert.match(client, /<RegionMapPicker markers=\{markers\}/);
   for (const h of ["/analysis/temperature", "/analysis/gap", "/analysis/scenario"]) assert.ok(entry.includes(`href="${h}"`), h);
   assert.match(entry, /loadWithinPrerenderBudget\(`\$\{what\} 스냅샷`, \(\) => getAllRegionSnapshots\(\), BUDGET_MS\)/);
   assert.match(entry, /loadWithinPrerenderBudget\(`\$\{what\} 온도`, \(\) => listLatestTemperatures\(\), BUDGET_MS\)/);
@@ -99,19 +104,22 @@ test("①② 허브 — 단지 분석은 바로 열기 · 지역 시세는 조�
   assert.match(hub, /toolCount=\{AI_TOOL_COUNT \+ 1\}/);
 });
 
-test("② /analysis/timing = 고르는 자리 · /analysis/price 삭제 → 301 1홉 · /api/timing 없음 · 앱 안 링크 정리", () => {
+test("② /analysis/timing = [1112] 대시보드 + 머리 검색 · /analysis/price 삭제 → 301 1홉 · 앱 안 링크 정리", () => {
   const page = strip(read("app/analysis/timing/page.tsx"));
   assert.match(page, /export const revalidate = 86_400;/);
   assert.doesNotMatch(page, /searchParams/, "서버는 쿼리를 읽지 않는다(ISR)");
-  assert.match(page, /<LegacyRegionParam regions=\{data\.regions\} \/>/);
-  assert.match(page, /<RegionSiseEntry data=\{data\} autoFocus \/>/);
-  assert.match(strip(read("app/analysis/timing/legacy-region-param.tsx")), /router\.replace\(href\)/);
+  /* [1112] 소유자 "이런 식으로 해줘"(시세·타이밍 대시보드 캡처) — 대시보드 복귀 · 머리 오른쪽은 검색칸 하나 */
+  assert.match(page, /<TimingWithSearch\s+searchRegions=\{listRegionSiseRegions\(REGION_CATALOG, REGION_ALIASES\)\}/);
+  const tc = strip(read("app/analysis/timing/TimingClient.tsx"));
+  for (const gone of ["<StepLine", "<AnalysisCrossLinks", "<TimingRegionSelect", "<TimingComplexPicker", '"지난달 대비"', 'label: "시장 온도"']) assert.ok(!tc.includes(gone), `중복 제거: ${gone}`);
+  assert.match(tc, /title="지역 시세 분석"/);
+  assert.match(strip(read("app/analysis/region-search-box.tsx")), /if \(id && onPick && pickIds\?\.includes\(id\)\)/);
+  assert.match(strip(read("app/analysis/region-sise-entry.tsx")), /findTemperatureRegion\(r\.id\) \? \{ \.\.\.r, href: `\/analysis\/timing\?region=\$\{encodeURIComponent\(r\.id\)\}` \} : r/);
   for (const f of [
     "app/analysis/price/page.tsx",
-    "app/analysis/timing/TimingClient.tsx",
-    "app/analysis/timing/TimingOverlayChart.tsx",
-    "app/analysis/timing/volume-window.ts",
-    "app/api/timing/route.ts",
+    "app/analysis/timing/region-select.tsx",
+    "app/analysis/timing/complex-picker.tsx",
+    "app/analysis/timing/legacy-region-param.tsx",
     "app/components/home/HomeToolPick.tsx",
   ]) assert.ok(!existsSync(f), `${f} 는 지웠다`);
   assert.ok(existsSync("app/analysis/timing/region-verdict.tsx"), "갭 · 온도 · 시나리오 · 비교가 쓰는 공용 조각은 남는다");

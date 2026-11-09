@@ -128,6 +128,6 @@ test("썸네일 srcset — 고정 px sizes 는 그 칸의 1x·2x·3x 허용 폭�
   assert.match(cover, /srcSet: buildImageSrcSet\(src as string, srcSetWidthsFor\(sizes\)\), sizes/);
   /* 노트 허브 썸네일(44px · 36px)은 CoverImage 를 거친다 — [1101] 62px 스토리 원 줄(StoryRail)은 목록과 같은 노트라 지웠다 */
   const feed = read("app/notes/notes-feed-client.tsx");
-  for (const s of ['sizes="44px"', 'sizes="36px"']) assert.ok(feed.includes(s), s);
+  for (const s of ['sizes="44px"']) assert.ok(feed.includes(s), s); /* [1115] 36px 레일 줄은 뺐다 */
   assert.ok(!feed.includes('sizes="62px"') && !feed.includes("function StoryRail"), "스토리 줄 없음");
 });

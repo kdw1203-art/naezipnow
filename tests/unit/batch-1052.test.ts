@@ -126,7 +126,8 @@ test("지역 화면 — 그 지역 실시간 토론으로 가는 한 줄(토론 
 test("홈 — 거래 원천을 한쪽으로 단정하지 않는다 · 오늘의 한 줄 roving tabindex · 문장형 문구 정리 · 막대 40px", () => {
   const home = code("app/page.tsx");
   assert.doesNotMatch(home, /거래 = 그 달 신고 건수\(국토교통부\)/);
-  assert.match(home, /거래 = 그 달 아파트 매매 건수\(카드 끝 표기/);
+  /* [1114] 지역 동향은 표 — 범례는 가격 원천 두 갈래를 적는다(한쪽 단정 없음) */
+  assert.match(home, /가격 = 평균 매매가\(한국부동산원\) 또는 실거래 평균\(국토교통부 신고 월 집계/);
   assert.doesNotMatch(home, /오늘 브리핑을 아직 만들지 못했어요/);
   assert.doesNotMatch(home, /text-\[12px\]/);
   const today = code("app/components/home/HomeTodayLine.tsx");

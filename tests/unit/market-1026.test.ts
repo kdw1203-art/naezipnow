@@ -194,7 +194,7 @@ const count = (s: string, needle: string) => s.split(needle).length - 1;
 test("[1026] 네 화면 — StepLine 한 번 · 결론 카드 · 폰 하단 바 한 번 · 본문 | 레일 340 · 채움 파랑 리터럴 0(region-verdict 한 곳) · 파란 '노트 쓰기' 칩 없음 · 표식", () => {
   for (const [name, files] of Object.entries(SCREENS)) {
     const all = files.map(code).join("\n");
-    assert.equal(count(all, "<StepLine"), 1, `${name} 절차 한 줄은 화면당 한 번`);
+    assert.equal(count(all, "<StepLine"), 0, `${name} [1112 · 중복 제거] 절차 칩 줄 없음 — 결론 카드가 말한다`);
     assert.equal(count(all, "<VerdictCard"), 1, `${name} 결론 카드 하나`);
     assert.equal(count(all, "<RegionPrimaryBar"), 1, `${name} 폰 하단 바 한 번(레일 복제본 안에 넣지 않는다)`);
     assert.ok(count(all, "<RegionActionCard") >= 1 || all.includes("actionCard"), `${name} 다음 행동 카드`);

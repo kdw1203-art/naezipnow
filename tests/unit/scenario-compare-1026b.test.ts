@@ -250,7 +250,7 @@ test("[1026b] 두 화면 — StepLine 한 번 · 결론 카드 하나 · 폰 하
     ["compare", COMPARE_FILES, `${CMP}/page.tsx`],
   ] as const) {
     const all = files.map(code).join("\n");
-    assert.equal(count(all, "<StepLine"), 1, `${name} 절차 한 줄은 화면당 한 번`);
+    assert.equal(count(all, "<StepLine"), 0, `${name} [1112 · 중복 제거] 절차 칩 줄 없음`);
     assert.equal(count(all, "<VerdictCard"), 1, `${name} 결론 카드 하나`);
     assert.equal(count(all, "<MobilePrimaryBar"), 1, `${name} 폰 하단 바 한 번`);
     assert.equal(count(all, "btn-primary"), 1, `${name} 채움 파랑 리터럴 하나(레일 + 폰 바가 같은 요소)`);
@@ -262,7 +262,7 @@ test("[1026b] 두 화면 — StepLine 한 번 · 결론 카드 하나 · 폰 하
     assert.ok(!/note=\{\{/.test(all), `${name} 이어서 칩의 채움 파랑 없음`);
     assert.ok(m.includes('className="nz-dot-blue'), `${name} 섹션 점 파랑 하나`);
     assert.ok(m.includes("<PageHead"), `${name} 머리 한 모양`);
-    assert.ok(m.indexOf("<PageHead") < m.indexOf("<StepLine") && m.indexOf("<StepLine") < m.indexOf("<VerdictCard"), `${name} 머리 → 절차 → 결론`);
+    assert.ok(m.indexOf("<PageHead") < m.indexOf("<VerdictCard"), `${name} 머리 → 결론`);
   }
 });
 

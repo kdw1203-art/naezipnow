@@ -7,7 +7,10 @@
    둘 다 프리렌더 예산 안(20초)에서 읽고, 못 읽으면 그 칸이 "—" + "불러오기 실패 · 잠시 후 다시" 한 줄 — 빈 값으로 위장하지 않는다. */
 import Link from "@/app/components/IntentLink";
 import { REGION_ALIASES, REGION_CATALOG } from "@/lib/region/catalog";
-import { getAllRegionSnapshots } from "@/lib/market/store";
+import { findTemperatureRegion } from "@/lib/market/temperature";
+import { getAllRegionSeriesSince, getAllRegionSnapshots } from "@/lib/market/store";
+import { buildTickerPages, seriesSince, type TickerPage } from "@/lib/region/region-ticker";
+import { RegionTickerBoard } from "./region-ticker-board";
 import { listLatestTemperatures } from "@/lib/market/temperature-archive";
 import { formatWeekKorean } from "@/lib/market/week-label";
 import { formatKrwShort, formatYm } from "@/lib/market/format";
@@ -19,28 +22,38 @@ import {
   type RegionSiseRegion,
   type RegionSiseRow,
 } from "@/lib/region/region-sise";
-import { RegionSearchBox } from "./region-search-box";
-import { SidoFilter } from "./sido-filter";
+import { RegionSiseClient } from "./region-sise-client";
+import { regionSiseMapMarkers, type RegionMapMarker } from "@/lib/region/region-map";
 import { TOOL_COL_GO, TOOL_COL_NAME } from "./tool-cols";
 
 export type RegionSiseData = {
   regions: RegionSiseRegion[];
   groups: RegionSiseGroup[];
+  /** [1111] 지도 보기 말풍선(값 = 평균 매매가 · 없으면 온도) */
+  markers: RegionMapMarker[];
   /** 스냅샷 기준월("2026.10") — 못 읽었으면 null */
   periodLabel: string | null;
   /** 온도 기록 주("11월 둘째 주") — 못 읽었으면 null */
   weekLabel: string | null;
   snapshotFailed: boolean;
   tempFailed: boolean;
+  /** [1115] 시세판 쪽(서울 주요 구 · 상승 · 하락 — 쪽마다 16칸) */
+  tickerPages: TickerPage[];
+  tickerFailed: boolean;
 };
 
 const BUDGET_MS = 20_000;
 
 export async function loadRegionSiseData(what = "[region-sise]"): Promise<RegionSiseData> {
-  const regions = listRegionSiseRegions(REGION_CATALOG, REGION_ALIASES);
-  const [snap, temp] = await Promise.all([
+  /* [1112] 지수 · 온도가 있는 62곳은 대시보드(/analysis/timing?region=)로 — 소유자 "이런 식으로 해줘". 그 밖은 지역 종합 화면 */
+  const regions = listRegionSiseRegions(REGION_CATALOG, REGION_ALIASES).map((r) =>
+    findTemperatureRegion(r.id) ? { ...r, href: `/analysis/timing?region=${encodeURIComponent(r.id)}` } : r,
+  );
+  const [snap, temp, series] = await Promise.all([
     loadWithinPrerenderBudget(`${what} 스냅샷`, () => getAllRegionSnapshots(), BUDGET_MS),
     loadWithinPrerenderBudget(`${what} 온도`, () => listLatestTemperatures(), BUDGET_MS),
+    /* [1115] 시세판 선 — 전 지역 월간 매매가격지수 14개월(쪽 나눔 한 묶음) */
+    loadWithinPrerenderBudget(`${what} 지수 시계열`, () => getAllRegionSeriesSince("sale_index", "monthly", seriesSince(new Date())), BUDGET_MS),
   ]);
   /* 스냅샷 0행은 키 부재 · 재적재 창 — "값이 없는 지역 107곳"이 아니라 못 읽은 것이다(lib/market/store 주석) */
   const snapshots = snap.ok && snap.data.size > 0 ? snap.data : null;
@@ -52,9 +65,15 @@ export async function loadRegionSiseData(what = "[region-sise]"): Promise<Region
     const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
     periodLabel = top ? formatYm(top[0]) : null;
   }
+  const groups = buildRegionSiseGroups(regions, snapshots, temps);
+  const coords = new Map(REGION_CATALOG.map((r) => [r.id, { lat: r.lat, lng: r.lng }] as const));
+  const seriesMap = series.ok && series.data.size > 0 ? series.data : null;
   return {
     regions,
-    groups: buildRegionSiseGroups(regions, snapshots, temps),
+    groups,
+    tickerPages: seriesMap ? buildTickerPages(groups.flatMap((g) => g.rows), seriesMap) : [],
+    tickerFailed: seriesMap === null,
+    markers: regionSiseMapMarkers(groups.flatMap((g) => g.rows), coords, formatKrwShort),
     periodLabel,
     weekLabel: temp.ok && temp.data.weekStart ? formatWeekKorean(temp.data.weekStart) : null,
     snapshotFailed: snapshots === null,
@@ -83,6 +102,14 @@ function Row({ r }: { r: RegionSiseRow }) {
           <>
             <span className="t-num font-bold text-ink">{r.temp.score}</span>
             <span className="text-text-3">/100 · {r.temp.headline}</span>
+            {/* [1115 · 그래프] 0~100 막대 — 50 = 중립(가운데 눈금) · 높으면 빨강(뜨거움) · 낮으면 파랑(차가움). 숫자는 위 글자가 말한다 */}
+            <span className="relative mt-1 block h-1.5 w-full max-w-[160px] overflow-hidden rounded-full bg-divider" aria-hidden="true">
+              <span
+                className={`block h-full rounded-full ${r.temp.score >= 55 ? "bg-up" : r.temp.score <= 45 ? "bg-down" : "bg-text-3"}`}
+                style={{ width: `${Math.max(3, Math.min(100, r.temp.score))}%` }}
+              />
+              <span className="absolute inset-y-0 left-1/2 w-px bg-surface" />
+            </span>
           </>
         ) : (
           "—"
@@ -124,10 +151,17 @@ export function RegionSiseEntry({ data, autoFocus = false }: { data: RegionSiseD
   const failed = [data.snapshotFailed ? "평균 매매가 · 전세가율" : null, data.tempFailed ? "시장 온도" : null].filter(Boolean);
   return (
     <div className="flex flex-col gap-3">
-      <div className="card rounded-2xl p-3.5">
-        <RegionSearchBox regions={data.regions} autoFocus={autoFocus} />
-      </div>
-      <SidoFilter sidos={data.groups.map((g) => g.sido)} counts={data.groups.map((g) => g.rows.length)} panels={data.groups.map((g) => <Panel key={g.sido} g={g} />)} />
+      {/* [1115] 시세판 — 4×4 칸(폰 2×4) · 쪽이 아래에서 위로 넘어간다(서울 주요 구 → 상승 큰 곳 → 하락 큰 곳) */}
+      <RegionTickerBoard pages={data.tickerPages} failed={data.tickerFailed} />
+      {/* [1111] 검색칸 + [표 | 지도] — 판(표)은 여기서 그려 넘긴다(서버 HTML) · 지도는 고를 때만 */}
+      <RegionSiseClient
+        regions={data.regions}
+        markers={data.markers}
+        autoFocus={autoFocus}
+        sidos={data.groups.map((g) => g.sido)}
+        counts={data.groups.map((g) => g.rows.length)}
+        panels={data.groups.map((g) => <Panel key={g.sido} g={g} />)}
+      />
       <p className="m-0 px-1 t-caption text-text-3">
         {failed.length > 0 ? `${failed.join(" · ")} ${LOAD_FAILED_LINE} · ` : ""}
         평균 매매가 · 전세가율 = 한국부동산원 공표 통계{data.periodLabel ? ` ${data.periodLabel} 기준` : ""} · 시장 온도 = 매주 기록한 0~100점

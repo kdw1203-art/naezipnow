@@ -3,7 +3,6 @@ import { TOOL_PERSONAS, personaVars } from "@/lib/ai/tool-persona";
 import Link from "@/app/components/IntentLink";
 import { cache } from "react";
 import { ShellBreadcrumb } from "../../components/PageShell";
-import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
 import { QaBlock } from "../../components/QaBlock";
 import { CitationBlock } from "../../components/CitationBlock";
 import {
@@ -242,19 +241,7 @@ export default async function TemperatureHubPage() {
                   {/* [1026] 다음 행동 카드(채움 파랑 + 지도 · 노트 쓰기 · 결정 카드)와 폰 하단 바는 [1027] TempMapClient 가 그린다 —
                       지역이 화면에서 고른 주·시/도를 따라가야 해서다(여기서 만들면 "이번 주 전국 1위"로 굳는다). */}
                   {/* #411 — 도구 간 이어가기. [D62·D55] 이 화면의 주인공은 이번 주 가장 뜨거운 지역 — 그 지역을 실어 보낸다 */}
-                  <AnalysisCrossLinks
-                    current="temperature"
-                    regionLabel={hottest?.current.regionLabel ?? null}
-                    regionFor={
-                      hottest
-                        ? {
-                            timing: hottest.current.regionId,
-                            scenario: hottest.current.regionId,
-                            map: hottest.current.regionLabel,
-                          }
-                        : undefined
-                    }
-                  />
+{/* [1112 · 중복 제거] "이어서 분석" 칩 카드는 뺐다(메뉴 · 허브와 같은 목적지) */}
                 </>
               }
             />

@@ -76,7 +76,7 @@ test("D2 단지 요약 — 숫자 네 칸 · 비교 칸 금액/비율 분리 · 
   assert.match(hub, /summaryTiles && summaryTiles\.length >= 2 \?/);
   assert.match(hub, /국토교통부 실거래 · 공공데이터 기준 · 투자 권유 아님 · 현장 확인 후 판단/);
   assert.doesNotMatch(hub, /myRecordCard|임장노트 회차별 모음/, "탭 줄의 '내 기록'과 같은 입구 — 카드 제거");
-  assert.match(code("app/complex/[id]/page.tsx"), /summaryTiles=\{buildSummaryTiles\(\{ headline, tradeSummary: facts\.tradeSummary, rentSummary: facts\.rentSummary \}\)\}/);
+  assert.match(code("app/complex/[id]/page.tsx"), /summaryTiles=\{buildSummaryTiles\(\{ headline, tradeSummary: facts\.tradeSummary, rentSummary: facts\.rentSummary \}\)\.filter\(\s*\(t\) => t\.key !== "price",\s*\)\}/); /* [1115] 대표가 칸은 결과 요약이 말한다 */
   /* 같은 사실 두 곳 — 준공 · 세대 · 전세가율은 칸에 없다 */
   const tilesSrc = code("lib/complex/summary-tiles.ts");
   assert.doesNotMatch(tilesSrc, /준공|세대|전세가율/);

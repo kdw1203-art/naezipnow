@@ -6,6 +6,7 @@ import { ToolGlyph } from "./ToolGlyph";
 import type { WorkbenchCardDto } from "./workbench-cards";
 import { useHubPicked } from "./hub-context";
 import { TOOL_COL_GO, TOOL_COL_NAME, TOOL_COL_RESULT } from "./tool-cols";
+import { ToolResultPreview } from "./tool-preview";
 
 /* ============================================================
    워크벤치 표 — [UI-03 · UI-06 · UI-08 · UI-10 · 958]
@@ -70,7 +71,10 @@ export function WorkbenchGrid({ core }: { core: WorkbenchCardDto[] }) {
         </Link>
       </td>
       <td className="hidden px-2 py-1.5 t-sub text-text-2 md:table-cell">{c.premise}</td>
-      <td className={`hidden px-2 py-1.5 t-caption text-text-3 lg:table-cell ${TOOL_COL_RESULT}`}>{c.result ?? "—"}</td>
+      {/* [1115] 결과 칸 = 그 도구 결과의 모양을 작은 그림으로("예시" 표기 · 실측 값 아님) — 글자만 있던 "투자 점수(점)" 는 그림 아래 줄로 */}
+      <td className={`tool-scope hidden px-2 py-2 lg:table-cell ${TOOL_COL_RESULT}`} style={c.vars}>
+        <ToolResultPreview id={c.id} result={c.result} />
+      </td>
       {/* [1067 · 칸 흔들림] 폭은 한 값으로 고정 — 지역 시세 표의 › 칸과 같은 자리 */}
       <td className={`px-3 text-right t-body text-text-3 ${TOOL_COL_GO}`} aria-hidden="true">
         {/* dead-control-ok: 줄 전체가 링크(tr onClick · 첫 칸 링크) — 화살표는 그 표시 */}
@@ -88,7 +92,7 @@ export function WorkbenchGrid({ core }: { core: WorkbenchCardDto[] }) {
             <tr className="border-b border-line bg-bg text-left t-caption text-text-3">
               <th scope="col" className={`px-3 py-2 font-bold ${TOOL_COL_NAME}`}>도구</th>
               <th scope="col" className="px-2 py-2 font-bold">하는 일</th>
-              <th scope="col" className={`hidden px-2 py-2 font-bold lg:table-cell ${TOOL_COL_RESULT}`}>결과</th>
+              <th scope="col" className={`hidden px-2 py-2 font-bold lg:table-cell ${TOOL_COL_RESULT}`}>결과 예시</th>
               <th scope="col" className={`px-3 py-2 ${TOOL_COL_GO}`}>
                 <span className="sr-only">열기</span>
               </th>

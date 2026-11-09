@@ -74,9 +74,9 @@ test("AI 분석 — [1110] 줄 누름 = 바로 도구(펼침 없음) · 번들�
 test("홈 중복 검토 — 구별 막대는 지역 동향 안 접힘 · 브리핑 숫자 되풀이 없음 · 손님 오늘 한 줄", () => {
   const page = code("app/page.tsx");
   const sec = page.slice(page.indexOf('<h2 className="t-section text-ink">지역 동향</h2>'), page.indexOf("<HomeTownBlock"));
-  assert.ok(sec.includes("<HomeSeoulMoves data={data.seoulMoves} />"), "지역 동향 칸 안");
-  assert.ok(sec.indexOf("<HomeSeoulMoves") < sec.indexOf('<Fineprint label="기준 · 출처">'), "기준·출처 앞");
-  assert.equal(page.split("<HomeSeoulMoves").length - 1, 1, "한 곳만");
+  /* [1113 · 중복 제거] 구별 막대는 홈에서 뺐다(실시간 토론의 지역 순위와 같은 값) */
+  assert.equal(page.split("<HomeSeoulMoves").length - 1, 0, "홈에 없음");
+  void sec;
   const comp = code("app/components/home/HomeSeoulMoves.tsx");
   assert.doesNotMatch(comp, /"use client"/);
   assert.match(comp, /<details id="seoul-moves"/);

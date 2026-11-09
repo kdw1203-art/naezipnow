@@ -48,21 +48,8 @@ function Tile({
   );
 }
 
-export function RegionHero({
-  id: _id,
-  name,
-  mapRegion,
-  overview,
-  freshnessLine,
-}: {
-  id: string;
-  name: string;
-  /** 지도 딥링크 이름 — "서울 강남구"·"경기 수원시 영통구"(구 이름만이면 "중구"가 서울로 풀린다) */
-  mapRegion: string;
-  overview: RegionOverview;
-  /** 실거래 신선도 한 줄 — 페이지가 단지 허브와 같은 조각(<MarketFreshnessLine>)을 넘긴다(tests/unit/product-1007 이 잠금) */
-  freshnessLine?: React.ReactNode;
-}) {
+/** [1114] 숫자 칸(지수 · 평균가 · 전세가율 · 거래량) — 지역 화면 머리와 홈 "시장 한눈에"가 같은 칸을 쓴다(같은 계산 · 같은 모양) */
+export function regionHeroTiles(overview: RegionOverview): React.ReactNode[] {
   const { index, jeonse, volume, volumeOpen, avgPrice } = overview;
   const openNote =
     volumeOpen.length > 0
@@ -176,6 +163,25 @@ export function RegionHero({
       />,
     );
   }
+  return tiles;
+}
+
+export function RegionHero({
+  id: _id,
+  name,
+  mapRegion,
+  overview,
+  freshnessLine,
+}: {
+  id: string;
+  name: string;
+  /** 지도 딥링크 이름 — "서울 강남구"·"경기 수원시 영통구"(구 이름만이면 "중구"가 서울로 풀린다) */
+  mapRegion: string;
+  overview: RegionOverview;
+  /** 실거래 신선도 한 줄 — 페이지가 단지 허브와 같은 조각(<MarketFreshnessLine>)을 넘긴다(tests/unit/product-1007 이 잠금) */
+  freshnessLine?: React.ReactNode;
+}) {
+  const tiles = regionHeroTiles(overview);
 
   /* [1101 · 같은 사실 한 번] 칸이 있으면 큰 제목 줄("매매가격지수 · 전월 대비 ▼1.6%" + "1년 전 대비 ▲2.8%")을 그리지 않는다 —
      첫 칸이 같은 숫자를 바로 아래에서 다시 말했다(운영 강남구: 같은 수가 한 화면에 네 번 · 소유자 2026-11-02 검토).

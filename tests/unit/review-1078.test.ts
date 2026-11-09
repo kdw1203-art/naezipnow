@@ -91,7 +91,8 @@ test("S5 빈 블록 순서 — 동네 홈 · 동네 허브 · 홈", () => {
   const t = read("app/town/page.tsx");
   assert.match(t, /<div className=\{!loadFailed && firstPage\.length === 0 \? "order-2" : ""\}>\s*<TownFeed/);
   /* [1101] 맨 앞에 설 때는 위 간격을 줄인다(first) */
-  assert.match(t, /<div className=\{!loadFailed && firstPage\.length === 0 \? "order-1" : ""\}>\s*<TownIndex first=\{!loadFailed && firstPage\.length === 0\} \/>/);
+  /* [1111] 인덱스는 지도 고르기 — 글 수를 세려고 cards 를 받는다 */
+  assert.match(t, /<div className=\{!loadFailed && firstPage\.length === 0 \? "order-1" : ""\}>\s*<TownIndex first=\{!loadFailed && firstPage\.length === 0\} markers=\{markers\} \/>/);
   /* [1101 · 빈 칸 접기] 홈은 0건 띠조차 그리지 않는다(뉴스룸이 두 칸) — 글이 생기면 예전 칸 */
   assert.match(read("app/components/home/HomeTownBlock.tsx"), /\{!storiesEmpty && \(\s*<div className="card flex flex-col gap-2 rounded-2xl px-4 py-4">/);
 });

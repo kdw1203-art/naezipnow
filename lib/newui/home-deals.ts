@@ -44,3 +44,13 @@ export function toHomeDealRows(
   });
 }
 
+
+/** [1114] 실거래 금액 순위 — 최근 신고 N건 중 한 건 금액 높은 순 상위 k건(같은 금액은 최근 신고 순 그대로 · 안정 정렬). 0원 · 비정상 값은 뺀다 */
+export function rankHomeDeals(rows: readonly HomeDealRow[], k = 10): HomeDealRow[] {
+  return rows
+    .map((r, i) => ({ r, i }))
+    .filter(({ r }) => Number.isFinite(r.man) && r.man > 0)
+    .sort((a, b) => b.r.man - a.r.man || a.i - b.i)
+    .slice(0, k)
+    .map(({ r }) => r);
+}

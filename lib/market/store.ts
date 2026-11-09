@@ -503,6 +503,47 @@ export async function getRegionSeries(
     .reverse();
 }
 
+/**
+ * [1115 · 지역 시세 시세판] 전 지역 시계열 한 번에 — sincePeriod("2025-08-01") 이후 행을 쪽(1,000행)으로 나눠 받는다(PostgREST 기본 상한).
+ * 지역마다 getRegionSeries 를 107번 부르지 않는다. 실패는 던진다(못 읽은 것을 "값 없음"으로 위장하지 않는다).
+ */
+export async function getAllRegionSeriesSince(
+  metric: MarketMetric,
+  periodType: PeriodType,
+  sincePeriod: string,
+  signal?: AbortSignal,
+): Promise<Map<string, Array<{ period: string; value: number }>>> {
+  const out = new Map<string, Array<{ period: string; value: number }>>();
+  const sb = getServiceSupabase();
+  if (!sb) return out;
+  const PAGE = 1000;
+  for (let page = 0; page < 5; page++) {
+    let q = sb
+      .from("market_region_series")
+      .select("region_id,period,value")
+      .eq("property_type", "apt")
+      .eq("metric", metric)
+      .eq("period_type", periodType)
+      .gte("period", sincePeriod)
+      .order("region_id", { ascending: true })
+      .order("period", { ascending: true })
+      .range(page * PAGE, page * PAGE + PAGE - 1);
+    if (signal) q = q.abortSignal(signal);
+    const { data, error } = await q;
+    if (error || !data) throwQueryFailure(`market_region_series(전 지역/${metric})`, error);
+    for (const r of data) {
+      const v = Number(r.value);
+      if (!Number.isFinite(v)) continue;
+      const id = String(r.region_id);
+      const arr = out.get(id) ?? [];
+      arr.push({ period: String(r.period), value: v });
+      out.set(id, arr);
+    }
+    if (data.length < PAGE) break;
+  }
+  return out;
+}
+
 /* ---------- 지역 최근 실거래 (market_transactions 읽기 전용) ---------- */
 
 export interface RegionTransactionRow {

@@ -69,8 +69,8 @@ test("지역 탭 — 여섯 화면이 같은 부품 · 같은 자리(머리 아�
 
 test("첫 화면 · 같은 사실 한 번 — 홈 순서 · 노트 목록 기본 · 지도 모달 없음 · 단지 요약 위치 · 레일 · 노트 상세 점수 카드", () => {
   const home = strip(read("app/page.tsx"));
-  assert.match(home, /<aside\s+data-autotrim=""\s+className="order-2 flex flex-col gap-3 lg:sticky lg:top-\[76px\] lg:self-start"/, "폰은 본문 뒤");
-  assert.match(home, /<div data-autotrim="" className="order-1 flex flex-col gap-3 lg:gap-4">(\s|\{\})*<HomeMyRail \/>/, "내 관심은 본문 맨 위");
+  /* [1114 · 벤토] 내 관심은 판 격자 위(첫 내용) · 폰 순서는 DOM 순서(ia-1114) */
+  assert.ok(home.indexOf("<HomeMyRail />") < home.indexOf("<HomeMarketBoard"), "내 관심은 본문 맨 위");
   assert.equal((home.match(/<HomeMyRail \/>/g) ?? []).length, 1);
   const feed = strip(read("app/notes/notes-feed-client.tsx"));
   assert.match(feed, /const \[view, setView\] = useState<ViewMode>\("table"\);/);
@@ -101,7 +101,9 @@ test("빈 동네 칸 · 조작 다이어트 — 홈 0건 띠 · 후기 0건 · �
   assert.match(feed, /<div className="rise-in-3 card flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-2xl px-4 py-3">/);
   assert.match(feed, /이 피드 · /);
   const hub = strip(read("app/town/page.tsx"));
-  assert.match(hub, /\{cards\.length > 0 && \(\s*<div className="mb-4 flex items-center gap-2" data-reveal="">/);
+  /* [1111] 바로가기 칩 줄(글이 있을 때만)은 지도 고르기로 합쳤다 — 남은 것은 가장 많은 동네 한 줄(hottest 일 때만) */
+  assert.match(hub, /\{hottest && \(\s*<p className="mb-3 px-1 t-caption text-text-3">/);
+  assert.doesNotMatch(hub, /data-reveal=""[^]*우리 동네 홈/);
   const news = strip(read("app/town/news/NewsListClient.tsx"));
   assert.equal((news.match(/scroll-x-hidden-bar rise-in mb-2 flex items-center gap-1\.5 max-md:-mx-3\.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3\.5 md:flex-wrap \[&>\*\]:shrink-0/g) ?? []).length, 2);
   /* 1100 은 폐기 — 그 흔적 없음 */

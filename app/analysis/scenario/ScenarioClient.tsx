@@ -11,14 +11,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
-import { StepLine } from "@/app/components/StepLine";
 import { PageHead } from "@/app/components/PageHead";
 import { Icon } from "@/app/components/Icon";
 import { MobilePrimaryBar } from "@/app/components/MobilePrimaryBar";
 import { ShellBreadcrumb } from "../../components/PageShell";
 import { SimulationNotice } from "../../components/ExampleBadge";
 import type { PickedComplex } from "../ComplexPicker";
-import { AnalysisCrossLinks } from "../AnalysisCrossLinks";
 import { VerdictCard } from "../timing/region-verdict";
 import { useCopy } from "@/lib/ui/use-copy";
 import { EXAMPLE_PRICE_WON, computeScenario } from "@/lib/market/scenario-calc";
@@ -305,7 +303,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
         )}
 
         {/* [1026b] 절차 한 줄 — 화면당 한 번 */}
-        <StepLine className="mt-3" steps={plan.steps} current={plan.current} />
+        {/* [1112 · 중복 제거] 절차 칩 줄은 뺐다 — 결론 카드가 같은 말을 한 줄로 */}
 
         <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
           <div className="flex min-w-0 flex-col gap-3">
@@ -378,11 +376,7 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
             <div className="lg:hidden">{actionCard}</div>
             {/* #411 — 도구 간 이어가기: 선택한 기준 지역 그대로 (미선택이면 링크만). [1026b] 파란 "계산기" 칩은 걷었다(채움 파랑 하나).
                 데스크톱에서도 본문 끝 — 레일(조건 · 시나리오 · 다음 행동)이 이미 길다 */}
-            <AnalysisCrossLinks
-              current="scenario"
-              regionLabel={regionLabel}
-              regionFor={regionId ? { timing: regionId, map: mapRegion ?? undefined } : undefined}
-            />
+{/* [1112 · 중복 제거] "이어서 분석" 칩 카드는 뺐다(메뉴 · 허브와 같은 목적지) */}
           </div>
           {/* 레일(lg+) — 손잡이(조건 · 시나리오) + 다음 행동. 손잡이가 길어 sticky 는 걸지 않는다(아래 카드가 화면 밖에 갇히지 않게) */}
           <aside className="hidden lg:flex lg:flex-col lg:gap-3" aria-label="조건과 다음 행동">
