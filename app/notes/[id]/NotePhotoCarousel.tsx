@@ -176,7 +176,7 @@ export function NotePhotoCarousel({ photos, label = "현장 사진", roles }: Pr
           onClick={() => {
             if (!isFailed) setZoom(true);
           }}
-          className={`flex h-[248px] w-full items-center justify-center sm:h-[340px] lg:h-[400px] ${
+          className={`flex h-[min(125vw,560px)] w-full items-center justify-center sm:h-[560px] lg:h-[640px] ${
             isFailed ? "" : "cursor-zoom-in"
           }`}
         >
