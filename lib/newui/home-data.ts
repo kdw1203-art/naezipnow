@@ -820,7 +820,7 @@ async function loadNewHomeDataInternal(): Promise<NewHomeData> {
      ("준비되면 표시됩니다")로 나가 실패가 준비 중으로 위장됐다(2026-08-04
      소유자 캡처). 실패로 분류해 "지금 불러오기 실패"로 말한다. */
   /* [1133] 단, 새로 만든 DB(실거래 0건 · 수집 시작 전)는 정말로 빈 것이다 — 그때는 실패가 아니라 "없음" */
-  if (!regionsFailed && snapshots.size === 0 && !(await isCollectingFromEmpty())) regionsFailed = true;
+  if (!regionsFailed && snapshots.size === 0 && !(await isCollectingFromEmpty("market_region_price"))) regionsFailed = true;
   let regions = buildRegionCards(snapshots);
   /* [1002] 스냅샷 실패 → 월 집계 폴백. 카드가 1장이라도 나오면 그건 실패가 아니라
      "오래된 실측"이다(regionsStale). 폴백도 비면 예전처럼 실패로 말한다. */

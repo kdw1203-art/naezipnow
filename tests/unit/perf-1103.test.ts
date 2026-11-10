@@ -21,7 +21,8 @@ test("/my/settings — 셸은 서버 page.tsx 가 감싼다(클라이언트 Sett
   const page = code("app/my/settings/page.tsx");
   assert.doesNotMatch(page, /"use client"/, "page.tsx 는 서버 컴포넌트");
   assert.match(page, /import \{ PageShell \} from "@\/app\/components\/PageShell";/);
-  assert.match(page, /<PageShell title="설정" breadcrumb="마이 › 설정">\s*<SettingsClient channels=\{channels\} \/>\s*<\/PageShell>/);
+  /* [1135] 셸 안: 기본 정보 카드 → 설정(둘 다 셸의 자식) */
+  assert.match(page, /<PageShell title="설정" breadcrumb="마이 › 설정">[\s\S]*<BasicInfoCard \/>\s*<SettingsClient channels=\{channels\} \/>\s*<\/PageShell>/);
   /* DOM 은 그대로 — 셸 children 자리에 예전과 같은 바깥 div */
   assert.match(client, /return \(\s*<div className="mx-auto flex w-full max-w-\[560px\] flex-col gap-4">/);
 });

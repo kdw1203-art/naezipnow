@@ -136,6 +136,12 @@ export async function POST(req: NextRequest) {
     });
   }
 
+  /* [1135] 기본 정보(연락처 · 생년월일 · 주소)는 탈퇴 요청 즉시 지운다 — 유예 기간에 둘 이유가 없는 값(방침: 탈퇴 또는 삭제 시까지) */
+  {
+    const { error: basicErr } = await sb.from("user_basic_info").delete().eq("email", email.trim().toLowerCase());
+    if (basicErr) logger.warn("[delete-account] 기본 정보 삭제 실패", basicErr.message);
+  }
+
   /* 공개 콘텐츠 비공개 — 실패해도 요청은 유지(SOP 2항을 운영자가 재확인) */
   const hidden: Record<string, number | "error"> = {};
   try {

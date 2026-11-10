@@ -168,7 +168,8 @@ test("S1 API — 가입 동의는 새 계정 뒤 · 매물 등록 중개사만 �
   const reg = code("app/api/auth/register/route.ts");
   assert.match(reg, /onNewAccount\?: \(\) => Promise<void>/);
   assert.match(reg, /if \(onNewAccount\) await onNewAccount\(\)/);
-  assert.equal((reg.match(/\(\) => recordConsent\(sb, email, consent, ip, ua\)/g) ?? []).length, 2);
+  /* [1135] 콜백이 동의 기록 뒤 기본 정보 저장까지 한다 — 여전히 새 계정이 만들어진 뒤에만(두 곳) */
+  assert.equal((reg.match(/async \(\) => \{\s*await recordConsent\(sb, email, consent, ip, ua\);\s*await saveBasic\(\);\s*\}/g) ?? []).length, 2);
   assert.doesNotMatch(reg, /if \(!resendOnly\) await recordConsent/);
   const listings = code("app/api/listings/route.ts");
   assert.match(listings, /getExpertStatus\(session\.user\.email\)/);

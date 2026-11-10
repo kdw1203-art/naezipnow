@@ -1,6 +1,7 @@
 "use client";
 /* [1026c · 폰 배율 1] 동의 체크박스 — 폰 간격 단위(3px)에서 h-5 가 15px 이었다. 20px 고정 + 40px 손끝 칸(span)으로 감싼다(옆 글자가 탭을 가져가지 않게). */
 
+import { ADDRESS_MAX } from "@/lib/account/basic-info";
 import { capsLockOn } from "@/lib/auth/auth-ux";
 import { CapsLockNote } from "@/app/components/auth/CapsLockNote";
 import { SignupSteps } from "@/app/components/auth/SignupSteps";
@@ -93,6 +94,10 @@ export function SignupClient({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  /* [1135] 기본 정보(선택) — 접힌 칸 */
+  const [phone, setPhone] = useState("");
+  const [birth, setBirth] = useState("");
+  const [address, setAddress] = useState("");
   /* [개선 #9] 비밀번호 확인칸 제거 — 표시 토글로 오타를 눈으로 확인한다
      (칸 하나가 줄고, 모바일에서 두 번 입력하는 마찰이 사라진다). */
   const [showPw, setShowPw] = useState(false);
@@ -282,6 +287,10 @@ export function SignupClient({
           email: normalizedEmail,
           password,
           name: name.trim().slice(0, NAME_MAX),
+          /* [1135] 적은 칸만 보낸다(빈 칸은 안 보냄 — 서버가 건드리지 않는다) */
+          ...(phone.trim() || birth.trim() || address.trim()
+            ? { basic: { ...(phone.trim() ? { phone } : {}), ...(birth.trim() ? { birth } : {}), ...(address.trim() ? { address } : {}) } }
+            : {}),
           source: signupViaRef.current ? "soft_signup" : "onboarding_signup",
           campaign: signupViaRef.current?.replace(/^soft:/, "") || "default",
           /* [1039] 인증 메일 링크를 누른 뒤에도 목적지(/welcome[?next])를 잃지 않게 서버로 보낸다 */
@@ -687,6 +696,30 @@ export function SignupClient({
           </p>
         )}
         <CapsLockNote on={caps} />
+        {/* [1135 · 기본 정보(선택)] 연락처 · 생년월일 6자리 · 주소 — 접어 둔다(가입 칸 수를 늘리지 않는다 · 991 의 전환율 교훈). 가입 뒤 마이 › 설정에서도 고친다 */}
+        <details className="group rounded-xl border border-line bg-surface px-3.5 py-1">
+          <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between t-sub font-bold text-text-2">
+            기본 정보 (선택) · 연락처 · 생년월일 · 주소
+            <span aria-hidden="true" className="text-text-3 transition-transform group-open:rotate-180">
+              {/* dead-control-ok: summary 가 눌리는 자리 — 꺾쇠는 열림 표시 */}⌄
+            </span>
+          </summary>
+          <div className="flex flex-col gap-2 pb-2.5 pt-1">
+            <div className="njn-field">
+              <input id="signup-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder=" " maxLength={13} />
+              <label htmlFor="signup-phone">휴대전화 (선택)</label>
+            </div>
+            <div className="njn-field">
+              <input id="signup-birth" name="birth" type="text" inputMode="numeric" autoComplete="bday" value={birth} onChange={(e) => setBirth(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder=" " maxLength={6} />
+              <label htmlFor="signup-birth">생년월일 6자리 (선택)</label>
+            </div>
+            <div className="njn-field">
+              <input id="signup-address" name="address" type="text" autoComplete="street-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder=" " maxLength={ADDRESS_MAX} />
+              <label htmlFor="signup-address">주소 (선택)</label>
+            </div>
+            <p className="m-0 t-caption text-text-3">주민등록번호 뒷자리는 받지 않음 · 가입 뒤 마이 › 설정에서 수정 · 삭제</p>
+          </div>
+        </details>
 
         {/* [1039] 봇 덫 — 화면 밖 · 탭 순서 밖 · 낭독기 밖. 사람은 채울 수 없다 */}
         <div aria-hidden="true" className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden">

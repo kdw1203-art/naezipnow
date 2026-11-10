@@ -396,9 +396,9 @@ test("[1133] 이름 · 핸들 금지어 — admin · naezipnow · 관리자 등(
 
 test("[1133] 수집 시작 전 — 실거래 0건인 새 DB 는 0행을 실패로 말하지 않는다", () => {
   const f = read("lib/market/fresh-db.ts");
-  assert.match(f, /from\("market_transactions"\)\.select\("id", \{ count: "exact", head: true \}\)/);
+  assert.match(f, /from\(table\)\.select\("\*", \{ count: "exact", head: true \}\)/);
   assert.match(f, /return !error && count === 0;/);
-  assert.match(read("lib/newui/home-data.ts"), /snapshots\.size === 0 && !\(await isCollectingFromEmpty\(\)\)\) regionsFailed = true;/);
+  assert.match(read("lib/newui/home-data.ts"), /snapshots\.size === 0 && !\(await isCollectingFromEmpty\("market_region_price"\)\)\) regionsFailed = true;/);
   const e = read("app/analysis/region-sise-entry.tsx");
   assert.match(e, /tickerFailed: seriesMap === null && !collecting,/);
   assert.match(e, /snapshotFailed: snapshots === null && !collecting,/);
@@ -417,4 +417,37 @@ test("[1134] 공개 키 — 다른 프로젝트의 anon JWT · 옛 공개 키는
   assert.equal(publicKeyFitsProject(undefined, "x"), false);
   const src = read("lib/supabase/env.ts");
   assert.match(src, /FALLBACK_SUPABASE_URL = "https:\/\/gjhnrpiiuhjzjzuuvdck\.supabase\.co"/);
+});
+
+/* ── [1135] 기본 정보(선택) · 첫 계정 금지어 한 번 ── */
+test("[1135] 기본 정보 — 휴대전화 · 생년월일 6자리 · 주소(전부 선택 · 빈 값은 지움 · 넘어온 칸만)", async () => {
+  const { normalizePhone, normalizeBirth, normalizeAddress, validateBasicInfo, hasAnyBasicInfo } = await import("../../lib/account/basic-info.ts");
+  assert.equal(normalizePhone("01012345678"), "010-1234-5678");
+  assert.equal(normalizePhone("010 123 4567"), "010-123-4567");
+  assert.equal(normalizePhone(""), null);
+  assert.equal(normalizePhone("0212345678"), undefined);
+  assert.equal(normalizeBirth("900115"), "900115");
+  assert.equal(normalizeBirth("90-01-15"), "900115");
+  assert.equal(normalizeBirth("901315"), undefined);
+  assert.equal(normalizeBirth("900230"), undefined);
+  assert.equal(normalizeBirth("9001151"), undefined, "7자리(주민번호 뒷자리 첫 글자)는 받지 않는다");
+  assert.equal(normalizeAddress("  서울  강남구\n대치동 "), "서울 강남구 대치동");
+  assert.equal(normalizeAddress("가".repeat(121)), undefined);
+  assert.deepEqual(validateBasicInfo({ phone: "01012345678" }), { ok: true, value: { phone: "010-1234-5678" } });
+  assert.deepEqual(validateBasicInfo({}), { ok: true, value: {} });
+  assert.equal(validateBasicInfo({ birth: "1" }).ok, false);
+  assert.equal(hasAnyBasicInfo({ phone: null }), false);
+  assert.equal(hasAnyBasicInfo({ address: "서울" }), true);
+});
+
+test("[1135] 가입 — 기본 정보는 새 계정 뒤에만 저장 · 금지어 이름은 허용 목록 · 첫 계정만 · 탈퇴 때 삭제 · 방침에 항목", () => {
+  const reg = read("app/api/auth/register/route.ts");
+  assert.match(reg, /isReservedName\(typedName\) && !isAllowlistedAdmin\(/);
+  assert.match(reg, /&& !\(await isFirstAccount\(\)\)\) \{/);
+  assert.match(reg, /await recordConsent\(sb, email, consent, ip, ua\);\s*await saveBasic\(\);/);
+  assert.match(read("app/api/me/delete-account/route.ts"), /from\("user_basic_info"\)\.delete\(\)/);
+  assert.match(read("app/legal/privacy/page.tsx"), /"휴대전화 번호, 생년월일\(6자리\), 주소"/);
+  const su = read("app/signup/SignupClient.tsx");
+  assert.match(su, /기본 정보 \(선택\) · 연락처 · 생년월일 · 주소/);
+  assert.doesNotMatch(su + read("app/my/settings/BasicInfoCard.tsx"), /주민등록번호 (앞|뒤)자리 입력|rrn/i);
 });

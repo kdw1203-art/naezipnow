@@ -18,6 +18,9 @@ import { mapSignUpRejection } from "@/lib/auth/signup-error";
 import { findAuthUserByEmail } from "@/lib/auth/find-auth-user";
 import { EMAIL_RE, NAME_MAX } from "@/lib/auth/signup-form";
 import { isReservedName, RESERVED_NAME_ERROR } from "@/lib/account/reserved-names";
+import { hasAnyBasicInfo, validateBasicInfo } from "@/lib/account/basic-info";
+import { saveBasicInfo } from "@/lib/account/basic-info-store";
+import { isAllowlistedAdmin } from "@/lib/auth/admin-emails";
 import { safeInternalPath } from "@/lib/safe-path";
 import { verifyTurnstile } from "@/lib/auth/verify-turnstile";
 
@@ -371,6 +374,18 @@ async function recordConsent(
   }
 }
 
+/** 회원이 한 명도 없는가 — 새 DB 의 첫 가입 판정(조회 실패는 false: 금지어를 풀지 않는다) */
+async function isFirstAccount(): Promise<boolean> {
+  try {
+    const sb = getServiceSupabase();
+    if (!sb) return false;
+    const { count, error } = await sb.from("app_users").select("id", { count: "exact", head: true });
+    return !error && count === 0;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(req: NextRequest) {
   // IP당 10분에 5회 (인스턴스별 best-effort)
   const rl = rateLimit(`register:${getClientIp(req)}`, { limit: 5, windowMs: 10 * 60_000 });
@@ -401,11 +416,21 @@ export async function POST(req: NextRequest) {
   /* [1039] 이름 길이 상한 — 화면(maxLength)과 같은 값. 예전엔 상한이 없었다 */
   /* [1133 · 사칭 금지어] 직접 적은 이름에 운영자 · 서비스 이름이 들어 있으면 거절 · 이메일 앞부분에서 따 온 이름이 걸리면 "회원" 으로 */
   const typedName = String(b.name ?? "").trim();
-  if (typedName && isReservedName(typedName)) {
+  /* [1135 · 첫 계정 한 번] 소유자 2026-11-10 "내가 만들 관리자 이름에 대해 1회 가능하게" — 금지어가 든 이름은
+     ① 관리자 허용 목록의 이메일이거나 ② 회원이 한 명도 없는 새 DB 의 **첫 가입**일 때만 받는다(그 뒤로는 누구도 못 쓴다). */
+  if (typedName && isReservedName(typedName) && !isAllowlistedAdmin(String(b.email ?? "").trim().toLowerCase()) && !(await isFirstAccount())) {
     return NextResponse.json({ error: RESERVED_NAME_ERROR, field: "name" }, { status: 400 });
   }
   const fromEmail = email.split("@")[0] || "";
   const name = (typedName || (fromEmail && !isReservedName(fromEmail) ? fromEmail : "") || "회원").slice(0, NAME_MAX);
+  /* [1135 · 기본 정보(선택)] 연락처 · 생년월일 6자리 · 주소 — 넘어온 칸만 검사. 저장은 **새 계정이 만들어진 뒤에만**(동의 기록과 같은 규칙 — 남의 이메일에 값을 심지 못하게) */
+  const basicRaw = b.basic && typeof b.basic === "object" ? (b.basic as Record<string, unknown>) : {};
+  const basic = validateBasicInfo(basicRaw);
+  if (!basic.ok) return NextResponse.json({ error: basic.error, field: basic.field }, { status: 400 });
+  const saveBasic = async () => {
+    if (!hasAnyBasicInfo(basic.value)) return;
+    await saveBasicInfo(email, basic.value).catch((e: unknown) => logger.warn("[auth/register] 기본 정보 저장 실패", e));
+  };
   /* [1039] 인증 메일 링크를 누른 뒤의 목적지 — 가입 화면이 보낸 /welcome[?next=…]. 내부 경로만(열린 리다이렉트 금지) */
   const afterVerify = safeInternalPath(typeof b.next === "string" ? b.next : null, "/");
   const verifyNext =
@@ -487,7 +512,10 @@ export async function POST(req: NextRequest) {
       verifyRedirect,
       resendOnly,
       req,
-      () => recordConsent(sb, email, consent, ip, ua),
+      async () => {
+        await recordConsent(sb, email, consent, ip, ua);
+        await saveBasic();
+      },
     );
   }
 
@@ -577,7 +605,10 @@ export async function POST(req: NextRequest) {
         verifyRedirect,
         undefined,
         req,
-        () => recordConsent(sb, email, consent, ip, ua),
+        async () => {
+        await recordConsent(sb, email, consent, ip, ua);
+        await saveBasic();
+      },
       );
     }
     const duplicated =
@@ -603,6 +634,7 @@ export async function POST(req: NextRequest) {
 
   // 동의 기록 별도 저장 (법적 증빙)
   await recordConsent(sb, email, consent, ip, ua);
+  await saveBasic();
 
   return NextResponse.json(
     {

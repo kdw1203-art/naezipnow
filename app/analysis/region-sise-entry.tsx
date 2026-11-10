@@ -71,7 +71,7 @@ export async function loadRegionSiseData(what = "[region-sise]"): Promise<Region
   const groups = buildRegionSiseGroups(regions, snapshots, temps);
   const seriesMap = series.ok && series.data.size > 0 ? series.data : null;
   /* [1133] 새로 만든 DB(실거래 0건)면 0행은 조회 이상이 아니라 수집 시작 전이다 — "불러오기 실패"라고 하지 않는다 */
-  const collecting = (snapshots === null || seriesMap === null) && snap.ok && series.ok ? await isCollectingFromEmpty() : false;
+  const collecting = (snapshots === null || seriesMap === null) && snap.ok && series.ok ? await isCollectingFromEmpty(snapshots === null ? "market_region_price" : "market_region_series") : false;
   const coords = new Map(REGION_CATALOG.map((r) => [r.id, { lat: r.lat, lng: r.lng }] as const));
   return {
     regions,

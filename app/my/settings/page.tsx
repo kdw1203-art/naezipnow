@@ -1,4 +1,5 @@
 import { SettingsClient, type NotifyChannels } from "./SettingsClient";
+import { BasicInfoCard } from "./BasicInfoCard";
 import { PageShell } from "@/app/components/PageShell";
 import { isEmailConfigured } from "@/lib/email/send";
 import { isWebPushConfigured } from "@/lib/push/vapid";
@@ -39,6 +40,8 @@ export default function SettingsPage() {
   /* [1103 · 번들] 셸은 서버에서 감싼다 — 클라이언트 SettingsClient 안에서 감싸면 푸터(서버 조각)까지 브라우저 번들에 실렸다(미등재 상한 495KB 에 2KB 남던 원인 중 하나) */
   return (
     <PageShell title="설정" breadcrumb="마이 › 설정">
+      {/* [1135] 기본 정보(연락처 · 생년월일 6자리 · 주소) — 가입 때 적은 값을 여기서 고친다 */}
+      <BasicInfoCard />
       <SettingsClient channels={channels} />
     </PageShell>
   );
