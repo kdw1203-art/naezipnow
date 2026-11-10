@@ -21,6 +21,7 @@ import { HomeTownBlock } from "./components/home/HomeTownBlock";
 import { HomeHubLinks } from "./components/home/HomeHubLinks";
 import { HomeRecentDeals, toHomeDealRows, type HomeDealRow } from "./components/home/HomeRecentDeals";
 import { HomeMarketBoard } from "./components/home/HomeMarketBoard";
+import { HomeAltBoard } from "./components/home/HomeAltBoard";
 import { HomeRegionTable } from "./components/home/HomeRegionTable";
 import { listRegionTransactions } from "@/lib/market/store";
 import { complexCanonicalPathFromNames } from "@/lib/complex/complex-store";
@@ -256,7 +257,8 @@ export default async function Home() {
               · 아래 = 공개 임장노트(7) | 거래 많은 단지(5) · 동네이야기 · 뉴스룸(전폭). 폰은 같은 순서 1열(DOM 순서 = 읽는 순서). */}
           <div className="mt-3 grid grid-cols-1 gap-3 md:mt-4 lg:grid-cols-12 lg:gap-4">
             <div data-autotrim="" className="flex min-w-0 flex-col gap-3 lg:col-span-8 lg:gap-4">
-              {dealsRegion && <HomeMarketBoard id={dealsRegion.id} name={dealsRegion.name} />}
+              {/* [1137 · 홈 개편] 시세판(B) ↔ 내 화면(C)을 같은 자리에서 번갈아 — 비회원은 시세판만(서버 HTML 그대로). 로그인하면 탭 둘 + 자동 넘김 */}
+              <HomeAltBoard market={dealsRegion ? <HomeMarketBoard id={dealsRegion.id} name={dealsRegion.name} /> : null} />
             </div>
 
             <aside data-autotrim="" className="flex min-w-0 flex-col gap-3 lg:col-span-4 lg:gap-4">

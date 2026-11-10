@@ -21,7 +21,8 @@ test("① rankHomeDeals — 금액 높은 순 · 같은 금액은 최근 신고 
 test("② 홈 — 12칸 격자 · 왼쪽 8 = 시장 한눈에(지역 화면 숫자 칸 · 시세 흐름 카드 그대로) · 오른쪽 4 = 순위 배너 + 지역 동향 표", () => {
   const home = strip(read("app/page.tsx"));
   assert.match(home, /className="mt-3 grid grid-cols-1 gap-3 md:mt-4 lg:grid-cols-12 lg:gap-4"/);
-  assert.match(home, /lg:col-span-8 lg:gap-4">\s*\{dealsRegion && <HomeMarketBoard id=\{dealsRegion\.id\} name=\{dealsRegion\.name\} \/>\}/);
+  /* [1137] 시세판은 번갈아 보이는 판(HomeAltBoard)의 market 자리로 들어간다 */
+  assert.match(home, /<HomeAltBoard market=\{dealsRegion \? <HomeMarketBoard id=\{dealsRegion\.id\} name=\{dealsRegion\.name\} \/> : null\} \/>/);
   const aside = home.slice(home.indexOf('<aside data-autotrim=""'), home.indexOf("</aside>"));
   assert.ok(aside.indexOf("<HomeRecentDeals") >= 0 && aside.indexOf("<HomeRecentDeals") < aside.indexOf("<HomeRegionTable"), "배너 → 표");
   let last = -1;

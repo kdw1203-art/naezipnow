@@ -368,7 +368,7 @@ test("[1128] 출처 표기 한 꼴 · 노트 타일 방문일 · 매물 0건의 
 /* ── [1131] 홈 자리 비우기 ── */
 test("[1131] 홈 — 로그인 묶음 없음 · 마이로 옮김 · 검색칸 흐린 글자 = 최근 본 단지", () => {
   const home = strip(read("app/page.tsx"));
-  assert.doesNotMatch(home, /HomeMyRail|HomeEngagementCard|HomeWatchlistBrief/);
+  assert.doesNotMatch(home, /HomeMyRail|HomeEngagementCard|HomeWatchlistBrief/); // [1137] 내 화면 조각은 HomeAltBoard 안에서만(따로 자리를 차지하지 않는다)
   assert.match(read("app/my/(index)/page.tsx"), /<MyHomeBrief \/>/);
   const b = read("app/my/MyHomeBrief.tsx");
   assert.match(b, /<HomeWatchlistBrief \/>/);
@@ -450,4 +450,15 @@ test("[1135] 가입 — 기본 정보는 새 계정 뒤에만 저장 · 금지�
   const su = read("app/signup/SignupClient.tsx");
   assert.match(su, /기본 정보 \(선택\) · 연락처 · 생년월일 · 주소/);
   assert.doesNotMatch(su + read("app/my/settings/BasicInfoCard.tsx"), /주민등록번호 (앞|뒤)자리 입력|rrn/i);
+});
+
+/* ── [1137] 홈 개편 — 시세판 ↔ 내 화면 번갈아 ── */
+test("[1137] 홈 — 비회원은 시세판만 · 로그인하면 탭 둘 + 자동 넘김(손대면 멈춤 · 움직임 줄이기 존중) · 겹친 칸이라 밀리지 않음", () => {
+  const a = read("app/components/home/HomeAltBoard.tsx");
+  assert.match(a, /if \(!authed\) return <>\{market\}<\/>;/);
+  assert.match(a, /prefers-reduced-motion: reduce/);
+  assert.match(a, /inert=\{tab !== "market"\}/);
+  assert.match(a, /inert=\{tab !== "mine"\}/);
+  assert.equal((a.match(/col-start-1 row-start-1/g) ?? []).length, 2, "두 판이 한 칸에 겹친다");
+  for (const k of ["HomeMyRegions", "HomeWatchlistBrief", "HomeEngagementCard"]) assert.match(a, new RegExp(`const ${k} = dynamic\\(`), `${k} 는 로그인 뒤에만 받는다`);
 });
