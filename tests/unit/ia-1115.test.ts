@@ -446,10 +446,9 @@ test("[1135] 가입 — 기본 정보는 새 계정 뒤에만 저장 · 금지�
   assert.match(reg, /&& !\(await isFirstAccount\(\)\)\) \{/);
   assert.match(reg, /await recordConsent\(sb, email, consent, ip, ua\);\s*await saveBasic\(\);/);
   assert.match(read("app/api/me/delete-account/route.ts"), /from\("user_basic_info"\)\.delete\(\)/);
-  assert.match(read("app/legal/privacy/page.tsx"), /"휴대전화 번호, 생년월일\(6자리\), 주소"/);
+  /* [1138] 방침 · 가입 화면 문구는 필수로 바뀜 — 아래 1138 테스트가 본다 */
   const su = read("app/signup/SignupClient.tsx");
-  assert.match(su, /기본 정보 \(선택\) · 연락처 · 생년월일 · 주소/);
-  assert.doesNotMatch(su + read("app/my/settings/BasicInfoCard.tsx"), /주민등록번호 (앞|뒤)자리 입력|rrn/i);
+  assert.doesNotMatch(su + read("app/my/settings/BasicInfoCard.tsx") + read("app/components/account/BasicInfoFields.tsx"), /주민등록번호 (앞|뒤)자리 입력|rrn/i);
 });
 
 /* ── [1137] 홈 개편 — 시세판 ↔ 내 화면 번갈아 ── */
@@ -461,4 +460,58 @@ test("[1137] 홈 — 비회원은 시세판만 · 로그인하면 탭 둘 + 자�
   assert.match(a, /inert=\{tab !== "mine"\}/);
   assert.equal((a.match(/col-start-1 row-start-1/g) ?? []).length, 2, "두 판이 한 칸에 겹친다");
   for (const k of ["HomeMyRegions", "HomeWatchlistBrief", "HomeEngagementCard"]) assert.match(a, new RegExp(`const ${k} = dynamic\\(`), `${k} 는 로그인 뒤에만 받는다`);
+});
+
+/* ── [1138] 기본 정보 필수 — 순서 · 추천 두 칸 · 소셜/기존 회원 완성 화면 ── */
+test("[1138] 기본 정보 — 순서(생년월일 · 주소 · 휴대전화 · 직업 · 보유 주택 · 이용 목적) · 여섯 칸 모두 필수 · 목록 밖 값 거절", async () => {
+  const m = await import("../../lib/account/basic-info.ts");
+  assert.deepEqual([...m.BASIC_FIELD_ORDER], ["birth", "address", "phone", "job", "housing", "purpose"]);
+  const full = { birth: "900115", address: "서울 강남구 대치동", phone: "01012345678", job: "직장인", housing: "무주택", purpose: "실거주 매수" };
+  const ok = m.validateRequiredBasicInfo(full);
+  assert.equal(ok.ok, true);
+  if (ok.ok) assert.equal(ok.value.phone, "010-1234-5678");
+  assert.deepEqual(m.validateRequiredBasicInfo({ ...full, birth: "" }), { ok: false, field: "birth", error: "생년월일 6자리 입력 필요" });
+  const miss = m.validateRequiredBasicInfo({});
+  assert.equal(miss.ok, false);
+  if (!miss.ok) assert.equal(miss.field, "birth", "화면 순서대로 첫 칸부터");
+  assert.equal(m.validateRequiredBasicInfo({ ...full, job: "왕" }).ok, false);
+  assert.equal(m.validateRequiredBasicInfo({ ...full, purpose: undefined }).ok, false);
+  assert.equal(m.isBasicInfoComplete({ ...full }), true);
+  assert.equal(m.isBasicInfoComplete({ ...full, housing: null }), false);
+  assert.equal(m.isBasicGateExempt("/my/basic-info"), true);
+  assert.equal(m.isBasicGateExempt("/legal/privacy"), true);
+  assert.equal(m.isBasicGateExempt("/login"), true);
+  assert.equal(m.isBasicGateExempt("/loginx"), false);
+  assert.equal(m.isBasicGateExempt("/"), false);
+  assert.equal(m.isBasicGateExempt("/my/settings"), false);
+});
+
+test("[1138] 가입 · API · 게이트 · 방침 · DB 열이 같은 규칙을 쓴다", () => {
+  const reg = read("app/api/auth/register/route.ts");
+  assert.match(reg, /validateRequiredBasicInfo\(basicRaw\)/);
+  assert.match(reg, /if \(!basic\.ok && !b\.resendConfirmation\) return/, "인증 메일 다시 보내기는 다시 묻지 않는다");
+  assert.match(read("app/api/me/basic-info/route.ts"), /validateRequiredBasicInfo\(body\)/);
+  const su = read("app/signup/SignupClient.tsx");
+  assert.match(su, /<BasicInfoFields prefix="signup-basic"/);
+  assert.doesNotMatch(su, /기본 정보 \(선택\)/);
+  const gate = read("app/components/account/BasicInfoGate.tsx");
+  assert.match(gate, /if \(!alive \|\| !r\.ok\) return;/, "조회 실패면 보내지 않는다");
+  assert.match(gate, /\/my\/basic-info\?next=/);
+  assert.match(read("app/layout.tsx"), /<BasicInfoGate \/>/);
+  assert.match(read("app/legal/privacy/page.tsx"), /"생년월일\(6자리\), 주소, 휴대전화 번호, 직업, 보유 주택 수, 이용 목적"/);
+  const sql = read("supabase/rebuild/bridge/20261231000600_bridge_user_basic_info_required.sql");
+  const lib = read("lib/account/basic-info.ts");
+  for (const v of ["직장인", "구직 중", "2주택 이상", "실거주 매수", "정보 확인"]) {
+    assert.ok(sql.includes(`'${v}'`) && lib.includes(`"${v}"`), `${v} — DB 제약과 화면 목록이 같다`);
+  }
+});
+
+test("[1138] 로그인 — 공용 카운터(KV) 장애면 메모리 카운터로(전부 막지 않는다 · 무제한도 아니다)", () => {
+  const auth = read("auth.ts");
+  assert.match(auth, /if \(rl\.degraded\) \{[\s\S]{0,200}rl = memoryKeyRateLimit\(key, \{ max, windowMs \}\);/);
+  assert.match(auth, /if \(!rl\.ok\) \{\s*logger\.warn\(`\[auth\] 로그인 시도 제한/);
+  assert.doesNotMatch(auth, /!rl\.ok \|\| rl\.degraded/);
+  const rl = read("lib/rate-limit.ts");
+  assert.match(rl, /if \(result\.degraded && failClosed\) \{\s*return \{ \.\.\.memoryRateLimit\(key, max, windowMs\), degraded: true \};/);
+  assert.match(rl, /export function memoryKeyRateLimit\(key: string, \{ max, windowMs \}[^)]*\): DetailedRateLimitResult \{\s*return \{ \.\.\.memoryRateLimit\(key, max, windowMs\), degraded: false \};/, "같은 상한(메모리)");
 });

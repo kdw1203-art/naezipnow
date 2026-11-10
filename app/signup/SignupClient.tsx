@@ -1,7 +1,8 @@
 "use client";
 /* [1026c · 폰 배율 1] 동의 체크박스 — 폰 간격 단위(3px)에서 h-5 가 15px 이었다. 20px 고정 + 40px 손끝 칸(span)으로 감싼다(옆 글자가 탭을 가져가지 않게). */
 
-import { ADDRESS_MAX } from "@/lib/account/basic-info";
+import { validateRequiredBasicInfo, type BasicField } from "@/lib/account/basic-info";
+import { BasicInfoFields, EMPTY_DRAFT, basicFieldId, type BasicDraft } from "@/app/components/account/BasicInfoFields";
 import { capsLockOn } from "@/lib/auth/auth-ux";
 import { CapsLockNote } from "@/app/components/auth/CapsLockNote";
 import { SignupSteps } from "@/app/components/auth/SignupSteps";
@@ -67,6 +68,7 @@ const SOCIAL_BUTTON: Record<SocialProvider, { label: string; className: string }
 
 type RegisterResponse = {
   error?: string;
+  field?: string;
   detail?: string;
   code?: string;
   message?: string;
@@ -94,10 +96,13 @@ export function SignupClient({
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  /* [1135] 기본 정보(선택) — 접힌 칸 */
-  const [phone, setPhone] = useState("");
-  const [birth, setBirth] = useState("");
-  const [address, setAddress] = useState("");
+  /* [1138] 기본 정보(필수) — 생년월일 · 주소 · 휴대전화 · 직업 · 보유 주택 · 이용 목적 */
+  const [basic, setBasic] = useState<BasicDraft>(EMPTY_DRAFT);
+  const [basicErr, setBasicErr] = useState<Partial<Record<BasicField, string>>>({});
+  const setBasicField = (f: BasicField, v: string) => {
+    setBasic((b) => ({ ...b, [f]: v }));
+    if (basicErr[f]) setBasicErr((e) => ({ ...e, [f]: undefined }));
+  };
   /* [개선 #9] 비밀번호 확인칸 제거 — 표시 토글로 오타를 눈으로 확인한다
      (칸 하나가 줄고, 모바일에서 두 번 입력하는 마찰이 사라진다). */
   const [showPw, setShowPw] = useState(false);
@@ -268,7 +273,18 @@ export function SignupClient({
       consent: agree ? undefined : "필수 동의 필요",
     };
     setFieldErr(errs);
-    const firstBad = errs.email ? "signup-email" : errs.password ? "signup-password" : errs.consent ? "signup-agree" : null;
+    /* [1138] 기본 정보 — 첫 문제 칸 하나만 표시(위에서부터 차례로 고치게) */
+    const bv = validateRequiredBasicInfo(basic);
+    setBasicErr(bv.ok ? {} : { [bv.field]: bv.error });
+    const firstBad = errs.email
+      ? "signup-email"
+      : errs.password
+        ? "signup-password"
+        : !bv.ok
+          ? basicFieldId("signup-basic", bv.field)
+          : errs.consent
+            ? "signup-agree"
+            : null;
     if (firstBad) {
       document.getElementById(firstBad)?.focus();
       return;
@@ -287,10 +303,8 @@ export function SignupClient({
           email: normalizedEmail,
           password,
           name: name.trim().slice(0, NAME_MAX),
-          /* [1135] 적은 칸만 보낸다(빈 칸은 안 보냄 — 서버가 건드리지 않는다) */
-          ...(phone.trim() || birth.trim() || address.trim()
-            ? { basic: { ...(phone.trim() ? { phone } : {}), ...(birth.trim() ? { birth } : {}), ...(address.trim() ? { address } : {}) } }
-            : {}),
+          /* [1138] 여섯 칸 모두(서버가 다시 검사) */
+          basic,
           source: signupViaRef.current ? "soft_signup" : "onboarding_signup",
           campaign: signupViaRef.current?.replace(/^soft:/, "") || "default",
           /* [1039] 인증 메일 링크를 누른 뒤에도 목적지(/welcome[?next])를 잃지 않게 서버로 보낸다 */
@@ -321,6 +335,12 @@ export function SignupClient({
         /* [1039] 서버 원문(영문 DB·인증 메시지)은 화면에 붙이지 않는다 — 한글로 풀어 준 설명만 */
         const detail = data.detail && /[가-힣]/.test(data.detail) ? ` · ${data.detail}` : "";
         setError(`${data.error ?? "가입 실패 · 잠시 후 다시"}${detail}`);
+        /* [1138] 서버가 기본 정보 칸을 짚으면 그 칸에도 표시 */
+        const bf = typeof data.field === "string" && data.field.startsWith("basic-") ? (data.field.slice(6) as BasicField) : null;
+        if (bf) {
+          setBasicErr({ [bf]: data.error ?? "확인 필요" });
+          document.getElementById(basicFieldId("signup-basic", bf))?.focus();
+        }
         /* [1080] 토큰은 한 번만 쓴다 — 실패했으면 위젯을 새로 그려 새 토큰을 받는다 */
         if (captchaSiteKey) {
           setCaptchaToken(null);
@@ -696,30 +716,11 @@ export function SignupClient({
           </p>
         )}
         <CapsLockNote on={caps} />
-        {/* [1135 · 기본 정보(선택)] 연락처 · 생년월일 6자리 · 주소 — 접어 둔다(가입 칸 수를 늘리지 않는다 · 991 의 전환율 교훈). 가입 뒤 마이 › 설정에서도 고친다 */}
-        <details className="group rounded-xl border border-line bg-surface px-3.5 py-1">
-          <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between t-sub font-bold text-text-2">
-            기본 정보 (선택) · 연락처 · 생년월일 · 주소
-            <span aria-hidden="true" className="text-text-3 transition-transform group-open:rotate-180">
-              {/* dead-control-ok: summary 가 눌리는 자리 — 꺾쇠는 열림 표시 */}⌄
-            </span>
-          </summary>
-          <div className="flex flex-col gap-2 pb-2.5 pt-1">
-            <div className="njn-field">
-              <input id="signup-phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder=" " maxLength={13} />
-              <label htmlFor="signup-phone">휴대전화 (선택)</label>
-            </div>
-            <div className="njn-field">
-              <input id="signup-birth" name="birth" type="text" inputMode="numeric" autoComplete="bday" value={birth} onChange={(e) => setBirth(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder=" " maxLength={6} />
-              <label htmlFor="signup-birth">생년월일 6자리 (선택)</label>
-            </div>
-            <div className="njn-field">
-              <input id="signup-address" name="address" type="text" autoComplete="street-address" value={address} onChange={(e) => setAddress(e.target.value)} placeholder=" " maxLength={ADDRESS_MAX} />
-              <label htmlFor="signup-address">주소 (선택)</label>
-            </div>
-            <p className="m-0 t-caption text-text-3">주민등록번호 뒷자리는 받지 않음 · 가입 뒤 마이 › 설정에서 수정 · 삭제</p>
-          </div>
-        </details>
+        {/* [1138 · 기본 정보(필수)] 소유자 2026-11-11 — 접지 않고 펼쳐 둔다(필수 칸을 접어 두면 못 보고 지나친다) */}
+        <fieldset className="m-0 mt-1 flex min-w-0 flex-col gap-2 rounded-xl border border-line bg-surface px-3.5 pb-3 pt-2">
+          <legend className="px-1 t-sub font-bold text-text-1">기본 정보</legend>
+          <BasicInfoFields prefix="signup-basic" value={basic} onChange={setBasicField} errors={basicErr} />
+        </fieldset>
 
         {/* [1039] 봇 덫 — 화면 밖 · 탭 순서 밖 · 낭독기 밖. 사람은 채울 수 없다 */}
         <div aria-hidden="true" className="pointer-events-none absolute -left-[9999px] h-0 w-0 overflow-hidden">

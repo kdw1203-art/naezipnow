@@ -15,7 +15,7 @@ import { isTossLoginEnabled } from "@/lib/auth/toss-login";
 import { recordAuthLoginOutcome } from "@/lib/auth/login-telemetry";
 import { logger } from "@/lib/log";
 import { isAllowlistedAdmin, resolveProjectAdminEmail } from "@/lib/auth/admin-emails";
-import { keyRateLimit, getClientIp, AUTH_RATE_LIMIT } from "@/lib/rate-limit";
+import { keyRateLimit, memoryKeyRateLimit, getClientIp, AUTH_RATE_LIMIT } from "@/lib/rate-limit";
 
 /** 프로덕션에서는 반드시 `AUTH_SECRET` 환경변수를 두세요. 비우면 세션 API가 500 → ClientFetchError 납니다. */
 const DEV_AUTH_SECRET_FALLBACK =
@@ -137,10 +137,16 @@ async function credentialThrottleBlocked(
     ...(ip !== "unknown" ? [`auth:${scope}:ip:${ip}`] : []),
   ];
   for (const key of keys) {
-    const rl = await keyRateLimit(key, { max, windowMs });
-    /* degraded = 카운터를 못 셌다. 인증 경로에서 그걸 통과로 읽으면
-       "백엔드를 죽이면 무제한 대입" 이 되므로 막는다(lib/rate-limit.ts 참고). */
-    if (!rl.ok || rl.degraded) {
+    let rl = await keyRateLimit(key, { max, windowMs });
+    /* degraded = 공용 카운터(KV)를 못 셌다. 통과로 읽으면 "백엔드를 죽이면 무제한 대입" 이 되고,
+       [1138] 막음으로 읽으면 KV 장애 동안 **모든 비밀번호 로그인이 막힌다**(운영 2026-11-11 실측:
+       /api/health kv ok:false reason:network · 가입 직후 첫 로그인부터 "시도 한도 초과").
+       그래서 인스턴스 메모리 카운터로 내려 같은 상한을 건다 — 막지도 풀지도 않는다. */
+    if (rl.degraded) {
+      logger.warn(`[auth] 공용 카운터 장애 — 메모리 카운터로 · ${scope}`);
+      rl = memoryKeyRateLimit(key, { max, windowMs });
+    }
+    if (!rl.ok) {
       logger.warn(`[auth] 로그인 시도 제한 — ${scope}`);
       return true;
     }

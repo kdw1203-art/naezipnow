@@ -8,6 +8,7 @@ import { ConditionalIslands } from "./components/ConditionalIslands";
 import { BackToTop } from "./components/BackToTop";
 import { SideAdRails } from "./components/ads/SideAdRails";
 import { OfflineBanner } from "./components/OfflineBanner";
+import { BasicInfoGate } from "./components/account/BasicInfoGate";
 import { ADSENSE_EXCLUDED_PATH_PREFIXES, getAdSenseClient } from "@/lib/ads/adsense-policy";
 import { buildAdSenseBootScript } from "@/lib/ads/adsense-boot";
 import { WebVitalsReporter } from "./components/WebVitalsReporter";
@@ -353,6 +354,8 @@ export default function RootLayout({
                   <BackToTop />
                   {/* [966] 끊기면 탭바 위 알약으로 알리고, 돌아오면 2.5초 뒤 접는다 */}
                   <OfflineBanner />
+                  {/* [1138] 로그인했는데 필수 기본 정보가 비었으면 완성 화면으로 */}
+                  <BasicInfoGate />
                   <WebVitalsReporter />
                   <ClientErrorReporter />
                   {/* 어드민 트래픽 대시보드용 1st-party 페이지뷰·체류 기록 —

@@ -18,7 +18,7 @@ import { mapSignUpRejection } from "@/lib/auth/signup-error";
 import { findAuthUserByEmail } from "@/lib/auth/find-auth-user";
 import { EMAIL_RE, NAME_MAX } from "@/lib/auth/signup-form";
 import { isReservedName, RESERVED_NAME_ERROR } from "@/lib/account/reserved-names";
-import { hasAnyBasicInfo, validateBasicInfo } from "@/lib/account/basic-info";
+import { validateRequiredBasicInfo } from "@/lib/account/basic-info";
 import { saveBasicInfo } from "@/lib/account/basic-info-store";
 import { isAllowlistedAdmin } from "@/lib/auth/admin-emails";
 import { safeInternalPath } from "@/lib/safe-path";
@@ -423,12 +423,15 @@ export async function POST(req: NextRequest) {
   }
   const fromEmail = email.split("@")[0] || "";
   const name = (typedName || (fromEmail && !isReservedName(fromEmail) ? fromEmail : "") || "회원").slice(0, NAME_MAX);
-  /* [1135 · 기본 정보(선택)] 연락처 · 생년월일 6자리 · 주소 — 넘어온 칸만 검사. 저장은 **새 계정이 만들어진 뒤에만**(동의 기록과 같은 규칙 — 남의 이메일에 값을 심지 못하게) */
+  /* [1135 · 기본 정보] 저장은 **새 계정이 만들어진 뒤에만**(동의 기록과 같은 규칙 — 남의 이메일에 값을 심지 못하게)
+     [1138 · 필수] 생년월일 · 주소 · 휴대전화 · 직업 · 보유 주택 · 이용 목적 여섯 칸이 모두 있어야 가입을 받는다.
+     저장이 실패해도 가입은 막지 않는다 — 로그인 뒤 완성 화면(/my/basic-info)이 다시 받는다. */
   const basicRaw = b.basic && typeof b.basic === "object" ? (b.basic as Record<string, unknown>) : {};
-  const basic = validateBasicInfo(basicRaw);
-  if (!basic.ok) return NextResponse.json({ error: basic.error, field: basic.field }, { status: 400 });
+  const basic = validateRequiredBasicInfo(basicRaw);
+  /* 인증 메일 다시 보내기(resendConfirmation)는 계정을 새로 만들지 않는다 — 기본 정보를 다시 묻지 않는다 */
+  if (!basic.ok && !b.resendConfirmation) return NextResponse.json({ error: basic.error, field: `basic-${basic.field}` }, { status: 400 });
   const saveBasic = async () => {
-    if (!hasAnyBasicInfo(basic.value)) return;
+    if (!basic.ok) return;
     await saveBasicInfo(email, basic.value).catch((e: unknown) => logger.warn("[auth/register] 기본 정보 저장 실패", e));
   };
   /* [1039] 인증 메일 링크를 누른 뒤의 목적지 — 가입 화면이 보낸 /welcome[?next=…]. 내부 경로만(열린 리다이렉트 금지) */

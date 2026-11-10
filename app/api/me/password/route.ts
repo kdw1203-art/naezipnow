@@ -8,7 +8,7 @@
  */
 import { NextRequest, NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
-import { applyRateLimit, AUTH_RATE_LIMIT, keyRateLimit } from "@/lib/rate-limit";
+import { applyRateLimit, AUTH_RATE_LIMIT, keyRateLimit, memoryKeyRateLimit } from "@/lib/rate-limit";
 import { PASSWORD_MIN } from "@/lib/auth/signup-form";
 import { verifyCurrentPassword } from "@/lib/auth/password-login";
 import { sendPasswordChangedNotice, setAccountPassword } from "@/lib/auth/set-password";
@@ -27,8 +27,10 @@ export async function POST(req: NextRequest) {
   if (!email) return NextResponse.json({ error: "로그인 필요" }, { status: 401 });
 
   /* 계정 단위 한도 — 세션을 가진 사람이 지금 비밀번호를 대입으로 찾는 길을 막는다. 카운터를 못 세면 막는다 */
-  const rl = await keyRateLimit(`me-password:${email}`, { max: 5, windowMs: 10 * 60_000 });
-  if (!rl.ok || rl.degraded) {
+  let rl = await keyRateLimit(`me-password:${email}`, { max: 5, windowMs: 10 * 60_000 });
+  /* [1138] 공용 카운터 장애면 메모리 카운터로(막지도 풀지도 않는다) */
+  if (rl.degraded) rl = memoryKeyRateLimit(`me-password:${email}`, { max: 5, windowMs: 10 * 60_000 });
+  if (!rl.ok) {
     return NextResponse.json({ error: "시도 한도 초과 · 10분 뒤 다시" }, { status: 429 });
   }
 

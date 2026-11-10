@@ -126,7 +126,9 @@ test("비밀번호 바꾸기 — 재설정과 설정 화면이 같은 길 · 변
   const me = read("app/api/me/password/route.ts");
   assert.match(me, /if \(!email\) return NextResponse\.json\(\{ error: "로그인 필요" \}, \{ status: 401 \}\);/);
   assert.match(me, /keyRateLimit\(`me-password:\$\{email\}`, \{ max: 5, windowMs: 10 \* 60_000 \}\)/);
-  assert.match(me, /if \(!rl\.ok \|\| rl\.degraded\)/);
+  /* [1138] 공용 카운터 장애면 메모리 카운터로 — 막지도 풀지도 않는다 */
+  assert.match(me, /if \(rl\.degraded\) rl = memoryKeyRateLimit\(/);
+  assert.match(me, /if \(!rl\.ok\) \{/);
   assert.match(me, /code: "no_password"/);
   assert.match(me, /await sendPasswordChangedNotice\(email, "settings"\);/);
   assert.match(read("lib/email/templates.ts"), /export function passwordChangedEmail\(/);

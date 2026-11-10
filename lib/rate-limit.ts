@@ -181,8 +181,10 @@ export async function requestRateLimit(
   if (kvAvailable()) {
     const result = await kvRateLimit(key, max, windowMs);
     // 인증 프리셋만 fail-closed. 비인증 경로는 종전대로 통과시킨다(가용성 우선).
+    /* [1138] 막음(ok:false)으로 읽으면 KV 장애 동안 로그인 · 비밀번호 찾기 · 매직 링크가 전부 막혔다(운영 2026-11-11).
+       인증 프리셋은 메모리 카운터로 내려 같은 상한을 건다 — 막지도 풀지도 않는다. */
     if (result.degraded && failClosed) {
-      return { ...result, ok: false };
+      return { ...memoryRateLimit(key, max, windowMs), degraded: true };
     }
     return result;
   }
@@ -250,6 +252,11 @@ export async function keyRateLimit(
   /* [1080] 같은 KV 백엔드 — fail-open(degraded) 은 호출자가 본다 */
   if (kvAvailable()) return kvRateLimit(key, max, windowMs);
 
+  return { ...memoryRateLimit(key, max, windowMs), degraded: false };
+}
+
+/** [1138] 인스턴스 메모리 카운터만 — 공용 카운터(KV)가 죽었을 때 인증 경로가 내려 쓰는 자리(막지도 풀지도 않게) */
+export function memoryKeyRateLimit(key: string, { max, windowMs }: { max: number; windowMs: number }): DetailedRateLimitResult {
   return { ...memoryRateLimit(key, max, windowMs), degraded: false };
 }
 
