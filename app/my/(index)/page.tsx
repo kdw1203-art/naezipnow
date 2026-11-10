@@ -1,4 +1,5 @@
 /* [1025 · 결정·비서] 마이 화면에 /decide · /my/assistant 진입 링크(게스트 메뉴 1줄 + 로그인 허브 아래 카드 2줄). */
+import { MyHomeBrief } from "../MyHomeBrief";
 import Link from "@/app/components/IntentLink";
 import { isPaidPlan } from "@/lib/subscriptions/labels";
 import { ShellBreadcrumb, ShellTitle } from "@/app/components/PageShell";
@@ -405,6 +406,8 @@ export default async function MyPage() {
         data={data}
         leftExtra={
           <>
+      {/* [1131] 홈에서 옮겨 온 묶음 — 내 관심 지역 칩 · 내 관심단지 주간 브리핑 */}
+      <MyHomeBrief />
       {/* [1056 · C2] 저장한 글 — 동네 글의 "저장"(북마크 type=post)이 어디에도 모이지 않았다. 3건 + 전체(/my/watchlist?tab=saved). */}
       <section className="card rounded-lg px-4 py-3" aria-label="저장한 글">
         <div className="flex items-center justify-between gap-3">

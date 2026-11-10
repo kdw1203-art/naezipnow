@@ -13,7 +13,6 @@ import { AdSenseUnit } from "./components/ads/AdSenseUnit";
 import { Footer } from "./components/Footer";
 import { HomeHeroSearch } from "./components/home/HomeHeroSearch";
 import { CoverImage } from "./components/CoverImage";
-import { HomeMyRail } from "./components/home/HomeMyRail";
 import type { KpiTemp } from "./components/home/HomeKpiRow";
 import { HomeTodayLine } from "./components/home/HomeTodayLine";
 import { RollingPanel } from "./components/home/RollingPanel";
@@ -246,10 +245,9 @@ export default async function Home() {
           {/* [1124 · 처음 온 사람의 길] 비회원에게만 — 가입 → 임장노트 → 지도 → AI 분석 네 단계 + 전문가 등록 */}
           <StartSteps from="home" className="mt-3 md:mt-4" />
 
-          {/* ⑥ 내 관심 — 로그인만, 클라이언트 섬(서버 HTML 에는 없다). 로그인한 사람에게는 자기 관심 단지가 첫 내용이다 */}
-          <div className="mt-3 flex flex-col gap-3 empty:hidden md:mt-4">
-            <HomeMyRail />
-          </div>
+          {/* [1131 · 홈 자리 비우기] 소유자 2026-11-10 "이런 부분은 마이페이지에서 보거나 검색창에 음영처리로 · 홈 화면에서는 자리를 차지하지 않도록" —
+              로그인 묶음(출석 · 포인트 · 내 관심단지 브리핑 · 최근 본 단지 · 내 관심 지역)을 홈에서 걷었다. 출석 · 포인트 · 최근 본 단지는 마이에 이미 있고,
+              관심단지 브리핑 · 관심 지역은 마이로 옮겼다(app/my/MyHomeBrief). 최근 본 단지는 위 검색칸의 흐린 글자(placeholder)와 펼침 목록에서. */}
 
           {/* [1114 · 홈 벤토] 소유자 2026-11-09 시안 A 선택 — 지역 화면 형식(숫자 칸 · 시세 흐름 그래프 · 표)을 홈에 그대로.
               lg 12칸: 왼쪽 8 = 대표 지역 시장 한눈에(숫자 칸) + 시세 흐름(지표 탭 그래프) · 오른쪽 4 = 실거래 금액 순위 배너 + 지역 동향 표

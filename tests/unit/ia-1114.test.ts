@@ -25,7 +25,7 @@ test("② 홈 — 12칸 격자 · 왼쪽 8 = 시장 한눈에(지역 화면 숫�
   const aside = home.slice(home.indexOf('<aside data-autotrim=""'), home.indexOf("</aside>"));
   assert.ok(aside.indexOf("<HomeRecentDeals") >= 0 && aside.indexOf("<HomeRecentDeals") < aside.indexOf("<HomeRegionTable"), "배너 → 표");
   let last = -1;
-  for (const k of ["<HomeMyRail", "<HomeMarketBoard", "<HomeRecentDeals", "<HomeRegionTable", ">공개 임장노트</h2>", "<HomeHubLinks", "<HomeTownBlock", "<HomeTalkSection"]) {
+  for (const k of ["<HomeMarketBoard", "<HomeRecentDeals", "<HomeRegionTable", ">공개 임장노트</h2>", "<HomeHubLinks", "<HomeTownBlock", "<HomeTalkSection"]) {
     const i = home.indexOf(k);
     assert.ok(i > last, `순서: ${k}`);
     last = i;

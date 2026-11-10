@@ -73,8 +73,8 @@ test("지역 탭 — 여섯 화면이 같은 부품 · 같은 자리(머리 아�
 test("첫 화면 · 같은 사실 한 번 — 홈 순서 · 노트 목록 기본 · 지도 모달 없음 · 단지 요약 위치 · 레일 · 노트 상세 점수 카드", () => {
   const home = strip(read("app/page.tsx"));
   /* [1114 · 벤토] 내 관심은 판 격자 위(첫 내용) · 폰 순서는 DOM 순서(ia-1114) */
-  assert.ok(home.indexOf("<HomeMyRail />") < home.indexOf("<HomeMarketBoard"), "내 관심은 본문 맨 위");
-  assert.equal((home.match(/<HomeMyRail \/>/g) ?? []).length, 1);
+  /* [1131] 로그인 묶음은 홈에서 걷었다(마이 · 검색칸으로) */
+  assert.doesNotMatch(home, /<HomeMyRail/);
   const feed = strip(read("app/notes/notes-feed-client.tsx"));
   assert.match(feed, /const \[view, setView\] = useState<ViewMode>\("table"\);/);
   assert.doesNotMatch(feed, /njn-fab|<StoryRail|function StoryRail/);

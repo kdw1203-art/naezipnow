@@ -312,9 +312,8 @@ test("[1126] 화면 — 자사 안내 카드 한 번 · 홈 내 관심 지역 ·
   const tr = read("app/components/ads/AdSlotTracker.tsx");
   assert.match(tr, /data-house-ad=\{kind === "house" \? "" : undefined\}/);
   assert.match(tr, /if \(kind !== "house"\) return;/);
-  const rail = read("app/components/home/HomeMyRail.tsx");
-  assert.match(rail, /<HomeMyRegions \/>/);
-  assert.match(rail, /dynamic\(\(\) => import\("@\/app\/components\/home\/HomeMyRegions"\)/, "비회원 첫 화면 번들에 싣지 않는다");
+  /* [1131] 내 관심 지역 칩은 홈이 아니라 마이에서(MyHomeBrief) */
+  assert.match(read("app/my/MyHomeBrief.tsx"), /<HomeMyRegions \/>/);
   assert.match(read("app/notes/compare/page.tsx"), /Math\.max\(0, Math\.min\(100, Number\(s\.value\) \|\| 0\)\)/);
   assert.match(read("app/analysis/ai/[tool]/ResultRail.tsx"), /\{!ai\.running && <AiQuotaNote \/>\}/);
 });
@@ -364,4 +363,14 @@ test("[1128] 출처 표기 한 꼴 · 노트 타일 방문일 · 매물 0건의 
   const l = read("app/listings/ListingsListClient.tsx");
   assert.match(l, /aria-label="다른 곳에서 찾기"/);
   for (const h of ['href="/map"', 'href="/auctions"', 'href="/apply"']) assert.ok(l.includes(h), h);
+});
+
+/* ── [1131] 홈 자리 비우기 ── */
+test("[1131] 홈 — 로그인 묶음 없음 · 마이로 옮김 · 검색칸 흐린 글자 = 최근 본 단지", () => {
+  const home = strip(read("app/page.tsx"));
+  assert.doesNotMatch(home, /HomeMyRail|HomeEngagementCard|HomeWatchlistBrief/);
+  assert.match(read("app/my/(index)/page.tsx"), /<MyHomeBrief \/>/);
+  const b = read("app/my/MyHomeBrief.tsx");
+  assert.match(b, /<HomeWatchlistBrief \/>/);
+  assert.match(read("app/components/home/HomeHeroSearch.tsx"), /placeholder=\{recentComplexes\[0\] \? `최근 본 단지 · /);
 });

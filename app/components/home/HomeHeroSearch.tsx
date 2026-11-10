@@ -318,7 +318,8 @@ export function HomeHeroSearch({
             aria-controls={LIST_ID}
             aria-activedescendant={showPanel && activeIdx >= 0 ? optionId(activeIdx) : undefined}
             aria-autocomplete="list"
-            placeholder={PLACEHOLDERS[phIdx]}
+            /* [1131] 최근 본 단지가 있으면 검색칸의 흐린 글자가 그 이름이다(홈에서 걷은 "최근 본 단지" 칩 줄의 자리) — 눌러 펼치면 목록이 그대로 있다 */
+            placeholder={recentComplexes[0] ? `최근 본 단지 · ${recentComplexes.slice(0, 2).map((c) => c.name).join(" · ")}` : PLACEHOLDERS[phIdx]}
             aria-label="통합 검색"
             autoComplete="off"
             className="w-full min-w-0 bg-transparent t-section text-ink outline-none placeholder:font-normal placeholder:text-text-3"
