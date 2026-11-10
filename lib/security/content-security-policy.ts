@@ -43,6 +43,15 @@ export function buildContentSecurityPolicy(
     "https://*.googlesyndication.com https://*.doubleclick.net https://www.googleadservices.com https://www.google.com https://www.gstatic.com https://fundingchoicesmessages.google.com https://*.adtrafficquality.google";
   const googleAdsFrame =
     "https://googleads.g.doubleclick.net https://*.googlesyndication.com https://tpc.googlesyndication.com https://*.adtrafficquality.google https://www.google.com";
+  /* [1117] 애드센스가 광고 안 글꼴(Google Sans)을 구글 폰트에서 직접 받는다 — pagead2 스크립트가
+     <link href="https://fonts.googleapis.com/css?family=Google Sans:400|700"> 를 문서에 꽂고, 그 CSS 가
+     fonts.gstatic.com 의 woff2 를 부른다. [969] 셀프호스팅 때 두 도메인을 뺀 뒤로 이게 막혀
+     광고가 뜨는 화면마다 style-src-elem · font-src 위반이 났다(2026-11-10 Vercel 로그 실측:
+     /api/security/csp-report 23시간 317건, 표본 12건 전부 이 두 도메인 · sourceFile=pagead2).
+     사이트 자체 폰트는 여전히 /fonts/ 셀프호스팅이다 — 이건 광고 스크립트 몫만 연다.
+     광고 스크립트는 운영에서만 싣으므로(script-src 와 같은 기준) 개발 정책은 그대로 좁게 둔다. */
+  const googleAdsStyle = isDev ? "" : " https://fonts.googleapis.com";
+  const googleAdsFont = isDev ? "" : " https://fonts.gstatic.com";
 
   /* 토스페이먼츠 결제위젯/결제창 v2 — SDK 는 js.tosspayments.com 에서 로드되고
      (cdn.toss.im 은 구 SDK 도메인), 위젯 UI·본인인증은 iframe 과 API 호출을
@@ -63,9 +72,10 @@ export function buildContentSecurityPolicy(
        font-src 의 fonts.gstatic.com·cdn.jsdelivr.net 을 뺐다. 브라우저가 이 도메인에서
        CSS·폰트를 받는 곳이 더는 없다(app/layout.tsx 는 /fonts/, 슬로건 @font-face 는
        globals.css). 남은 사용처(app/api/og · lib/inspection/report-pdf · lib/seo)는
-       전부 서버 측 fetch 라 문서 CSP 와 무관하다. */
-    "style-src 'self' 'unsafe-inline'",
-    `font-src 'self' ${vercelLive}`,
+       전부 서버 측 fetch 라 문서 CSP 와 무관하다.
+       [1117] 운영에서는 애드센스 광고 글꼴 몫으로 두 구글 폰트 도메인만 다시 연다(위 googleAdsStyle 주석). */
+    `style-src 'self' 'unsafe-inline'${googleAdsStyle}`,
+    `font-src 'self' ${vercelLive}${googleAdsFont}`,
     "img-src 'self' data: blob: https: http:",
     `connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.openai.com ${naverMapConnect} https://maps.apigw.ntruss.com https://naveropenapi.apigw.ntruss.com https://sens.apigw.ntruss.com https://nid.naver.com http://openapi.seoul.go.kr:8088 https://openapi.seoul.go.kr ${openFreeMap} ${tossConnect} https://*.vercel-insights.com https://vitals.vercel-insights.com ${vercelLive} https://www.google-analytics.com https://*.google-analytics.com https://analytics.google.com https://stats.g.doubleclick.net https://accounts.google.com ${googleAdsConnect}${kakaoConnect}`,
     "worker-src 'self' blob:",

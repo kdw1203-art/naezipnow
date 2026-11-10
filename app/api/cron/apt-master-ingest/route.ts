@@ -62,7 +62,13 @@ async function handle(req: Request) {
     forced.length > 0 ? "forced" : picked && picked.length > 0 ? "stalest" : "clock";
 
   const configured = isDataGoKrEncodingConfigured();
-  const { sigungu, fetched, upserted, failed, empty, errors } = await ingestAptMasterBatch(batch);
+  /* [1117] 시간 예산 — maxDuration(120초)보다 30초 먼저 새 시군구 시작을 멈춘다.
+     남은 30초는 진행 중이던 한 곳을 끝내고 적재 로그를 쓰는 몫이다. 예산이 없던 때는
+     API 가 느린 날 함수가 통째로 잘려 로그 한 줄 없이 타임아웃 에러만 남았다. */
+  const startedAt = Date.now();
+  const { sigungu, fetched, upserted, failed, empty, errors, deferred } = await ingestAptMasterBatch(batch, {
+    deadlineMs: startedAt + (maxDuration - 30) * 1000,
+  });
   const mode: "live" | "mock" = configured ? "live" : "mock";
 
   /* F3/#147 — 적재 로그(신선도 대시보드·운영 추적용).
@@ -83,7 +89,10 @@ async function handle(req: Request) {
         ? `오래된순=${batch.length}곳`
         : `slice=${idx}/${Math.ceil(total / SLICE)}(신선도 조회 실패로 시계 순환)`;
   const slice = `${where} 시군구=${sigungu} 읽음=${fetched} 변경=${upserted}`;
-  const emptyNote = empty.length > 0 ? ` · 빈 시군구=${empty.join(",")}` : "";
+  const emptyNote =
+    (empty.length > 0 ? ` · 빈 시군구=${empty.join(",")}` : "") +
+    /* [1117] 미룬 곳은 실패가 아니다 — 다음 실행이 "오래된 순"으로 다시 잡는다. 숨기지 않고 적는다. */
+    (deferred.length > 0 ? ` · 시간 예산으로 다음 실행에 미룸=${deferred.join(",")}` : "");
   await logIngest({
     source: "apt-master",
     dataset: "전국 공동주택 단지 마스터",
@@ -109,6 +118,7 @@ async function handle(req: Request) {
     total,
     batch,
     ...(empty.length > 0 ? { empty } : {}),
+    ...(deferred.length > 0 ? { deferred } : {}),
     ...(failed > 0 ? { failed, errors } : {}),
     ...(upserted === 0 && !configured ? { reason: "no-key" } : {}),
   });

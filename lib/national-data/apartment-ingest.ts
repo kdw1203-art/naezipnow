@@ -321,7 +321,17 @@ export async function pickStalestSigungu(limit: number): Promise<string[] | null
 }
 
 
-export async function ingestAptMasterBatch(sigunguCds: string[]): Promise<{
+/**
+ * [1117] `opts.deadlineMs`(epoch ms)를 주면, 그 시각을 넘긴 뒤에는 **새 시군구를 시작하지 않고**
+ * 남은 코드를 `deferred` 로 돌려준다. 예전에는 예산이 없어서 공공 API 가 느린 날 함수가
+ * maxDuration(120초)에 통째로 잘렸다 — 적재 로그 한 줄 없이 "Task timed out after 120 seconds"
+ * 만 남았다(2026-11-09 20:00 UTC 런타임 에러). 순서가 "가장 오래 안 본 시군구부터"라
+ * 미룬 곳은 다음 실행에서 다시 앞줄에 선다.
+ */
+export async function ingestAptMasterBatch(
+  sigunguCds: string[],
+  opts?: { deadlineMs?: number },
+): Promise<{
   sigungu: number;
   /** 읽어서 저장 가능한 형태로 만든 행 수 합 */
   fetched: number;
@@ -330,6 +340,8 @@ export async function ingestAptMasterBatch(sigunguCds: string[]): Promise<{
   /** [971] 한 행도 못 읽은 시군구 코드 — 수집 구멍이 여기서 드러난다. */
   empty: string[];
   errors: string[];
+  /** [1117] 시간 예산이 다 돼 시작하지 못한 시군구 코드 — 실패가 아니라 "다음 실행 몫"이다. */
+  deferred: string[];
 }> {
   let sigungu = 0;
   let fetched = 0;
@@ -337,7 +349,12 @@ export async function ingestAptMasterBatch(sigunguCds: string[]): Promise<{
   let failed = 0;
   const empty: string[] = [];
   const errors: string[] = [];
+  const deferred: string[] = [];
   for (const cd of sigunguCds) {
+    if (opts?.deadlineMs != null && Date.now() >= opts.deadlineMs) {
+      deferred.push(cd);
+      continue;
+    }
     /* 시군구 사이에도 간격을 둔다 — 12곳을 쉬지 않고 때리면 뒤쪽이 통째로 막힌다 */
     if (sigungu > 0) await new Promise((r) => setTimeout(r, LIST_DELAY_MS));
     const res = await ingestAptMasterForSigungu(cd);
@@ -348,7 +365,7 @@ export async function ingestAptMasterBatch(sigunguCds: string[]): Promise<{
     if (res.error && errors.length < 3) errors.push(`${cd}: ${res.error}`);
     sigungu += 1;
   }
-  return { sigungu, fetched, upserted, failed, empty, errors };
+  return { sigungu, fetched, upserted, failed, empty, errors, deferred };
 }
 
 /* ══════════════════════════════════════════════════════════════════════

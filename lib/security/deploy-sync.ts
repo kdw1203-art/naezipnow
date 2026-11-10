@@ -2,7 +2,7 @@
 export const DEPLOY_COOKIE = "wd-deploy";
 
 /** CSP 정책을 바꾸면 이 숫자를 올린다 — middleware 가 낡은 브라우저 캐시를 비운다 */
-export const CSP_REVISION = "4";
+export const CSP_REVISION = "5";
 
 export const CSP_REV_COOKIE = "wd-csp-rev";
 
