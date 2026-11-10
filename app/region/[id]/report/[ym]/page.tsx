@@ -341,7 +341,7 @@ export default async function RegionMonthlyReportPage({
       </div>
 
       <p className="mt-6 t-sub text-text-3">
-        출처: 국토교통부 실거래가 공개시스템(신고 기준), 한국부동산원 매매가격지수. 본
+        출처 · 국토교통부 실거래가 공개시스템(신고 기준), 한국부동산원 매매가격지수. 본
         페이지는 공개 데이터의 산술 정리이며 투자 권유가 아닙니다.
       </p>
     </PageShell>

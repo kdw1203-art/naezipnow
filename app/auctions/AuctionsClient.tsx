@@ -631,7 +631,7 @@ export function AuctionsClient({
                     더보기 ({Math.min(rowCap, cards.length).toLocaleString()} / {cards.length.toLocaleString()}건)
                   </button>
                 )}
-                <p className="mt-2 t-caption text-text-3">마감 임박순 · 출처: 한국자산관리공사 온비드(공공데이터포털) · 매일 자동 갱신</p>
+                <p className="mt-2 t-caption text-text-3">마감 임박순 · 출처 · 한국자산관리공사 온비드(공공데이터포털) · 매일 자동 갱신</p>
               </section>
               <div data-tone="sand" className="max-md:hidden"><HScroll className="rise-in-4 lq-panel py-1">
                 <div className="min-w-[560px]">
@@ -687,7 +687,7 @@ export function AuctionsClient({
                     </button>
                   )}
                   <div className="pb-2 pt-1 t-caption text-text-3">
-                    마감 임박순 · 출처: 한국자산관리공사 온비드(공공데이터포털) · 매일 자동
+                    마감 임박순 · 출처 · 한국자산관리공사 온비드(공공데이터포털) · 매일 자동
                     갱신
                   </div>
                 </div>
@@ -784,7 +784,7 @@ export function AuctionsClient({
 
             {/* [1063] 출처·면책 문장은 한 자도 바꾸지 않고 접기 뒤로 */}
             <Fineprint className="rise-in-4 mt-1 px-1" label="출처 · 면책">
-              출처: 한국자산관리공사 온비드(공공데이터포털) · 참고용 정보이며 권리분석·명도·정확한
+              출처 · 한국자산관리공사 온비드(공공데이터포털) · 참고용 정보이며 권리분석·명도·정확한
               입찰조건은 온비드 공고 원문과 전문가 확인이 필요합니다.
             </Fineprint>
           </div>

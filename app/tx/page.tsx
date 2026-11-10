@@ -267,7 +267,7 @@ export default async function TxIndexPage() {
           ))}
         </nav>
         <p className="px-1 t-caption leading-[1.6] text-text-3">
-          데이터 출처: 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외){range ? ` · ${range}` : ""} · 구간당 {MIN_BAND_TX}건 이상만
+          출처 · 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외){range ? ` · ${range}` : ""} · 구간당 {MIN_BAND_TX}건 이상만
         </p>
         <AdZone placement="sidebar" seed={1} plan={null} className="hidden lg:block" />
       </aside>

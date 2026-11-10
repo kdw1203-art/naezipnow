@@ -220,6 +220,20 @@ export function ListingsListClient({
               </Link>
             )}
           </div>
+          {/* [1128 · 없으면 다른 길] 매물이 0건일 때 — 집을 찾으러 온 사람이 갈 수 있는 실제 화면 셋(지도 실거래 · 공매 · 청약). 글자 링크(채움 버튼은 위 하나) */}
+          {!filtersActive && (
+            <nav aria-label="다른 곳에서 찾기" className="flex flex-wrap justify-center gap-x-4 gap-y-1 t-sub">
+              <Link href="/map" className="tap-line inline-block py-[5px] font-bold text-primary no-underline">
+                지도에서 실거래 보기 ›
+              </Link>
+              <Link href="/auctions" className="tap-line inline-block py-[5px] font-bold text-primary no-underline">
+                공매 물건 ›
+              </Link>
+              <Link href="/apply" className="tap-line inline-block py-[5px] font-bold text-primary no-underline">
+                청약 일정 · 경쟁률 ›
+              </Link>
+            </nav>
+          )}
         </div>
       ) : (
         <>

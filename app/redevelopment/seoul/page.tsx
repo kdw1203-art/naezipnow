@@ -94,7 +94,7 @@ export default async function SeoulPlanIndexPage() {
         label="서울 자치구별 결정 조서 지도"
         valueLabel="말풍선 = 도시계획 결정 조서 건수 · 구 중심 위치(구역 경계 아님)"
         defaultSido="서울"
-        heightClass="h-[520px] max-md:h-[400px]"
+        /* [1129] 높이는 기본(600 · 폰 420) — 520 에서는 아래쪽 구(금천 · 관악 · 서초) 말풍선이 잘렸다 */
         searchPlaceholder="구 이름"
       />
       <h2 className="mb-2 mt-5 t-section text-ink">자치구 25곳</h2>

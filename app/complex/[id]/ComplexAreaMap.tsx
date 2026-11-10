@@ -40,7 +40,7 @@ import { stationLabel } from "@/lib/poi/parse";
    [1053] 두 요청: main(유사 단지 + 공공데이터 역 — DB 만, 빠름)을 먼저 받고, 관공서(OpenStreetMap · 자주 실패)는
    main 뒤에 part=osm 으로 따로 받는다 — 관공서가 유사 단지 · 역을 기다리게 하지 않는다. 원천별 상태(읽는 중 · 읽음 · 실패)를
    따로 두고, "다시 불러오기"는 실패한 원천이 든 요청만 다시 부른다(규칙은 lib/map/area-parts — 단위 시험).
-   출처: 역은 공공 표에서 왔으면 "전국도시철도역사정보표준데이터", OpenStreetMap 은 그 자료가 화면에 있을 때만 적는다. */
+   출처 · 역은 공공 표에서 왔으면 "전국도시철도역사정보표준데이터", OpenStreetMap 은 그 자료가 화면에 있을 때만 적는다. */
 
 type Layer = AreaLayer;
 

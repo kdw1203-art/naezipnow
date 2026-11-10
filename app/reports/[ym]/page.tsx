@@ -485,7 +485,7 @@ export default async function MonthlyReportPage({
           </Link>
         </nav>
         <p className="px-1 t-caption leading-[1.6] text-text-3">
-          데이터 출처: 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외) · {label} 집계
+          출처 · 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외) · {label} 집계
           {report.updatedAt ? ` · 갱신 ${report.updatedAt.slice(0, 10)}` : ""}
         </p>
         <AdZone placement="sidebar" seed={1} plan={null} />

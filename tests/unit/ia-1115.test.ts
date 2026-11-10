@@ -353,3 +353,15 @@ test("[1127] 조서 지도 — 서울 25구 말풍선 · 건수 없으면 이름
   assert.equal(none.length, 25);
   assert.ok(none.every((m) => m.value == null));
 });
+
+/* ── [1128] 잔여분 ── */
+test("[1128] 출처 표기 한 꼴 · 노트 타일 방문일 · 매물 0건의 다른 길", () => {
+  for (const f of ["app/tx/page.tsx", "app/dong/[region]/[dong]/page.tsx", "app/reports/[ym]/page.tsx", "app/auctions/AuctionsClient.tsx"]) {
+    const s2 = strip(read(f)).replace(/\{\/\*[\s\S]*?\*\/\}/g, "");
+    assert.doesNotMatch(s2, /출처: /, `${f}: 출처 표기는 「출처 · 」 한 꼴`);
+  }
+  assert.match(read("app/notes/notes-feed-client.tsx"), /\.slice\(8, 10\)\)\} 방문/);
+  const l = read("app/listings/ListingsListClient.tsx");
+  assert.match(l, /aria-label="다른 곳에서 찾기"/);
+  for (const h of ['href="/map"', 'href="/auctions"', 'href="/apply"']) assert.ok(l.includes(h), h);
+});

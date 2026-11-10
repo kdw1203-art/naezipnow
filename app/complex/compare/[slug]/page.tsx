@@ -806,7 +806,7 @@ export default async function ComplexComparePage({
         </summary>
         <ul className="mt-1 flex flex-col gap-1.5 pb-3 t-sub text-text-2">
           <li>
-            출처: 국토교통부 실거래가 공개시스템 아파트 매매 신고 자료. 해제된 거래는
+            출처 · 국토교통부 실거래가 공개시스템 아파트 매매 신고 자료. 해제된 거래는
             제외했습니다. 매물 호가·시세가 아닙니다.
           </li>
           <li>

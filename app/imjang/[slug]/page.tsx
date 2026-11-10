@@ -344,7 +344,7 @@ export default async function ImjangRegionPage({
           </Link>
         </nav>
         <p className="px-1 t-caption leading-[1.6] text-text-3">
-          데이터 출처: 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외){range ? ` · ${range}` : ""} · 공개 임장노트는 작성자 기록
+          출처 · 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외){range ? ` · ${range}` : ""} · 공개 임장노트는 작성자 기록
         </p>
         <AdZone placement="sidebar" seed={2} plan={null} className="hidden lg:block" />
       </aside>

@@ -382,7 +382,7 @@ export default async function RedevelopmentZonePage({
 
           <p className="px-1 t-caption leading-[1.6] text-text-3">
             구역·진행 단계는 공개자료를 정리한 참고값이며 최신 고시와 다를 수 있음 · 단계별 인가일은 확보한 자료에 없음 ·
-            실거래 출처: 국토교통부 실거래가 공개시스템
+            실거래 출처 · 국토교통부 실거래가 공개시스템
           </p>
         </aside>
       </div>

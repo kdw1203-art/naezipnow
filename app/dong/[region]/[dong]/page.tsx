@@ -192,7 +192,8 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
       {guNotes != null && (
         <p className="rise-in -mt-2 mb-4 t-sub max-md:-mt-1 max-md:mb-3">
           {guNotes > 0 ? (
-            <Link href="/notes" prefetch={false} className="tap-line font-bold text-primary">
+            /* [1129] 공개 노트 전체(/notes)가 아니라 그 구 이름으로 찾은 결과로 — 적은 건수와 눌러서 보는 목록이 같은 범위여야 한다 */
+            <Link href={`/search?q=${encodeURIComponent(guToken)}`} prefetch={false} className="tap-line font-bold text-primary">
               {guToken} 공개 임장노트 {n(guNotes)}건 ›
             </Link>
           ) : (
@@ -391,7 +392,7 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
             </Link>
           </nav>
           <p className="px-1 t-caption leading-[1.6] text-text-3">
-            데이터 출처: 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외){firstYm && lastYm ? ` · ${ymDot(firstYm)}~${ymDot(lastYm)}` : ""}
+            출처 · 국토교통부 실거래가 공개시스템 신고분(해제 신고분 제외){firstYm && lastYm ? ` · ${ymDot(firstYm)}~${ymDot(lastYm)}` : ""}
           </p>
           <AdZone placement="sidebar" seed={4} plan={null} className="hidden lg:block" />
         </aside>

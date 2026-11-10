@@ -922,7 +922,7 @@ export function CalculatorClient({ mortgage, after }: { mortgage: MortgageRatesP
                     );
                   })}
                   <div className="mt-2 t-caption text-text-3">
-                    출처: {mortgage.source}
+                    출처 · {mortgage.source}
                     {mortgage.asOf ? ` · 공시 기준월 ${mortgage.asOf}` : ""} · 월 원리금은 대출 {manwonText(loan)} ·{" "}
                     {effectiveYears}년 원리금균등 기준 참고 계산 · 실제 조건은 은행 심사
                   </div>

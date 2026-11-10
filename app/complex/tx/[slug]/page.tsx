@@ -409,7 +409,7 @@ export default async function ComplexTxPage({
             ))}
           </ul>
           <p className="mt-2 t-sub text-text-3">
-            출처: KB부동산 시세(공개 자료) · 참고용, 실거래·계약 조건에 따라 다를 수 있습니다.
+            출처 · KB부동산 시세(공개 자료) · 참고용, 실거래·계약 조건에 따라 다를 수 있습니다.
           </p>
         </section>
       )}

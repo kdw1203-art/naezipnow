@@ -245,6 +245,8 @@ function GridTile({
           {n.region && (
             <p className="mt-0.5 truncate t-caption text-white/85 md:mt-1">
               {n.region}
+              {/* [1128 · 카드 고정 자리] 사진 · 점수(오른쪽 위) · 지역 옆 방문일(월.일) — 방문일이 있을 때만 */}
+              {/^\d{4}-\d{2}-\d{2}/.test(n.visitDate ?? "") ? ` · ${Number(n.visitDate!.slice(5, 7))}.${Number(n.visitDate!.slice(8, 10))} 방문` : ""}
             </p>
           )}
           {/* [996 · 4] 판단 — 타일 안 글자 배지(링크 전체가 이미 탭 대상).
