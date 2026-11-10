@@ -169,7 +169,23 @@ export type CountSummary = {
   devices: Array<{ device: string; n: number }>;
   inAppShare: number | null;
   signup: Array<{ route: string; label: string; n: number }>;
+  /** [1125] 들어온 첫 화면을 유입 묶음(홈 · 임장노트 · 뉴스 · 전문가 · 지도 · 지역·단지 · 그 밖)으로 — 최근 7일 */
+  entryGroups?: Array<{ key: string; label: string; n: number }>;
 };
+
+/* [1125 · 유입 경로] 첫 화면(is_landing) 묶음 — 소유자 2026-11-10 "유입경로 임장노트 · 뉴스 · 전문가 등록". 익명 수라 사람 단위 가입 전환은 잇지 못한다(수만 센다). */
+export const ENTRY_GROUPS: ReadonlyArray<{ key: string; label: string; test: (route: string) => boolean }> = [
+  { key: "home", label: "홈", test: (r) => r === "/" },
+  { key: "notes", label: "임장노트", test: (r) => r === "/notes" || r.startsWith("/notes/") || r.startsWith("/n/") || r.startsWith("/imjang") },
+  { key: "news", label: "뉴스", test: (r) => r.startsWith("/town/news") },
+  { key: "expert", label: "전문가", test: (r) => r === "/pro" || r.startsWith("/pro/") || r.startsWith("/experts") || r.startsWith("/my/expert-profile") || r.startsWith("/u/") },
+  { key: "map", label: "지도", test: (r) => r === "/map" || r.startsWith("/map/") },
+  { key: "place", label: "지역 · 단지", test: (r) => r.startsWith("/region/") || r.startsWith("/complex/") || r.startsWith("/dong") || r.startsWith("/tx") },
+];
+
+export function entryGroupOf(route: string): string {
+  return ENTRY_GROUPS.find((g) => g.test(route))?.key ?? "other";
+}
 
 function addDays(day: string, delta: number): string {
   const t = Date.parse(`${day}T00:00:00Z`) + delta * 86_400_000;
@@ -202,6 +218,7 @@ export function summarizeCounts(rows: AggRow[], today: string, isOutage: (day: s
   let prev7 = 0;
   let landings7 = 0;
   let inApp7 = 0;
+  const entries = new Map<string, number>();
   for (const r of rows) {
     const n = Number.isFinite(r.n) && r.n > 0 ? r.n : 0;
     if (!n || r.day < start14 || r.day > today) continue;
@@ -220,6 +237,8 @@ export function summarizeCounts(rows: AggRow[], today: string, isOutage: (day: s
       landings7 += n;
       const host = r.ref_host || "";
       refs.set(host, (refs.get(host) ?? 0) + n);
+      const g = entryGroupOf(r.route);
+      entries.set(g, (entries.get(g) ?? 0) + n);
     }
   }
   const days: CountSummary["days"] = [];
@@ -244,5 +263,6 @@ export function summarizeCounts(rows: AggRow[], today: string, isOutage: (day: s
     devices: topOf(devices, 8).map(([device, n]) => ({ device, n })),
     inAppShare: last7 > 0 ? inApp7 / last7 : null,
     signup: SIGNUP_STEPS.map((s) => ({ ...s, n: routes.get(s.route) ?? 0 })),
+    entryGroups: [...ENTRY_GROUPS.map((g) => ({ key: g.key, label: g.label, n: entries.get(g.key) ?? 0 })), { key: "other", label: "그 밖", n: entries.get("other") ?? 0 }],
   };
 }

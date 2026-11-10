@@ -7,6 +7,9 @@ import { listUpisGuSummary, totalsOf } from "@/lib/seoul/upis-store";
 import { UPIS_SOURCE_URL, type UpisGuSummary } from "@/lib/seoul/upis-display";
 import { logger } from "@/lib/log";
 import { SEOUL_GU, SEOUL_GU_INDEX_HREF, seoulGuHref } from "@/lib/seoul/upis-gu";
+import { RegionMapPicker } from "@/app/components/region/RegionMapPicker";
+import { upisGuMarkers } from "@/lib/region/region-switch";
+import { SEOUL_DISTRICTS } from "@/lib/map/seoul-districts";
 
 /* [1045] 서울 자치구별 도시계획 결정 조서 — /redevelopment/seoul. 자치구 25곳 화면(/redevelopment/seoul/[gu])의 목차.
    구별 건수는 뷰(seoul_upis_gu_summary) 한 번. 이 화면은 주소가 하나라 빌드 때 미리 만들어진다 — 여기서 던지면 DB 가 잠깐
@@ -84,6 +87,17 @@ export default async function SeoulPlanIndexPage() {
           건수 불러오기 실패 · 잠시 후 다시
         </p>
       )}
+      {/* [1127 · 조서 지도] 자치구 25곳 지도 — 말풍선 = 조서 건수 · 누르면 그 구 화면. 조서에 구역 좌표가 없어 구 중심에 놓는다.
+          건수를 못 불러와도 지도는 선다(이름만). 아래 25칸 목록은 그대로(크롤 경로 · 지도가 안 뜨는 환경). */}
+      <RegionMapPicker
+        markers={upisGuMarkers(SEOUL_DISTRICTS, failed ? null : new Map(summary.map((g) => [g.sigungu, g.total])))}
+        label="서울 자치구별 결정 조서 지도"
+        valueLabel="말풍선 = 도시계획 결정 조서 건수 · 구 중심 위치(구역 경계 아님)"
+        defaultSido="서울"
+        heightClass="h-[520px] max-md:h-[400px]"
+        searchPlaceholder="구 이름"
+      />
+      <h2 className="mb-2 mt-5 t-section text-ink">자치구 25곳</h2>
       <ul className="grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-3 lg:grid-cols-5 lg:gap-3">
         {SEOUL_GU.map((g) => {
           const s = by.get(g.name);

@@ -8,6 +8,7 @@ import { Fineprint } from "./components/Fineprint";
 import { ResumeDraftPopupLazy as ResumeDraftPopup } from "./components/home/ResumeDraftPopupLazy";
 import { EmptyState, ErrorState } from "./components/ui/EmptyState";
 import { AdZone } from "./components/ads/AdZone";
+import { StartSteps } from "./components/nav/StartSteps";
 import { AdSenseUnit } from "./components/ads/AdSenseUnit";
 import { Footer } from "./components/Footer";
 import { HomeHeroSearch } from "./components/home/HomeHeroSearch";
@@ -242,6 +243,8 @@ export default async function Home() {
 
           {/* [1098 · 배너] 상단 띠 배너 자리 — 검색 띠와 본문 사이 한 줄(띠 배너가 없으면 관리자에게만 점선 자리) */}
           <TopBanner placement="home_feed" plan={null} className="mt-3 md:mt-4" />
+          {/* [1124 · 처음 온 사람의 길] 비회원에게만 — 가입 → 임장노트 → 지도 → AI 분석 네 단계 + 전문가 등록 */}
+          <StartSteps from="home" className="mt-3 md:mt-4" />
 
           {/* ⑥ 내 관심 — 로그인만, 클라이언트 섬(서버 HTML 에는 없다). 로그인한 사람에게는 자기 관심 단지가 첫 내용이다 */}
           <div className="mt-3 flex flex-col gap-3 empty:hidden md:mt-4">
@@ -313,7 +316,7 @@ export default async function Home() {
                   </>
                 )}
               </section>
-              <AdZone placement="home_feed" seed={0} plan={null} className="hidden lg:block" />
+              <AdZone placement="home_feed" seed={0} plan={null} spot="side" className="hidden lg:block" />
               <AdSenseUnit />
             </aside>
 

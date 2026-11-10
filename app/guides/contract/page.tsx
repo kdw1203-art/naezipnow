@@ -10,6 +10,8 @@ import { breadcrumbJsonLd, howToJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { FactTable } from "@/app/components/compact/FactTable";
 import { FaqCompact } from "@/app/components/compact/FaqCompact";
+import { SectionTabs } from "@/app/components/nav/SectionTabs";
+import { GUIDE_TABS } from "@/lib/nav/section-tabs";
 
 /* ============================================================
    항목 F30 — 계약 전 체크리스트 & 표준계약·특약 가이드 (정보성 콘텐츠)
@@ -194,6 +196,8 @@ export default function ContractGuidePage() {
         dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, howTo]) }}
       />
       <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4 max-md:gap-3">
+        {/* [1121 · 기능 통폐합] 가이드 묶음 탭 */}
+        <SectionTabs tabs={GUIDE_TABS} current="/guides/contract" label="가이드" />
         {/* [1015 · 규칙 B] 머리의 "일반적인 확인 포인트예요 … 확인하세요" 안내 블록 삭제 — 맨 끝 고지 한 줄이 같은 말을 한다 */}
 
         {/* [1008 · J] 계산하는 도구로 가는 입구 한 줄 — 계약일·잔금일을 넣으면 날짜가 붙은 할 일 목록이 된다 */}

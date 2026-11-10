@@ -73,11 +73,13 @@ export async function generateMetadata({
 export default async function ComplexBrowsePage({
   searchParams,
 }: {
-  searchParams: Promise<{ district?: string }>;
+  searchParams: Promise<{ district?: string; sort?: string }>;
 }) {
   const sp = await searchParams;
   const region = resolveRegion(sp.district);
   const label = regionDisplayName(region);
+  /* [1118] 순서 고르기 — 최신 거래(기본) · 거래 많은 · 평단가 높은(같은 30곳 안에서 다시 줄 세운다 · 새 조회 없음) */
+  const sort = sp.sort === "tx" || sp.sort === "price" ? sp.sort : "recent";
   /* 조회 실패와 "거래 0건"을 구분해서 넘긴다 — 예전에는 둘 다 "준비 중입니다"로
      나갔는데, 장애 중에 그 문장은 거짓이다. */
   let summaries: ComplexSummary[] = [];
@@ -92,6 +94,19 @@ export default async function ComplexBrowsePage({
     );
   }
 
+  const ordered =
+    sort === "tx"
+      ? [...summaries].sort((a, b) => b.txCount12m - a.txCount12m)
+      : sort === "price"
+        ? [...summaries].sort((a, b) => (b.avgPricePerPyeongKrw ?? -1) - (a.avgPricePerPyeongKrw ?? -1))
+        : summaries;
+  const SORTS: Array<{ key: typeof sort; label: string }> = [
+    { key: "recent", label: "최신 거래순" },
+    { key: "tx", label: "거래 많은 순" },
+    { key: "price", label: "평단가 높은 순" },
+  ];
+  const sortHref = (k: string) =>
+    `/complex/browse?district=${encodeURIComponent(label)}${k === "recent" ? "" : `&sort=${k}`}`;
   return (
     <PageShell breadcrumb="홈 › 단지 실거래 › 서울 단지 목록" title="서울 단지별 실거래 현황">
       <HubBreadcrumbLd trail={[{ name: "단지별 실거래 현황", path: "/complex/browse" }]} />
@@ -112,7 +127,7 @@ export default async function ComplexBrowsePage({
           <h2 className="t-section text-ink">
             {label} 단지별 현황{" "}
             <span className="t-sub font-medium text-text-3">
-              최신 거래순 · 상위 {summaries.length}개
+              최근 거래 {summaries.length}곳
             </span>
           </h2>
           <details className="group relative">
@@ -141,10 +156,26 @@ export default async function ComplexBrowsePage({
             </div>
           </details>
         </div>
-        {/* [1015 · 규칙 I] 실거래 표 껍데기 = blue 리퀴드 판(스크롤 상자는 표 부품 안쪽) */}
-        <div className="lq-panel pb-2" data-tone="blue">
+        {/* [1118] 순서 칩 — 증권 앱 순위 탭 꼴(링크 · JS 없음) */}
+        <nav aria-label="순서" className="mb-2 flex gap-1.5 px-0.5">
+          {SORTS.map((o) => (
+            <Link
+              key={o.key}
+              href={sortHref(o.key)}
+              aria-current={sort === o.key ? "true" : undefined}
+              className={`chip inline-flex min-h-10 items-center px-3 t-sub font-bold no-underline md:min-h-9 ${
+                sort === o.key ? "chip-active" : "border border-line bg-surface text-text-2"
+              }`}
+            >
+              {o.label}
+            </Link>
+          ))}
+        </nav>
+        {/* [1118] 순위 목록 판 — 흰 카드(리퀴드 파랑 판은 표 시절의 껍데기) */}
+        <div className="card rounded-2xl px-3 py-2 md:px-4">
           <ComplexSummaryTable
-            summaries={summaries}
+            summaries={ordered}
+            ranked={sort !== "recent"}
             regionId={region.id}
             failed={summariesFailed}
           />

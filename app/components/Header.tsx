@@ -21,6 +21,8 @@ export function Header() {
   /* [1044] 대분류 활성은 "가장 긴 접두 하나"(nav-data navGroupOf) — 뉴스(/town/news)가 동네(/town)에서 떨어져 나와
      예전 startsWith 로는 뉴스 화면에서 동네·뉴스가 둘 다 켜진다. */
   const activeLabel = navGroupOf(pathname)?.label ?? null;
+  const moreItems = NAV.filter((item) => item.more);
+  const moreActive = moreItems.some((item) => item.label === activeLabel);
 
   /* [968 · 12] 스크롤 인지 — 공용 스크롤 상태(리스너 하나·rAF)에서 8px 경계만 받는다.
      예전엔 이 컴포넌트가 scroll 이벤트마다 setState 했다(터치는 프레임당 여러 번). */
@@ -68,7 +70,7 @@ export function Header() {
             (6칸 시절에도 각 10 · 15px 이 넘치고 있었다). 라벨은 그대로 두고 **간격만** 한 계단 더: 항목 좌우 패딩 md 4 · lg 6 · xl 14px, 항목 사이 md 0 · lg 2px,
             묶음 사이 md 8 · lg 10 · xl 24px, 검색칸 lg 180 · xl 252px(HeaderSearch), "노트 쓰기" md 12 · lg 16px. 실측 뒤: 768 · 1024 · 1100 · 1280 넘침 0 · 벨 36px. */}
         <nav className="hidden shrink-0 gap-0 t-body font-semibold text-text-1 md:flex lg:gap-0.5">
-          {NAV.map((item) => {
+          {NAV.filter((item) => !item.more).map((item) => {
             const active = activeLabel === item.label;
             return (
               <div
@@ -125,6 +127,54 @@ export function Header() {
               </div>
             );
           })}
+          {/* [1127 · 핵심 넷 + 더보기] 소유자 2026-11-10(토스 심사 완료 뒤) — 상단은 임장노트 · 지도 · AI 분석 · 동네 넷만 펼치고,
+              뉴스 · 요금제는 "더보기" 하나로 접는다(nav-data more). 링크는 전부 서버 HTML 에 그대로 있다(크롤 경로 · 요금제 두 번에 닿음).
+              뉴스 · 요금제 화면에 있으면 "더보기"가 켜진다. 좌측 내비 · 모바일 전체 메뉴 · 푸터는 여섯 그대로. */}
+          {moreItems.length > 0 && (
+            <div
+              className="group relative"
+              onKeyDown={(e) => {
+                if (e.key !== "Escape") return;
+                const el = document.activeElement;
+                if (el instanceof HTMLElement && e.currentTarget.contains(el)) el.blur();
+              }}
+            >
+              <button
+                type="button"
+                aria-haspopup="true"
+                /* 누르면 초점을 잡아 판을 연다 — 사파리 · 터치 화면은 버튼을 눌러도 초점이 가지 않아 hover 없이는 열 수 없었다 */
+                onClick={(e) => e.currentTarget.focus()}
+                data-active={moreActive ? "true" : undefined}
+                className={
+                  moreActive
+                    ? "nav-underline block whitespace-nowrap rounded-lg bg-primary-soft px-1 py-[7px] font-semibold text-primary transition-colors lg:px-1.5 xl:px-3.5"
+                    : "nav-underline block whitespace-nowrap rounded-lg px-1 py-[7px] font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.07)] hover:text-primary lg:px-1.5 xl:px-3.5"
+                }
+              >
+                더보기
+              </button>
+              <div className="invisible absolute left-0 top-full z-50 pt-2 opacity-0 transition-all duration-[180ms] group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                <div className="glass-strong dropdown-panel popover-surface flex min-w-[168px] gap-1 rounded-2xl p-1.5">
+                  {moreItems.map((item) => (
+                    <div key={item.label} className="flex min-w-[150px] flex-col">
+                      {/* 묶음 이름은 글자만 — 첫 하위 링크(뉴스룸 · 요금제·이용권)가 같은 목적지다 */}
+                      <span className="block whitespace-nowrap px-3 pb-0.5 pt-1.5 t-caption font-bold text-text-3">{item.label}</span>
+                      {(item.children ?? []).map((c) => (
+                        <Link
+                          key={c.href + c.label}
+                          href={c.href}
+                          prefetch={false}
+                          className="block whitespace-nowrap rounded-lg px-3 py-2 t-body font-semibold text-text-1 transition-all duration-[120ms] hover:translate-x-0.5 hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
+                        >
+                          {c.label}
+                        </Link>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
         </nav>
 
         {/* [972] 모바일 헤더 가운데 — 예전엔 그냥 빈 칸(flex-1)이었다.

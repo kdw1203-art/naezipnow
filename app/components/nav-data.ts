@@ -8,6 +8,8 @@ export type NavItem = {
   href: string;
   /** [1044] 이 대분류를 함께 켜는 다른 경로(세그먼트 접두) — 주소가 대분류 href 아래에 있지 않은 하위 화면용 */
   also?: readonly string[];
+  /** [1127] PC 상단 메뉴에서 "더보기" 안으로 접는 대분류 — 좌측 내비 · 모바일 전체 메뉴 · 푸터는 그대로 펼친다 */
+  more?: boolean;
   children?: {
     label: string;
     href: string;
@@ -61,7 +63,7 @@ export const NAV: NavItem[] = [
     also: ["/complex", "/region", "/tx", "/dong", "/reports"],
     children: [
       { label: "통합 지도 (탐색·실거래·매물)", shortLabel: "통합 지도", href: "/map" },
-      { label: "3D 지도", href: "/map/3d" },
+      /* [1121 · 기능 통폐합] 3D 지도 메뉴 줄은 뺐다 — 지도 단지 판 · 단지 · 동 화면의 「3D로 보기」와 3D 화면의 「2D」로 오간다(같은 지도의 다른 보기) */
     ],
   },
   {
@@ -107,6 +109,7 @@ export const NAV: NavItem[] = [
   {
     label: "뉴스",
     href: "/town/news",
+    more: true,
     also: ["/digest"],
     children: [
       { label: "뉴스룸", href: "/town/news" },
@@ -124,6 +127,7 @@ export const NAV: NavItem[] = [
   {
     label: "요금제",
     href: "/subscription",
+    more: true,
     children: [
       { label: "요금제·이용권", href: "/subscription" },
       { label: "결제 수단 안내", href: "/subscription/payment-methods" },

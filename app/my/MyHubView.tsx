@@ -246,7 +246,16 @@ function NoteRow({ n, sub, last }: { n: MyHubNote; sub?: string; last?: boolean 
   );
 }
 
-export function MyHubView({ data }: { data: MyHubData }) {
+export function MyHubView({
+  data,
+  leftExtra,
+  rightExtra,
+}: {
+  data: MyHubData;
+  /** [1122] 왼쪽(활동) 열 끝 · 오른쪽(관리) 열 「더 보기」 위에 끼우는 서버 조각 */
+  leftExtra?: React.ReactNode;
+  rightExtra?: React.ReactNode;
+}) {
   const {
     name,
     avatarUrl,
@@ -724,6 +733,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
               </div>
             </section>
           )}
+          {leftExtra}
         </div>
 
         {/* ── 우측: 구독 · 포인트 · 더 보기 ── */}
@@ -833,7 +843,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
               tone="mint"
               items={[
                 { label: "미션", href: "/my/points?tab=missions", desc: "시작 3미션 200P · 주간 미션 매주 리셋" },
-                { label: "AI 분석 기록", href: "/my/analyses" },
+                /* [1121] AI 분석 기록은 「내 분석」 칸으로(포인트 칸에 있을 자리가 아니었다) */
                 { label: "친구 초대", href: "/my/points?tab=referral", desc: "내 링크 가입 시 친구와 나 모두 300P" },
               ]}
             />
@@ -847,6 +857,7 @@ export function MyHubView({ data }: { data: MyHubData }) {
             </div>
           </section>
 
+          {rightExtra}
           {/* 더 보기 — 관리자 콘솔 링크는 role=admin 세션에만. 접근 제어는 서버(app/admin/layout.tsx). */}
           <section className="mb-2 flex flex-col gap-2.5">
             <SectionHead title="더 보기" />

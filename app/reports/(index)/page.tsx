@@ -8,6 +8,10 @@ import { listSeasonAvailability, type SeasonAvailability } from "@/lib/reports/s
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { logger } from "@/lib/log";
 import { reportingClosed } from "@/lib/newui/reporting-window";
+import { buildYearHeat } from "@/lib/reports/year-heat";
+import { ReportsYearHeatmap } from "./ReportsYearHeatmap";
+import { SectionTabs } from "@/app/components/nav/SectionTabs";
+import { REPORT_TABS } from "@/lib/nav/section-tabs";
 
 /* [1010] 1h → 1일. 목록(데이터가 있는 달 + 관측된 계절)은 월 경계에서만 늘어난다.
    적재 직후 SOURCE_MAP.molit 이 "/reports" 를 이미 비우므로 TTL 은 안전망이다. */
@@ -110,6 +114,8 @@ export default async function ReportsIndexPage() {
     else byYear.set(y, [m]);
   }
   const years = [...byYear.keys()].sort((a, b) => b.localeCompare(a));
+  /* [1118] 연도별 달력 칸 — 그 해 안에서 견준 색(lib/reports/year-heat) */
+  const heat = buildYearHeat(months, (ym) => !reportingClosed(ym, now));
 
   return (
     <>
@@ -121,6 +127,8 @@ export default async function ReportsIndexPage() {
       )}
       <div className="mx-auto max-w-[1100px]">
         <h1 className="rise-in t-title text-ink">월간 아파트 실거래 리포트</h1>
+        {/* [1121 · 기능 통폐합] 실거래 리포트 묶음 탭(월간 · 주간) */}
+        <SectionTabs tabs={REPORT_TABS} current="/reports" label="실거래 리포트" className="mt-2" />
         {/* [1011] "매월 자동으로 만들어지는" 파이프라인 설명을 걷었다(소유자 지시).
             [1015 · 규칙 B] 사실 한 줄: 최신 달 · 지역 수 · 건수(실데이터)
             [1028 · 제안 12] 해요체 두 문장 — 무엇을 집계했는지 + 계산 방식은 데이터 방법론 링크.
@@ -141,37 +149,8 @@ export default async function ReportsIndexPage() {
                 월간 집계 <strong className="text-ink">불러오기 실패</strong> · 잠시 후 다시
               </div>
             ) : months.length > 0 ? (
-              years.map((y) => (
-                <section key={y} id={`y${y}`} className="scroll-mt-24">
-                  <h2 className="mb-2 t-section text-ink">
-                    {y}년 <span className="t-sub font-medium text-text-3">{byYear.get(y)!.length}개월</span>
-                  </h2>
-                  {/* [1015 · 규칙 I] 카드 타일 묶음 → 리퀴드 행 목록(blue = 실거래·거래 건수) */}
-                  <div data-tone="blue" className="lq-panel flex flex-col divide-y">
-                    {byYear.get(y)!.map((m) => (
-                      <Link
-                        key={m.ym}
-                        prefetch={false}
-                        href={`/reports/${m.ym}`}
-                        className="flex min-h-[48px] items-center justify-between gap-3 py-2.5 no-underline"
-                      >
-                        <span className="t-body font-bold text-ink">
-                          {formatYmKo(m.ym)} 실거래 리포트
-                          {/* 신고 기한이 안 지난 달 — 완결처럼 보이지 않게 */}
-                          {!reportingClosed(m.ym, now) && (
-                            <span className="ml-1.5 inline-block whitespace-nowrap rounded-md bg-primary-soft px-1.5 py-0.5 t-caption font-bold text-primary align-middle">
-                              신고 중
-                            </span>
-                          )}
-                        </span>
-                        <span className="t-num shrink-0 t-sub font-bold text-text-3">
-                          {m.regionCount}개 지역 · {m.txCount.toLocaleString("ko-KR")}건 ›
-                        </span>
-                      </Link>
-                    ))}
-                  </div>
-                </section>
-              ))
+              /* [1118 · 다른 디자인] 연도별 30줄 목록 → 해마다 1~12월 달력 칸(색 = 그 해 안 거래 크기 · 점선 = 신고 중) */
+              <ReportsYearHeatmap years={heat} />
             ) : (
               <div className="card rounded-2xl px-5 py-8 text-center t-body text-text-3 max-md:py-5">
 집계된 월 없음 · 실거래 신고가 집계되면 표시

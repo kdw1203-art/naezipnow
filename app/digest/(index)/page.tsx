@@ -11,6 +11,8 @@ import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { newsHref, storyHref } from "@/lib/town/post-href";
 import { DigestThumb } from "../DigestThumb";
 import { newsThumbPath } from "@/lib/news/thumb";
+import { SectionTabs } from "@/app/components/nav/SectionTabs";
+import { REPORT_TABS } from "@/lib/nav/section-tabs";
 
 export const metadata = buildPageMetadata({
   title: "주간 다이제스트",
@@ -129,6 +131,8 @@ export default async function DigestPage() {
         <h1 className="rise-in-1 mt-2 t-title text-ink">
           {digest.weekLabel} 주간 다이제스트
         </h1>
+        {/* [1121 · 기능 통폐합] 실거래 리포트 묶음 탭(월간 · 주간) */}
+        <SectionTabs tabs={REPORT_TABS} current="/digest" label="실거래 리포트" className="mt-2" />
 
         {/* 뉴스 하이라이트 (board_posts 자동 수집, 7일) */}
         <div className="rise-in-2 card flex flex-col gap-2 rounded-2xl px-4 py-3.5">

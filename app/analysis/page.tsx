@@ -3,7 +3,6 @@
    (loadHubTeasersByRegion → ToolCard teaserByRegion) · 계열 "N종" 배지 → 그 계열 앵커 · 기록 시작 카드 게스트/로그인 같은 최소 높이(.hub-start). */
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import { AdZone } from "@/app/components/ads/AdZone";
-import { TopBanner } from "@/app/components/ads/TopBanner";
 import { Icon } from "@/app/components/Icon";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { loadHomeCoverage } from "@/lib/newui/home-coverage";
@@ -141,8 +140,6 @@ export default async function AnalysisHubPage() {
             toolTitles={Object.fromEntries(AI_TOOL_IDS.map((id) => [id, TOOL_IDENTITIES[id].title]))}
           />
 
-          {/* [1098 · 배너] 상단 띠 배너 자리 — 히어로 아래 */}
-          <TopBanner placement="page_bottom" plan={null} />
 
           {/* ── 계열 1 · 단지 하나를 깊게 (UI-01·03) — [1109] 살아 있는 4종만(종합 진단 · 시세 예측 · 매수 타이밍 · 임장 동선).
               "그 밖의 8종" 칸은 없다: 운영 60일 표본에서 그 8종은 열린 적이 0~3회였고 이름이 겹치는 쌍(비교 · 갭 · 포트폴리오 ·

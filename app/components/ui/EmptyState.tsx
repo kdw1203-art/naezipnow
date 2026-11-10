@@ -116,6 +116,28 @@ export function EmptyState({
   className = "",
 }: EmptyStateProps) {
   const picture: IllustName | null = illust ?? (icon ? (ICON_TO_ILLUST[icon] ?? null) : null);
+  /* [1122 · 관리자 개편] 관리자 빈 상태는 한 줄 — 작은 아이콘 · 제목 · 설명 | 오른쪽 링크.
+     예전엔 칸마다 가운데 정렬 블록(48px 원 · 제목 · 설명 · 단추 = 약 150px)이라 "할 일 없음" 여섯 칸이 대시보드 첫 화면을 다 채웠다(로컬 캡처 2026-11-09) */
+  if (tone === "admin") {
+    return (
+      <div className={`${SHELL.admin} flex items-center gap-3 px-3.5 py-3 ${className}`.trim()}>
+        {icon && (
+          <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${ICON_WRAP.admin}`}>
+            <Icon name={icon} size={16} />
+          </span>
+        )}
+        <span className="min-w-0 flex-1">
+          <span className={`block ${TITLE.admin}`}>{title}</span>
+          {desc && <span className={`block ${DESC.admin}`}>{desc}</span>}
+        </span>
+        {action && (
+          <a href={action.href} className={`${ADMIN_LINK} shrink-0`}>
+            {action.label}
+          </a>
+        )}
+      </div>
+    );
+  }
   return (
     <div
       className={`${SHELL[tone]} ${PAD[tone]} flex flex-col items-center gap-2 text-center ${className}`.trim()}

@@ -1,4 +1,5 @@
 import { unstable_cache } from "next/cache";
+import { MapFirstCoach } from "./MapFirstCoach";
 import { MapClientLazy as MapClient } from "./MapClientLazy";
 import type { DanjiItem, TradeItem } from "./map-client";
 import {
@@ -496,6 +497,8 @@ export default async function MapPage() {
         danjiLoadFailed={!dbLoaded.ok}
         regionMarkersLoadFailed={!markersLoaded.ok}
       />
+      {/* [1125] 처음 온 비회원에게 한 번만 — 단지를 누르면 열리는 것 · 임장노트로 가는 길 */}
+      <MapFirstCoach />
     </>
   );
 }

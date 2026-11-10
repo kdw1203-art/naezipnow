@@ -333,6 +333,14 @@ export function SupplyClient({
             </div>
           )}
           {monthlyShown.length > 0 ? (
+            /* [1119 · 같은 사실 한 번] 위 세로 막대와 같은 24개월 — 숫자로 읽는 줄은 닫힌 접힘으로(막대가 2개 이하라 그림이 없을 때만 펼친다) */
+            <details className="group" open={monthlyShown.length <= 2}>
+              <summary className="tap-line flex min-h-10 cursor-pointer list-none items-center justify-between t-sub font-bold text-text-2">
+                월별 숫자 보기
+                <span aria-hidden="true" className="text-text-3 transition-transform group-open:rotate-180">
+                  {/* dead-control-ok: summary 가 눌리는 자리 — 꺾쇠는 열림 표시 */}⌄
+                </span>
+              </summary>
             <div className="flex flex-col gap-1.5">
               {monthlyShown.map((b) => {
                 const pct =
@@ -364,6 +372,7 @@ export function SupplyClient({
                 );
               })}
             </div>
+            </details>
           ) : (
             <div className="rounded-lg border border-line bg-surface px-4 py-8 text-center t-body text-text-3">
 표시할 월별 입주 물량 데이터 없음

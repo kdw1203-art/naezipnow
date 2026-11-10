@@ -47,15 +47,19 @@ export function RegionMapPicker({
   const go = (href: string) => router.push(href);
 
   const listFallback = (
-    /* 지도를 못 그릴 때 — 고른 시/도의 지역만(5개 초과 필터 규칙: 시/도 칩이 필터) */
-    <div className={`flex flex-col overflow-auto rounded-2xl border border-line bg-surface p-2 ${heightClass}`}>
+    /* 지도를 못 그릴 때 — 고른 시/도의 지역만(5개 초과 필터 규칙: 시/도 칩이 필터).
+       [1123] 지도 높이(600px)를 그대로 잡아 흰 빈 칸이 크게 남던 것 → 내용 높이만 · 칩 줄바꿈 대신 줄 맞춘 격자(이름 | 값) */
+    <div className="rounded-2xl border border-line bg-surface p-2">
       <p className="m-0 px-2 py-1 t-caption text-text-3">지도 불러오기 실패 · 목록으로 고르기</p>
-      <ul className="m-0 flex list-none flex-wrap gap-1.5 p-1">
+      <ul className="m-0 grid list-none grid-cols-2 gap-1 p-1 sm:grid-cols-3 lg:grid-cols-5">
         {inSido.map((m) => (
           <li key={m.id}>
-            <Link href={m.href} className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline">
-              {m.name}
-              {m.value ? <span className="ml-1 t-caption text-text-3">{m.value}</span> : null}
+            <Link
+              href={m.href}
+              className="flex min-h-10 items-center justify-between gap-2 rounded-lg bg-bg px-3 t-sub font-bold text-text-1 no-underline hover:bg-divider"
+            >
+              <span className="truncate">{m.name}</span>
+              {m.value ? <span className="shrink-0 t-caption t-num font-medium text-text-3">{m.value}</span> : null}
             </Link>
           </li>
         ))}

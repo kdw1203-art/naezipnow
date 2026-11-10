@@ -469,6 +469,19 @@ export function LoginClient({ social: socialAll }: { social: SocialProvider[] })
           {ctx.line1}
         </h1>
         {ctx.sub && <p className="rise-in-2 t-body text-text-2">{ctx.sub}</p>}
+        {/* [1125 · 로그인 = 가입과 같은 꼴] 가입 화면(1122)의 사실 세 칸을 그대로 — 두 화면이 같은 말을 한다(무료 요금제 한도 · 권유 문장 없음) */}
+        <ul className="rise-in-2 m-0 grid list-none grid-cols-3 gap-1.5 p-0" aria-label="로그인하면 쓰는 것">
+          {[
+            { k: "임장노트", v: "저장 · 사진 · 점수" },
+            { k: "관심 단지", v: "10곳 · 새 실거래 알림" },
+            { k: "AI 분석", v: "누적 3회 무료" },
+          ].map((b) => (
+            <li key={b.k} className="flex min-w-0 flex-col gap-0.5 rounded-xl bg-bg px-2.5 py-2">
+              <span className="t-sub font-bold text-ink">{b.k}</span>
+              <span className="t-caption text-text-3">{b.v}</span>
+            </li>
+          ))}
+        </ul>
 
         {verifiedNotice && (
           <div

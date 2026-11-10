@@ -462,32 +462,40 @@ export default async function TownRegionHomePage({
             지도에서 {region.name} 보기 ›
           </Link>
         </div>
-        <div className="card flex flex-col divide-y divide-line rounded-2xl px-4">
-          {groupRegionsByCity(REGION_CATALOG, id).map((g) => (
-            <details key={g.key} className="group py-2.5" open={g.city === ownCity}>
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-1 t-body font-bold text-ink">
-                <span>
-                  {g.city}
-                  <span className="ml-1.5 t-caption font-semibold text-text-3">{g.items.length}곳</span>
-                </span>
-                <span className="shrink-0 text-text-3 transition-transform group-open:rotate-45" aria-hidden="true">
-                  +
-                </span>
-              </summary>
-              <div className="flex flex-wrap gap-1.5 pb-1.5 pt-1">
-                {g.items.map((r) => (
-                  <Link
-                    key={r.id}
-                    href={`/town/${r.id}`}
-                    className="chip border border-line bg-surface px-3 py-1.5 t-sub font-bold text-text-2"
-                  >
-                    {r.name}
-                  </Link>
-                ))}
-              </div>
-            </details>
-          ))}
-        </div>
+        {/* [1120 · 5개 넘으면 필터] 시·도 접힘 9개 + 펼친 시·도 칩 벽(서울 25칸) → "다른 동네 고르기" 접힘 하나 — 판 안에 시·도별 링크 전량(크롤 경로 그대로) · 지금 시·도가 맨 앞 */}
+        <details className="group relative">
+          <summary className="press flex min-h-10 w-fit cursor-pointer list-none items-center gap-1 rounded-lg border border-line bg-surface px-3 t-sub font-bold text-text-2">
+            다른 동네 고르기 · {ownCity ?? "전국"} 먼저
+            <span aria-hidden="true" className="text-text-3 transition-transform group-open:rotate-180">
+              {/* dead-control-ok: summary 가 눌리는 자리 — 꺾쇠는 열림 표시 */}⌄
+            </span>
+          </summary>
+          <div className="card mt-1 flex max-h-[60vh] flex-col gap-3 overflow-y-auto rounded-xl p-3">
+            {[...groupRegionsByCity(REGION_CATALOG, id)]
+              .sort((x, y) => (x.city === ownCity ? -1 : y.city === ownCity ? 1 : 0))
+              .map((g) => (
+                <div key={g.key}>
+                  <p className="m-0 mb-1 px-1 t-caption font-bold text-text-3">
+                    {g.city} · {g.items.length}곳
+                  </p>
+                  <div className="grid grid-cols-3 gap-1 sm:grid-cols-5">
+                    {g.items.map((r) => (
+                      <Link
+                        key={r.id}
+                        href={`/town/${r.id}`}
+                        aria-current={r.id === id ? "page" : undefined}
+                        className={`flex min-h-10 items-center justify-center rounded-lg px-2 text-center t-sub font-bold no-underline ${
+                          r.id === id ? "bg-primary-soft text-primary" : "text-text-2 hover:bg-bg"
+                        }`}
+                      >
+                        {r.name}
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </details>
       </section>
 
       {/* [1015] 광고 — 페이지 끝 1곳(브리프 규칙 G: 첫 화면 밖). 이 화면에 광고 자리가 없었다.

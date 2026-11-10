@@ -2,6 +2,7 @@
    "잠실동 아파트 실거래가" 같은 동 단위 검색어를 받는 화면. 원천은 전부 이미 있는 집계(lib/dong/landing.ts 헤더).
    얇은 페이지 금지: 단지 3곳 · 최근 6개월 30건 미만은 noindex,follow(페이지는 있다 — 단지 상세의 동 칩이 여기로 온다).
    지역 슬러그는 /tx 와 같은 규칙(공백 → 하이픈)이라 /tx/<지역> ↔ /dong/<지역>/<동> 이 1:1 로 이어진다. */
+import { countPublicNotesByRegionToken } from "@/lib/inspection/store-db";
 import type { Metadata } from "next";
 import { cache } from "react";
 import Link from "@/app/components/IntentLink";
@@ -103,10 +104,15 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
     logger.error(`[dong] ${label} 거래 창 조회 실패`, e);
   }
   /* [1095 · 기능] 이 동의 단지 비교 조합(거래 많은 순 6쌍) — 실패는 빈 배열(곁다리) */
-  const [siblings, txRegion, pairs] = await Promise.all([
+  /* [1127] 이 구의 공개 임장노트 수 — 노트 지역은 구 단위라 동이 아니라 구 이름으로 센다. 실패 · 0건이면 줄 없음 */
+  /* 여러 도시에 같은 이름이 있는 구(중구 · 동구 · 서구 · 남구 · 북구 · 강서구)는 도시까지 붙인 글자로 센다 — 다른 도시 노트가 섞이지 않게 */
+  const lastToken = region.trim().split(/\s+/).pop() ?? "";
+  const guToken = ["중구", "동구", "서구", "남구", "북구", "강서구"].includes(lastToken) ? region.trim() : lastToken;
+  const [siblings, txRegion, pairs, guNotes] = await Promise.all([
     loadDongSiblings(region),
     findTxRegionBySlug(regionSlug).catch(() => null),
     loadDongPairs(region, dong),
+    guToken ? countPublicNotesByRegionToken(guToken).catch(() => null) : Promise.resolve(null),
   ]);
   const others = siblings.filter((s) => s.dong !== dong).slice(0, 14);
   const regionHubId = catalogIdForTxRegionName(region);
@@ -140,6 +146,39 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
   const shown = complexes.slice(0, 30);
   const rest = complexes.slice(30);
 
+  /* [1120] 최근 실거래 표 한 벌 — 앞 8건 · 나머지 접힘이 같은 꼴을 쓴다 */
+  const dealTable = (rows: typeof deals, offset: number) => (
+    <table className="w-full whitespace-nowrap text-left t-body">
+      <thead>
+        <tr className="border-b border-border t-sub text-text-3">
+          <th className="py-2 font-medium">계약</th>
+          <th className="py-2 pl-3 font-medium">단지</th>
+          <th className="py-2 pl-3 text-right font-medium">전용</th>
+          <th className="py-2 pl-3 text-right font-medium">층</th>
+          <th className="py-2 pl-3 text-right font-medium">금액</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((d, i) => (
+          <tr key={`${d.ym}-${d.day ?? 0}-${d.complexName}-${i + offset}`} className="border-b border-border last:border-b-0">
+            <td className="py-2.5 tabular-nums text-text-2">
+              {ymDot(d.ym)}
+              {d.day ? `.${String(d.day).padStart(2, "0")}` : ""}
+            </td>
+            <td className="py-2.5 pl-3 font-bold text-ink">
+              <Link href={complexCanonicalPathFromNames(region, d.complexName)} className="tap-line text-ink no-underline hover:text-primary">
+                {d.complexName}
+              </Link>
+            </td>
+            <td className="py-2.5 pl-3 text-right tabular-nums text-text-2">{d.areaM2 ? `${Math.round(d.areaM2)}㎡` : "—"}</td>
+            <td className="py-2.5 pl-3 text-right tabular-nums text-text-2">{d.floor ?? "—"}</td>
+            <td className="py-2.5 pl-3 text-right t-num font-bold text-ink">{formatKrwShort(d.priceKrw)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+
   return (
     <PageShell breadcrumb={`홈 › 동별 실거래 › ${region} › ${dong}`} title={`${label} 아파트 실거래`}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript([crumbs, dataset]) }} />
@@ -149,6 +188,23 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
         단지 <strong className="text-ink">{n(complexes.length)}곳</strong> · 최근 6개월 매매 신고{" "}
         <strong className="text-ink">{n(recent)}건</strong> · 국토교통부 실거래 · 매물 호가 아님
       </p>
+      {/* [1127] 0건이어도 줄은 선다(소유자 "데이터가 없더라도") — "없음"으로 적고 첫 노트 쓰기로 잇는다. 조회 실패만 줄 없음 */}
+      {guNotes != null && (
+        <p className="rise-in -mt-2 mb-4 t-sub max-md:-mt-1 max-md:mb-3">
+          {guNotes > 0 ? (
+            <Link href="/notes" prefetch={false} className="tap-line font-bold text-primary">
+              {guToken} 공개 임장노트 {n(guNotes)}건 ›
+            </Link>
+          ) : (
+            <>
+              <span className="text-text-3">{guToken} 공개 임장노트 없음 · </span>
+              <Link href="/notes/new" prefetch={false} className="tap-line font-bold text-primary">
+                첫 노트 쓰기 ›
+              </Link>
+            </>
+          )}
+        </p>
+      )}
       {/* [1086 · 서울 3D] 서울 동은 3D 동네 지도로 — 건물 높이(OpenStreetMap) 위에 이 동 단지(평당 평균 단계)·역·학교 */}
       {map3dSupported(region) && (
         <p className="rise-in -mt-2 mb-4 t-sub max-md:-mt-1 max-md:mb-3">
@@ -199,41 +255,24 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
             <section className="rise-in-1 card mb-4 p-[var(--pad-card)] max-md:mb-3">
               <h2 className="t-section text-ink">면적대별 거래금액</h2>
               <p className="mt-0.5 t-caption text-text-3">최근 12개월 · 전용면적 기준 · {bands.length}구간</p>
-              <div data-tone="blue">
-                <HScroll className="lq-panel mt-3 max-md:mt-2">
-                  <table className="w-full whitespace-nowrap text-left t-body">
-                    <thead>
-                      <tr className="border-b border-border t-sub text-text-3">
-                        <th className="py-2 font-medium">전용면적</th>
-                        <th className="py-2 pl-3 text-right font-medium">중앙값</th>
-                        <th className="py-2 pl-3 text-right font-medium">평균</th>
-                        <th className="py-2 pl-3 text-right font-medium">거래</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {bands.map((b) => (
-                        <tr key={b.slug} className="border-b border-border last:border-b-0">
-                          <td className="py-2.5 font-bold text-ink">
-                            {txRegion ? (
-                              <Link
-                                href={`/tx/${encodeURIComponent(regionSlug)}/area/${b.slug}`}
-                                className="tap-line text-primary no-underline"
-                              >
-                                {b.label}
-                              </Link>
-                            ) : (
-                              b.label
-                            )}
-                          </td>
-                          <td className="py-2.5 pl-3 text-right t-num font-bold text-ink">{formatKrwShort(b.medianKrw)}</td>
-                          <td className="py-2.5 pl-3 text-right tabular-nums text-text-2">{formatKrwShort(b.avgKrw)}</td>
-                          <td className="py-2.5 pl-3 text-right tabular-nums text-text-2">{n(b.count)}건</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </HScroll>
-              </div>
+              {/* [1120] 20줄 표 → 앞 8건 + "나머지 N건" 접힘(같은 표 꼴 · 행은 HTML 에 그대로) */}
+              {[deals.slice(0, 8), deals.slice(8)].map((part, pi) =>
+                part.length === 0 ? null : pi === 0 ? (
+                  <div key={pi} data-tone="blue">
+                    <HScroll className="lq-panel mt-3 max-md:mt-2">{dealTable(part, 0)}</HScroll>
+                  </div>
+                ) : (
+                  <details key={pi} className="group mt-2">
+                    <summary className="tap-line flex min-h-10 cursor-pointer list-none items-center justify-center rounded-lg border border-line t-sub font-bold text-text-2 hover:bg-bg">
+                      <span className="group-open:hidden">나머지 {n(part.length)}건 보기</span>
+                      <span className="hidden group-open:inline">접기</span>
+                    </summary>
+                    <div data-tone="blue">
+                      <HScroll className="lq-panel mt-2">{dealTable(part, 8)}</HScroll>
+                    </div>
+                  </details>
+                ),
+              )}
             </section>
           )}
 

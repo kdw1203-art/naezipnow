@@ -125,7 +125,7 @@ test("D4 HScroll — 넘칠 때만 끝 흐림·안내, 끝에 닿으면 '표 끝
     "app/apply/ApplySearchClient.tsx",
     "app/region/[id]/page.tsx",
     "app/region/[id]/report/[ym]/page.tsx",
-    "app/components/ComplexSummaryTable.tsx",
+    /* [1118] ComplexSummaryTable 은 표 → 순위 목록(가로 스크롤 없음) */
     "app/notes/best/[ym]/page.tsx",
     "app/calculator/BrokerageFeeCalc.tsx",
   ]) {

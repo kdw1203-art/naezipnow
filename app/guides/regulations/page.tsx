@@ -4,6 +4,8 @@ import { PageShell } from "@/app/components/PageShell";
 import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { FaqCompact } from "@/app/components/compact/FaqCompact";
+import { SectionTabs } from "@/app/components/nav/SectionTabs";
+import { GUIDE_TABS } from "@/lib/nav/section-tabs";
 
 /* ============================================================
    항목 F28 — 부동산 규제·의무 안내 (정보성 콘텐츠)
@@ -183,6 +185,8 @@ export default function RegulationsGuidePage() {
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
       <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4 max-md:gap-3">
+        {/* [1121 · 기능 통폐합] 가이드 묶음 탭 */}
+        <SectionTabs tabs={GUIDE_TABS} current="/guides/regulations" label="가이드" />
         {/* 최신 수치 확인 안내 — 수치를 지어내지 않는다. [1015 · 규칙 B·C] 파란 안내 블록 → 사실 한 줄 */}
         <p className="rise-in -mt-1 t-sub text-text-2">
           개념만 다룸 · 세율·한도·규제지역 지정은 수시로 바뀜 · 최신 수치는 국세청(홈택스)·국토교통부·청약홈(한국부동산원)

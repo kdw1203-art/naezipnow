@@ -509,6 +509,19 @@ export function SignupClient({
       {/* [1040] 가입 3단계 — 계정 → 메일 인증 → 관심 지역. 머리의 채움 막대(칸을 채운 비율)를 대신한다:
           "이 화면 다음에 무엇이 남았나"를 인증 메일 안내·환영 화면과 같은 띠로 잇는다 */}
       <SignupSteps current={0} className="rise-in" />
+      {/* [1122 · 가입 화면] 가입하면 생기는 것 — 사실 세 칸(무료 요금제 한도 그대로 · 권유 문장 없음). 토스 · 카카오 가입 첫 화면의 "받는 것 요약" 꼴 */}
+      <ul className="rise-in m-0 grid list-none grid-cols-3 gap-1.5 p-0" aria-label="무료 가입으로 쓰는 것">
+        {[
+          { k: "임장노트", v: "저장 · 사진 · 점수" },
+          { k: "관심 단지", v: "10곳 · 새 실거래 알림" },
+          { k: "AI 분석", v: "누적 3회 무료" },
+        ].map((b) => (
+          <li key={b.k} className="flex min-w-0 flex-col gap-0.5 rounded-xl bg-bg px-2.5 py-2">
+            <span className="t-sub font-bold text-ink">{b.k}</span>
+            <span className="t-caption text-text-3">{b.v}</span>
+          </li>
+        ))}
+      </ul>
 
       {googleBlocked && inApp && (
         <div className="rise-in-2">

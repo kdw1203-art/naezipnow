@@ -24,6 +24,7 @@ import {
 } from "@/lib/newui/complex-link";
 import { NEWS_TAGS } from "@/lib/news/tags";
 import { townHandoff } from "@/lib/town/handoff";
+import { StartSteps } from "@/app/components/nav/StartSteps";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { Icon } from "@/app/components/Icon";
 import { ReadingProgress } from "./ReadingProgress";
@@ -697,6 +698,8 @@ export default async function TownNewsDetailPage({
           </div>
         </aside>
       </div>
+      {/* [1124 · 유입 경로 — 뉴스] 기사로 처음 들어온 비회원에게 다음 순서(가입 → 임장노트 → 지도 → 분석) */}
+      <StartSteps from="news" returnTo={`/town/news/${id}`} className="mt-4" />
     </ShellNarrow>
   );
 }

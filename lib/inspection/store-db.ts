@@ -272,6 +272,25 @@ export async function countNotesByRegionToken(
 }
 
 /**
+ * [1127] 공개 임장노트 수 — 지역 글자(구 · 시 토큰) 부분일치. 동 화면의 "이 구 공개 임장노트 N건" 한 줄용.
+ * 노트의 지역은 구 단위 자유 글자라 **동 단위로는 세지 못한다**(부르는 쪽이 구 이름으로 적는다).
+ * 읽기 전용 클라이언트(anon 정책 = 공개 노트만). 실패는 throw — 부르는 쪽이 줄을 그리지 않는다(0건으로 접지 않는다).
+ */
+export async function countPublicNotesByRegionToken(token: string): Promise<number> {
+  const clean = token.replace(/[%_,()]/g, "").trim();
+  if (!clean) return 0;
+  const sb = getReadOnlySupabase();
+  if (!sb) throw new Error("inspection_notes 를 읽을 수단이 없습니다");
+  const { count, error } = await sb
+    .from("inspection_notes")
+    .select("id", { count: "exact", head: true })
+    .eq("is_public", true)
+    .ilike("region", `%${clean}%`);
+  if (error) throw noteQueryError("inspection_notes (지역 공개 노트 수)", error);
+  return count ?? 0;
+}
+
+/**
  * 공개 임장노트 목록 (최신순).
  *
  * ── 2026-07-26: 두 가지를 고쳤다 ────────────────────────────────────────────

@@ -5,6 +5,8 @@ import { ListingCompareView } from "@/components/ListingCompareView";
 import { getListingById } from "@/lib/listings/store-db";
 import { comparePriceToMarket } from "@/lib/listings/price-compare";
 import { MAX_COMPARE, type MarketAwareCompareListing } from "@/components/listing-compare-store";
+import { SectionTabs } from "@/app/components/nav/SectionTabs";
+import { COMPARE_TABS } from "@/lib/nav/section-tabs";
 
 /* ============================================================
    매물 비교함 — /listings/compare?ids=a,b,c
@@ -87,6 +89,8 @@ export default async function ListingComparePage({
       <ShellBreadcrumb>홈 › 실매물 › 비교함</ShellBreadcrumb>
       <div className="mb-4">
         <h1 className="rise-in t-title font-bold text-ink">매물 비교함</h1>
+        {/* [1121] 비교 묶음 탭 */}
+        <SectionTabs tabs={COMPARE_TABS} current="/listings/compare" label="비교" className="mt-2" />
         <p className="mt-1 t-body text-text-3">
           담은 매물의 가격·면적·층·시세대비·신선도·위치를 나란히 비교해요.
         </p>

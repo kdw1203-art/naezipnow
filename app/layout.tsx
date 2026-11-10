@@ -6,6 +6,7 @@ import { InstallPrompt } from "./components/InstallPrompt";
 import { AdSenseLoader } from "./components/AdSenseLoader";
 import { ConditionalIslands } from "./components/ConditionalIslands";
 import { BackToTop } from "./components/BackToTop";
+import { SideAdRails } from "./components/ads/SideAdRails";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { ADSENSE_EXCLUDED_PATH_PREFIXES, getAdSenseClient } from "@/lib/ads/adsense-policy";
 import { buildAdSenseBootScript } from "@/lib/ads/adsense-boot";
@@ -327,6 +328,8 @@ export default function RootLayout({
               <SoftSignupProvider>
                 {/* 402/쿼터 — SoftSignup(401)과 짝인 전역 페이월 */}
                 <UpgradePaywallProvider>
+                  {/* [1124] 본문 바깥 좌우 광고 띠 — 넓은 PC 화면의 빈 여백에만(제외 경로 · 관리자 · 광고 없는 플랜은 안 나간다) */}
+                  <SideAdRails />
                   {children}
                   {/* 이동 중 상단 진행바 · 경로 전환 페이드 · 스크롤 리빌.
                       셋 다 렌더하는 마크업이 없거나(null) 화면 위 얇은 한 줄이라

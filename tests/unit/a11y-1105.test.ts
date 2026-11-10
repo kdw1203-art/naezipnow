@@ -28,13 +28,16 @@ test("2) 가로 밀기 줄 — 칩 · 틀 자신의 포커스 링을 안쪽으�
   const hs = strip(read("app/components/HScroll.tsx"));
   assert.match(hs, /<div\s+ref=\{ref\}\s+data-hscroll=""\s+className=\{`overflow-x-auto /);
   const cmp = strip(read("app/complex/compare/page.tsx"));
-  assert.match(cmp, /aria-label="지역 바로가기"\s*className="[^"]*overflow-x-auto[^"]*"\s*data-hscroll=""/);
+  /* [1119] /complex/compare 칩 줄 → "지역 고르기" 접힘(가로 밀기 틀 없음) */
+  assert.match(cmp, /<nav aria-label="지역 바로가기" className="card absolute left-0 z-20/);
   /* 칩 줄 셋이 실제로 그 틀 안에 있다 — /calculator(HScroll) · /complex/browse(.scroll-x-hidden-bar) · /complex/compare(data-hscroll) */
   assert.match(read("app/calculator/CalculatorNav.tsx"), /<HScroll hint=\{null\} className="mb-4">/);
   /* [1115] /complex/browse 칩 줄은 "구 바꾸기" 접힘으로 바뀌어 가로 밀기 줄이 없다 */
   assert.doesNotMatch(read("app/complex/browse/page.tsx"), /className="scroll-x-hidden-bar rise-in-1 /);
   const css = read("app/globals.css");
-  const tail = css.slice(css.indexOf("[1105 · 접근성]"));
+  /* [1124] 뒤에 덧붙은 절(좌우 광고 띠)은 이 절의 검사 밖 */
+  const end1124 = css.indexOf("[1124] 좌우 광고 띠");
+  const tail = css.slice(css.indexOf("[1105 · 접근성]"), end1124 > 0 ? css.lastIndexOf("/*", end1124) : undefined);
   assert.ok(css.indexOf("[1105 · 접근성]") > css.indexOf("[1104 · 속도] 위 리퀴드 판"), "파일 끝에 덧붙임");
   assert.match(
     tail,

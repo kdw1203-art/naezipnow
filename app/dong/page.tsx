@@ -1,7 +1,6 @@
 /* [1083] 동별 실거래 허브 — /dong. 사이트맵 문턱(단지 3곳 · 최근 6개월 50건)을 넘는 동 전부를 지역별로 — 사이트맵 dongs 섹션의 허브이자
    크롤 경로. 지역 머리는 /tx/<지역>(면적대·가격대)으로, 칩은 /dong/<지역>/<동>으로. 조회 실패는 던진다(빈 허브를 사실처럼 내지 않는다). */
 import type { Metadata } from "next";
-import { TopBanner } from "@/app/components/ads/TopBanner";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
 import { PageShell } from "@/app/components/PageShell";
@@ -62,8 +61,6 @@ export default async function DongHubPage() {
         <strong className="text-ink">{n(sidoGroups.length)}곳</strong> · 최근 6개월 매매 신고 <strong className="text-ink">{n(totalRecent)}건</strong> · 단지 3곳·거래 50건
         이상인 동만 · 국토교통부 실거래 · 매물 호가 아님
       </p>
-      {/* [1098 · 배너] 상단 띠 배너 자리 */}
-      <TopBanner placement="page_bottom" plan={null} className="mb-4 max-md:mb-3" />
       <section className="rise-in-1" aria-label="시/도별 동 목록">
         <h2 className="sr-only">시/도별 동 목록</h2>
         <DongHubGroups groups={sidoGroups} />

@@ -3,6 +3,8 @@ import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { PageShell } from "../../components/PageShell";
+import { RegionTabs } from "@/app/components/region/RegionTabs";
+import { catalogIdForTxRegionName } from "@/lib/region/region-tabs";
 import { getImjangGuide, type ImjangGuide } from "@/lib/imjang/guide";
 import { IMJANG_CHECKPOINTS } from "@/lib/imjang/checkpoints";
 import { filterNotesByRegion } from "@/lib/imjang/notes-match";
@@ -143,6 +145,7 @@ export default async function ImjangRegionPage({
     { name: region.name, url: `/imjang/${encodeURIComponent(region.slug)}` },
   ]);
 
+  const regionTabId = catalogIdForTxRegionName(region.name);
   return (
     <PageShell
       breadcrumb={`홈 › 임장 가이드 › ${region.name}`}
@@ -152,6 +155,8 @@ export default async function ImjangRegionPage({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }}
       />
+      {/* [1121 · 기능 통폐합 3단계] 지역 화면 탭 줄 — 임장 가이드는 그 지역 화면의 한 탭(실거래 구간 화면과 같은 방식) */}
+      {regionTabId && <RegionTabs id={regionTabId} current="imjang" txSlug={region.slug} className="rise-in mb-3" />}
 
       {/* 데이터 브리핑 — 가기 전에 아는 것. [1015 · 규칙 B·D] 사실 한 줄("시세는 여기까지 —" 문장 삭제) */}
       <p className="rise-in mb-4 t-sub leading-[1.65] text-text-2 max-md:mb-3">

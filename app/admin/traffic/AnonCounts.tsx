@@ -136,6 +136,29 @@ export function AnonCountsView({ data }: { data: CountSummary | null }) {
                 </ul>
               )}
             </div>
+            {/* [1125 · 유입 경로] 첫 화면 묶음 — 홈 · 임장노트 · 뉴스 · 전문가 · 지도 · 지역·단지(막대 = 들어옴 가운데 몫) */}
+            {data.entryGroups && data.landings7 > 0 && (
+              <div className="md:col-span-full">
+                <h3 className="text-[13px] font-bold text-ink">
+                  유입 경로 · 첫 화면 묶음 <span className="text-[12px] font-medium text-text-3">최근 7일 · 익명 수라 묶음별 가입 전환은 잇지 않음</span>
+                </h3>
+                <ul className="mt-2 grid gap-x-6 gap-y-1.5 md:grid-cols-2">
+                  {data.entryGroups.map((g) => (
+                    <li key={g.key} className="text-[12px]">
+                      <div className="flex justify-between gap-2">
+                        <span className="text-text-2">{g.label}</span>
+                        <span className="t-num shrink-0 font-bold text-ink">
+                          {g.n.toLocaleString("ko-KR")} <span className="font-medium text-text-3">{pct(g.n, data.landings7)}</span>
+                        </span>
+                      </div>
+                      <div className="mt-0.5 h-1.5 overflow-hidden rounded-full bg-divider" aria-hidden="true">
+                        <div className="h-full rounded-full bg-primary" style={{ width: `${Math.round((g.n / data.landings7) * 100)}%` }} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div>
               <h3 className="text-[13px] font-bold text-ink">기기</h3>
               <ul className="mt-2 flex flex-col gap-1">

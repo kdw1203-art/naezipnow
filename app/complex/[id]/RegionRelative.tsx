@@ -94,11 +94,7 @@ export function RegionRelativeView({ r, compact = false }: { r: RegionRelativeDa
               />
             </span>
           )}
-          {r.jeonseRatio != null && (
-            <span>
-              {r.district} 전세가율 <b className="tabular-nums text-text-2">{r.jeonseRatio}%</b>
-            </span>
-          )}
+          {/* [1125 · 같은 사실 한 번] 구 전세가율 줄은 뺐다 — 결과 요약의 「지역 전세가율」이 같은 값이다(그쪽은 AI 진단과 같은 계산이라 남긴다) */}
           {period && <span>{period} 기준 · 한국부동산원</span>}
         </div>
       </div>

@@ -14,6 +14,8 @@ import {
   SIGNAL_LEAN,
   type SignalFactorKey,
 } from "@/lib/signals/engine";
+import { SectionTabs } from "@/app/components/nav/SectionTabs";
+import { GUIDE_TABS } from "@/lib/nav/section-tabs";
 
 export const metadata = buildPageMetadata({
   title: "데이터 방법론 — 실거래 집계 방식",
@@ -208,6 +210,8 @@ export default function MethodologyPage() {
       <div className="mx-auto max-w-[760px]">
         {/* [1015 · 규칙 D] 제목은 명사 */}
         <h1 className="rise-in t-title text-ink">데이터 방법론</h1>
+        {/* [1121 · 기능 통폐합] 가이드 묶음 탭(전체 · 임장 · 계약 · 규제 · 데이터) */}
+        <SectionTabs tabs={GUIDE_TABS} current="/methodology" label="가이드" className="mt-2" />
         {/* G12 — 정의형 첫 문단: 이 페이지가 무엇인지 완결 문장으로 */}
         <p className="rise-in-1 mt-2 t-body leading-[1.7] text-text-2">
           이 페이지는 내집나우(naezipnow.com)이 국토교통부 실거래 데이터를 수집·집계해

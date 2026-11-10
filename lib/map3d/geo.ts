@@ -167,3 +167,24 @@ export function map3dPath(region: string, dong: string, focusHref?: string | nul
 export function map3dSupported(region: string | null | undefined): boolean {
   return typeof region === "string" && /^서울(특별시)?\s/.test(region.trim());
 }
+
+/** [1121 · 지도 2D | 3D] 지도 단지 판에서 3D 로 — 시·도 · 구 · 지번 주소에서 동을 찾아 3D 주소를 만든다(서울만 · 못 찾으면 null).
+ *  지번 주소 예: "서울특별시 강남구 대치동 316" → region "서울 강남구" · dong "대치동". 도로명 주소(…로 · …길)에서는 동을 지어내지 않는다. */
+export function map3dPathFromAddress(
+  city: string | null | undefined,
+  district: string | null | undefined,
+  address: string | null | undefined,
+  focusHref?: string | null,
+): string | null {
+  const c = (city ?? "").trim();
+  const d = (district ?? "").trim();
+  if (!c || !d) return null;
+  const sido = c.replace(/특별시$|광역시$|특별자치시$|특별자치도$|도$/, "");
+  const region = `${sido} ${d}`;
+  if (!map3dSupported(region)) return null;
+  const tokens = (address ?? "").trim().split(/\s+/);
+  const at = tokens.indexOf(d);
+  const after = at >= 0 ? tokens.slice(at + 1) : tokens;
+  const dong = after.find((t) => /^[가-힣0-9]+동[0-9]*가?$|^[가-힣]+[0-9]*가$/.test(t));
+  return dong ? map3dPath(region, dong, focusHref) : null;
+}

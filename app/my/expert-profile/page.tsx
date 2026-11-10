@@ -64,6 +64,19 @@ export default async function ExpertProfilePage() {
               면허·사업자 서류를 첨부해 등록을 신청하고 관리자가 승인하면 프로필이 만들어져요. 승인 뒤 이
               화면에서 소개·전문 분야·상담료·연락처와 홍보 링크를 관리합니다.
             </p>
+            {/* [1125 · 유입 경로 — 전문가 등록] 승인되면 프로필이 보이는 곳 세 군데(사실만 · 노출 수 약속 없음) */}
+            <ul className="m-0 mx-auto mt-3 grid max-w-[460px] list-none grid-cols-3 gap-1.5 p-0 text-left" aria-label="승인 뒤 프로필이 보이는 곳">
+              {[
+                { k: "분야별 목록", v: "동네 › 전문가" },
+                { k: "단지 화면", v: "가까운 전문가 칸" },
+                { k: "글 · 댓글", v: "이름 옆 인증 표시" },
+              ].map((b) => (
+                <li key={b.k} className="flex min-w-0 flex-col gap-0.5 rounded-xl bg-bg px-2.5 py-2">
+                  <span className="t-sub font-bold text-ink">{b.k}</span>
+                  <span className="t-caption text-text-3">{b.v}</span>
+                </li>
+              ))}
+            </ul>
             <Link href="/town/experts/apply" className="btn-primary btn-md mt-4 inline-block no-underline">
               전문가 등록하기
             </Link>

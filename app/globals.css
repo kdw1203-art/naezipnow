@@ -8683,3 +8683,51 @@ html[data-ad-free="1"] :is(.ad-zone, .ad-strip, [data-ad-gate]) {
   outline-offset: -2px;
 }
 
+
+/* ── [1124] 좌우 광고 띠 — 본문 열 바깥 여백(넓은 PC 화면)에 세로 띠 하나씩 ──
+   본문 1240px + 띠 160px × 2 + 틈 → 1640px 부터 · 넓은 본문(main 1400px)은 1800px 부터.
+   고정 아님(문서 위쪽 · 스크롤하면 같이 올라간다). 띠가 보이는 동안 본문 흐름 가운데 광고(data-spot="center")는 숨긴다. */
+.side-ad-rail {
+  display: none;
+}
+@media (min-width: 1640px) {
+  body:not(:has(main.max-w-\[1400px\])) .side-ad-rail {
+    display: block;
+    position: absolute;
+    top: 96px;
+    width: 160px;
+    z-index: 1;
+  }
+  body:not(:has(main.max-w-\[1400px\])) .side-ad-rail[data-side="left"] {
+    left: calc(50% - 620px - 180px);
+  }
+  body:not(:has(main.max-w-\[1400px\])) .side-ad-rail[data-side="right"] {
+    right: calc(50% - 620px - 180px);
+  }
+  body:has(.side-ad-rail):not(:has(main.max-w-\[1400px\])) main .ad-zone[data-spot="center"] {
+    display: none;
+  }
+}
+@media (min-width: 1800px) {
+  body:has(main.max-w-\[1400px\]) .side-ad-rail {
+    display: block;
+    position: absolute;
+    top: 96px;
+    width: 160px;
+    z-index: 1;
+  }
+  body:has(main.max-w-\[1400px\]) .side-ad-rail[data-side="left"] {
+    left: calc(50% - 700px - 180px);
+  }
+  body:has(main.max-w-\[1400px\]) .side-ad-rail[data-side="right"] {
+    right: calc(50% - 700px - 180px);
+  }
+  body:has(.side-ad-rail):has(main.max-w-\[1400px\]) main .ad-zone[data-spot="center"] {
+    display: none;
+  }
+}
+@media print {
+  .side-ad-rail {
+    display: none !important;
+  }
+}

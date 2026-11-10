@@ -37,6 +37,7 @@ import { RegionAlertButton } from "@/app/components/RegionAlertButton";
 import { useToast } from "@/app/components/toast/use-toast";
 import { checklistKey, useWatchAdd } from "./ResultView";
 import { EconomyWatch } from "./EconomyWatch";
+import { AiQuotaNote } from "./AiQuotaNote";
 import type { PickedLite, RunResult } from "./workbench-types";
 
 export function RailCard({ title, children, id, className = "" }: { title: string; children: ReactNode; id?: string; className?: string }) {
@@ -215,6 +216,8 @@ export function ResultRail({
                   <button type="button" onClick={ai.onAsk} disabled={ai.running} aria-busy={ai.running || undefined} className={TEXT_LINK}>
                     {ai.running ? <span className="njn-ring njn-ring--ink" aria-hidden="true" /> : <Icon name="sparkles" size={16} />}
                     {ai.running ? "AI 해설 쓰는 중" : "AI 해설 받기"}
+                    {/* [1125] 누르기 전에 남은 횟수 */}
+                    {!ai.running && <AiQuotaNote />}
                   </button>
                 ) : (
                   <Link href={loginHref} className={TEXT_LINK}>

@@ -11,6 +11,7 @@ import { noteDisplayTitle, noteMetaTitle } from "@/lib/notes/title-rule";
 import { authorProfileHref } from "@/lib/profile/author-href";
 import { cache, Suspense } from "react";
 import { loadNote, type LoadResult } from "../load-note";
+import { StartSteps } from "@/app/components/nav/StartSteps";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
@@ -1717,6 +1718,8 @@ export default async function NoteDetailPage({
       {/* A9 공개노트 전환 훅 — 비로그인 열람자에게 관심단지·알림 로그인 유도 */}
       {/* [961] 광고 공간 — 글 끝. 본문을 다 읽은 뒤의 자연스러운 쉼에만 둔다 */}
       <AdZone placement="article_end" seed={0} plan={null} className="mt-6" />
+      {/* [1124 · 유입 경로 — 임장노트] 공개 노트로 처음 들어온 비회원에게 다음 순서(가입 → 내 노트 → 지도 → 분석) */}
+      {!viewerEmail && realNote.isPublic && <StartSteps from="note" returnTo={`/notes/${realNote.id}`} className="mt-4" />}
       {/* [1015 · 규칙 C·D·J] 물음형 제목("이 단지가 궁금하신가요?") → 명사, 파란 색면 → 흰 카드, 채움 → outline */}
       {!viewerEmail && complexHref && (
         <div className="card mt-4 p-5 text-center max-md:p-3.5">

@@ -233,6 +233,14 @@ export function TempMapClient({
                 </b>
                 <span className="truncate">{r.current.regionLabel}</span>
               </Link>
+              {/* [1117 · 표에 그래프] 0~100 막대 — 지역 시세 표와 같은 꼴(50 가운데 눈금 · 55 이상 빨강 · 45 이하 파랑) */}
+              <span className="relative ml-auto hidden h-1.5 w-14 shrink-0 overflow-hidden rounded-full bg-divider sm:block" aria-hidden="true">
+                <span
+                  className={`block h-full rounded-full ${r.current.score >= 55 ? "bg-up" : r.current.score <= 45 ? "bg-down" : "bg-text-3"}`}
+                  style={{ width: `${Math.max(3, Math.min(100, r.current.score))}%` }}
+                />
+                <span className="absolute inset-y-0 left-1/2 w-px bg-surface" />
+              </span>
               <span className="t-sub shrink-0 text-text-3">
                 <ScoreDelta row={r} />
               </span>

@@ -26,7 +26,7 @@ export async function FollowedAuthorsNotes({ email }: { email: string }) {
   const section = sectionState(feed.ok ? loaded(feed.value.items) : { ok: false }, ROWS);
 
   return (
-    <section className="card mt-4 max-md:mt-3 rounded-lg px-4 py-3" aria-label="팔로우한 작성자의 새 노트">
+    <section className="card rounded-lg px-4 py-3" aria-label="팔로우한 작성자의 새 노트">
       <div className="flex items-center justify-between gap-3">
         <span className="t-caption font-bold text-text-3">팔로우한 작성자의 새 노트</span>
         {feed.ok && feed.value.followingCount > 0 && (

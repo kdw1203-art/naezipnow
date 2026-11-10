@@ -14,6 +14,8 @@ import { Fineprint } from "@/app/components/Fineprint";
 import { getPublicRecordDatasetStatsResult } from "@/lib/market/public-records";
 import { CODEF_PRODUCTS } from "@/lib/codef/endpoints";
 import { RecordsSearchClient } from "./RecordsSearchClient";
+import { SectionTabs } from "@/app/components/nav/SectionTabs";
+import { GUIDE_TABS } from "@/lib/nav/section-tabs";
 
 /* [945 · 실사용50 #33] 데이터 출처·갱신 주기·한계 — 한 장짜리 신뢰 문서.
    화면 곳곳의 각주("국토부 신고 기준" 등)를 한 페이지로 모은다.
@@ -175,6 +177,8 @@ export default async function DataSourcesPage() {
         <h1 className="rise-in t-title text-ink">
           데이터 출처와 한계
         </h1>
+        {/* [1121 · 기능 통폐합] 가이드 묶음 탭(전체 · 임장 · 계약 · 규제 · 데이터) */}
+        <SectionTabs tabs={GUIDE_TABS} current="/methodology" label="가이드" className="mt-2" />
         <p className="rise-in-1 measure mt-2 t-body leading-[1.75] text-text-2">
           원천 · 갱신 주기 · 알려진 한계. 계산 공식은{" "}
           <Link href="/methodology" className="tap-line font-bold text-primary">

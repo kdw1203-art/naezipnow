@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 /**
  * 광고 클릭만 집계한다.
@@ -38,8 +38,27 @@ export function AdSlotTracker({
     }
   };
 
+  /* [1125 · 자사 안내 카드는 화면에 한 번] 좌우 띠 · 옆 열 · 페이지 끝이 모두 비면 "내집나우 안내" 카드가 서너 장 뜬다.
+     문서 순서로 처음 보이는 한 장만 남기고 나머지는 걷는다(광고주 배너는 그대로). 애드센스가 늦게 채워져 앞 카드가 사라지는 경우를 위해 한 번 더 본다. */
+  const ref = useRef<HTMLDivElement>(null);
+  const [dup, setDup] = useState(false);
+  useEffect(() => {
+    if (kind !== "house") return;
+    const check = () => {
+      const me = ref.current;
+      if (!me) return;
+      const shown = (el: Element) => (el.firstElementChild?.getClientRects().length ?? 0) > 0;
+      const first = Array.from(document.querySelectorAll("[data-house-ad]")).find((el) => el === me || shown(el));
+      setDup(first !== me);
+    };
+    check();
+    const t = window.setTimeout(check, 3000);
+    return () => window.clearTimeout(t);
+  }, [kind]);
+  if (dup) return <div ref={ref} data-house-ad="" hidden />;
+
   return (
-    <div onClick={onClick} className="contents">
+    <div ref={ref} onClick={onClick} className="contents" data-house-ad={kind === "house" ? "" : undefined}>
       {children}
     </div>
   );

@@ -93,8 +93,10 @@ test("비교 허브 — 타일 1,119개는 클라이언트 조각(압축 행) ·
   assert.match(tiles, /^"use client";/);
   assert.match(tiles, /export type ComparePairWire = \[string, string, string, number, number\];/);
   assert.match(tiles, /const slug = buildComplexPairSlug\(a, b, regionId\);/);
-  assert.match(tiles, /<Link key=\{slug\} href=\{`\/complex\/compare\/\$\{slug\}`\} className="tile rounded-lg border border-border px-3 py-2\.5">/);
-  assert.match(tiles, /\{dong\} · 12개월 \{n\(txA\)\}건 vs \{n\(txB\)\}건/);
+  /* [1119] 맞대결 줄 — 건수 몫 막대 · 앞 10개 + 닫힌 접힘(링크는 HTML 그대로) */
+  assert.match(tiles, /<Link href=\{`\/complex\/compare\/\$\{slug\}`\} className="tile block rounded-lg border border-border px-3 py-2\.5 no-underline">/);
+  assert.match(tiles, /const share = txA \+ txB > 0 \? Math\.round\(\(txA \/ \(txA \+ txB\)\) \* 100\) : 50;/);
+  assert.match(tiles, /const SHOWN = 10;/);
   const open = strip(read("app/components/OpenDetailsOnHash.tsx"));
   assert.match(open, /^"use client";/);
   assert.match(open, /if \(el instanceof HTMLDetailsElement && !el\.open\) el\.open = true;/);

@@ -399,9 +399,14 @@ export default async function MyPage() {
   return (
     <>
       <ShellTitle>마이</ShellTitle>
-      <MyHubView data={data} />
+      {/* [1122 · 마이 정리] 격자 밖에 전폭으로 붙던 세 칸(저장한 글 · 팔로우 새 노트 · 내 분석)을 2열 격자 안으로 —
+          왼쪽(활동) 끝 = 저장한 글 · 팔로우 / 오른쪽(관리) = 내 분석이 "더 보기" 위. 화면이 한 덩어리로 읽힌다 */}
+      <MyHubView
+        data={data}
+        leftExtra={
+          <>
       {/* [1056 · C2] 저장한 글 — 동네 글의 "저장"(북마크 type=post)이 어디에도 모이지 않았다. 3건 + 전체(/my/watchlist?tab=saved). */}
-      <section className="card mt-4 max-md:mt-3 rounded-lg px-4 py-3" aria-label="저장한 글">
+      <section className="card rounded-lg px-4 py-3" aria-label="저장한 글">
         <div className="flex items-center justify-between gap-3">
           <span className="t-caption font-bold text-text-3">저장한 글</span>
           <Link
@@ -430,12 +435,20 @@ export default async function MyPage() {
       </section>
       {/* [1057 · C2] 팔로우한 작성자의 새 노트 — 피드 API 는 있었으나 어느 화면도 그리지 않았다. 5건 · 자기 조회·자기 상태(서버 컴포넌트) */}
       <FollowedAuthorsNotes email={email} />
+          </>
+        }
+        rightExtra={
+          <>
       {/* [1025 · 결정·비서] 진입 링크 두 줄 — 헤더는 통합자 영역이라 여기(마이)에만 */}
-      <section className="card mt-4 max-md:mt-3 rounded-lg px-4 py-0.5" aria-label="결정 카드 · AI 비서">
+      {/* [1121 · 기능 통폐합 3단계] 「내 분석」 한 칸 — AI 비서 · AI 분석 기록 · 결정 카드(예전엔 비서는 여기, 분석 기록은 포인트 칸 안에 흩어져 있었다).
+          AI 도구 실행 입구는 AI 분석 허브(에이전트 포함) 하나 */}
+      <section className="card rounded-lg px-4 py-0.5" aria-label="내 분석">
+        <p className="m-0 pt-3 t-caption font-bold text-text-3">내 분석</p>
         <ul className="m-0 flex list-none flex-col divide-y p-0" data-tone="plain">
           {[
-            { label: "결정 카드", sub: "후보 3곳 · 내 기준 · 결정 저장", href: "/decide" },
             { label: "AI 비서", sub: "이번 주 자동 알림 · 임장 일정 · 감시 목록", href: "/my/assistant" },
+            { label: "AI 분석 기록", sub: "실행한 분석 다시 보기", href: "/my/analyses" },
+            { label: "결정 카드", sub: "후보 3곳 · 내 기준 · 결정 저장", href: "/decide" },
           ].map((m) => (
             <li key={m.href}>
               <Link href={m.href} className="flex min-h-10 items-center justify-between gap-3 py-[13px] no-underline">
@@ -449,6 +462,9 @@ export default async function MyPage() {
           ))}
         </ul>
       </section>
+          </>
+        }
+      />
     </>
   );
 }

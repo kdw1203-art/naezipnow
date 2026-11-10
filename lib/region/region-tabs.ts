@@ -13,7 +13,7 @@
 import { REGION_CATALOG } from "@/lib/region/catalog";
 import { marketRegionNameCandidates } from "@/lib/market/region-name-candidates";
 
-export type RegionTabKey = "overview" | "tx" | "rent" | "temperature" | "town" | "report";
+export type RegionTabKey = "overview" | "tx" | "rent" | "temperature" | "town" | "report" | "imjang";
 
 export type RegionTab = { key: RegionTabKey; label: string; href: string };
 
@@ -24,6 +24,8 @@ export const REGION_TAB_LABEL: Readonly<Record<RegionTabKey, string>> = {
   temperature: "시장 온도",
   town: "동네",
   report: "월간 리포트",
+  /* [1121 · 기능 통폐합 3단계] 지역 임장 가이드(/imjang/[실거래 구간 슬러그]) — 같은 지역의 따로 떨어진 화면을 탭으로 */
+  imjang: "임장 가이드",
 };
 
 export function regionTabs(input: {
@@ -43,6 +45,8 @@ export function regionTabs(input: {
   if (input.hasTemperature) tabs.push({ key: "temperature", label: REGION_TAB_LABEL.temperature, href: `/analysis/temperature/${enc}` });
   tabs.push({ key: "town", label: REGION_TAB_LABEL.town, href: `/town/${enc}` });
   tabs.push({ key: "report", label: REGION_TAB_LABEL.report, href: `/region/${enc}/report` });
+  /* 임장 가이드는 실거래 구간과 같은 슬러그(lib/imjang/guide getImjangGuide = findTxRegionBySlug) — 실거래 구간 탭이 있을 때만 */
+  if (input.txSlug) tabs.push({ key: "imjang", label: REGION_TAB_LABEL.imjang, href: `/imjang/${encodeURIComponent(input.txSlug)}` });
   return tabs;
 }
 

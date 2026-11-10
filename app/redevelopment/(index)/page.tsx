@@ -129,15 +129,12 @@ export default async function RedevelopmentPage() {
   const stageRows = stageCounts
     ? STAGE_GUIDES.map((s) => ({ label: s.longLabel, value: stageCounts[s.key] }))
     : [];
-  const topStage = stageRows.length > 0 ? stageRows.reduce((a, b) => (b.value > a.value ? b : a)) : null;
   /* 머리 숫자 — 이 화면이 이미 들고 있는 배열에서 센 값만(새 조회·추정 없음) */
   const headFacts: { k: string; v: string }[] = [
     ...(sigunguCounts.length > 0
       ? [{ k: "시군구", v: `${sigunguCounts.length.toLocaleString("ko-KR")}곳` }]
       : []),
-    ...(topStage && topStage.value > 0
-      ? [{ k: `최다 단계 · ${topStage.label}`, v: `${topStage.value.toLocaleString("ko-KR")}곳` }]
-      : []),
+    /* [1120 · 같은 사실 한 번] "최다 단계 · 사업시행인가 12곳"은 바로 아래 단계별 막대의 한 줄과 같은 값 — 소유자 2026-11-09 "응"(빼기) */
     { k: "정비사업 뉴스", v: `${news.length.toLocaleString("ko-KR")}건` },
   ];
 

@@ -22,6 +22,9 @@ const HomeEngagementCard = dynamic(
   { ssr: false },
 );
 
+/* [1125] 내 관심 지역 칩 — 로그인 확인 뒤에만(지역 카탈로그가 딸려 오므로 따로 받는 청크) */
+const HomeMyRegions = dynamic(() => import("@/app/components/home/HomeMyRegions").then((m) => m.HomeMyRegions), { ssr: false });
+
 /* [967 · 27] 홈 "내 관심" 레일 — 로그인 사용자에게만, 관심단지 변동(HomeWatchlistBrief)
  * 과 최근 본 단지(RecentComplexChips)를 히어로 바로 아래 한 묶음으로.
  *
@@ -75,6 +78,7 @@ export function HomeMyRail({
     <>
       {/* [1056] 오늘의 활동 — 관심 단지가 없는 사용자에게도 늘 그린다(출석은 누구나 가능) */}
       <HomeEngagementCard />
+      <HomeMyRegions />
       <section
         aria-label="내 관심"
         className={any ? `rise-in flex flex-col gap-2.5 ${className}` : "contents"}

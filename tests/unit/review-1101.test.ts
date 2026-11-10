@@ -16,8 +16,9 @@ const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\{\/\*[
 
 test("지역 탭 — 여섯 화면 · 있는 화면만 · 실거래 구간 이름 → 카탈로그 id 거꾸로 대조", () => {
   const all = regionTabs({ id: "gangnam", txSlug: "서울 강남구", hasRent: true, hasTemperature: true });
-  assert.deepEqual(all.map((t) => t.key), ["overview", "tx", "rent", "temperature", "town", "report"]);
-  assert.deepEqual(all.map((t) => t.label), ["개요", "실거래 구간", "전월세", "시장 온도", "동네", "월간 리포트"]);
+  /* [1121] 임장 가이드 탭(실거래 구간과 같은 슬러그)이 끝에 붙는다 */
+  assert.deepEqual(all.map((t) => t.key), ["overview", "tx", "rent", "temperature", "town", "report", "imjang"]);
+  assert.deepEqual(all.map((t) => t.label), ["개요", "실거래 구간", "전월세", "시장 온도", "동네", "월간 리포트", "임장 가이드"]);
   assert.deepEqual(all.map((t) => t.href), [
     "/region/gangnam",
     `/tx/${encodeURIComponent("서울 강남구")}`,
@@ -25,12 +26,13 @@ test("지역 탭 — 여섯 화면 · 있는 화면만 · 실거래 구간 이�
     "/analysis/temperature/gangnam",
     "/town/gangnam",
     "/region/gangnam/report",
+    `/imjang/${encodeURIComponent("서울 강남구")}`,
   ]);
   /* 없는 화면은 탭이 없다 — 빈 화면 · 404 로 보내지 않는다 */
   const thin = regionTabs({ id: "busan-haeundae", txSlug: null, hasRent: false, hasTemperature: false });
   assert.deepEqual(thin.map((t) => t.key), ["overview", "town", "report"]);
   assert.deepEqual(regionTabs({ id: " ", txSlug: null, hasRent: false, hasTemperature: false }), []);
-  assert.equal(Object.keys(REGION_TAB_LABEL).length, 6);
+  assert.equal(Object.keys(REGION_TAB_LABEL).length, 7); /* [1121] + 임장 가이드 */
   /* 실거래 표기("서울 강남구" · "고양 덕양구" · "평택시")에서 카탈로그 id 로 */
   assert.equal(catalogIdForTxRegionName("서울 강남구"), "gangnam");
   assert.equal(catalogIdForTxRegionName("고양 덕양구"), "goyang-deogyang");
@@ -42,7 +44,8 @@ test("지역 탭 — 여섯 화면 · 있는 화면만 · 실거래 구간 이�
 
 test("지역 탭 — 여섯 화면이 같은 부품 · 같은 자리(머리 아래) · 지금 화면 표시 · 지역 분석 머리의 칩 셋은 탭으로 갔다", () => {
   const tabs = strip(read("app/components/region/RegionTabs.tsx"));
-  assert.match(tabs, /<nav aria-label=\{`\$\{info\.name\} 지역 화면`\} className=\{`region-tabs news-tabs \$\{className\}`\.trim\(\)\}>/);
+  /* [1122] 바깥 여백은 감싼 div 가 받고(다른 지역 찾기 단추가 탭 줄 아래 한 묶음) nav 는 탭 꼴만 */
+  assert.match(tabs, /<nav aria-label=\{`\$\{info\.name\} 지역 화면`\} className="region-tabs news-tabs">/);
   assert.match(tabs, /aria-current="page"/);
   assert.match(tabs, /if \(tabs\.length < 2\) return null;/);
   assert.match(tabs, /hasTemperature: Boolean\(findTemperatureRegion\(info\.id\)\),/);

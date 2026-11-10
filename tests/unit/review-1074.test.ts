@@ -15,8 +15,8 @@ const read = (p: string) => readFileSync(p, "utf8");
 test("P1 단지 비교 — 폰 한 줄 가로 밀기 · PC 줄바꿈 · 지역 화면 링크 40px", () => {
   const s = read("app/complex/compare/page.tsx");
   /* [1101] PC 도 한 줄 가로 밀기(얇은 막대) — 63개 칩이 PC 에서 일곱 줄이었다 */
-  assert.match(s, /aria-label="지역 바로가기"\s*className="-mx-3\.5 flex flex-nowrap gap-1\.5 overflow-x-auto px-3\.5 pb-1\.5 max-md:\[scrollbar-width:none\] max-md:\[&::-webkit-scrollbar\]:hidden md:mx-0 md:px-0 md:\[scrollbar-width:thin\]"/);
-  assert.match(s, /className="chip shrink-0 whitespace-nowrap bg-surface px-3 py-1\.5 t-sub font-bold text-text-2 no-underline shadow-sm"/);
+  /* [1119] 칩 줄 → "지역 고르기" 접힘 — 판 안 칸도 40px */
+  assert.match(s, /className="flex min-h-10 items-center justify-between gap-2 rounded-lg px-2\.5 t-sub font-bold text-text-2 no-underline hover:bg-bg"/);
   assert.match(s, /className="mt-1 inline-flex min-h-\[40px\] items-center t-sub font-bold text-primary md:min-h-6"/);
   /* 63개 링크는 그대로 HTML 에(검색 색인) — groups.map 두 번(칩 · 접힘) */
   assert.equal((s.match(/groups\.map\(/g) ?? []).length, 2);

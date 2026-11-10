@@ -60,7 +60,7 @@ test("④ 순위 배너 · 표 — 한 줄씩 아래→위 · 멈춤 · 동작 �
   assert.match(d, /rankHomeDeals\(rows, 10\)/);
   assert.match(d, /<details className="group">/);
   assert.match(d, /최근 신고 \{rows\.length\.toLocaleString\("ko-KR"\)\}건 중 한 건 금액 높은 순/);
-  const tb = strip(read("app/components/home/HomeRegionTable.tsx"));
+  const tb = strip(read("app/components/home/HomeRegionTableBody.tsx"));
   assert.match(tb, /<table className="w-full border-collapse">/);
   assert.match(tb, /bg-up" : pct! < 0 \? "bg-down"/);
   assert.match(tb, /\{r\.stale \? "실거래 평균" : "평균"\}/);

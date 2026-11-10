@@ -7,6 +7,11 @@ import { breadcrumbJsonLd, jsonLdScript } from "@/lib/seo/jsonld";
 import { seoAlternates } from "@/lib/seo/alternates";
 import { logger } from "@/lib/log";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
+import { SectionTabs } from "@/app/components/nav/SectionTabs";
+import { GUIDE_TABS } from "@/lib/nav/section-tabs";
+import { RegionMapPicker } from "@/app/components/region/RegionMapPicker";
+import { imjangMapMarkers } from "@/lib/region/region-switch";
+import { REGION_CATALOG } from "@/lib/region/catalog";
 
 /* ============================================================
    임장 가이드 인덱스 — /imjang (전략 정본 §4-2)
@@ -56,6 +61,7 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ImjangIndexPage() {
   const { regions, loadError } = await loadIndex();
+  const imjang = imjangMapMarkers(regions, REGION_CATALOG);
 
   const crumbs = breadcrumbJsonLd([
     { name: "홈", url: "/" },
@@ -65,6 +71,8 @@ export default async function ImjangIndexPage() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLdScript(crumbs) }} />
+      {/* [1121 · 기능 통폐합] 가이드 묶음 탭 */}
+      <SectionTabs tabs={GUIDE_TABS} current="/imjang" label="가이드" className="mb-3" />
 
       {/* [1015 · 규칙 B·D] 설명 문단("임장(臨場)은 … 남기세요") → 사실 한 줄. "시세" 낱말은 실거래만 있는 화면이라 쓰지 않는다 */}
       <p className="rise-in mb-4 t-sub text-text-2 max-md:mb-3">
@@ -74,7 +82,7 @@ export default async function ImjangIndexPage() {
       {/* 지역 목록 — 실데이터 있는 지역만, 거래 많은 순 */}
       <section className="mb-6 max-md:mb-4">
         <h2 className="mb-2 t-section text-ink">
-          지역별 가이드 <span className="t-sub font-medium text-text-3">거래 많은 순</span>
+          지역별 가이드 <span className="t-sub font-medium text-text-3">지도 · 검색으로 고르기</span>
         </h2>
         {loadError ? (
           <div className="card rounded-2xl px-4 py-4">
@@ -86,21 +94,37 @@ export default async function ImjangIndexPage() {
             아직 구간이 정리된 지역이 없습니다.
           </div>
         ) : (
-          <div className="flex flex-wrap gap-2 max-md:gap-1.5">
-            {regions.map((r) => (
-              <Link
-                key={r.slug}
-                prefetch={false}
-                href={`/imjang/${encodeURIComponent(r.slug)}`}
-                className="chip bg-surface px-3.5 py-2 t-body font-bold text-text-1 shadow-sm no-underline hover:text-primary"
-              >
-                {r.name}
-                <span className="ml-1.5 t-sub font-medium text-text-3">
-                  {r.txCount.toLocaleString("ko-KR")}건
+          /* [1122 · 많으면 지도 · 필터 · 검색] 48칩 벽 → 지역 고르기 지도(검색 · 시/도 필터 · 말풍선 = 실거래 건수) + 닫힌 전체 목록(크롤 경로) */
+          <>
+            <RegionMapPicker
+              markers={imjang.markers}
+              label="임장 가이드 지역 고르기 지도"
+              valueLabel="말풍선 = 국토교통부 실거래 신고 건수(가이드가 있는 지역만)"
+              defaultSido="경기"
+              heightClass="h-[520px] max-md:h-[400px]"
+            />
+            <details className="group mt-2 px-1">
+              <summary className="tap-line flex min-h-10 cursor-pointer list-none items-center gap-1 t-sub font-bold text-text-2">
+                전체 목록 {regions.length}곳 · 거래 많은 순
+                <span aria-hidden="true" className="text-text-3 transition-transform group-open:rotate-180">
+                  {/* dead-control-ok: summary 가 눌리는 자리 — 꺾쇠는 열림 표시 */}⌄
                 </span>
-              </Link>
-            ))}
-          </div>
+              </summary>
+              <div className="mt-1 flex flex-wrap gap-2 max-md:gap-1.5">
+                {regions.map((r) => (
+                  <Link
+                    key={r.slug}
+                    prefetch={false}
+                    href={`/imjang/${encodeURIComponent(r.slug)}`}
+                    className="chip bg-surface px-3.5 py-2 t-body font-bold text-text-1 shadow-sm no-underline hover:text-primary"
+                  >
+                    {r.name}
+                    <span className="ml-1.5 t-sub font-medium text-text-3">{r.txCount.toLocaleString("ko-KR")}건</span>
+                  </Link>
+                ))}
+              </div>
+            </details>
+          </>
         )}
       </section>
 

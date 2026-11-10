@@ -21,6 +21,7 @@ import { readAreaUnitCookie } from "@/lib/prefs/area-unit";
 import type { AreaUnit } from "@/lib/prefs/ui-prefs";
 import { areaBandLabelByUnit } from "@/lib/complex/area-band-label";
 import { monthDeltaView, monthDeltasLatestFirst, ymRangeShort } from "@/lib/complex/month-delta";
+import { map3dPathFromAddress } from "@/lib/map3d/geo";
 
 /* ============================================================
    단지 정보 패널 — 검색/마커/목록 선택 시.
@@ -626,6 +627,7 @@ export function ComplexInfoPanel({
   const bandLabel = (label: string) => areaBandLabelByUnit(label, areaUnit);
 
   const detailHref = `/complex/${encodeURIComponent(complexId)}`;
+  const map3dHref = map3dPathFromAddress(complex?.city, complex?.district, complex?.address, detailHref);
   /* 임장노트 작성기(app/notes/new/NoteForm.tsx)가 읽는 파라미터 그대로: apt·region·complexId·lat·lng */
   const noteHref = (() => {
     const params = new URLSearchParams({ apt: name });
@@ -1399,12 +1401,20 @@ export function ComplexInfoPanel({
             자리에 들어간다 — 탭 모드에서는 인셋이 0이라 아무 일도 안 일어나
             조용히 지나가는 종류의 버그다. sm 이상은 시트가 가운데 뜬다. */}
         <div className="border-t border-[rgba(16,28,54,.06)] bg-surface px-5 py-3 pb-[calc(12px+env(safe-area-inset-bottom,0px))] sm:pb-3">
-          <Link
-            href={detailHref}
-            className="btn-primary btn-cta block rounded-xl p-3 text-center t-body font-bold text-white"
-          >
-            단지 홈 보기 ›
-          </Link>
+          <div className="flex gap-2">
+            <Link
+              href={detailHref}
+              className="btn-primary btn-cta block flex-1 rounded-xl p-3 text-center t-body font-bold text-white"
+            >
+              단지 홈 보기 ›
+            </Link>
+            {/* [1121 · 기능 통폐합] 지도 [2D | 3D] — 3D 지도(동 단위 · 서울)는 메뉴 따로가 아니라 지도의 다른 보기. 동을 못 찾으면 단추 없음 */}
+            {map3dHref && (
+              <Link href={map3dHref} className="btn-outline flex shrink-0 items-center rounded-xl px-4 t-body font-bold no-underline">
+                3D로 보기
+              </Link>
+            )}
+          </div>
         </div>
       </aside>
     </div>

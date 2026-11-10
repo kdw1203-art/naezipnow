@@ -57,6 +57,7 @@ type ViewMode = "grid" | "feed" | "table";
 type DeskView = "table" | "feed";
 /* [1052 · 번들] 내 노트 필터 줄은 '내 노트' 탭에서만 그린다(탭은 클라이언트 상태 — 서버 HTML 에 없다) → 따로 받는 청크.
    /notes 가 미등재 상한 495KB 에 2.5KB 안쪽(493.2KB)이 되어 뗐다 */
+const MineVisitMonths = nextDynamic(() => import("./mine-visit-months").then((m) => m.MineVisitMonths), { ssr: false });
 const MineFilterBar = nextDynamic(() => import("./mine-filter-bar").then((m) => m.MineFilterBar), {
   ssr: false,
   loading: () => <div aria-hidden className="h-10" />,
@@ -1338,6 +1339,9 @@ export function NotesFeedClient({
           </div>
         </div>
         )}
+
+        {/* [1125] 내 노트 방문 달력 — 최근 12개월 달별 방문 건수 */}
+        {mine && allNotes.length > 0 && <MineVisitMonths visitDates={allNotes.map((n) => n.visitDate)} />}
 
         {/* [1006] 내 노트 필터 줄 — 정렬 · 판단 · 지역 · 기간(방문일) */}
         {mine && mineOptions && allNotes.length > 0 && (

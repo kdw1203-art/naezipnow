@@ -217,21 +217,28 @@ export function weeklyDigestEmail(params: {
   const toneColor = (t: "up" | "down" | "flat") =>
     t === "up" ? "#c62828" : t === "down" ? "#1565c0" : "#8a94a6";
 
-  const marketRows = params.market
-    .slice(0, 6)
-    .map(
-      (m) => `<tr>
-        <td style="padding:7px 0;font-size:14px;color:#191f28;">${escapeHtml(m.name)}</td>
-        <td style="padding:7px 0;font-size:14px;font-weight:700;color:#191f28;text-align:right;">${escapeHtml(m.price)}</td>
-        <td style="padding:7px 0 7px 10px;font-size:13px;font-weight:700;color:${toneColor(m.tone)};text-align:right;white-space:nowrap;">${escapeHtml(m.delta)}</td>
-      </tr>`,
-    )
-    .join("");
+  /* [1122 · 메일 개편] 소유자 2026-11-09 "주간 다이제스트(메일) 업데이트" — 사이트 새 형식(숫자 칸 · 순위 줄 · 등락 알약)에 맞춘다.
+     시장 요약 = 2칸 격자 숫자 칸(지역 · 큰 가격 · 등락 알약) — 메일 클라이언트용 표 레이아웃 · 색은 사이트 등락 토큰(상승 빨강 · 하락 파랑). */
+  const toneBg = (t: "up" | "down" | "flat") => (t === "up" ? "#fdecee" : t === "down" ? "#e8f0fe" : "#f1f3f7");
+  const marketItems = params.market.slice(0, 6);
+  const marketCell = (m: (typeof marketItems)[number]) => `<td style="width:50%;padding:4px;vertical-align:top;">
+          <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background-color:#f7f9fc;border-radius:12px;">
+            <tr><td style="padding:12px 14px;">
+              <div style="font-size:12px;font-weight:700;color:#606a77;">${escapeHtml(m.name)}</div>
+              <div style="margin-top:2px;font-size:20px;font-weight:700;color:#191f28;letter-spacing:-0.5px;">${escapeHtml(m.price)}</div>
+              <span style="display:inline-block;margin-top:6px;padding:2px 8px;border-radius:999px;background-color:${toneBg(m.tone)};font-size:12px;font-weight:700;color:${toneColor(m.tone)};white-space:nowrap;">${escapeHtml(m.delta)}</span>
+            </td></tr>
+          </table>
+        </td>`;
+  const marketRows = Array.from({ length: Math.ceil(marketItems.length / 2) }, (_, r) => {
+    const pair = marketItems.slice(r * 2, r * 2 + 2);
+    return `<tr>${pair.map(marketCell).join("")}${pair.length === 1 ? '<td style="width:50%;padding:4px;"></td>' : ""}</tr>`;
+  }).join("");
   const absolute = (href: string) => (href.startsWith("/") ? `https://naezipnow.com${href}` : href);
   const safeHttp = (u: string | null | undefined) => (u && /^https?:\/\//i.test(u) ? u : null);
   const newsRows = params.news
     .slice(0, 5)
-    .map((n) => {
+    .map((n, idx) => {
       const href = n.href ? absolute(n.href) : null;
       const img = safeHttp(n.imageUrl);
       const src = safeHttp(n.sourceUrl);
@@ -251,33 +258,45 @@ export function weeklyDigestEmail(params: {
       return `<tr>
         ${thumb}
         <td style="padding:0 0 12px;vertical-align:top;font-size:14px;line-height:1.55;color:#191f28;"${img ? "" : ' colspan="2"'}>
-          ${title}${source ? `<br />${source}` : ""}
+          <span style="display:inline-block;min-width:18px;margin-right:6px;font-size:13px;font-weight:700;color:#1d4fd8;">${idx + 1}</span>${title}${source ? `<br /><span style="display:inline-block;margin-left:24px;">${source}</span>` : ""}
         </td>
       </tr>`;
     })
     .join("");
 
+  const sectionHead = (t: string) =>
+    `<h2 style="margin:0 0 8px;font-size:13px;font-weight:700;color:#4e5661;"><span style="display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background-color:#1d4fd8;vertical-align:middle;"></span>${t}</h2>`;
   const html = emailLayout(`
-    <h1 style="margin:0 0 6px;font-size:19px;color:#191f28;">${escapeHtml(params.weekLabel)} 주간 다이제스트</h1>
-    <p style="margin:0 0 18px;font-size:13px;color:#8a94a6;">국토교통부 실거래 · 한국부동산원 지수 기준 · 매물 호가가 아닙니다</p>
+    <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#1d4fd8;">주간 다이제스트</p>
+    <h1 style="margin:0 0 6px;font-size:22px;color:#191f28;letter-spacing:-0.5px;">${escapeHtml(params.weekLabel)} 주간 다이제스트</h1>
+    <p style="margin:0 0 20px;font-size:13px;color:#8a94a6;">국토교통부 실거래 · 한국부동산원 지수 기준 · 매물 호가가 아닙니다</p>
     ${
       marketRows
-        ? `<h2 style="margin:0 0 6px;font-size:14px;color:#191f28;">시장 요약 · 주요 지역</h2>
-           <table style="width:100%;border-collapse:collapse;margin:0 0 18px;">${marketRows}</table>`
+        ? `${sectionHead("시장 요약 · 주요 지역")}
+           <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 -4px 6px;">${marketRows}</table>
+           <p style="margin:0 0 20px;font-size:12px;color:#8a94a6;">가격 = 평균 매매가 · 등락 = 매매가격지수 전월 대비</p>`
         : ""
     }
     ${
       newsRows
-        ? `<h2 style="margin:0 0 8px;font-size:14px;color:#191f28;">이번 주 뉴스</h2>
+        ? `${sectionHead("이번 주 뉴스")}
            <table style="width:100%;border-collapse:collapse;margin:0 0 10px;">${newsRows}</table>`
         : ""
     }
     ${
       params.communityCount > 0
-        ? `<p style="margin:0 0 18px;font-size:13px;color:#4a5568;">이웃 글 ${params.communityCount}건이 새로 올라왔어요.</p>`
+        ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 20px;background-color:#f7f9fc;border-radius:12px;"><tr>
+             <td style="padding:12px 14px;font-size:13px;color:#4e5661;">이웃 글 <strong style="color:#191f28;">${params.communityCount}건</strong> 새로 올라옴</td>
+             <td style="padding:12px 14px;text-align:right;"><a href="https://naezipnow.com/town" style="font-size:13px;font-weight:700;color:#1d4fd8;text-decoration:none;">동네이야기 ›</a></td>
+           </tr></table>`
         : ""
     }
-    <a href="https://naezipnow.com/digest" style="display:inline-block;background:#1d4fd8;color:#ffffff;font-size:14px;font-weight:700;padding:10px 20px;border-radius:8px;text-decoration:none;">전체 다이제스트 보기</a>
+    <a href="https://naezipnow.com/digest" style="display:block;background:#1d4fd8;color:#ffffff;font-size:15px;font-weight:700;padding:13px 20px;border-radius:12px;text-decoration:none;text-align:center;">전체 다이제스트 보기</a>
+    <p style="margin:14px 0 0;text-align:center;font-size:13px;">
+      <a href="https://naezipnow.com/analysis" style="color:#4e5661;font-weight:700;text-decoration:none;">지역 시세 분석 ›</a>
+      <span style="color:#d5dbe5;">&nbsp;|&nbsp;</span>
+      <a href="https://naezipnow.com/notes/new" style="color:#4e5661;font-weight:700;text-decoration:none;">임장노트 쓰기 ›</a>
+    </p>
   `);
 
   const text = [

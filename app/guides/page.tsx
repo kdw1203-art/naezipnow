@@ -4,6 +4,8 @@ import Link from "@/app/components/IntentLink";
 import { PageShell } from "@/app/components/PageShell";
 import { GUIDES, LEGACY_GUIDES } from "@/lib/guides/catalog";
 import { seoAlternates } from "@/lib/seo/alternates";
+import { SectionTabs } from "@/app/components/nav/SectionTabs";
+import { GUIDE_TABS } from "@/lib/nav/section-tabs";
 
 /* [945 · 실사용50 #25] 가이드 허브 — 카탈로그 10편 + 기존 2편(계약·규제).
    [1015] 카드 타일 묶음 → 리퀴드 행 목록(lq-panel · 가이드 = hanji). 소개 문단은 편수 한 줄로. 폰 여백 압축. */
@@ -54,6 +56,8 @@ export default function GuidesIndexPage() {
       <HubBreadcrumbLd trail={[{ name: "가이드", path: "/guides" }]} />
       <div className="mx-auto w-full max-w-[720px]">
         <h1 className="rise-in t-title text-ink">부동산 실전 가이드</h1>
+        {/* [1121 · 기능 통폐합] 가이드 묶음 탭(전체 · 임장 · 계약 · 규제 · 데이터) */}
+        <SectionTabs tabs={GUIDE_TABS} current="/guides" label="가이드" className="mt-2" />
         {/* [1015 · 규칙 B] 소개 문단("개념은 짧게, 순서는 구체적으로…") → 사실 한 줄(편 수는 카탈로그 길이) */}
         <p className="rise-in-1 mt-1 t-sub text-text-2">
           {total}편 · {byCategory.length + 1}개 분야

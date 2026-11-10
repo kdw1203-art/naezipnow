@@ -5,6 +5,9 @@ import { buildRegionTrendDatasets } from "@/app/region/[id]/region-trends";
 import { regionHeroTiles } from "@/app/region/[id]/RegionHero";
 import { RegionTrendCard } from "@/app/region/[id]/RegionTrendCard";
 import { logger } from "@/lib/log";
+import { RegionSearchBox } from "@/app/analysis/region-search-box";
+import { REGION_ALIASES, REGION_CATALOG } from "@/lib/region/catalog";
+import { listRegionSiseRegions } from "@/lib/region/region-sise";
 import type { RegionMarketSnapshot } from "@/lib/market/types";
 
 /* [1114 · 홈 = 지역 화면 형식] 소유자 2026-11-09(지역 종합 캡처 두 장): "이런 형식은 그대로 두고 이런 그래프 · 표를 적극 사용해주고
@@ -46,6 +49,7 @@ export async function HomeMarketBoard({ id, name }: { id: string; name: string }
   const tiles = regionHeroTiles(overview);
   const datasets = buildRegionTrendDatasets({ name, indexSeries, jeonseSeries, volume, now });
   const regionHref = `/region/${encodeURIComponent(id)}`;
+  const searchRegions = listRegionSiseRegions(REGION_CATALOG, REGION_ALIASES);
 
   if (tiles.length === 0 && datasets.length === 0) {
     return failed ? (
@@ -64,6 +68,10 @@ export async function HomeMarketBoard({ id, name }: { id: string; name: string }
             <Link href={regionHref} className="tap-line inline-block shrink-0 py-[5px] t-sub font-bold text-primary no-underline">
               {name} 종합 ›
             </Link>
+          </div>
+          {/* [1123 · 다른 지역도] 대표 지역 한 곳만 보이던 칸 — 검색칸(시 · 구 · 동)으로 다른 지역 종합 화면으로 바로 */}
+          <div className="mt-2 md:max-w-[360px]">
+            <RegionSearchBox regions={searchRegions} pickIds={[]} />
           </div>
           <div className="mt-2.5 grid grid-cols-2 gap-2 md:grid-cols-4">{tiles}</div>
           <p className="m-0 mt-2.5 t-caption text-text-3 break-words">

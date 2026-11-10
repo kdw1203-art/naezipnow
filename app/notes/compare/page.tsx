@@ -22,6 +22,8 @@ import { AiFeedbackButtons } from "@/app/components/AiFeedbackButtons";
 import { CompareFunnelPing } from "./CompareFunnelPing";
 import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { Timeline, VisitThumb } from "./Timeline";
+import { SectionTabs } from "@/app/components/nav/SectionTabs";
+import { COMPARE_TABS } from "@/lib/nav/section-tabs";
 
 /* 시안 9e — 노트 다회차 비교.
    실데이터: listNotesByAuthorForApt. 예시 목업 제거 — 회차 부족 시 empty+CTA. */
@@ -162,8 +164,12 @@ function CompareTable({ model, covers }: { model: VisitCompareModel; covers: (st
         >
           <span className="text-text-2">기록 점수</span>
           {model.scores.map((s, i) => (
-            <span key={i} className={`text-center font-bold ${s.cls}`}>
+            /* [1125 · 표에 그래프] 회차별 기록 점수 — 숫자 아래 막대(0~100 · 길이 = 점수). 회차 사이 오르내림이 한눈에 */
+            <span key={i} className={`flex flex-col items-center gap-1 text-center font-bold ${s.cls}`}>
               {s.value}
+              <span className="block h-1.5 w-full max-w-[72px] overflow-hidden rounded-full bg-divider" aria-hidden="true">
+                <span className="block h-full rounded-full bg-primary" style={{ width: `${Math.max(0, Math.min(100, Number(s.value) || 0))}%` }} />
+              </span>
             </span>
           ))}
         </div>
@@ -304,6 +310,8 @@ export default async function NotesComparePage({
       <div className="flex flex-col gap-3.5">
         {/* [1022 · 정렬·글씨·테마] 공용 PageHead */}
         <PageHead icon="repeat" title="노트 다회차 비교" sub="같은 단지의 회차별 점수 축 비교" subOnPhone className="px-1" />
+        {/* [1121] 비교 묶음 탭 */}
+        <SectionTabs tabs={COMPARE_TABS} current="/notes/compare" label="비교" className="mt-2" />
         <div className="card flex flex-col gap-3 rounded-3xl px-[22px] py-8 text-center">
           <div className="t-section text-ink">{emptyTitle}</div>
           <p className="mx-auto max-w-[420px] t-body text-text-2">

@@ -45,7 +45,7 @@ test("① 메뉴 — 여섯 묶음 · 실거래 대분류 없음 · 지도가 �
     ["임장노트", "지도", "AI 분석", "동네", "뉴스", "요금제"],
   );
   const map = NAV.find((g) => g.label === "지도");
-  assert.deepEqual((map?.children ?? []).map((c) => c.href), ["/map", "/map/3d"]);
+  assert.deepEqual((map?.children ?? []).map((c) => c.href), ["/map"]); /* [1121] 3D 는 지도의 다른 보기(단지 판 · 단지 · 동 화면 「3D로 보기」) */
   assert.deepEqual([...(map?.also ?? [])].sort(), ["/complex", "/dong", "/region", "/reports", "/tx"].sort());
   const ai = NAV.find((g) => g.label === "AI 분석");
   assert.deepEqual(

@@ -3,7 +3,9 @@
    모양은 뉴스룸 분류 탭과 같은 밑줄 탭(.news-tabs · 40px · 폰 가로 밀기) — 사이트에 탭 꼴이 하나 더 생기지 않게.
    탭이 하나뿐인 지역(카탈로그 밖 · 실거래 구간만 있는 곳)은 줄을 그리지 않는다. */
 import Link from "@/app/components/IntentLink";
-import { findCatalogRegionById } from "@/lib/region/catalog";
+import { findCatalogRegionById, REGION_CATALOG } from "@/lib/region/catalog";
+import { regionSwitchMarkers } from "@/lib/region/region-switch";
+import { RegionSwitcher } from "./RegionSwitcher";
 import { isSudogwonRegion } from "@/lib/rent/params";
 import { hasAnyNonAptRent } from "@/lib/rent/any-rows";
 import { findTemperatureRegion } from "@/lib/market/temperature";
@@ -46,8 +48,11 @@ export async function RegionTabs({
     hasTemperature: Boolean(findTemperatureRegion(info.id)),
   });
   if (tabs.length < 2) return null;
+  /* [1122] 다른 지역 찾기 — 한 지역만 보이는 화면에서 검색 · 시/도 필터 · 지도로 다른 지역으로(지금 탭 그대로) */
+  const switchMarkers = regionSwitchMarkers(REGION_CATALOG, current, (rid) => Boolean(findTemperatureRegion(rid)));
   return (
-    <nav aria-label={`${info.name} 지역 화면`} className={`region-tabs news-tabs ${className}`.trim()}>
+    <div className={className}>
+    <nav aria-label={`${info.name} 지역 화면`} className="region-tabs news-tabs">
       {tabs.map((t) =>
         t.key === current ? (
           <Link key={t.key} href={t.href} aria-current="page" prefetch={false}>
@@ -60,6 +65,8 @@ export async function RegionTabs({
         ),
       )}
     </nav>
+    <RegionSwitcher markers={switchMarkers} currentName={info.name} defaultSido={info.city ?? "서울"} />
+    </div>
   );
 }
 

@@ -553,6 +553,13 @@ export function Map3DClient() {
               </p>
             </div>
             <div className="flex shrink-0 items-center gap-1.5">
+              {/* [1121 · 기능 통폐합] 지도 [2D | 3D] — 같은 지역 2D 지도로 */}
+              <Link
+                href={params ? `/map?region=${encodeURIComponent(params.region)}` : "/map"}
+                className="btn-outline flex min-h-10 items-center rounded-lg px-2.5 t-sub no-underline md:min-h-8"
+              >
+                2D
+              </Link>
               <button type="button" onClick={togglePitch} className="btn-outline min-h-10 rounded-lg px-2.5 t-sub md:min-h-8">
                 {pitched ? "위에서" : "3D"}
               </button>

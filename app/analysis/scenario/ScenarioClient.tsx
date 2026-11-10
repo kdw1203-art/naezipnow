@@ -30,6 +30,7 @@ import {
 } from "@/lib/market/scenario-conclusion";
 import { ControlsShell, ScenarioControlsLazy, ScenarioDetailsLazy } from "./ScenarioLazy";
 import { useDesktop } from "./use-desktop";
+import { CalculatorNav } from "@/app/calculator/CalculatorNav";
 
 /* ============================================================
    시장·대출 시나리오 — 기준 시세를 지역 실데이터(스냅샷 평균가)로 프리필.
@@ -281,6 +282,8 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
     <>
       <ShellBreadcrumb>분석 › 시장·대출 시나리오</ShellBreadcrumb>
       <div className="nz-dot-blue mx-auto w-full max-w-[1200px]">
+        {/* [1121 · 기능 통폐합] 계산기 묶음 탭 — 시나리오는 계산기의 한 칸 */}
+        <CalculatorNav current="/analysis/scenario" />
         <PageHead
           icon="calculator"
           title="시장·대출 시나리오"

@@ -145,7 +145,7 @@ test("배치 — KPI 칸 수만큼 열 · 아래 광고 본문 열 안 · 단지
   assert.doesNotMatch(cxPage, /이 단지 AI 분석 받기/);
   assert.doesNotMatch(strip(read("app/complex/[id]/ComplexRecordsSection.tsx")), /AI 분석 받기/);
   assert.equal((read("app/complex/[id]/ComplexInsightView.tsx").match(/이 단지 AI 종합 진단 받기/g) ?? []).length, 1);
-  assert.match(read("app/components/ComplexSummaryTable.tsx"), /<th className="py-2 font-medium md:w-\[44%\]">단지<\/th>/);
+  assert.match(read("app/components/ComplexSummaryTable.tsx"), /md:grid-cols-\[32px_minmax\(0,1fr\)_120px_150px\]/); /* [1118] 순위 목록 — 단지 열이 늘어도 숫자 두 열은 고정 폭 */
   assert.match(strip(read("app/components/compact/MiniBar.tsx")), /\{r\.value > 0 && \(/);
   const gs = strip(read("app/analysis/gap/GapScreener.tsx"));
   assert.match(gs, /const GAP_TABLE_PAGE = 40;/);

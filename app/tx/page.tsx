@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
-import { TopBanner } from "@/app/components/ads/TopBanner";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { Explain } from "@/app/components/explain/Explain";
 import { PageShell } from "../components/PageShell";
@@ -188,8 +187,6 @@ export default async function TxIndexPage() {
       </p>
 
       {/* [1015 · 규칙 F·G] 데스크톱 2단 — 본문(지역 목록) + 340px 레일(관련 용어 · 관련 화면 · 데이터 출처 · 광고 1). 폰은 한 열, 광고는 끝 1. */}
-      {/* [1098 · 배너] 상단 띠 배너 자리 */}
-      <TopBanner placement="page_bottom" plan={null} className="mb-4 max-md:mb-3" />
 
       <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-5">
       <div className="min-w-0">

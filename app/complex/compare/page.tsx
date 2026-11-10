@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
-import { TopBanner } from "@/app/components/ads/TopBanner";
 import { PageShell } from "../../components/PageShell";
 import { QaBlock } from "../../components/QaBlock";
 /* [1015 · 규칙 B] "조합을 고른 기준" 문단은 제목 옆 ⓘ 하나로(단지 상세와 같은 지연 청크) */
@@ -20,6 +19,8 @@ import {
 } from "@/lib/data/prerender-budget";
 import { cache, Fragment } from "react";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
+import { SectionTabs } from "@/app/components/nav/SectionTabs";
+import { COMPARE_TABS } from "@/lib/nav/section-tabs";
 
 /* ============================================================
    N10 — 단지 vs 단지 비교 허브 (/complex/compare)
@@ -216,8 +217,13 @@ export default async function ComplexComparePage() {
         </span>
       </p>
 
-      {/* [1098 · 배너] 상단 띠 배너 자리 */}
-      <TopBanner placement="page_bottom" plan={null} className="mb-4 max-md:mb-3" />
+      {/* [1121 · 기능 통폐합] 비교 묶음 탭(단지 · 노트 · 매물) + 후보 단지 비교(내가 담은 단지)는 단지 탭 안 링크 */}
+      <SectionTabs tabs={COMPARE_TABS} current="/complex/compare" label="비교" className="mb-3" />
+      <p className="-mt-1 mb-4 t-sub max-md:mb-3">
+        <Link href="/analysis/compare" className="tap-line font-bold text-primary no-underline hover:underline">
+          내가 담은 후보 단지 비교 ›
+        </Link>
+      </p>
 
       {loadFailed ? (
         <section className="rise-in-1 card p-[var(--pad-card)]">
@@ -245,21 +251,27 @@ export default async function ComplexComparePage() {
           {/* [1101 · 조작 다이어트] PC 도 한 줄 가로 밀기 — 63개 칩이 PC 에서 일곱 줄(약 280px)로 쌓여 첫 화면을 덮었다. 폰은 1074 부터 한 줄.
               PC 는 얇은 가로 막대를 보인다(마우스로 밀 수 있다는 표시 · 폰은 막대 없이 손가락으로) */}
           {/* [1105] data-hscroll — 칩 포커스 링을 안쪽으로(가로 밀기 틀이 바깥 링 위 · 아래를 잘랐다 · globals.css 끝) */}
-          <nav
-            aria-label="지역 바로가기"
-            className="-mx-3.5 flex flex-nowrap gap-1.5 overflow-x-auto px-3.5 pb-1.5 max-md:[scrollbar-width:none] max-md:[&::-webkit-scrollbar]:hidden md:mx-0 md:px-0 md:[scrollbar-width:thin]"
-            data-hscroll=""
-          >
-            {groups.map((group) => (
-              <a
-                key={`jump-${group.regionId}`}
-                href={`#region-${group.regionId}`}
-                className="chip shrink-0 whitespace-nowrap bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline shadow-sm"
-              >
-                {group.label} <span className="font-medium text-text-3">{group.pairs.length}</span>
-              </a>
-            ))}
-          </nav>
+          {/* [1119 · 5개 넘으면 필터] 63개 지역 칩 가로 밀기 → "지역 고르기" 접힘 하나(판 안 링크 63개 · 누르면 그 지역이 펼쳐진다 — OpenDetailsOnHash) */}
+          <details className="group relative">
+            <summary className="press flex min-h-10 w-fit cursor-pointer list-none items-center gap-1 rounded-lg border border-line bg-surface px-3 t-sub font-bold text-text-2">
+              지역 고르기 · {groups.length}곳
+              <span aria-hidden="true" className="text-text-3 transition-transform group-open:rotate-180">
+                {/* dead-control-ok: summary 가 눌리는 자리 — 꺾쇠는 열림 표시 */}⌄
+              </span>
+            </summary>
+            <nav aria-label="지역 바로가기" className="card absolute left-0 z-20 mt-1 grid max-h-[60vh] w-[min(92vw,640px)] grid-cols-2 gap-1 overflow-y-auto rounded-xl p-2 sm:grid-cols-3">
+              {groups.map((group) => (
+                <a
+                  key={`jump-${group.regionId}`}
+                  href={`#region-${group.regionId}`}
+                  className="flex min-h-10 items-center justify-between gap-2 rounded-lg px-2.5 t-sub font-bold text-text-2 no-underline hover:bg-bg"
+                >
+                  <span className="truncate">{group.label}</span>
+                  <span className="shrink-0 font-medium text-text-3 tabular-nums">{group.pairs.length}</span>
+                </a>
+              ))}
+            </nav>
+          </details>
           {/* [1105 · 접근성] <summary> 안 <h2> 는 대화형 요소 안 제목이라(버튼 역할 · 자식 의미가 지워지는 보조기기가 있다) 걷는다 —
               summary 에는 글(span · 같은 모양), 제목은 summary 밖 낭독기 전용 h2(지역마다 제목 이동 그대로) · details 이름은 그 제목.
               span 의 [html[data-mscale]_&]:truncate 는 예전 h2 가 받던 폰 배율 한 줄 규칙(globals html[data-mscale] :is(h2,h3,h4))과 같다 */}
