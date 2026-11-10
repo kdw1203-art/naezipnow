@@ -46,7 +46,7 @@ async function main() {
   const sbUrl = await ask("NEXT_PUBLIC_SUPABASE_URL (엔터 = 기존값 유지): ");
   const sbAnon = await ask("NEXT_PUBLIC_SUPABASE_ANON_KEY: ");
   const sbService = await ask("SUPABASE_SERVICE_ROLE_KEY: ");
-  addEnv("NEXT_PUBLIC_SUPABASE_URL", sbUrl || "https://pbhiskvwpwwhtkmnhkbm.supabase.co");
+  addEnv("NEXT_PUBLIC_SUPABASE_URL", sbUrl || "https://gjhnrpiiuhjzjzuuvdck.supabase.co");
   addEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY", sbAnon);
   addEnv("SUPABASE_SERVICE_ROLE_KEY", sbService);
 

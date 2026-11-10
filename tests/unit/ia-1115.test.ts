@@ -403,3 +403,18 @@ test("[1133] 수집 시작 전 — 실거래 0건인 새 DB 는 0행을 실패�
   assert.match(e, /tickerFailed: seriesMap === null && !collecting,/);
   assert.match(e, /snapshotFailed: snapshots === null && !collecting,/);
 });
+
+/* ── [1134] 새 프로젝트 공개 키 ── */
+test("[1134] 공개 키 — 다른 프로젝트의 anon JWT · 옛 공개 키는 무효 · 폴백은 새 프로젝트", async () => {
+  const { publicKeyFitsProject, refOfAnonJwt } = await import("../../lib/supabase/env.ts");
+  const jwt = (ref: string) => "eyJhbGciOiJIUzI1NiJ9." + Buffer.from(JSON.stringify({ ref, role: "anon" })).toString("base64url") + ".sig";
+  assert.equal(refOfAnonJwt(jwt("abc")), "abc");
+  assert.equal(publicKeyFitsProject(jwt("oldproject"), "gjhnrpiiuhjzjzuuvdck"), false);
+  assert.equal(publicKeyFitsProject(jwt("gjhnrpiiuhjzjzuuvdck"), "gjhnrpiiuhjzjzuuvdck"), true);
+  assert.equal(publicKeyFitsProject("sb_publishable_UjkQXcYY6f9oBbjjfZvFAA_jYpui-OX", "gjhnrpiiuhjzjzuuvdck"), false);
+  assert.equal(publicKeyFitsProject("sb_publishable_anything", "gjhnrpiiuhjzjzuuvdck"), true);
+  assert.equal(publicKeyFitsProject("[SENSITIVE]", "x"), false);
+  assert.equal(publicKeyFitsProject(undefined, "x"), false);
+  const src = read("lib/supabase/env.ts");
+  assert.match(src, /FALLBACK_SUPABASE_URL = "https:\/\/gjhnrpiiuhjzjzuuvdck\.supabase\.co"/);
+});
