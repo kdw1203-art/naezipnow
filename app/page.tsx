@@ -195,13 +195,15 @@ export default async function Home() {
               시작)과 1022 "검색 부분을 심플하게"를 한 판으로 잇는다 — 돌아온 사람이 여는 화면이라 첫 줄이 검색, 둘째 줄이 오늘 숫자다.
               내 동네 숫자 3칸은 따로 두지 않는다: 지역 동향 첫 카드와 같은 숫자가 된다(1050 중복 검토) — 숫자는 "오늘의 시장" 슬라이드
               (관심 지역이면 그 지역 문장)가 말한다. 첫 화면에는 rise-in·data-reveal 을 쓰지 않는다. */}
-          <section className="brand-navy-card flex flex-col gap-3 rounded-2xl px-4 pb-3 pt-5 md:gap-4 md:px-6 md:pb-4 md:pt-7" aria-label="검색 · 오늘의 시장">
+          <section className="brand-navy-card flex flex-col gap-2.5 rounded-2xl px-4 pb-2.5 pt-3.5 md:gap-3 md:px-6 md:pb-3 md:pt-4" aria-label="검색 · 오늘의 시장">
             <svg className="brand-wm text-on-dark" width="150" height="140" viewBox="0 0 120 120" aria-hidden="true">
               <path d="M14 46 C 38 64, 82 64, 106 46" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" />
               <circle cx="60" cy="86" r="8.5" fill="currentColor" />
             </svg>
             {/* [1030 · G1] 질문문 → 낱말. 예시는 검색칸 placeholder 가 든다. */}
-            <p className="t-display text-center text-on-dark">단지 · 동네 검색</p>
+            {/* [1132 · 띠 높이 줄이기] 소유자 2026-11-10 "홈에서 해당 부분이 너무 큰 세로 공간" — 큰 제목 줄을 화면에서 걷고(검색칸 흐린 글자가 같은 말을 한다 · 읽기 프로그램용으로만 남김)
+                위아래 여백 · 칸 사이 간격 · 오늘의 시장 문장 줄 높이를 줄였다. */}
+            <p className="sr-only">단지 · 동네 검색</p>
             {/* [1015 · 규칙 B] "예산으로 찾기" 칩 줄과 "어디서부터 시작할까요?" 문 4개는 뺐다(소유자: "필요 없는 부분 —
                 물음표 칸으로 마우스를 올리면 보이는 정도로"). 네 입구는 ⓘ 하나(hover 미리보기·탭 시트)로 접었다.
                 [1024] 소유자(캡처): "이런건 한줄로 바꿔줘" — "처음이라면 ⓘ" 를 칩 행의 coverage 슬롯으로 넘겨 칩과 같은 줄에 둔다. */}

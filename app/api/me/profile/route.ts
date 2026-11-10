@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isReservedName, RESERVED_NAME_ERROR } from "@/lib/account/reserved-names";
 import { logger } from "@/lib/log";
 import { safeAuth } from "@/lib/safe-auth";
 import { appendOnboardingStep } from "@/lib/onboarding/append-step";
@@ -60,6 +61,10 @@ export async function PATCH(req: Request) {
     const name = body.name.replace(/\s+/g, " ").trim();
     if (name.length < 1 || name.length > 50) {
       return NextResponse.json({ error: "이름은 1~50자" }, { status: 400 });
+    }
+    /* [1133 · 사칭 금지어] 운영자 · 서비스 이름이 들어 있는 이름은 관리자만 */
+    if (session.user.role !== "admin" && isReservedName(name)) {
+      return NextResponse.json({ error: RESERVED_NAME_ERROR }, { status: 400 });
     }
     updates.name = name;
     publicUpdates.full_name = name;

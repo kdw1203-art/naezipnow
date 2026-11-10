@@ -84,7 +84,8 @@ test("[1023] 허브 — 최근 실행 결과 3건은 history-store 를 마운트
   assert.match(recent, /REGION_KEYED = new Set\(\["ai-timing"\]\)/);
   const hero = code("app/analysis/hub-hero.tsx");
   /* [1050 · 번들] 도구 이름은 서버가 넘긴다(titles) — tool-identity 를 브라우저 번들에 싣지 않는다 */
-  assert.match(hero, /<HubRecentRuns titles=\{toolTitles\} \/>/);
+  /* [1132] 허브에서는 최근 실행 결과 목록을 그리지 않는다(마이 › 내 분석) */
+  assert.doesNotMatch(hero, /<HubRecentRuns/);
   /* 실행 4칸 "마지막 실행 N일 전" — 고른 단지 id 로 조회, 기록이 있는 칸만 */
   assert.match(hero, /findLastRun\(id, pickedId\)/);
   assert.match(hero, /lastRun\[id\] && \(/);

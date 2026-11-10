@@ -130,7 +130,7 @@ test("③ 단지 상세 — 기록 한 자리 · 인근 단지+비교 한 목록
 test("④ 홈 — 네이비 검색 띠 · 최근 실거래 순위 · AI 입구 판 없음 · 지역 동향은 사이드바 · 폰 순서(본문 → 사이드바)", () => {
   const home = strip(read("app/page.tsx"));
   assert.doesNotMatch(home, /AIPanel|HomeAiGateway\(|HOME_AI_GATEWAY_TITLE/);
-  assert.match(home, /<section className="brand-navy-card flex flex-col gap-3 rounded-2xl[^"]*" aria-label="검색 · 오늘의 시장">/);
+  assert.match(home, /<section className="brand-navy-card flex flex-col gap-2.5 rounded-2xl[^"]*" aria-label="검색 · 오늘의 시장">/);
   const band = home.slice(home.indexOf('aria-label="검색 · 오늘의 시장"'), home.indexOf("<TopBanner"));
   assert.match(band, /<HomeHeroSearch\s+onDark/);
   assert.match(band, /<HomeTodayLine\s+embedded/);

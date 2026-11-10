@@ -336,7 +336,7 @@ export function HomeTodayLine({
         href={cur.href}
         /* 두 줄 높이를 미리 잡아 둔다 — 문장 길이가 바뀔 때 아래 카드가 밀리지 않게(CLS).
            짧은 문장에서 아래가 비어 보이지만, 넘길 때마다 화면이 튀는 쪽이 훨씬 나쁘다. */
-        className="today-slide mt-1.5 block min-h-[2.9em] t-title no-underline md:min-h-[2.1em]"
+        className="today-slide mt-1 block min-h-[2.6em] t-section no-underline md:min-h-[1.5em]"
         style={{ color: "var(--on-dark)" }}
       >
         {cur.text}

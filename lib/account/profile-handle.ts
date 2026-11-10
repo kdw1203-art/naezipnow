@@ -1,3 +1,4 @@
+import { isReservedName } from "./reserved-names";
 /**
  * [1058] 공개 프로필 핸들·소개의 순수 규칙 — ProfileEditSheet(클라이언트)·PATCH /api/me/profile(서버)·
  * node:test 가 같은 규칙을 부른다. `server-only`·React 를 import 하지 않는다.
@@ -43,7 +44,8 @@ export function validateHandle(raw: string | null | undefined): HandleValidation
   const handle = normalizeHandle(raw);
   if (!handle) return { ok: true, handle: null };
   /* 예약어를 먼저 — "me"·"u" 는 길이로도 걸리지만 이유는 예약어다 */
-  if (RESERVED_HANDLES.includes(handle)) {
+  /* [1133] 운영자 · 서비스 이름이 들어 있는 핸들도(admin_kim · naezipnow01 …) */
+  if (RESERVED_HANDLES.includes(handle) || isReservedName(handle)) {
     return { ok: false, error: "쓸 수 없는 핸들 · 다른 낱말로" };
   }
   if (!HANDLE_RE.test(handle)) {

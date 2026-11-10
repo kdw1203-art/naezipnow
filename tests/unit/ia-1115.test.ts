@@ -374,3 +374,32 @@ test("[1131] 홈 — 로그인 묶음 없음 · 마이로 옮김 · 검색칸 �
   assert.match(b, /<HomeWatchlistBrief \/>/);
   assert.match(read("app/components/home/HomeHeroSearch.tsx"), /placeholder=\{recentComplexes\[0\] \? `최근 본 단지 · /);
 });
+
+/* ── [1133] 사칭 금지어 · 빈 자료 문구 ── */
+test("[1133] 이름 · 핸들 금지어 — admin · naezipnow · 관리자 등(대소문자 · 공백 · 기호 · 전각 무시)", async () => {
+  const { isReservedName, reservedKeywordIn } = await import("../../lib/account/reserved-names.ts");
+  for (const bad of ["admin", "Admin", "A d m i n", "naezipnow", "NaeZip-Now", "ＡＤＭＩＮ", "내집나우 공식", "관 리 자", "운영자님", "kim_admin01", "고객센터"]) {
+    assert.equal(isReservedName(bad), true, bad);
+  }
+  for (const ok of ["고대웅", "임장왕", "apt_lover", "강남사는사람", "", "administer"]) {
+    assert.equal(isReservedName(ok), ok === "administer" ? true : false, ok);
+  }
+  assert.equal(reservedKeywordIn("naezipnow_fan"), "naezipnow");
+  const { validateHandle } = await import("../../lib/account/profile-handle.ts");
+  assert.equal(validateHandle("admin_kim").ok, false);
+  assert.equal(validateHandle("naezipnow01").ok, false);
+  assert.equal(validateHandle("apt_lover").ok, true);
+  const reg = read("app/api/auth/register/route.ts");
+  assert.match(reg, /typedName && isReservedName\(typedName\)/);
+  assert.match(read("app/api/me/profile/route.ts"), /session\.user\.role !== "admin" && isReservedName\(name\)/);
+});
+
+test("[1133] 수집 시작 전 — 실거래 0건인 새 DB 는 0행을 실패로 말하지 않는다", () => {
+  const f = read("lib/market/fresh-db.ts");
+  assert.match(f, /from\("market_transactions"\)\.select\("id", \{ count: "exact", head: true \}\)/);
+  assert.match(f, /return !error && count === 0;/);
+  assert.match(read("lib/newui/home-data.ts"), /snapshots\.size === 0 && !\(await isCollectingFromEmpty\(\)\)\) regionsFailed = true;/);
+  const e = read("app/analysis/region-sise-entry.tsx");
+  assert.match(e, /tickerFailed: seriesMap === null && !collecting,/);
+  assert.match(e, /snapshotFailed: snapshots === null && !collecting,/);
+});

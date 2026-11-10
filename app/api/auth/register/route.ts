@@ -17,6 +17,7 @@ import { maskEmailPublic } from "@/lib/privacy/mask-email";
 import { mapSignUpRejection } from "@/lib/auth/signup-error";
 import { findAuthUserByEmail } from "@/lib/auth/find-auth-user";
 import { EMAIL_RE, NAME_MAX } from "@/lib/auth/signup-form";
+import { isReservedName, RESERVED_NAME_ERROR } from "@/lib/account/reserved-names";
 import { safeInternalPath } from "@/lib/safe-path";
 import { verifyTurnstile } from "@/lib/auth/verify-turnstile";
 
@@ -398,7 +399,13 @@ export async function POST(req: NextRequest) {
     .toLowerCase();
   const password = String(b.password ?? "");
   /* [1039] 이름 길이 상한 — 화면(maxLength)과 같은 값. 예전엔 상한이 없었다 */
-  const name = (String(b.name ?? "").trim() || email.split("@")[0] || "회원").slice(0, NAME_MAX);
+  /* [1133 · 사칭 금지어] 직접 적은 이름에 운영자 · 서비스 이름이 들어 있으면 거절 · 이메일 앞부분에서 따 온 이름이 걸리면 "회원" 으로 */
+  const typedName = String(b.name ?? "").trim();
+  if (typedName && isReservedName(typedName)) {
+    return NextResponse.json({ error: RESERVED_NAME_ERROR, field: "name" }, { status: 400 });
+  }
+  const fromEmail = email.split("@")[0] || "";
+  const name = (typedName || (fromEmail && !isReservedName(fromEmail) ? fromEmail : "") || "회원").slice(0, NAME_MAX);
   /* [1039] 인증 메일 링크를 누른 뒤의 목적지 — 가입 화면이 보낸 /welcome[?next=…]. 내부 경로만(열린 리다이렉트 금지) */
   const afterVerify = safeInternalPath(typeof b.next === "string" ? b.next : null, "/");
   const verifyNext =

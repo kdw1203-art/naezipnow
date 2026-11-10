@@ -17,7 +17,7 @@ import {
 } from "./tool-catalog";
 import { useHubPicked } from "./hub-context";
 import { LastToolChip } from "./tool-cards-client";
-import { HubRecentRuns, recentRunWhen } from "./hub-recent";
+import { recentRunWhen } from "./hub-recent";
 import { findLastRun } from "@/lib/ai/history-store";
 
 /* ============================================================
@@ -193,8 +193,8 @@ export function HubHero({
 
       </div>
 
-      {/* [1023] 최근 실행 결과 3건 — 기록이 있을 때만(마운트 뒤) */}
-      <HubRecentRuns titles={toolTitles} />
+      {/* [1132] 최근 실행 결과 3건은 허브에서 걷었다(소유자 2026-11-10 "여기서는 필요없어") — 지난 결과는 마이 › 내 분석(AI 분석 기록)에서 본다.
+          실행 4칸의 "마지막 실행 N일 전"(recentRunWhen)은 그대로. */}
 
       {/* 고른 즉시 실행 지점을 띄운다 — 다시 아래로 찾아 내려갈 필요가 없다 */}
       {picked && (

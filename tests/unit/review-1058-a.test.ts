@@ -72,7 +72,8 @@ test("A2 validateHandle — [a-z0-9_]{3,20} · 소문자화 · @ 제거 · 빈 �
   }
   /* 예약어 검사도 소문자 기준 — "Admin" 도 막힌다 */
   assert.equal(validateHandle("Admin").ok, false);
-  assert.equal(validateHandle("admin2").ok, true);
+  /* [1133] 금지어가 들어 있는 핸들도 막는다(admin2 · naezipnow01) — 예전엔 정확히 같은 낱말만 막았다 */
+  assert.equal(validateHandle("admin2").ok, false);
 });
 
 test("A2 validateBio — 120자 · 줄바꿈·연속 공백은 한 칸 · 빈 값은 ''", () => {

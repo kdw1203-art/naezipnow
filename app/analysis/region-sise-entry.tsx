@@ -5,6 +5,7 @@
    예전 다섯 도구가 하던 일은 그 종합 화면과 비교 화면(전국 온도 지도 · 전세가율·갭 순위 · 시나리오)이 맡는다 — 같은 사실을 두 곳에 두지 않는다.
    데이터: 부동산원 스냅샷 전 지역(getAllRegionSnapshots · 갭 스크리너와 같은 표) + 이번 주 시장 온도(listLatestTemperatures · 온도 지도와 같은 표).
    둘 다 프리렌더 예산 안(20초)에서 읽고, 못 읽으면 그 칸이 "—" + "불러오기 실패 · 잠시 후 다시" 한 줄 — 빈 값으로 위장하지 않는다. */
+import { isCollectingFromEmpty, COLLECTING_LINE } from "@/lib/market/fresh-db";
 import Link from "@/app/components/IntentLink";
 import { REGION_ALIASES, REGION_CATALOG } from "@/lib/region/catalog";
 import { findTemperatureRegion } from "@/lib/market/temperature";
@@ -40,6 +41,8 @@ export type RegionSiseData = {
   /** [1115] 시세판 쪽(서울 주요 구 · 상승 · 하락 — 쪽마다 16칸) */
   tickerPages: TickerPage[];
   tickerFailed: boolean;
+  /** [1133] 새로 만든 DB — 실거래 0건(수집 시작 전) */
+  collecting: boolean;
 };
 
 const BUDGET_MS = 20_000;
@@ -66,17 +69,20 @@ export async function loadRegionSiseData(what = "[region-sise]"): Promise<Region
     periodLabel = top ? formatYm(top[0]) : null;
   }
   const groups = buildRegionSiseGroups(regions, snapshots, temps);
-  const coords = new Map(REGION_CATALOG.map((r) => [r.id, { lat: r.lat, lng: r.lng }] as const));
   const seriesMap = series.ok && series.data.size > 0 ? series.data : null;
+  /* [1133] 새로 만든 DB(실거래 0건)면 0행은 조회 이상이 아니라 수집 시작 전이다 — "불러오기 실패"라고 하지 않는다 */
+  const collecting = (snapshots === null || seriesMap === null) && snap.ok && series.ok ? await isCollectingFromEmpty() : false;
+  const coords = new Map(REGION_CATALOG.map((r) => [r.id, { lat: r.lat, lng: r.lng }] as const));
   return {
     regions,
     groups,
     tickerPages: seriesMap ? buildTickerPages(groups.flatMap((g) => g.rows), seriesMap) : [],
-    tickerFailed: seriesMap === null,
+    tickerFailed: seriesMap === null && !collecting,
+    collecting,
     markers: regionSiseMapMarkers(groups.flatMap((g) => g.rows), coords, formatKrwShort),
     periodLabel,
     weekLabel: temp.ok && temp.data.weekStart ? formatWeekKorean(temp.data.weekStart) : null,
-    snapshotFailed: snapshots === null,
+    snapshotFailed: snapshots === null && !collecting,
     tempFailed: temps === null,
   };
 }
@@ -163,6 +169,7 @@ export function RegionSiseEntry({ data, autoFocus = false }: { data: RegionSiseD
         panels={data.groups.map((g) => <Panel key={g.sido} g={g} />)}
       />
       <p className="m-0 px-1 t-caption text-text-3">
+        {data.collecting ? `${COLLECTING_LINE} · ` : ""}
         {failed.length > 0 ? `${failed.join(" · ")} ${LOAD_FAILED_LINE} · ` : ""}
         평균 매매가 · 전세가율 = 한국부동산원 공표 통계{data.periodLabel ? ` ${data.periodLabel} 기준` : ""} · 시장 온도 = 매주 기록한 0~100점
         {data.weekLabel ? `(${data.weekLabel})` : ""} · 지역을 고르면 개요 · 실거래 구간 · 전월세 · 시장 온도 · 동네 · 월간 리포트
