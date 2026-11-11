@@ -9,6 +9,7 @@ import {
   NATIONAL_PAGE_SIZE,
   nationalHref,
   parseNationalParams,
+  stripOrdinal,
   type NationalListParams,
 } from "@/lib/redevelopment/national";
 import { logger } from "@/lib/log";
@@ -129,10 +130,10 @@ export default async function RedevListPage({ searchParams }: { searchParams: Pr
                           {r.sido} {r.sigungu}
                         </td>
                         <td className="px-3 py-2.5 font-bold text-ink">{r.name}</td>
-                        <td className="whitespace-nowrap px-3 py-2.5">{r.project_type ?? "—"}</td>
-                        <td className="whitespace-nowrap px-3 py-2.5">{r.stage ?? "—"}</td>
+                        <td className="whitespace-nowrap px-3 py-2.5">{stripOrdinal(r.project_type) ?? "—"}</td>
+                        <td className="whitespace-nowrap px-3 py-2.5">{stripOrdinal(r.stage) ?? "—"}</td>
                         <td className="whitespace-nowrap px-3 py-2.5 t-num">{r.households ? `${r.households.toLocaleString("ko-KR")}세대` : "—"}</td>
-                        <td className="px-3 py-2.5 text-text-2">{r.operator ?? "—"}</td>
+                        <td className="px-3 py-2.5 text-text-2">{stripOrdinal(r.operator) ?? "—"}</td>
                       </tr>
                     ))}
                   </tbody>

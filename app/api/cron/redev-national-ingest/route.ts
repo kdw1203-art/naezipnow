@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { ingestNationalRedevZones, isNationalRedevConfigured } from "@/lib/redevelopment/national-ingest";
 import { NATIONAL_DATASET } from "@/lib/redevelopment/national";
@@ -25,6 +26,8 @@ export async function GET(req: Request) {
       status: r.ok ? "ok" : r.skipped ? "skipped" : "error",
       message: r.reason ?? `받음 ${r.fetched} · 저장 ${r.upserted}${r.total !== null ? ` · 공표 ${r.total}` : ""}`,
     });
+    /* [1151] 서울 구별 정비구역 수 지도(하루 캐시)를 바로 새로 그린다 */
+    if (r.ok) revalidatePath("/redevelopment/seoul");
     return NextResponse.json(r);
   } catch (err) {
     const message = ingestErrorMessage(err, "전국 정비구역 적재 실패");

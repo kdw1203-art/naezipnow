@@ -853,3 +853,14 @@ test("[1150] 단지 정보 갱신 주기 · 서울 구별 정비구역 수 지�
   assert.match(read("app/redevelopment/seoul/page.tsx"), /\{nationalCounts && \(/);
   assert.doesNotMatch(read("tests/unit/ia-1115.test.ts").split("[1150]")[0], /assert\.match\(read\("vercel\.json"\)/, "vercel.json 을 글자 모양으로 보지 않는다");
 });
+
+test("[1151] 정비구역 분류 값의 순번을 뗀다 — 3)재건축(공동주택) → 재건축(공동주택)", async () => {
+  const m = await import("../../lib/redevelopment/national.ts");
+  assert.equal(m.stripOrdinal("3)재건축(공동주택)"), "재건축(공동주택)");
+  assert.equal(m.stripOrdinal("17)사업시행자지정"), "사업시행자지정");
+  assert.equal(m.stripOrdinal("재개발"), "재개발");
+  assert.equal(m.stripOrdinal(""), null);
+  const z = m.parseNationalRow({ "시도": "서울특별시", "시군구": "강남구", "구역명칭": "대치미도아파트", "현 사업추진단계": "2)정비구역지정", "사업유형": "3)재건축(공동주택)", "사업시행자": "1)조합", "공급 예정 세대수": "3914" });
+  assert.deepEqual([z?.stage, z?.projectType, z?.operator], ["정비구역지정", "재건축(공동주택)", "조합"]);
+  assert.match(read("app/api/cron/redev-national-ingest/route.ts"), /revalidatePath\("\/redevelopment\/seoul"\)/);
+});

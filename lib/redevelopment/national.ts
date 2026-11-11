@@ -20,6 +20,12 @@ export type NationalZone = {
 
 const s = (v: unknown): string => String(v ?? "").replace(/\s+/g, " ").trim();
 
+/** [1151] 공표 자료의 분류 값은 "3)재건축(공동주택)" · "2)정비구역지정" 처럼 순번이 붙어 온다 — 화면에는 순번을 떼고 보인다(실측 2026-11-11) */
+export function stripOrdinal(v: string | null | undefined): string | null {
+  const t = s(v).replace(/^\d{1,2}\)\s*/, "");
+  return t || null;
+}
+
 /** 같은 시군구 안에서 구역명칭이 열쇠다 — 공백 · 대소문자 차이는 같은 구역으로 */
 export function nationalZoneId(sido: string, sigungu: string, name: string): string {
   return [sido, sigungu, name].map((x) => s(x).replace(/\s/g, "").toLowerCase()).join("|");
@@ -44,9 +50,9 @@ export function parseNationalRow(raw: unknown): NationalZone | null {
     sido,
     sigungu,
     name: name.slice(0, 120),
-    stage: s(r["현 사업추진단계"]) || null,
-    projectType: s(r["사업유형"]) || null,
-    operator: s(r["사업시행자"]).slice(0, 120) || null,
+    stage: stripOrdinal(s(r["현 사업추진단계"])),
+    projectType: stripOrdinal(s(r["사업유형"])),
+    operator: stripOrdinal(s(r["사업시행자"]).slice(0, 120)),
     households: parseHouseholds(r["공급 예정 세대수"]),
   };
 }
