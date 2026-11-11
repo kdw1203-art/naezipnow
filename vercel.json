@@ -29,6 +29,10 @@
       "schedule": "50 0 * * *"
     },
     {
+      "path": "/api/cron/region-buzz-ingest",
+      "schedule": "5 16 * * *"
+    },
+    {
       "path": "/api/cron/kb-ingest",
       "schedule": "0 1 * * *"
     },

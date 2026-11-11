@@ -49,7 +49,7 @@ function readTokens(): Tokens {
   /* 토큰이 비면(이론상) 바탕·글자 토큰끼리 섞는다 — 새 색을 정하지 않는다 */
   const bg = v("--bg", "rgb(247, 249, 252)");
   const surface = v("--surface", "rgb(255, 255, 255)");
-  const primary = v("--primary", "rgb(29, 79, 216)");
+  const primary = v("--primary", "rgb(27, 75, 145)");
   const success = v("--success", "rgb(23, 122, 74)");
   const text1 = v("--text-1", "rgb(51, 61, 75)");
   const text3 = v("--text-3", "rgb(96, 106, 119)");

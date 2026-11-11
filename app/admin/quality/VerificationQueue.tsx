@@ -115,7 +115,7 @@ function ExpertRow({ item }: { item: QueueItem }) {
                 type="button"
                 onClick={() => setEvOpen((v) => !v)}
                 aria-expanded={evOpen}
-                className="rounded-lg bg-[rgba(29,79,216,.1)] px-2 py-1 text-[10px] font-bold text-primary"
+                className="rounded-lg bg-[rgba(27, 75, 145,.1)] px-2 py-1 text-[10px] font-bold text-primary"
               >
                 {evOpen ? "자료 닫기" : "심사 자료"}
               </button>

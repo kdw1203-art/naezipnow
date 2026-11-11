@@ -194,6 +194,8 @@ export type IngestSource =
   | "economy-alerts"
   | "onbid"
   | "court-auction"
+  /** [1139] 네이버 검색어 트렌드 · 뉴스 건수(app/api/cron/region-buzz-ingest) */
+  | "naver-buzz"
   | "redevelopment"
   /** 입주물량 자동 인제스트(app/api/cron/supply-ingest, 개선 #21) */
   | "supply"

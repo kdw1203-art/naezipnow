@@ -153,8 +153,8 @@ export type ToolPersona = {
       가깝게 둔다 — AI 갭투자와 지역 갭 스크리너는 실제로 같은 이야기다.
    ④ [1012 · R2 · C] **보라·남보라(#6D28D9 · #A21CAF · #7E22CE · #3730A3 · #4338CA)는 팔레트에 없다**
       (디자인 시스템 v3 규칙 9: 주색 나우블루 1 + 의미색 3 + 회색). 시세 예측·갭·경제 지표·
-      지역 흐름·전세가율 순위 5종을 나우블루(--primary #1D4FD8 · 다크 --ai-accent #88AAFF ·
-      soft --primary-soft #EDF2FE)로 바꿨다. 같은 hex 를 여러 도구가 쓰는 건 이 주색뿐이다
+      지역 흐름·전세가율 순위 5종을 나우블루(--primary #1b4b91 · 다크 --ai-accent #88AAFF ·
+      soft --primary-soft #eaf0f9)로 바꿨다. 같은 hex 를 여러 도구가 쓰는 건 이 주색뿐이다
       (tests/unit/tool-persona-980.test.ts 가 그렇게 허용). 분석 허브 목록 카드는 이 색을
       아예 쓰지 않는다(회색 1종) — 도구 색은 상세 화면(/analysis/ai/[tool])의 정체성으로만.
    ───────────────────────────────────────────────────────────────────────── */
@@ -194,7 +194,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     character: "시나리오",
     premise: "1~5년 뒤 가격을 낙관 · 기본 · 비관 3가지로 계산",
     composition: "trajectory",
-    palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
+    palette: p("#1b4b91", "#88AAFF", "#eaf0f9", "rgba(136,170,255,.14)"),
     runMotion: "draw",
     reveal: "draw-path",
     runStages: [
@@ -371,7 +371,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     character: "갭",
     premise: "매매가와 전세가 차이(갭) · 매매가 대비 갭 비율",
     composition: "gauge",
-    palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
+    palette: p("#1b4b91", "#88AAFF", "#eaf0f9", "rgba(136,170,255,.14)"),
     runMotion: "roll",
     reveal: "fill",
     runStages: [
@@ -393,7 +393,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     character: "지표",
     premise: "기준금리 · 미분양 · 지역 매매가 변화",
     composition: "console",
-    palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
+    palette: p("#1b4b91", "#88AAFF", "#eaf0f9", "rgba(136,170,255,.14)"),
     runMotion: "pulse",
     reveal: "flip",
     runStages: [
@@ -467,7 +467,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     /* [1110] /analysis/timing = 지역 시세 분석(시 · 구 · 동 → 지역 종합 화면). 지수 · 거래량 흐름은 그 종합 화면의 시세 흐름 카드 */
     premise: "시 · 구 · 동 검색 → 지역 종합 화면",
     composition: "trajectory",
-    palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
+    palette: p("#1b4b91", "#88AAFF", "#eaf0f9", "rgba(136,170,255,.14)"),
     runMotion: "draw",
     reveal: "draw-path",
     runStages: [
@@ -491,7 +491,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     composition: "atlas",
     /* [1077] 앰버(#B45309) → 사이트 파랑. 지역 시세 네 화면(면적대별·타이밍·온도·전세가율) 중 이 화면만 주황 채움이 남아
        "알림 받기" 단추가 주황이었다(운영 실측 2026-10-18 · 1025 "채움 파랑 하나 · 초록·주황 채움 금지"). 타이밍·격차와 같은 값. */
-    palette: p("#1D4FD8", "#88AAFF", "#EEF4FF", "rgba(136,170,255,.14)"),
+    palette: p("#1b4b91", "#88AAFF", "#EEF4FF", "rgba(136,170,255,.14)"),
     runMotion: "pulse",
     reveal: "fill",
     runStages: [
@@ -513,7 +513,7 @@ export const TOOL_PERSONAS: Record<ToolPersonaId, ToolPersona> = {
     character: "순위",
     premise: "시군구별 전세가율 · 갭 순위",
     composition: "atlas",
-    palette: p("#1D4FD8", "#88AAFF", "#EDF2FE", "rgba(136,170,255,.14)"),
+    palette: p("#1b4b91", "#88AAFF", "#eaf0f9", "rgba(136,170,255,.14)"),
     runMotion: "sweep",
     reveal: "stagger-rows",
     runStages: [

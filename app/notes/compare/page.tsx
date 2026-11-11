@@ -127,7 +127,7 @@ function CompareTable({ model, covers }: { model: VisitCompareModel; covers: (st
             <div
               key={h.noteId}
               className={`flex flex-col items-center text-center ${
-                h.latest ? "rounded-lg bg-[rgba(29,79,216,.05)] p-0.5" : ""
+                h.latest ? "rounded-lg bg-[rgba(27, 75, 145,.05)] p-0.5" : ""
               }`}
             >
               <VisitThumb src={covers[i] ?? null} seed={h.noteId} />

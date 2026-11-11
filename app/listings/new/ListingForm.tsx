@@ -370,7 +370,7 @@ export function ListingForm() {
           <p className="mt-2 t-sub font-bold text-danger">{geoMsg}</p>
         )}
         {picked && (
-          <div className="mt-2 rounded-xl bg-[rgba(29,79,216,.06)] px-3 py-2.5 t-body leading-[1.6] text-text-2">
+          <div className="mt-2 rounded-xl bg-[rgba(27, 75, 145,.06)] px-3 py-2.5 t-body leading-[1.6] text-text-2">
             선택한 위치: <b className="text-ink">{picked.address}</b>
           </div>
         )}
@@ -661,7 +661,7 @@ export function ListingForm() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img loading="lazy" decoding="async" src={url} alt={`매물 사진 ${i + 1}`} className="h-full w-full object-cover" />
               {i === 0 && (
-                <span className="absolute left-1 top-1 rounded-md bg-[rgba(29,79,216,.85)] chip-pad-tight t-caption font-bold text-white">
+                <span className="absolute left-1 top-1 rounded-md bg-[rgba(27, 75, 145,.85)] chip-pad-tight t-caption font-bold text-white">
                   대표
                 </span>
               )}

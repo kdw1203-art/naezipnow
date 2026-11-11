@@ -21,7 +21,7 @@ function q(req: NextRequest, key: string, fallback: string): string {
 
 /** 시세 관례: 하락=blue, 상승=red (globals.css delta-down/delta-up 동일) */
 function deltaColor(delta: string): string {
-  if (/[▼↓-]|하락/.test(delta)) return "#1d4fd8"; // down → blue
+  if (/[▼↓-]|하락/.test(delta)) return "#1b4b91"; // down → blue
   if (/[▲↑+]|상승/.test(delta)) return "#c62828"; // up → red
   return "#7b8494"; // flat
 }
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
             height: "620px",
             borderRadius: "9999px",
             background:
-              "radial-gradient(circle at center, rgba(29,79,216,0.22) 0%, rgba(29,79,216,0.08) 45%, rgba(29,79,216,0) 70%)",
+              "radial-gradient(circle at center, rgba(27, 75, 145,0.22) 0%, rgba(27, 75, 145,0.08) 45%, rgba(27, 75, 145,0) 70%)",
             display: "flex",
           }}
         />
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
             height: "560px",
             borderRadius: "9999px",
             background:
-              "radial-gradient(circle at center, rgba(29,79,216,0.10) 0%, rgba(29,79,216,0) 65%)",
+              "radial-gradient(circle at center, rgba(27, 75, 145,0.10) 0%, rgba(27, 75, 145,0) 65%)",
             display: "flex",
           }}
         />
@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
                   width: "44px",
                   height: "44px",
                   borderRadius: "13px",
-                  background: "#1d4fd8",
+                  background: "#1b4b91",
                   color: "#ffffff",
                   display: "flex",
                   alignItems: "center",
@@ -128,7 +128,7 @@ export async function GET(req: NextRequest) {
                 style={{
                   fontSize: "30px",
                   fontWeight: 800,
-                  color: "#1d4fd8",
+                  color: "#1b4b91",
                   display: "flex",
                 }}
               >
@@ -166,9 +166,9 @@ export async function GET(req: NextRequest) {
                       display: "flex",
                       padding: "8px 14px",
                       borderRadius: "999px",
-                      background: "rgba(29,79,216,0.08)",
-                      border: "1px solid rgba(29,79,216,0.16)",
-                      color: "#1d4fd8",
+                      background: "rgba(27, 75, 145,0.08)",
+                      border: "1px solid rgba(27, 75, 145,0.16)",
+                      color: "#1b4b91",
                       fontSize: "22px",
                       fontWeight: 700,
                     }}
@@ -190,8 +190,8 @@ export async function GET(req: NextRequest) {
               padding: "40px 48px",
               borderRadius: "28px",
               background: "rgba(255,255,255,0.72)",
-              border: "1px solid rgba(29,79,216,0.12)",
-              boxShadow: "0 24px 60px rgba(29,79,216,0.10)",
+              border: "1px solid rgba(27, 75, 145,0.12)",
+              boxShadow: "0 24px 60px rgba(27, 75, 145,0.10)",
             }}
           >
             <div

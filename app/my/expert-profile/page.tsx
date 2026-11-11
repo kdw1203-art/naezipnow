@@ -5,6 +5,7 @@ import { getExpertByOwnerEmail } from "@/lib/experts/store-db";
 import { getLatestExpertApplication } from "@/lib/experts/verification-store";
 import { EXPERT_VERIFICATION_PIPELINE } from "@/lib/experts/verification-policy";
 import { ExpertProfileForm } from "./ExpertProfileForm";
+import { ExpertPromoEditor } from "./ExpertPromoEditor";
 import { GuestGate } from "@/app/components/GuestGate";
 import { formatKstDate, formatKstLongDate } from "@/lib/format/kst";
 import { ExpertBadge } from "@/app/components/ExpertBadge";
@@ -153,6 +154,8 @@ export default async function ExpertProfilePage() {
             isVerified: expert.isVerified,
           }}
         />
+        {/* [1144] 홍보 글 · 상태(무료 N일 남음 · 구독 중 · 종료) */}
+        <ExpertPromoEditor />
       </div>
     </PageShell>
   );

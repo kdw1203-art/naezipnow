@@ -698,9 +698,9 @@ export function NaverMap({
         map: mapRef.current,
         center: centerLL,
         radius: circle.radiusM,
-        fillColor: "#1d4fd8",
+        fillColor: "#1b4b91",
         fillOpacity: 0.08,
-        strokeColor: "#1d4fd8",
+        strokeColor: "#1b4b91",
         strokeOpacity: 0.6,
         strokeWeight: 2,
       });
@@ -758,7 +758,7 @@ export function NaverMap({
         measureLineRef.current = new maps.Polyline({
           map,
           path,
-          strokeColor: "#1d4fd8",
+          strokeColor: "#1b4b91",
           strokeOpacity: 0.95,
           strokeWeight: 3.5,
           strokeStyle: "solid",
@@ -1252,17 +1252,17 @@ function escapeHtml(v: string): string {
  */
 /** 거리 재기 지점 — 번호 원 + (있으면) 누적거리 라벨. selected 면 링 강조. */
 function buildMeasurePointHtml(index: number, label?: string, selected?: boolean): string {
-  const ring = selected ? "0 0 0 3px rgba(29,79,216,.35)" : "0 2px 6px rgba(16,28,54,.3)";
-  const bg = selected ? "#0b3db8" : "#1d4fd8";
+  const ring = selected ? "0 0 0 3px rgba(27, 75, 145,.35)" : "0 2px 6px rgba(16,28,54,.3)";
+  const bg = selected ? "#0b3db8" : "#1b4b91";
   const dot = `<span style="display:flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:9999px;background:${bg};color:#fff;font:700 11px sans-serif;border:2px solid #fff;box-shadow:${ring};flex:none;cursor:grab">${index}</span>`;
   const text = label
-    ? `<span style="border-radius:9999px;background:rgba(29,79,216,.95);color:#fff;font:700 11px sans-serif;padding:3px 8px;white-space:nowrap;box-shadow:0 2px 6px rgba(16,28,54,.25)">${escapeHtml(label)}</span>`
+    ? `<span style="border-radius:9999px;background:rgba(27, 75, 145,.95);color:#fff;font:700 11px sans-serif;padding:3px 8px;white-space:nowrap;box-shadow:0 2px 6px rgba(16,28,54,.25)">${escapeHtml(label)}</span>`
     : "";
   return `<div style="transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:5px">${dot}${text}</div>`;
 }
 
 function buildRadiusHandleHtml(label: string): string {
-  return `<div style="transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:4px;cursor:grab"><span style="width:14px;height:14px;border-radius:9999px;background:#fff;border:2.5px solid #1d4fd8;box-shadow:0 2px 8px rgba(16,28,54,.28)"></span><span style="border-radius:9999px;background:rgba(16,28,54,.82);color:#fff;font:700 10px sans-serif;padding:2px 7px;white-space:nowrap">${escapeHtml(label)}</span></div>`;
+  return `<div style="transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:4px;cursor:grab"><span style="width:14px;height:14px;border-radius:9999px;background:#fff;border:2.5px solid #1b4b91;box-shadow:0 2px 8px rgba(16,28,54,.28)"></span><span style="border-radius:9999px;background:rgba(16,28,54,.82);color:#fff;font:700 10px sans-serif;padding:2px 7px;white-space:nowrap">${escapeHtml(label)}</span></div>`;
 }
 
 const NO_PRICE_LABEL_MAX = 9;
@@ -1345,7 +1345,7 @@ function buildPriceMarkerHtml(data: MapMarkerData): string {
   const borderColor = selected ? "var(--primary)" : (tier ?? "var(--border-strong)");
   const borderWidth = selected ? 2 : tier ? 1.5 : 1;
   /* [1009 · C] 구간 색 글자는 구간 색과 --ink 를 반씩 섞는다(테두리는 구간 색 그대로 — 범례와 짝). 바탕이 토큰(다크에서 어두운
-     --surface)이 되자 진한 구간 색 글자가 묻혔다(실측 대비: #bd0026·#1d4fd8 2.6:1, #177a4a 3.2:1). 섞으면 다크 최저 5.2:1,
+     --surface)이 되자 진한 구간 색 글자가 묻혔다(실측 대비: #bd0026·#1b4b91 2.6:1, #177a4a 3.2:1). 섞으면 다크 최저 5.2:1,
      라이트에서도 예전 흰 바탕 위 노랑 #fed976 글자 1.4:1 → 3.6:1 로 오른다(나머지 구간은 4.5:1 이상). */
   const priceColor = tier ? `color-mix(in srgb, ${tier} 55%, var(--ink))` : "var(--ink)";
   const bg = selected ? "var(--primary-soft)" : "var(--surface)";

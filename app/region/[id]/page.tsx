@@ -1,4 +1,5 @@
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+import { RegionExpertPromo } from "@/app/components/experts/ExpertPromo";
 import type { Metadata } from "next";
 import { HScroll } from "@/app/components/HScroll";
 import { AdZone } from "@/app/components/ads/AdZone";
@@ -1518,6 +1519,8 @@ export default async function RegionHubPage({
           <li><Link href="/calculator/gap" className="tap-line t-sub text-text-2 no-underline">갭·전세가율 계산기</Link></li>
         </ul>
       </section>
+      {/* [1145] 이 지역 전문가 홍보(무료 100일 또는 프로 구독 중인 인증 전문가 · "홍보" 표시) — 오른쪽 레일 한 칸 */}
+      <RegionExpertPromo sigungu={name} city={catalogEntry?.city ?? "서울"} limit={1} />
       {/* [1015 · 규칙 G] 오른쪽 레일 광고 1 — 데스크톱만(폰은 아래 페이지 끝 한 곳) */}
       <div className="hidden lg:block">
         <AdZone placement="sidebar" seed={1} plan={null} />

@@ -52,9 +52,9 @@ export const COVER_COLORS = {
   /** 어두운 면의 주홍 온점 */
   redDark: "#E0563A",
   /** 나우블루 — 연파랑 면의 숫자 */
-  blue: "#1D4FD8",
+  blue: "#1b4b91",
   /** 연파랑 면(--primary-soft) */
-  blueSoft: "#EDF2FE",
+  blueSoft: "#eaf0f9",
 } as const;
 
 export function isCoverVariant(v: unknown): v is CoverVariant {

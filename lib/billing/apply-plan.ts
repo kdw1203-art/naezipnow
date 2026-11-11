@@ -1,3 +1,4 @@
+import { revalidateTag } from "next/cache";
 import { normalizePlan, type AppPlan } from "@/lib/billing/plan";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
@@ -58,6 +59,12 @@ export async function applyPlanToUserByEmail(
   if (error) {
     logger.error("[billing:apply-plan]", error.message);
     return false;
+  }
+  /* [1144] 전문가 홍보는 프로 구독 여부를 본다 — 요금제가 바뀌면 인증 전문가 목록 캐시를 비운다(요청 밖에서 불리면 조용히 넘어간다) */
+  try {
+    revalidateTag("verified-experts");
+  } catch {
+    /* 캐시 문맥 밖(스크립트) — 다음 갱신 주기에 반영 */
   }
   return Boolean(data?.length);
 }

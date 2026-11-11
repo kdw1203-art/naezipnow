@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { ShellBreadcrumb } from "../../components/PageShell";
 import { ExpertApplyCta } from "./ExpertApplyCta";
+import { RotatingExpertPromo } from "@/app/components/experts/ExpertPromo";
 import { QuoteRequestBanner } from "./QuoteRequest";
 import { ExpertsClient, type ExpertPublicRow } from "./ExpertsClient";
 import { listExpertsAll, type UserExpertProfile } from "@/lib/experts/store-db";
@@ -187,6 +188,8 @@ export default async function TownExpertsPage() {
 
       {/* ---------- 목록 ---------- */}
       <div id="experts" className="scroll-mt-24">
+        {/* [1144] 상단 고정 홍보 — 무료 100일 또는 프로 구독 중인 인증 전문가 2명(날마다 차례) */}
+        <RotatingExpertPromo slot={0} count={2} className="mb-3" />
         {loaded.ok ? (
           <ExpertsClient items={loaded.items.map(toPublicRow)} truncated={loaded.truncated} />
         ) : (

@@ -133,7 +133,7 @@ export function BasicInfoFields({
           </div>
         );
       })}
-      <p className="m-0 px-1 t-caption text-text-3">주민등록번호 뒷자리는 받지 않음 · 본인만 볼 수 있음 · 마이 › 설정에서 수정</p>
+      <p className="m-0 px-1 t-caption text-text-3">주민번호 뒷자리 받지 않음 · 본인만 열람 · 마이 › 설정에서 수정</p>
     </div>
   );
 }

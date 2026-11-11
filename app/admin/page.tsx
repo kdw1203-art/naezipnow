@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { Suspense } from "react";
+import { AdminStatusBoard, AdminStatusBoardFallback } from "./AdminStatusBoard";
 import { countPendingListings } from "@/lib/listings/store-db";
 import {
   loadAdminDashboardMetrics,
@@ -133,6 +135,15 @@ export default async function AdminDashboardPage() {
               실제 집계 구간은 아래 KPI 라벨("오늘 방문" 등)에 그대로 적혀 있다. */}
         </div>
       </div>
+
+      {/* [1140] 서비스 상태 신호등 — 수집 · 처리 대기 · 사이트. 느린 조회가 아래 숫자를 막지 않게 따로 흘린다 */}
+      <Suspense fallback={<AdminStatusBoardFallback />}>
+        <AdminStatusBoard
+          openReports={errs.ops ? null : (openReportCount ?? 0)}
+          pendingListings={pendingListingsCount}
+          pendingExperts={expertOps ? expertOps.pendingVerifications : null}
+        />
+      </Suspense>
 
       {/* KPI 4종 — 실집계 (실패 시 "—") */}
       <div className="rise-in-1 grid grid-cols-2 gap-3 lg:grid-cols-5">

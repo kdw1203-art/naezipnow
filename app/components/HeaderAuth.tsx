@@ -270,7 +270,7 @@ export function HeaderAuth() {
                 prefetch={false}
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className="block rounded-lg px-3 py-2 t-body font-bold text-primary transition-colors hover:bg-[rgba(29,79,216,.08)]"
+                className="block rounded-lg px-3 py-2 t-body font-bold text-primary transition-colors hover:bg-[rgba(27, 75, 145,.08)]"
               >
                 관리자 콘솔
               </Link>
@@ -282,7 +282,7 @@ export function HeaderAuth() {
                 prefetch={false}
                 role="menuitem"
                 onClick={() => setOpen(false)}
-                className="block rounded-lg px-3 py-2 t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
+                className="block rounded-lg px-3 py-2 t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(27, 75, 145,.08)] hover:text-primary"
               >
                 {m.label}
               </Link>

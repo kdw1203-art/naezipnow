@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
             height: "600px",
             borderRadius: "9999px",
             background:
-              "radial-gradient(circle at center, rgba(29,79,216,0.18) 0%, rgba(29,79,216,0.06) 45%, rgba(29,79,216,0) 70%)",
+              "radial-gradient(circle at center, rgba(27, 75, 145,0.18) 0%, rgba(27, 75, 145,0.06) 45%, rgba(27, 75, 145,0) 70%)",
             display: "flex",
           }}
         />
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
             background: "#ffffff",
             borderRadius: "32px",
             border: "1px solid rgba(17,24,39,0.06)",
-            boxShadow: "0 28px 70px rgba(29,79,216,0.10)",
+            boxShadow: "0 28px 70px rgba(27, 75, 145,0.10)",
             padding: "48px 56px",
           }}
         >
@@ -111,7 +111,7 @@ export async function GET(req: NextRequest) {
                   width: "38px",
                   height: "38px",
                   borderRadius: "11px",
-                  background: "#1d4fd8",
+                  background: "#1b4b91",
                   color: "#ffffff",
                   display: "flex",
                   alignItems: "center",
@@ -126,7 +126,7 @@ export async function GET(req: NextRequest) {
                 style={{
                   fontSize: "26px",
                   fontWeight: 800,
-                  color: "#1d4fd8",
+                  color: "#1b4b91",
                   display: "flex",
                 }}
               >
@@ -176,13 +176,13 @@ export async function GET(req: NextRequest) {
                 width: "170px",
                 height: "170px",
                 borderRadius: "9999px",
-                border: "10px solid rgba(29,79,216,0.14)",
+                border: "10px solid rgba(27, 75, 145,0.14)",
                 display: "flex",
                 flexDirection: "column",
                 alignItems: "center",
                 justifyContent: "center",
                 background: "#ffffff",
-                boxShadow: "0 12px 30px rgba(29,79,216,0.12)",
+                boxShadow: "0 12px 30px rgba(27, 75, 145,0.12)",
                 flexShrink: 0,
               }}
             >
@@ -190,7 +190,7 @@ export async function GET(req: NextRequest) {
                 style={{
                   fontSize: "58px",
                   fontWeight: 800,
-                  color: "#1d4fd8",
+                  color: "#1b4b91",
                   lineHeight: 1,
                   display: "flex",
                 }}

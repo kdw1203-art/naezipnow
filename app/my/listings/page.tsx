@@ -45,7 +45,7 @@ export const metadata: Metadata = {
 };
 
 const STATUS_META: Record<ListingStatus, { label: string; cls: string }> = {
-  pending: { label: "검수중", cls: "bg-[rgba(29,79,216,.1)] text-primary" },
+  pending: { label: "검수중", cls: "bg-[rgba(27, 75, 145,.1)] text-primary" },
   approved: { label: "노출중", cls: "bg-success-soft text-success" },
   rejected: { label: "반려", cls: "bg-danger-soft text-danger" },
   closed: { label: "마감", cls: "bg-[rgba(0,0,0,.06)] text-text-3" },
@@ -165,7 +165,7 @@ export default async function MyListingsPage() {
           </div>
           <Link
             href="/my/leads"
-            className="card card-pad-sm flex flex-col gap-0.5 no-underline transition-colors hover:bg-[rgba(29,79,216,.03)]"
+            className="card card-pad-sm flex flex-col gap-0.5 no-underline transition-colors hover:bg-[rgba(27, 75, 145,.03)]"
           >
             <span className="t-sub text-text-3">받은 문의</span>
             <span className="flex items-baseline gap-1.5">

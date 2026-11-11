@@ -29,7 +29,7 @@ test("R1 헤더 회원가입 — 네이비 채움 · 화면의 채움 파랑은 
 
 test("R2 시장 온도 — 파랑 · 기록 없는 칸은 이름만 · 세는 말은 한 줄", () => {
   const persona = read("lib/ai/tool-persona.ts");
-  assert.match(persona, /id: "market:temperature",[\s\S]{0,400}palette: p\("#1D4FD8", "#88AAFF", "#EEF4FF", "rgba\(136,170,255,\.14\)"\)/);
+  assert.match(persona, /id: "market:temperature",[\s\S]{0,400}palette: p\("#1b4b91", "#88AAFF", "#EEF4FF", "rgba\(136,170,255,\.14\)"\)/);
   assert.doesNotMatch(persona, /palette: p\("#B45309"/);
   const c = read("app/analysis/temperature/TempMapClient.tsx");
   assert.match(c, /const nationHas = nation\.filter\(\(t\) => t\.count > 0 && t\.avg !== null\)\.length;/);

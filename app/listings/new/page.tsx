@@ -63,7 +63,7 @@ export default async function ListingNewPage() {
   return (
     <>
       <ShellBreadcrumb>실매물 › 매물 등록</ShellBreadcrumb><ShellTitle>매물 등록</ShellTitle>
-      <div className="rise-in mb-4 rounded-xl bg-[rgba(29,79,216,.06)] px-4 py-3 t-body leading-[1.7] text-text-2">
+      <div className="rise-in mb-4 rounded-xl bg-[rgba(27, 75, 145,.06)] px-4 py-3 t-body leading-[1.7] text-text-2">
         등록하신 매물은 <b>검수 후 노출됩니다 (1~2일)</b>. 형식 요건을 확인한 뒤
         목록에 공개돼요. 집주인 직접 매물은 추후 등기부등본 등으로{" "}
         <b>소유 확인 절차</b>를 안내드릴 수 있어요.

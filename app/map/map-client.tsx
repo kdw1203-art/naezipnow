@@ -181,7 +181,7 @@ function ZoomTabButtons({ zoom, onSelect }: { zoom: Zoom; onSelect: (k: Zoom) =>
           aria-pressed={zoom === t.key}
           onClick={() => onSelect(t.key)}
           className={`chip px-3 py-1.5 t-sub transition-colors ${
-            zoom === t.key ? "bg-[rgba(29,79,216,.12)] font-bold text-primary" : "text-text-1"
+            zoom === t.key ? "bg-[rgba(27, 75, 145,.12)] font-bold text-primary" : "text-text-1"
           }`}
         >
           {t.label}
@@ -625,7 +625,7 @@ const LISTING_TYPE_LABEL_MAP: Record<MapListingItem["listingType"], string> = {
 };
 
 /** 매물 마커 전용 색 — 회색 단지 시세 마커와 시각적으로 구분 */
-const LISTING_MARKER_COLOR = "#1d4fd8";
+const LISTING_MARKER_COLOR = "#1b4b91";
 /** 전세(평균 보증금) 마커 색 — 매매 평단가 색상 티어와 구분되는 단일 색 */
 const JEONSE_MARKER_COLOR = "#177a4a";
 /** [1053] 마커에 평당가 말고 다른 값(거래 수 · 준공 · 세대수 · 주차)을 적을 때의 중립 색 — 가격 색 단계와 섞이지 않게 */
@@ -3439,7 +3439,7 @@ export function MapClient({
   const rentShareMarkers = useMemo<MapMarkerData[]>(() => {
     if (!showRentShare) return [];
     const color = (share: number) =>
-      share >= 60 ? "#b4571e" : share >= 40 ? "#c9861e" : share >= 25 ? "#5b8bff" : "#3d6ad1";
+      share >= 60 ? "#b4571e" : share >= 40 ? "#c9861e" : share >= 25 ? "#7aa5ea" : "#3d6ad1";
     const manwon = (v: number | null) =>
       v && v > 0 ? `${Math.round(v / 10_000).toLocaleString("ko-KR")}만` : null;
     return rentShareItems.map((r) => ({
@@ -3725,7 +3725,7 @@ export function MapClient({
           lat: searchMarker.lat,
           lng: searchMarker.lng,
           label: searchMarker.name,
-          pinColor: "#1d4fd8",
+          pinColor: "#1b4b91",
           selected: true,
           infoHtml: "",
         },
@@ -3748,7 +3748,7 @@ export function MapClient({
         // 오버레이 OFF — 예전처럼 개수만 세는 파란 원형 배지.
         // 전세 모드도 개수만 — 셀 단위 보증금 집계가 없어서 색을 칠면 거짓이 된다.
         if (!showPriceOverlay || txType === "rent") {
-          return { ...common, pinColor: "rgba(29,79,216,.85)" };
+          return { ...common, pinColor: "rgba(27, 75, 145,.85)" };
         }
         // ON — "N개 · 4,020만/평" 알약. 실거래가 없는 셀은 회색 + "실거래 없음"이라
         // 색이 없는 사실을 색으로 메우지 않는다. ([1028] 범례와 같은 말 — 예전 "데이터 없음")
@@ -4810,7 +4810,7 @@ export function MapClient({
                   ? "중심 · 테두리 끌어 조정 · 지도 누르면 중심 이동"
                   : "지도 누르면 중심 · 안 누르면 화면 중앙 기준"}
               </p>
-              <div className="rounded-lg bg-[rgba(29,79,216,.07)] px-2.5 py-2 t-sub font-bold text-primary">
+              <div className="rounded-lg bg-[rgba(27, 75, 145,.07)] px-2.5 py-2 t-sub font-bold text-primary">
                 반경 {radiusM >= 1000 ? `${radiusM / 1000}km` : `${radiusM}m`} 안 단지 표시
               </div>
               {/* [1102] 크기 고르기 — 예전엔 위 칩 줄에 붙어 있었다(줄이 950px 까지) */}
@@ -4881,7 +4881,7 @@ export function MapClient({
                 </p>
               ) : (
                 <>
-                  <div className="rounded-lg bg-[rgba(29,79,216,.07)] px-2.5 py-2">
+                  <div className="rounded-lg bg-[rgba(27, 75, 145,.07)] px-2.5 py-2">
                     <div className="t-caption text-text-3">직선 (실선)</div>
                     <div className="t-section text-primary">
                       {formatDistanceM(measureStraightM)}
@@ -4972,7 +4972,7 @@ export function MapClient({
               )}
 
               {selectedMeasureIdx != null && (
-                <div className="rounded-lg border border-primary/30 bg-[rgba(29,79,216,.06)] px-2.5 py-2">
+                <div className="rounded-lg border border-primary/30 bg-[rgba(27, 75, 145,.06)] px-2.5 py-2">
                   <div className="t-sub font-bold text-ink">
                     지점 {selectedMeasureIdx + 1} 선택됨
                   </div>
@@ -5707,13 +5707,13 @@ export function MapClient({
       >
         <Link
           href="/"
-          className="flex items-center gap-1.5 rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
+          className="flex items-center gap-1.5 rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(27, 75, 145,.08)] hover:text-primary"
         >
           <HomeIcon />홈
         </Link>
         <Link
           href="/notes"
-          className="rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
+          className="rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(27, 75, 145,.08)] hover:text-primary"
         >
           임장노트
         </Link>
@@ -5721,19 +5721,19 @@ export function MapClient({
             aria-current 로 "여기가 지금 보고 있는 화면"임을 스크린리더에도 알린다. */}
         <span
           aria-current="page"
-          className="rounded-full bg-[rgba(29,79,216,.12)] px-4 py-[9px] t-body font-bold text-primary"
+          className="rounded-full bg-[rgba(27, 75, 145,.12)] px-4 py-[9px] t-body font-bold text-primary"
         >
           지도
         </span>
         <Link
           href="/analysis"
-          className="hidden rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary md:block"
+          className="hidden rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(27, 75, 145,.08)] hover:text-primary md:block"
         >
           AI 분석
         </Link>
         <Link
           href="/town"
-          className="hidden rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.08)] hover:text-primary md:block"
+          className="hidden rounded-full px-4 py-[9px] t-body font-semibold text-text-1 transition-colors hover:bg-[rgba(27, 75, 145,.08)] hover:text-primary md:block"
         >
           동네
         </Link>

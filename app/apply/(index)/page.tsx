@@ -109,8 +109,8 @@ export default async function ApplyPage() {
       <TownHero href="/apply" />
       <TownCategoryNav stick />
 
-      {/* [1030 · 3차] 예전 THEME_APPLY 인라인 style(--primary #1d4fd8 · --primary-soft #edf2fe 인라인 고정)를 뺐다 — 값은 전역 라이트 토큰과
-          같아 라이트에선 차이가 없고, 다크에선 .dark 토큰(#5b8bff · #1a2540)을 덮어 "날짜별 캘린더 ›"·칩 글자가 어두운 파랑(대비 2.6:1),
+      {/* [1030 · 3차] 예전 THEME_APPLY 인라인 style(--primary #1b4b91 · --primary-soft #eaf0f9 인라인 고정)를 뺐다 — 값은 전역 라이트 토큰과
+          같아 라이트에선 차이가 없고, 다크에선 .dark 토큰(#7aa5ea · #17243b)을 덮어 "날짜별 캘린더 ›"·칩 글자가 어두운 파랑(대비 2.6:1),
           관련 데이터 아이콘 상자가 흰 하늘색으로 떴다(2026-10-04 운영 다크 캡처 · axe color-contrast 3곳). */}
       <div>
         {/* 상단 CTA — 예전의 정적 탭(전체·예정·접수 중·지난 청약)은 클릭해도 아무

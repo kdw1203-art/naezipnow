@@ -1,5 +1,6 @@
 /* [1026c · 번들] 방문 기록기(RecentComplexRecorder)·거리뷰 버튼(RoadviewButtonLazy)만 첫 로드에서 가볍게 — 배포 빌드 479/480KB 여유. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+import { RegionExpertPromo } from "@/app/components/experts/ExpertPromo";
 import { cache } from "react";
 import { loanRegionFromRegionName } from "@/lib/finance/loan-rules";
 import { logger } from "@/lib/log";
@@ -1915,6 +1916,8 @@ export default async function ComplexHubPage({
           <NearbyRedevelopment sigungu={v.dong} city={v.city} />
           <UpcomingSupply area={v.dong} city={v.city} />
           {/* [1047] 이 지역 인증 전문가 — 승인된 사람이 없으면 그리지 않는다 */}
+          {/* [1144] 이 지역 전문가 홍보(무료 100일 또는 프로 구독 중인 인증 전문가 · "홍보" 표시) */}
+          <RegionExpertPromo sigungu={v.dong} city={v.city} />
           <NearbyExperts sigungu={v.dong} city={v.city} />
 
           {/* [1083] 읽을거리 · 용어 — 가이드 2 · 용어 2([1108] 4 · 4 → 2 · 2 — 단지 화면 끝의 안내 링크는 둘씩이면 길이 난다) */}

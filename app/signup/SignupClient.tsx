@@ -97,6 +97,8 @@ export function SignupClient({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   /* [1138] 기본 정보(필수) — 생년월일 · 주소 · 휴대전화 · 직업 · 보유 주택 · 이용 목적 */
+  /* [1142] 가입 폼 두 걸음 — 1 계정 · 2 기본 정보 · 동의 */
+  const [formStep, setFormStep] = useState<1 | 2>(1);
   const [basic, setBasic] = useState<BasicDraft>(EMPTY_DRAFT);
   const [basicErr, setBasicErr] = useState<Partial<Record<BasicField, string>>>({});
   const setBasicField = (f: BasicField, v: string) => {
@@ -264,6 +266,20 @@ export function SignupClient({
     e.preventDefault();
     setError(null);
     setDupEmail(null);
+    /* [1142] 첫 걸음 — 계정 칸만 검사하고 다음 걸음을 연다(서버 요청 없음) */
+    if (formStep === 1) {
+      const e1 = { email: emailProblem(email) ?? undefined, password: passwordProblem(password) ?? undefined };
+      setFieldErr(e1);
+      if (e1.email || e1.password) {
+        document.getElementById(e1.email ? "signup-email" : "signup-password")?.focus();
+        return;
+      }
+      /* [1147] 계정 칸을 넘어 기본 정보 걸음에 닿음 — 필수 칸을 늘린 뒤 어디서 그만두는지 재려는 표식(세션당 한 번) */
+      trackStep("signup_step_2_basic");
+      setFormStep(2);
+      window.requestAnimationFrame(() => document.getElementById(basicFieldId("signup-basic", "birth"))?.focus());
+      return;
+    }
     trackStep("signup_step_4");
     const normalizedEmail = normalizeEmail(email);
     /* [1039] 세 칸을 한 번에 검사해 칸마다 표시하고, 첫 오류 칸으로 초점을 옮긴다(예전: 오류 한 줄 · 초점 그대로) */
@@ -286,7 +302,9 @@ export function SignupClient({
             ? "signup-agree"
             : null;
     if (firstBad) {
-      document.getElementById(firstBad)?.focus();
+      /* 계정 칸 문제면 첫 걸음으로 돌아가 그 칸을 보인다 */
+      if (errs.email || errs.password) setFormStep(1);
+      window.requestAnimationFrame(() => document.getElementById(firstBad)?.focus());
       return;
     }
     if (captchaSiteKey && !captchaToken) {
@@ -330,6 +348,7 @@ export function SignupClient({
       if (!res.ok) {
         if (res.status === 409 || data.code === "already_registered") {
           setDupEmail(normalizedEmail);
+          setFormStep(1);
           return;
         }
         /* [1039] 서버 원문(영문 DB·인증 메시지)은 화면에 붙이지 않는다 — 한글로 풀어 준 설명만 */
@@ -509,7 +528,7 @@ export function SignupClient({
   }
 
   const consentRow = "-mx-2.5 flex min-h-[40px] items-center gap-3 rounded-lg px-2.5 py-1 text-xs text-text-2";
-  const consentBox = "h-[20px] w-[20px] shrink-0 accent-[#1d4fd8]";
+  const consentBox = "h-[20px] w-[20px] shrink-0 accent-[#1b4b91]";
   const consentHit = "-ml-[10px] -mr-[4px] grid h-[40px] w-[40px] shrink-0 place-items-center";
 
   return (
@@ -598,6 +617,12 @@ export function SignupClient({
       <form onSubmit={onSubmit} noValidate className="rise-in-5 flex flex-col gap-2">
         {/* [1039] 떠오르는 라벨(.njn-field · 로그인과 같은 꼴) — placeholder 를 이름표로 쓰던 것을 실제 보이는 <label> 로.
             [968 · 29] 키보드 힌트 — 이름·이메일은 "다음"(Enter 로 다음 칸), 비밀번호는 "완료". */}
+        {/* [1142 · 가입 두 걸음] 계정(이름 · 이메일 · 비밀번호) → 기본 정보 · 동의. 필수 칸이 9개로 늘어 한 화면에 다 세우면 길다(991 의 이탈 교훈).
+            같은 폼 · 같은 단추 — 첫 걸음에서는 계정 칸만 검사하고 다음 걸음을 연다. 숨긴 걸음도 DOM 에 남아 입력값을 잃지 않는다 */}
+        <p className="m-0 t-caption font-bold text-text-3" aria-live="polite">
+          {formStep === 1 ? "1 / 2 · 계정" : "2 / 2 · 기본 정보 · 동의"}
+        </p>
+        <div className={formStep === 1 ? "flex flex-col gap-2" : "hidden"}>
         <div className="njn-field">
           <input
             id="signup-name"
@@ -716,6 +741,8 @@ export function SignupClient({
           </p>
         )}
         <CapsLockNote on={caps} />
+        </div>
+        <div className={formStep === 2 ? "flex flex-col gap-2" : "hidden"}>
         {/* [1138 · 기본 정보(필수)] 소유자 2026-11-11 — 접지 않고 펼쳐 둔다(필수 칸을 접어 두면 못 보고 지나친다) */}
         <fieldset className="m-0 mt-1 flex min-w-0 flex-col gap-2 rounded-xl border border-line bg-surface px-3.5 pb-3 pt-2">
           <legend className="px-1 t-sub font-bold text-text-1">기본 정보</legend>
@@ -800,6 +827,8 @@ export function SignupClient({
           </p>
         )}
 
+        </div>
+
         {/* [1039] 이미 가입된 이메일 — 다음 행동 두 개를 바로 잇는다(예전: 서로 어긋나는 안내 한 문장 · 링크 없음) */}
         {dupEmail && (
           <div role="alert" className="rounded-lg bg-danger-soft px-4 py-3 t-body font-bold text-danger">
@@ -841,8 +870,13 @@ export function SignupClient({
           disabled={busy || socialBusy !== null}
           className="btn-primary btn-cta rounded-2xl p-[15px] text-center text-[15px] disabled:opacity-60"
         >
-          {busy ? "가입 중…" : "가입하고 노트 쓰기"}
+          {busy ? "가입 중…" : formStep === 1 ? "다음 · 기본 정보" : "가입하고 노트 쓰기"}
         </button>
+        {formStep === 2 && (
+          <button type="button" onClick={() => setFormStep(1)} className="tap-line mx-auto min-h-10 px-3 t-sub font-bold text-text-2">
+            이전 · 계정 고치기
+          </button>
+        )}
         <div className="text-center text-xs text-text-3">
           이미 계정이 있다면{" "}
           <Link href={loginHref} className="tap-line inline-block py-[5px] font-bold text-primary">

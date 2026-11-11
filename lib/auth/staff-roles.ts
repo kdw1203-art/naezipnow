@@ -133,7 +133,7 @@ export function adminPathSection(pathname: string): AdminSection {
   if (pathname.startsWith("/admin/support") || pathname.startsWith("/admin/sms")) {
     return "support";
   }
-  if (pathname.startsWith("/admin/users") || pathname.startsWith("/admin/meetings")) {
+  if (pathname.startsWith("/admin/users") || pathname.startsWith("/admin/members") || pathname.startsWith("/admin/meetings")) {
     return "users";
   }
   if (pathname.startsWith("/admin/analytics") || pathname.startsWith("/admin/acquisition")) {

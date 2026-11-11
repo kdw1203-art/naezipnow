@@ -146,7 +146,7 @@ export function TabBar() {
                   비치는데, 본문이 어두운 화면(/subscription 등)에서는 실제 바탕이
                   #ced3da 까지 내려가 --primary 가 4.41:1 이었다(axe 실측). 같은 파랑
                   계열의 진한 값(--primary-strong)이면 5.67:1 이고, 다크에서는 이
-                  토큰이 밝은 쪽(#86a9ff)으로 뒤집히므로 어두운 유리 위에서도 산다. */}
+                  토큰이 밝은 쪽(#a6c3f3)으로 뒤집히므로 어두운 유리 위에서도 산다. */}
               <span className="t-sub font-bold text-primary-strong">
                 {tab.label}
               </span>

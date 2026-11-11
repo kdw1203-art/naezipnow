@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
         </p>
         <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#333;">
           마음이 바뀌셨다면 그 전에 <b>가입한 이메일로</b>
-          <a href="mailto:${escapeHtml(biz.privacyEmail)}" style="color:#1D4FD8;">${escapeHtml(biz.privacyEmail)}</a>
+          <a href="mailto:${escapeHtml(biz.privacyEmail)}" style="color:#1b4b91;">${escapeHtml(biz.privacyEmail)}</a>
           에 "탈퇴 취소" 라고 보내 주세요. 계정을 다시 열어 드립니다.
         </p>
       `),

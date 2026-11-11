@@ -112,7 +112,7 @@ test("API — /api/complex/insight: 예전 두 섹션의 규칙 · 예산 · 공
 
 test("캐시 수명 — 인증 전문가 7일(승인은 태그로 즉시) · 뉴스 상세 단지 링크 캐시는 market 태그 없음", () => {
   const experts = read("lib/experts/nearby.ts");
-  assert.match(experts, /\["verified-experts-lite-v1"\],\s*\{ revalidate: 604_800, tags: \["verified-experts"\] \}/);
+  assert.match(experts, /\["verified-experts-lite-v2"\],\s*\{ revalidate: 604_800, tags: \["verified-experts"\] \}/);
   assert.match(read("app/api/admin/experts/route.ts"), /revalidateTag\("verified-experts"\);/);
   const link = strip(read("lib/newui/complex-link.ts"));
   assert.match(link, /\["complex-href-v2"\],\s*\{ revalidate: 604_800 \}/);

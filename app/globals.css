@@ -35,9 +35,9 @@
      정한다. 70 + 200 + 12(여백) = 282. */
   --nz-map-right-lane: 282px;
   /* 컬러 토큰 */
-  --primary: #1d4fd8;
-  --primary-strong: #16389c;
-  --primary-soft: #edf2fe;
+  --primary: #1b4b91;
+  --primary-strong: #0b2545;
+  --primary-soft: #eaf0f9;
   --ink: #191f28;
   /* 2026-07-27 대비 정정: 구 --danger #d64545 는 라이트 모드 어느 배경에서도
      본문 최소 4.5:1 을 넘지 못했다.
@@ -150,13 +150,13 @@
   --success-fill: #177a4a;
   /* [975] 파랑 채움도 같은 이유로 고정값이 필요했다. 시나리오 막대가
      `background: var(--primary)` 에 흰 글씨였는데, 다크에서 --primary 는
-     #5b8bff 로 뒤집히므로 같은 함정이다. (실제로 걸린 건 그 옆 막대가 쓰던
+     #7aa5ea 로 뒤집히므로 같은 함정이다. (실제로 걸린 건 그 옆 막대가 쓰던
      --ai-accent(#88aaff, 다크 패널용)로, 밝은 카드 위 흰 글씨가 2.27:1 이었다.)
-     값이 --primary(#1d4fd8)보다 한 단계 밝은 이유: 채움은 **글자(흰색)와 표면**
-     양쪽을 만족해야 한다. #1d4fd8 은 흰 글자는 좋지만(6.64) 다크 표면과 2.60 이라
+     값이 --primary(#1b4b91)보다 한 단계 밝은 이유: 채움은 **글자(흰색)와 표면**
+     양쪽을 만족해야 한다. #1b4b91 은 흰 글자는 좋지만(6.64) 다크 표면과 2.60 이라
      막대 자체가 배경에 묻혔다. 지금 흰 글자 5.29 · 다크 표면 3.26 · 라이트 표면 5.29
      — danger-fill(5.62/3.07)과 같은 자리다. */
-  --primary-fill: #2f62e2;
+  --primary-fill: #3468bf;
 
   /* 15b 인터랙션 상태 */
   --disabled-bg: #eef1f6;
@@ -281,7 +281,7 @@
   --ai-panel: rgba(11, 37, 69, 0.97);
   /* 2026-08-02: #7ea2ff → #88aaff. AI 패널 안 bg-white/10 칩의 합성 배경
      (#383d45)에서 4.42:1 로 AA(4.5:1)에 못 미쳤다(axe serious). #88aaff 는
-     같은 배경에서 4.81:1, 패널 원 배경에서 6.26:1. 다크 위 파랑 #1d4fd8 금지. */
+     같은 배경에서 4.81:1, 패널 원 배경에서 6.26:1. 다크 위 파랑 #1b4b91 금지. */
   --ai-accent: #88aaff;
   --ai-text: #f2eee6; /* 한지 계열(살짝 눌러 눈부심 방지) */
   --ai-muted: rgba(246, 241, 231, 0.7);
@@ -521,7 +521,7 @@ body::before {
   top: -120px;
   background: radial-gradient(
     circle at 40% 40%,
-    rgba(29, 79, 216, 0.14),
+    rgba(27, 75, 145, 0.14),
     rgba(126, 162, 255, 0.08) 55%,
     transparent 75%
   );
@@ -535,7 +535,7 @@ body::after {
   background: radial-gradient(
     circle at 60% 40%,
     rgba(95, 208, 224, 0.12),
-    rgba(29, 79, 216, 0.07) 55%,
+    rgba(27, 75, 145, 0.07) 55%,
     transparent 75%
   );
   animation: blob 32s ease-in-out infinite reverse;
@@ -1138,7 +1138,7 @@ html[data-nz-typing] body .tabbar-autohide {
 
    ── 무엇이 문제였나 (2026-09-08 axe 실측) ────────────────────────────────
    `bg-primary` · `.btn-primary` · `.ai-chip` 은 배경으로 --primary 를 쓴다.
-   그런데 --primary 는 다크에서 **밝은 파랑(#5b8bff)** 으로 뒤집힌다 — 어두운 면
+   그런데 --primary 는 다크에서 **밝은 파랑(#7aa5ea)** 으로 뒤집힌다 — 어두운 면
    위 *글자* 로 읽히려면 그래야 하기 때문이다. 문제는 그 값을 **면**으로 쓰고 그
    위에 흰 글자를 얹을 때다: 흰 글자 대비가 3.18~3.21:1 로 내려앉는다.
    /auctions(보라) 15건 · /supply(초록) 8건 · /dev-deals(앰버) 3건 · 쿠키 동의
@@ -1155,7 +1155,7 @@ html[data-nz-typing] body .tabbar-autohide {
    장식용 `bg-primary`(4px 강조 바·점 등, 글자가 없다)는 건드리지 않는다 —
    거기서는 밝은 파랑이 어두운 면 위에서 더 잘 보인다.
 
-   라이트 모드는 손대지 않는다. --primary(#1d4fd8) 위 흰 글자가 이미 6.64:1 이다.
+   라이트 모드는 손대지 않는다. --primary(#1b4b91) 위 흰 글자가 이미 6.64:1 이다.
    ============================================================ */
 .dark .bg-primary.text-white,
 .dark .btn-primary {
@@ -1348,8 +1348,8 @@ html[data-nz-typing] body .tabbar-autohide {
 }
 .chip-check-active {
   border-radius: 8px;
-  border: 1px solid rgba(29, 79, 216, 0.35);
-  background: rgba(29, 79, 216, 0.08);
+  border: 1px solid rgba(27, 75, 145, 0.35);
+  background: rgba(27, 75, 145, 0.08);
   color: var(--primary);
   font-weight: 700;
   white-space: nowrap;
@@ -1408,7 +1408,7 @@ html[data-nz-typing] body .tabbar-autohide {
 .input:focus {
   outline: none;
   border: 1.5px solid var(--primary);
-  box-shadow: 0 0 0 3px rgba(29, 79, 216, 0.12);
+  box-shadow: 0 0 0 3px rgba(27, 75, 145, 0.12);
 }
 .input-error {
   border: 1.5px solid var(--danger);
@@ -1667,7 +1667,7 @@ html[data-nz-typing] body .tabbar-autohide {
 /* 19a #9 딥링크 착지: 배경 펄스 1회 600ms */
 @keyframes pulseBg {
   0% {
-    background-color: rgba(29, 79, 216, 0.1);
+    background-color: rgba(27, 75, 145, 0.1);
   }
   100% {
     background-color: transparent;
@@ -2070,9 +2070,9 @@ html[data-nz-typing] body .tabbar-autohide {
      135deg 파스텔)가 다크에서 형광 타일처럼 떠 보인다. 마크업 7곳을 쫓는 대신
      인라인 135deg 그라디언트만 골라 어둡게 내린다. (인스타 스토리 링은 45deg,
      tailwind 그라디언트는 class 라 이 선택자에 걸리지 않는다.) */
-  --primary: #5b8bff;
-  --primary-strong: #86a9ff;
-  --primary-soft: #1a2540;
+  --primary: #7aa5ea;
+  --primary-strong: #a6c3f3;
+  --primary-soft: #17243b;
   --ink: #f0f3f8;
   --danger: #ff6b6b;
   --danger-soft: rgba(214, 69, 69, 0.18);
@@ -2610,7 +2610,7 @@ html[data-nz-typing] body .tabbar-autohide {
 @media (hover: hover) and (pointer: fine) {
   .card:hover {
     box-shadow: var(--shadow-sm);
-    border-color: rgba(29, 79, 216, 0.16);
+    border-color: rgba(27, 75, 145, 0.16);
   }
 }
 
@@ -2693,12 +2693,12 @@ html[data-drag-scrolling] * {
   .nick-aurora {
     background-image: linear-gradient(
       90deg,
-      #1d4fd8,
+      #1b4b91,
       #7c3aed,
       #06b6d4,
       #16a34a,
       #7c3aed,
-      #1d4fd8
+      #1b4b91
     );
     background-size: 200% 100%;
     -webkit-background-clip: text;
@@ -5156,7 +5156,7 @@ body.nz-consent-open .back-to-top {
 /* [970 · B-36] /auctions 테마(보라) — 예전엔 page.tsx 인라인 style 로 라이트 값만
    심어 다크에서도 연보라(#f1ebfe) 배경이 그대로 떠 형광처럼 보였다. 클래스로 옮기고
    다크 값을 따로 둔다. 다크 --primary 는 표면(#171b22) 위 5.4:1, --primary-soft 위
-   4.7:1 로 루트 다크 파랑(#5b8bff)과 같은 급을 맞췄다(흰 글자 버튼도 루트와 같은 3.2:1). */
+   4.7:1 로 루트 다크 파랑(#7aa5ea)과 같은 급을 맞췄다(흰 글자 버튼도 루트와 같은 3.2:1). */
 .theme-auction {
   --primary: #7c3aed;
   --primary-soft: #f1ebfe;
@@ -5198,7 +5198,7 @@ body.nz-consent-open .back-to-top {
      초록 #0e9f6e → #0a7a55 : 자기 soft 위 3.04 → 4.79 (표면 5.35 · 흰 글자 5.35)
      앰버 #d97706 → #a4570a : 자기 soft 위 2.86 → 4.78 (표면 5.32 · 흰 글자 5.32)
    /supply 한 화면에서만 미달 텍스트가 243건이었다(입주/분양 배지가 목록 전체에 있다).
-   다크 값은 루트 다크 파랑(#5b8bff, 표면 위 5.41)과 같은 급으로 맞췄다. */
+   다크 값은 루트 다크 파랑(#7aa5ea, 표면 위 5.41)과 같은 급으로 맞췄다. */
 .theme-supply {
   --primary: #0a7a55;
   --primary-soft: #e7f6ef;

@@ -293,7 +293,7 @@ export function ListingsListClient({
                   <span
                     className={`rounded-md chip-pad t-sub font-bold ${
                       l.source === "owner"
-                        ? "bg-[rgba(29,79,216,.08)] text-primary"
+                        ? "bg-[rgba(27, 75, 145,.08)] text-primary"
                         : "bg-warning-soft text-warning"
                     }`}
                   >

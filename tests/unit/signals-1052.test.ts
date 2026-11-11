@@ -164,7 +164,7 @@ test("S2c · 관심도 — 못 읽은 것은 '불러오기 실패'(표본 적음
 
   const load = code("lib/signals/load.ts");
   assert.match(load, /newsItems === "failed" \? null :/, "기사 실패 → null(0 아님)");
-  assert.match(load, /newsFailed, siteViews30, siteViewsPrior30, watchers, siteFailed/);
+  assert.match(load, /newsFailed,\s*siteViews30,\s*siteViewsPrior30,\s*watchers,\s*siteFailed,/);
 });
 
 /* ── S3 · 쪽 경계 하나 ──────────────────────────────────────────────── */

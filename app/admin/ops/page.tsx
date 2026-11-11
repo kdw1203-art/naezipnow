@@ -26,7 +26,7 @@ const darkCard =
 
 /** 전환 퍼널 바 색상 (진함 → 옅음) — 기존 정적 퍼널 팔레트 계승 */
 const FUNNEL_BAR_COLORS = [
-  "#1d4fd8",
+  "#1b4b91",
   "#3a63de",
   "#4a72e2",
   "#6a8de9",

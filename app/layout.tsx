@@ -9,6 +9,7 @@ import { BackToTop } from "./components/BackToTop";
 import { SideAdRails } from "./components/ads/SideAdRails";
 import { OfflineBanner } from "./components/OfflineBanner";
 import { BasicInfoGate } from "./components/account/BasicInfoGate";
+import { OneLineFit } from "./components/OneLineFit";
 import { ADSENSE_EXCLUDED_PATH_PREFIXES, getAdSenseClient } from "@/lib/ads/adsense-policy";
 import { buildAdSenseBootScript } from "@/lib/ads/adsense-boot";
 import { WebVitalsReporter } from "./components/WebVitalsReporter";
@@ -356,6 +357,8 @@ export default function RootLayout({
                   <OfflineBanner />
                   {/* [1138] 로그인했는데 필수 기본 정보가 비었으면 완성 화면으로 */}
                   <BasicInfoGate />
+                  {/* [1143] 두 줄로 넘친 짧은 설명 줄을 한 줄에 맞춘다(자간 → 글자 크기) */}
+                  <OneLineFit />
                   <WebVitalsReporter />
                   <ClientErrorReporter />
                   {/* 어드민 트래픽 대시보드용 1st-party 페이지뷰·체류 기록 —

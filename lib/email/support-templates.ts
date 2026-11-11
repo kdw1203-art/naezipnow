@@ -6,7 +6,7 @@
  */
 import { emailLayout, escapeHtml } from "@/lib/email/templates";
 
-const ACCENT = "#1d4fd8";
+const ACCENT = "#1b4b91";
 const NAVY = "#0B2545";
 
 /** 사용자에게 보내는 답변 메일 — 문의 원문 요약 + 운영자 답변 + 내 문의 내역 링크 */

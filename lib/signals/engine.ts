@@ -46,7 +46,7 @@ export type SignalStatus = "ok" | "thin" | "none" | "failed";
 export const SIGNAL_FACTOR_META: Record<SignalFactorKey, { label: string; weight: number; what: string }> = {
   sentiment: { label: "심리", weight: 1, what: "매수우위지수 · 주택가격전망 CSI" },
   news: { label: "뉴스", weight: 0.6, what: "지역 기사 제목의 오름·내림 낱말" },
-  interest: { label: "관심도", weight: 0.6, what: "지역 기사 언급 변화 · 내집나우 관심 등록·조회" },
+  interest: { label: "관심도", weight: 0.6, what: "네이버 검색량 · 지역 기사 언급 변화 · 내집나우 관심 등록·조회" },
   volume: { label: "거래량", weight: 1, what: "지역 아파트 매매 신고 건수 변화" },
   trend: { label: "1년 추이", weight: 1, what: "한국부동산원 매매지수 1년 변화" },
   momentum: { label: "단기 추세", weight: 1, what: "주간 매매지수 최근 3주 흐름" },
@@ -140,6 +140,10 @@ export interface SignalInputs {
     watchers: number | null;
     /** 단지 화면인데 조회·관심 표본을 못 읽음 — "표본 적음"과 다르다 */
     siteFailed?: boolean;
+    /** [1139] 네이버 검색어 트렌드(상대 지수 · 이 지역 안에서만 견준다) — 최근 3개월 평균 · 직전 3개월 평균. 없으면 null */
+    search?: { recent3: number; prior3: number; asOf: string } | null;
+    /** [1139] 네이버 뉴스 검색 일별 건수를 쌓은 것 — 최근 w일 · 직전 w일(쌓인 날이 14일 미만이면 null) */
+    naverNews?: { recent: number; prior: number; windowDays: number; asOf: string } | null;
   }>;
   volume: Input<{
     /** 지역 월별 매매 신고 건수(오름차순, yyyymm) — 이번 달·지난달은 신고 기한(30일)이 안 지나 엔진이 뺀다 */
@@ -293,7 +297,7 @@ export function newsFactor(input: SignalInputs["news"]): SignalFactor {
 }
 
 export function interestFactor(input: SignalInputs["interest"]): SignalFactor {
-  const src = "지역 기사 언급 · 내집나우 관심 등록·조회(동의 방문 표본)";
+  const src = "네이버 검색어 트렌드 · 지역 기사 언급 · 내집나우 관심 등록·조회(동의 방문 표본)";
   if (input === "failed") return blank("interest", "failed", FAILED_TEXT, src);
   if (!input) return blank("interest", "none", "관심 자료 없음", src);
   const parts: number[] = [];
@@ -305,6 +309,17 @@ export function interestFactor(input: SignalInputs["interest"]): SignalFactor {
   else if (nr !== null && np !== null) {
     text.push(`지역 기사 30일 ${nr}건(직전 ${np}건)`);
     if (newsTotal >= 3) parts.push(Math.max(-1.5, Math.min(1.5, (nr - np) / Math.max(np, 2))));
+  }
+  /* [1139] 네이버 검색량 — 지역 기사 수집이 얇아도(새 DB · 작은 지역) 관심 변화를 말할 수 있다. 지수 2 미만끼리는 견주지 않는다(잡음) */
+  const sr = input.search ?? null;
+  if (sr) {
+    text.push(`네이버 검색 3개월 평균 ${sr.recent3}(직전 3개월 ${sr.prior3} · 상대 지수)`);
+    if (Math.max(sr.recent3, sr.prior3) >= 2) parts.push(Math.max(-1.5, Math.min(1.5, (sr.recent3 - sr.prior3) / Math.max(sr.prior3, 2))));
+  }
+  const nn = input.naverNews ?? null;
+  if (nn) {
+    text.push(`네이버 기사 ${nn.windowDays}일 ${nn.recent}건(직전 ${nn.prior}건)`);
+    if (nn.recent + nn.prior >= 6) parts.push(Math.max(-1.5, Math.min(1.5, (nn.recent - nn.prior) / Math.max(nn.prior, 3))));
   }
   const v30 = input.siteFailed ? null : input.siteViews30;
   const vp = input.siteFailed ? null : input.siteViewsPrior30;
@@ -323,7 +338,8 @@ export function interestFactor(input: SignalInputs["interest"]): SignalFactor {
       : made("interest", null, "thin", text.join(" · "), src, null, "표본 적음 · 점수 미반영");
   }
   const score = parts.reduce((a, b) => a + b, 0) / parts.length;
-  const thin = newsTotal < 6 && (v30 ?? 0) + (vp ?? 0) < 20;
+  const buzzOk = Boolean(sr && Math.max(sr.recent3, sr.prior3) >= 2) || Boolean(nn && nn.recent + nn.prior >= 6);
+  const thin = !buzzOk && newsTotal < 6 && (v30 ?? 0) + (vp ?? 0) < 20;
   const notes = [thin ? "표본 적음 · 가중치 절반" : null, anyFailed ? "일부 불러오기 실패" : null].filter(Boolean);
   return made("interest", score, thin ? "thin" : "ok", text.join(" · "), src, null, notes.length ? notes.join(" · ") : null);
 }

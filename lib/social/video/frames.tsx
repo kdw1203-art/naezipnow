@@ -13,7 +13,7 @@ import { OG_FONT_FAMILY, ogFonts } from "@/lib/og/font";
 const W = 1080;
 const H = 1920;
 const INK = "#191f28";
-const BLUE = "#1d4fd8";
+const BLUE = "#1b4b91";
 const GRAY = "#6b7684";
 
 async function toPng(el: React.ReactElement): Promise<Buffer> {
@@ -44,7 +44,7 @@ function Shell({ children }: { children: React.ReactNode }) {
           height: "720px",
           borderRadius: "9999px",
           background:
-            "radial-gradient(circle at center, rgba(29,79,216,0.20) 0%, rgba(29,79,216,0.06) 45%, rgba(29,79,216,0) 70%)",
+            "radial-gradient(circle at center, rgba(27, 75, 145,0.20) 0%, rgba(27, 75, 145,0.06) 45%, rgba(27, 75, 145,0) 70%)",
           display: "flex",
         }}
       />
@@ -82,7 +82,7 @@ function Badge({ text }: { text: string }) {
       style={{
         display: "flex",
         alignSelf: "flex-start",
-        background: "rgba(29,79,216,0.10)",
+        background: "rgba(27, 75, 145,0.10)",
         color: BLUE,
         fontSize: "34px",
         fontWeight: 700,

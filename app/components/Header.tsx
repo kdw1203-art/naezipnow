@@ -96,7 +96,7 @@ export function Header() {
                   className={
                     active
                       ? "nav-underline block whitespace-nowrap rounded-lg bg-primary-soft px-1 py-[7px] text-primary transition-colors lg:px-1.5 xl:px-3.5"
-                      : "nav-underline block whitespace-nowrap rounded-lg px-1 py-[7px] text-text-1 transition-colors hover:bg-[rgba(29,79,216,.07)] hover:text-primary lg:px-1.5 xl:px-3.5"
+                      : "nav-underline block whitespace-nowrap rounded-lg px-1 py-[7px] text-text-1 transition-colors hover:bg-[rgba(27, 75, 145,.07)] hover:text-primary lg:px-1.5 xl:px-3.5"
                   }
                 >
                   {item.label}
@@ -116,7 +116,7 @@ export function Header() {
                           /* [963] whitespace-nowrap — "통합 지도 (탐색·실거래·매물)" 이
                              168px 패널 안에서 3줄로 접혀 메뉴가 세로로 길어졌다.
                              메뉴 항목은 접지 않고 패널이 가장 긴 라벨에 맞춰 넓어진다. */
-                          className="block whitespace-nowrap rounded-lg px-3 py-2 t-body font-semibold text-text-1 transition-all duration-[120ms] hover:translate-x-0.5 hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
+                          className="block whitespace-nowrap rounded-lg px-3 py-2 t-body font-semibold text-text-1 transition-all duration-[120ms] hover:translate-x-0.5 hover:bg-[rgba(27, 75, 145,.08)] hover:text-primary"
                         >
                           {c.label}
                         </Link>
@@ -148,7 +148,7 @@ export function Header() {
                 className={
                   moreActive
                     ? "nav-underline block whitespace-nowrap rounded-lg bg-primary-soft px-1 py-[7px] font-semibold text-primary transition-colors lg:px-1.5 xl:px-3.5"
-                    : "nav-underline block whitespace-nowrap rounded-lg px-1 py-[7px] font-semibold text-text-1 transition-colors hover:bg-[rgba(29,79,216,.07)] hover:text-primary lg:px-1.5 xl:px-3.5"
+                    : "nav-underline block whitespace-nowrap rounded-lg px-1 py-[7px] font-semibold text-text-1 transition-colors hover:bg-[rgba(27, 75, 145,.07)] hover:text-primary lg:px-1.5 xl:px-3.5"
                 }
               >
                 더보기
@@ -164,7 +164,7 @@ export function Header() {
                           key={c.href + c.label}
                           href={c.href}
                           prefetch={false}
-                          className="block whitespace-nowrap rounded-lg px-3 py-2 t-body font-semibold text-text-1 transition-all duration-[120ms] hover:translate-x-0.5 hover:bg-[rgba(29,79,216,.08)] hover:text-primary"
+                          className="block whitespace-nowrap rounded-lg px-3 py-2 t-body font-semibold text-text-1 transition-all duration-[120ms] hover:translate-x-0.5 hover:bg-[rgba(27, 75, 145,.08)] hover:text-primary"
                         >
                           {c.label}
                         </Link>

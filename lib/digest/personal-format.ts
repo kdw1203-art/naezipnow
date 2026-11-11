@@ -248,7 +248,7 @@ export function formatPersonalDigestPush(d: PersonalDigest): { title: string; bo
 const TXT = "#191f28";
 const MUTED = "#8a94a6";
 const SUB = "#4a5568";
-const ACCENT = "#1d4fd8";
+const ACCENT = "#1b4b91";
 
 function h2(text: string): string {
   return `<h2 style="margin:18px 0 6px;font-size:14px;color:${TXT};">${escapeHtml(text)}</h2>`;

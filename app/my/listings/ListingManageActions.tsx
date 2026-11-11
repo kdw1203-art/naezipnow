@@ -168,7 +168,7 @@ export function ListingManageActions(props: {
       "w-full rounded-lg border border-line bg-surface px-2.5 py-1.5 t-body text-ink outline-none focus:border-primary";
     const lbl = "t-sub font-bold text-text-3";
     return (
-      <div className="mt-1 flex w-full flex-col gap-2 rounded-xl bg-[rgba(29,79,216,.03)] p-3">
+      <div className="mt-1 flex w-full flex-col gap-2 rounded-xl bg-[rgba(27, 75, 145,.03)] p-3">
         <div className="flex gap-1.5">
           {TYPES.map((t) => (
             <button

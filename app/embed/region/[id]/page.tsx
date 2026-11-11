@@ -52,7 +52,7 @@ function FallbackCard({ name }: { name: string }) {
         href="https://naezipnow.com"
         target="_blank"
         rel="noopener noreferrer"
-        className="text-[12px] font-bold text-[#1d4fd8]"
+        className="text-[12px] font-bold text-[#1b4b91]"
       >
         내집나우 지역 시세 열기 ↗
       </a>
@@ -183,7 +183,7 @@ export default async function EmbedRegionPage({
           href={`https://naezipnow.com/region/${id}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-[12px] font-bold text-[#1d4fd8]"
+          className="text-[12px] font-bold text-[#1b4b91]"
         >
           {/* [1012 · 규칙 5] "자세히" → 동사 + 구체 대상 */}
           {region.name} 시세 전체 보기 ↗

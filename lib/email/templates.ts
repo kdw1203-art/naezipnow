@@ -1,11 +1,11 @@
 /**
- * 한국어 이메일 템플릿 — 내집나우 브랜드(포인트 컬러 #1d4fd8), 인라인 스타일 HTML.
+ * 한국어 이메일 템플릿 — 내집나우 브랜드(포인트 컬러 #1b4b91), 인라인 스타일 HTML.
  * 각 함수는 sendEmail 에 바로 펼쳐 넣을 수 있는 { subject, html, text } 를 반환합니다.
  */
 
 import { getBusinessInfo } from "@/lib/brand/business-info";
 
-const ACCENT = "#1d4fd8"; /* 나우 블루 — 버튼·링크 전용(브랜드 규칙) */
+const ACCENT = "#1b4b91"; /* 나우 블루 — 버튼·링크 전용(브랜드 규칙) */
 /* [962] 브랜드 마스터 v2.1 — 메일도 같은 언어: 네이비 워드마크 + 주홍 온점, 한지 머리띠, 슬로건 */
 const NAVY = "#0B2545";
 const RED = "#C8442B";
@@ -258,16 +258,16 @@ export function weeklyDigestEmail(params: {
       return `<tr>
         ${thumb}
         <td style="padding:0 0 12px;vertical-align:top;font-size:14px;line-height:1.55;color:#191f28;"${img ? "" : ' colspan="2"'}>
-          <span style="display:inline-block;min-width:18px;margin-right:6px;font-size:13px;font-weight:700;color:#1d4fd8;">${idx + 1}</span>${title}${source ? `<br /><span style="display:inline-block;margin-left:24px;">${source}</span>` : ""}
+          <span style="display:inline-block;min-width:18px;margin-right:6px;font-size:13px;font-weight:700;color:#1b4b91;">${idx + 1}</span>${title}${source ? `<br /><span style="display:inline-block;margin-left:24px;">${source}</span>` : ""}
         </td>
       </tr>`;
     })
     .join("");
 
   const sectionHead = (t: string) =>
-    `<h2 style="margin:0 0 8px;font-size:13px;font-weight:700;color:#4e5661;"><span style="display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background-color:#1d4fd8;vertical-align:middle;"></span>${t}</h2>`;
+    `<h2 style="margin:0 0 8px;font-size:13px;font-weight:700;color:#4e5661;"><span style="display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background-color:#1b4b91;vertical-align:middle;"></span>${t}</h2>`;
   const html = emailLayout(`
-    <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#1d4fd8;">주간 다이제스트</p>
+    <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#1b4b91;">주간 다이제스트</p>
     <h1 style="margin:0 0 6px;font-size:22px;color:#191f28;letter-spacing:-0.5px;">${escapeHtml(params.weekLabel)} 주간 다이제스트</h1>
     <p style="margin:0 0 20px;font-size:13px;color:#8a94a6;">국토교통부 실거래 · 한국부동산원 지수 기준 · 매물 호가가 아닙니다</p>
     ${
@@ -287,11 +287,11 @@ export function weeklyDigestEmail(params: {
       params.communityCount > 0
         ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 20px;background-color:#f7f9fc;border-radius:12px;"><tr>
              <td style="padding:12px 14px;font-size:13px;color:#4e5661;">이웃 글 <strong style="color:#191f28;">${params.communityCount}건</strong> 새로 올라옴</td>
-             <td style="padding:12px 14px;text-align:right;"><a href="https://naezipnow.com/town" style="font-size:13px;font-weight:700;color:#1d4fd8;text-decoration:none;">동네이야기 ›</a></td>
+             <td style="padding:12px 14px;text-align:right;"><a href="https://naezipnow.com/town" style="font-size:13px;font-weight:700;color:#1b4b91;text-decoration:none;">동네이야기 ›</a></td>
            </tr></table>`
         : ""
     }
-    <a href="https://naezipnow.com/digest" style="display:block;background:#1d4fd8;color:#ffffff;font-size:15px;font-weight:700;padding:13px 20px;border-radius:12px;text-decoration:none;text-align:center;">전체 다이제스트 보기</a>
+    <a href="https://naezipnow.com/digest" style="display:block;background:#1b4b91;color:#ffffff;font-size:15px;font-weight:700;padding:13px 20px;border-radius:12px;text-decoration:none;text-align:center;">전체 다이제스트 보기</a>
     <p style="margin:14px 0 0;text-align:center;font-size:13px;">
       <a href="https://naezipnow.com/analysis" style="color:#4e5661;font-weight:700;text-decoration:none;">지역 시세 분석 ›</a>
       <span style="color:#d5dbe5;">&nbsp;|&nbsp;</span>
@@ -336,7 +336,7 @@ export function watchlistTxEmail(params: {
     <h1 style="margin:0 0 6px;font-size:18px;color:#191f28;">관심단지에 새 실거래 ${total}건</h1>
     <p style="margin:0 0 14px;font-size:13px;color:#8a94a6;">국토교통부 실거래 신고 기준 · 매물 호가가 아닙니다</p>
     <table style="width:100%;border-collapse:collapse;margin:0 0 16px;">${rows}</table>
-    <a href="https://naezipnow.com/my/watchlist" style="display:inline-block;background:#1d4fd8;color:#ffffff;font-size:14px;font-weight:700;padding:10px 20px;border-radius:8px;text-decoration:none;">관심 단지 전체 보기</a>
+    <a href="https://naezipnow.com/my/watchlist" style="display:inline-block;background:#1b4b91;color:#ffffff;font-size:14px;font-weight:700;padding:10px 20px;border-radius:8px;text-decoration:none;">관심 단지 전체 보기</a>
   `);
   const text = [
     `관심단지에 새 실거래 ${total}건`,
@@ -372,7 +372,7 @@ export function welcomeEmail(params: { name: string }) {
       ${item("🗺️", "지도에서 시세 보기", "구별 평균가·전세가율·경사·공매 물건까지 한 화면에서.", "https://naezipnow.com/map")}
       ${item("⭐", "관심 단지 등록", "보고 있는 단지를 담아두면 새 실거래를 모아볼 수 있어요.", "https://naezipnow.com/my/watchlist")}
     </table>
-    <a href="https://naezipnow.com/welcome" style="display:inline-block;background:#1d4fd8;color:#ffffff;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;text-decoration:none;">30초 시작 가이드 보기</a>
+    <a href="https://naezipnow.com/welcome" style="display:inline-block;background:#1b4b91;color:#ffffff;font-size:14px;font-weight:700;padding:11px 22px;border-radius:8px;text-decoration:none;">30초 시작 가이드 보기</a>
   `);
   const text = [
     `${params.name || "회원"}님, 내집나우에 오신 것을 환영해요`,
@@ -403,7 +403,7 @@ export function reengageEmail(params: { title: string; body: string; actionUrl: 
     html: emailLayout(`
       <h1 style="margin:0 0 10px;font-size:18px;color:#191f28;">${escapeHtml(params.title)}</h1>
       <p style="margin:0 0 18px;font-size:14px;line-height:1.65;color:#4a5568;">${escapeHtml(params.body)}</p>
-      <a href="${url}" style="display:inline-block;background:#1d4fd8;color:#ffffff;font-size:14px;font-weight:700;padding:10px 20px;border-radius:8px;text-decoration:none;">이어서 보기</a>
+      <a href="${url}" style="display:inline-block;background:#1b4b91;color:#ffffff;font-size:14px;font-weight:700;padding:10px 20px;border-radius:8px;text-decoration:none;">이어서 보기</a>
     `),
     text: `${params.title}\n\n${params.body}\n\n이어서 보기: ${url}`,
   };
@@ -454,7 +454,7 @@ export function paymentReceiptEmail(params: {
     <p style="margin:0 0 16px;font-size:14px;line-height:1.7;color:#4a5568;">
       ${
         params.guestPending
-          ? `${escapeHtml(params.planLabel)} ${escapeHtml(params.periodLabel)} 이용권을 결제했어요. <b>이 이메일로 가입하거나 로그인하면</b> 이용권이 자동으로 연결됩니다 — <a href="https://naezipnow.com/signup?callbackUrl=${encodeURIComponent(`/payment/success?orderId=${params.orderId}`)}" style="color:#1d4fd8;font-weight:700;">가입하고 연결하기</a>`
+          ? `${escapeHtml(params.planLabel)} ${escapeHtml(params.periodLabel)} 이용권을 결제했어요. <b>이 이메일로 가입하거나 로그인하면</b> 이용권이 자동으로 연결됩니다 — <a href="https://naezipnow.com/signup?callbackUrl=${encodeURIComponent(`/payment/success?orderId=${params.orderId}`)}" style="color:#1b4b91;font-weight:700;">가입하고 연결하기</a>`
           : `${escapeHtml(params.planLabel)} ${escapeHtml(params.periodLabel)} 이용권이 바로 적용됐습니다.`
       }
     </p>

@@ -244,7 +244,7 @@ export default async function ListingDetailPage({
       {productJsonLd && <JsonLd data={productJsonLd} />}
       {/* 상태 안내 (소유주가 검수중/반려 매물을 볼 때) */}
       {listing.status !== "approved" && (
-        <div className="rise-in mb-4 rounded-xl bg-[rgba(29,79,216,.06)] px-4 py-3 t-body leading-[1.7] text-text-2">
+        <div className="rise-in mb-4 rounded-xl bg-[rgba(27, 75, 145,.06)] px-4 py-3 t-body leading-[1.7] text-text-2">
           {listing.status === "pending" && "이 매물은 검수 중이에요. 승인 전까지는 나에게만 보여요."}
           {listing.status === "rejected" && (
             <>
@@ -296,7 +296,7 @@ export default async function ListingDetailPage({
             <span
               className={`rounded-md chip-pad t-sub font-bold ${
                 listing.source === "owner"
-                  ? "bg-[rgba(29,79,216,.08)] text-primary"
+                  ? "bg-[rgba(27, 75, 145,.08)] text-primary"
                   : "bg-warning-soft text-warning"
               }`}
             >

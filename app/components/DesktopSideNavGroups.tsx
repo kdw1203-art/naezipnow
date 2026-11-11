@@ -82,7 +82,7 @@ export default function DesktopSideNavGroups({ pathname, open }: { pathname: str
             aria-label={g.label}
             className={`rounded-2xl border p-1 transition-colors ${
               isCurrentGroup
-                ? "border-[rgba(29,79,216,.28)] bg-[color-mix(in_srgb,var(--primary-soft)_70%,transparent)]"
+                ? "border-[rgba(27, 75, 145,.28)] bg-[color-mix(in_srgb,var(--primary-soft)_70%,transparent)]"
                 : "border-line bg-[color-mix(in_srgb,var(--surface)_62%,transparent)]"
             } ${g.label === "마이" ? "mt-1.5 [border-top-width:2px]" : ""}`}
           >
@@ -125,7 +125,7 @@ export default function DesktopSideNavGroups({ pathname, open }: { pathname: str
                     className={`block rounded-lg px-2 py-[5px] t-body font-semibold no-underline ${
                       active
                         ? "bg-surface text-primary [box-shadow:var(--shadow-sm)]"
-                        : "text-text-2 hover:bg-[rgba(29,79,216,.07)] hover:text-primary"
+                        : "text-text-2 hover:bg-[rgba(27, 75, 145,.07)] hover:text-primary"
                     }`}
                   >
                     {c.shortLabel ?? c.label}

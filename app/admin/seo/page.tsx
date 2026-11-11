@@ -564,7 +564,7 @@ async function TitleExperimentPanel() {
           <span
             key={r.id}
             className={`rounded px-2 py-0.5 text-[10px] font-bold ${
-              r.variant === "A" ? "bg-[#1a2540] text-ai-accent" : "bg-[#2a2416] text-[#e0c589]"
+              r.variant === "A" ? "bg-[#17243b] text-ai-accent" : "bg-[#2a2416] text-[#e0c589]"
             }`}
             title={r.title}
           >

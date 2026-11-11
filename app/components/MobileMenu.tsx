@@ -243,7 +243,7 @@ export function MobileMenu() {
   const rowClass = (href: string) =>
     isActive(href)
       ? "flex items-center gap-2.5 rounded-lg bg-primary-soft px-3 py-[9px] t-body font-bold text-primary"
-      : "flex items-center gap-2.5 rounded-lg px-3 py-[9px] t-body font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary";
+      : "flex items-center gap-2.5 rounded-lg px-3 py-[9px] t-body font-semibold text-text-2 transition-colors active:bg-[rgba(27, 75, 145,.08)] active:text-primary";
 
   return (
     <>
@@ -255,7 +255,7 @@ export function MobileMenu() {
         onPointerDown={openMenu}
         onClick={openMenu}
         /* [1054] 40×40 실상자(h-10/w-10 은 폰 배율에서도 40px) — after:-inset 히트 영역(33px) 대신 */
-        className="relative -my-[2px] flex h-10 w-10 items-center justify-center rounded-xl text-text-1 transition-colors active:bg-[rgba(29,79,216,.08)] md:hidden"
+        className="relative -my-[2px] flex h-10 w-10 items-center justify-center rounded-xl text-text-1 transition-colors active:bg-[rgba(27, 75, 145,.08)] md:hidden"
       >
         <Icon name="menu" size={20} />
       </button>
@@ -323,7 +323,7 @@ export function MobileMenu() {
                 aria-label="메뉴 닫기"
                 onPointerDown={() => setOpen(false)}
                 onClick={() => setOpen(false)}
-                className="relative -mr-[8px] flex h-10 w-10 items-center justify-center rounded-xl text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)]"
+                className="relative -mr-[8px] flex h-10 w-10 items-center justify-center rounded-xl text-text-2 transition-colors active:bg-[rgba(27, 75, 145,.08)]"
               >
                 <Icon name="x" size={18} />
               </button>
@@ -350,7 +350,7 @@ export function MobileMenu() {
                       className={
                         activeNavLabel === item.label
                           ? "flex items-center gap-2 rounded-xl bg-primary-soft px-3 py-2 t-section font-bold text-primary"
-                          : "flex items-center gap-2 rounded-xl px-3 py-2 t-section font-bold text-ink transition-colors active:bg-[rgba(29,79,216,.07)]"
+                          : "flex items-center gap-2 rounded-xl px-3 py-2 t-section font-bold text-ink transition-colors active:bg-[rgba(27, 75, 145,.07)]"
                       }
                     >
                       <Icon name={CAT_ICON[item.label] ?? "search"} size={18} />
@@ -363,7 +363,7 @@ export function MobileMenu() {
                     prefetch={false}
                             key={c.href + c.label}
                             href={c.href}
-                            className="truncate rounded-lg px-3 py-[8px] t-body font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary"
+                            className="truncate rounded-lg px-3 py-[8px] t-body font-semibold text-text-2 transition-colors active:bg-[rgba(27, 75, 145,.08)] active:text-primary"
                           >
                             {/* [970 · A-26] 2열 칸에서 잘리던 긴 라벨은 shortLabel(nav-data) */}
                             {c.shortLabel ?? c.label}
@@ -418,7 +418,7 @@ export function MobileMenu() {
                     <button
                       type="button"
                       onClick={onInstallClick}
-                      className="flex items-center gap-2.5 rounded-lg px-3 py-[9px] t-body font-semibold text-text-2 transition-colors active:bg-[rgba(29,79,216,.08)] active:text-primary"
+                      className="flex items-center gap-2.5 rounded-lg px-3 py-[9px] t-body font-semibold text-text-2 transition-colors active:bg-[rgba(27, 75, 145,.08)] active:text-primary"
                     >
                       <Icon name="square-plus" size={17} />
                       <span className="truncate">홈 화면에 추가</span>

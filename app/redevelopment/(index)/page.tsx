@@ -293,7 +293,7 @@ export default async function RedevelopmentPage() {
                     <Icon name={s.icon} size={14} className="shrink-0 text-primary" />
                     <span className="min-w-0">{s.longLabel}</span>
                   </h3>
-                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[rgba(29,79,216,.06)] chip-pad t-caption font-semibold text-text-2">
+                  <span className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[rgba(27, 75, 145,.06)] chip-pad t-caption font-semibold text-text-2">
                     <Icon name="clock" size={11} />
                     {s.period}
                   </span>

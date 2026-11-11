@@ -163,7 +163,8 @@ const AUTH_ERROR_COPY: Record<string, string> = {
 function authErrorCopy(code: string | null, subCode: string | null): string | null {
   if (!code) return null;
   if (code === "verify_failed") {
-    return "이메일 인증 실패 · 메일의 링크를 다시 눌러 주세요.";
+    /* [1141] 인증 링크는 한 번만 쓴다 — 이미 인증을 마친 뒤 다시 누르면 여기로 온다(운영 2026-11-11: 인증은 됐는데 "실패"로 읽혔다) */
+    return "인증 링크 만료 또는 이미 사용됨 · 인증을 마쳤다면 아래에서 바로 로그인";
   }
   if (code === "config") {
     return "로그인 설정 불러오기 실패 · 잠시 후 다시";

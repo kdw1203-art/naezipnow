@@ -515,3 +515,267 @@ test("[1138] 로그인 — 공용 카운터(KV) 장애면 메모리 카운터로
   assert.match(rl, /if \(result\.degraded && failClosed\) \{\s*return \{ \.\.\.memoryRateLimit\(key, max, windowMs\), degraded: true \};/);
   assert.match(rl, /export function memoryKeyRateLimit\(key: string, \{ max, windowMs \}[^)]*\): DetailedRateLimitResult \{\s*return \{ \.\.\.memoryRateLimit\(key, max, windowMs\), degraded: false \};/, "같은 상한(메모리)");
 });
+
+/* ── [1139] 지역 관심도 · 기사 수 — 네이버 검색어 트렌드 6개월 · 일별 기사 건수 ── */
+test("[1139] 관심도 — 검색어 묶음 · 데이터랩 풀기 · 완결월 6개(이번 달 제외) · 쌓인 날만큼만 기사 수", async () => {
+  const m = await import("../../lib/buzz/model.ts");
+  assert.deepEqual(m.buzzKeywords({ name: "강남구" }), ["강남구 아파트", "강남구 부동산"]);
+  assert.deepEqual(m.buzzKeywords({ name: "중구" }), ["서울 중구 아파트", "서울 중구 부동산"], "여러 도시에 있는 구는 도시를 붙인다");
+  assert.deepEqual(m.buzzKeywords({ name: "성남시 분당구", city: "경기" }), ["분당구 아파트", "분당구 부동산", "성남 분당구 아파트"]);
+  assert.equal(m.buzzNewsQuery({ name: "파주시", city: "경기" }), "파주 부동산");
+  const pts = m.parseDatalabGroup({ data: [{ period: "2026-05-01", ratio: 10 }, { period: "2026-06-01", ratio: 20 }, { period: "bad", ratio: 1 }] });
+  assert.deepEqual(pts, [{ ym: "202605", ratio: 10 }, { ym: "202606", ratio: 20 }]);
+  const six = ["202605", "202606", "202607", "202608", "202609", "202610", "202611"].map((ym, i) => ({ ym, ratio: (i + 1) * 10 }));
+  assert.deepEqual(m.searchTrendSummary(six, "2026-11-11T00:00:00Z"), { prior3: 20, recent3: 50, asOf: "202610" }, "이번 달(11월)은 뺀다");
+  assert.equal(m.searchTrendSummary(six.slice(2), "2026-11-11T00:00:00Z"), null, "완결월 6개 미만이면 말하지 않는다");
+  const items = [{ pubDate: "Wed, 11 Nov 2026 01:00:00 +0900" }, { pubDate: "Tue, 10 Nov 2026 23:00:00 +0900" }, { pubDate: "Tue, 10 Nov 2026 09:00:00 +0900" }, { pubDate: "Mon, 09 Nov 2026 09:00:00 +0900" }];
+  assert.deepEqual(m.countNewsOnDay(items, "2026-11-10", 100), { count: 2, capped: false });
+  let p: { days: Record<string, Record<string, number>> } | null = null;
+  for (let d = 1; d <= 13; d++) p = m.mergeNewsDay(p, `2026-10-${String(d).padStart(2, "0")}`, { gangnam: d });
+  assert.equal(m.newsDailySummary(p!.days, "gangnam", "2026-11-11T00:00:00Z"), null, "14일 미만이면 말하지 않는다");
+  p = m.mergeNewsDay(p, "2026-10-14", { gangnam: 14 });
+  assert.deepEqual(m.newsDailySummary(p.days, "gangnam", "2026-11-11T00:00:00Z"), { recent: 77, prior: 28, windowDays: 7, asOf: "2026-10-14" });
+  assert.equal(m.newsDailySummary(p.days, "nowhere", "2026-11-11T00:00:00Z"), null);
+});
+
+test("[1139] 관심도 요인 — 네이버 검색 추이가 있으면 점수를 낸다(지수 2 미만은 잡음) · 크론 · 월 집계 일일 잡", async () => {
+  const { interestFactor } = await import("../../lib/signals/engine.ts");
+  const base = { newsRecent30: 1, newsPrior30: 0, siteViews30: null, siteViewsPrior30: null, watchers: null };
+  const thin = interestFactor(base);
+  assert.equal(thin.status, "thin");
+  const up = interestFactor({ ...base, search: { recent3: 30, prior3: 20, asOf: "202610" } });
+  assert.equal(up.status, "ok");
+  assert.ok((up.score ?? 0) > 0);
+  assert.match(up.value, /네이버 검색 3개월 평균 30\(직전 3개월 20 · 상대 지수\)/);
+  assert.equal(interestFactor({ ...base, search: { recent3: 1, prior3: 0.5, asOf: "202610" } }).status, "thin");
+  const route = read("app/api/cron/region-buzz-ingest/route.ts");
+  assert.match(route, /if \(!\(await authorizeCron\(req\)\)\) return/);
+  assert.match(read("vercel.json"), /"path": "\/api\/cron\/region-buzz-ingest"/);
+  const ing = read("lib/buzz/ingest.ts");
+  assert.match(ing, /if \(res\.status === 401 \|\| res\.status === 403\) break;/, "권한 오류면 한도를 태우지 않는다");
+  assert.doesNotMatch(ing, /trends\.google/);
+  const sql = read("supabase/rebuild/bridge/20261231000700_bridge_region_monthly_daily.sql");
+  assert.match(sql, /'market-region-monthly-daily'/);
+  assert.match(sql, /select public\.refresh_market_region_monthly\(25\);/);
+});
+
+/* ── [1140] 관리자 개편 — 메뉴 5묶음 + 검색 · 상태 신호등 ── */
+test("[1140] 관리자 메뉴 — 오늘 + 5묶음 · 23개 화면(1141 회원 추가) 모두 한 번씩 · 검색 낱말 · / 초점", () => {
+  const nav = read("app/admin/AdminNav.tsx");
+  const titles = [...nav.matchAll(/^\s{4}title: "([^"]+)",$/gm)].map((m) => m[1]);
+  assert.deepEqual(titles, ["오늘", "회원 · 콘텐츠", "데이터", "매출 · 결제", "유입 · 성능", "도구"]);
+  const hrefs = [...nav.matchAll(/\{ href: "(\/admin[^"]*)", label: "/g)].map((m) => m[1]);
+  assert.equal(hrefs.length, 23);
+  assert.equal(new Set(hrefs).size, 23, "같은 화면이 두 묶음에 들어가지 않는다");
+  for (const h of hrefs) assert.match(nav, new RegExp(`"${h}": "`), `${h} 검색 낱말`);
+  assert.match(nav, /if \(e\.key !== "\/" \|\| e\.ctrlKey/);
+  assert.match(nav, /맞는 메뉴 없음/);
+});
+
+test("[1140] 상태 신호등 — 멈춤 · 수집 실패는 빨강 · 비었거나 모르면 노랑(초록 아님) · 못 읽은 대기는 0 이 아니다", async () => {
+  const m = await import("../../lib/admin/status-board.ts");
+  const row = (o: Record<string, unknown>) => ({ label: "x", status: "fresh", lagDays: 0.2, rows: 10, ingest: null, ...o }) as Parameters<typeof m.freshnessLine>[0];
+  assert.equal(m.freshnessLine(row({})).level, "ok");
+  assert.equal(m.freshnessLine(row({ status: "stale", lagDays: 9 })).level, "bad");
+  assert.equal(m.freshnessLine(row({ ingest: { outcome: "failed", message: null } })).level, "bad");
+  assert.deepEqual(m.freshnessLine(row({ status: "empty", rows: 0 })), { label: "x", level: "warn", detail: "비어 있음 · 첫 수집 전" });
+  assert.equal(m.freshnessLine(row({ status: "unknown", rows: null })).detail, "불러오기 실패");
+  const s = m.summarizeFreshness([row({ label: "a" }), row({ label: "b", status: "stale" }), row({ label: "c", status: "aging" })], 2);
+  assert.equal(s.level, "bad");
+  assert.deepEqual(s.counts, { ok: 1, warn: 1, bad: 1 });
+  assert.deepEqual(s.lines.map((l) => l.label), ["b", "c"], "나쁜 것부터");
+  assert.equal(m.queueLine("신고", null, "/a").detail, "불러오기 실패");
+  assert.equal(m.queueLine("신고", 0, "/a").level, "ok");
+  assert.equal(m.queueLine("신고", 3, "/a").detail, "3건 대기");
+  assert.equal(m.headline(["ok", "ok", "warn", "bad"]), "정상 2 · 주의 1 · 장애 1");
+  const dash = read("app/admin/page.tsx");
+  assert.match(dash, /<Suspense fallback=\{<AdminStatusBoardFallback \/>\}>/);
+  assert.match(dash, /openReports=\{errs\.ops \? null : \(openReportCount \?\? 0\)\}/);
+});
+
+/* ── [1141] 회원 조회 · 메뉴 옆 대기 숫자 · 모바일 묶음 ── */
+test("[1141] 회원 통계 — 생년월일은 연령대 · 휴대전화 가림 · 주소는 시·구까지 · 검색어 정리", async () => {
+  const m = await import("../../lib/admin/member-stats.ts");
+  const now = "2026-11-11T00:00:00Z";
+  assert.equal(m.ageFromBirth6("900115", now), 36);
+  assert.equal(m.ageFromBirth6("051231", now), 20, "생일 전이면 한 살 적다");
+  assert.equal(m.ageFromBirth6("200101", now), 106, "14세 미만으로 읽히면 1900년대");
+  assert.equal(m.ageFromBirth6("9001", now), null);
+  assert.equal(m.ageBand(36), "30대");
+  assert.equal(m.ageBand(71), "60대 이상");
+  assert.equal(m.ageBand(null), "미입력");
+  assert.equal(m.sidoOf("서울특별시 강남구 대치동 1"), "서울");
+  assert.equal(m.sidoOf("충청북도 청주시"), "충북");
+  assert.equal(m.sidoOf("우리집"), "기타");
+  assert.equal(m.addressBrief("경기 성남시 분당구 정자동 12-3 101동"), "경기 성남시");
+  assert.equal(m.phoneMasked("010-1234-5678"), "010-****-5678");
+  assert.equal(m.phoneMasked(null), "미입력");
+  assert.equal(m.memberQuery("  a,b(c)%  "), "a b c");
+  const st = m.basicStats([{ birth: "900115", address: "서울 강남구", job: "직장인", housing: "무주택", purpose: "투자" }, { birth: null, address: null, job: null, housing: "무주택", purpose: null }], now);
+  assert.equal(st.total, 2);
+  assert.deepEqual(st.housing, [{ label: "무주택", count: 2 }]);
+  assert.deepEqual(st.age.map((a) => a.label).sort(), ["30대", "미입력"]);
+});
+
+test("[1141] 관리자 — 회원 화면은 users 권한 · 메뉴 옆 숫자는 실집계(못 읽으면 없음) · 모바일 묶음 · 인증 링크 안내", () => {
+  const page = read("app/admin/members/page.tsx");
+  assert.match(page, /if \(!canAccessAdminSection\(session, "users"\)\) redirect\("\/admin"\);/);
+  assert.doesNotMatch(page, /birth_yymmdd|m\.address\b/, "원본 생년월일 · 주소를 화면에 내보내지 않는다");
+  const qc = read("lib/admin/queue-counts.ts");
+  assert.match(qc, /if \(r\.status === "fulfilled" && !r\.value\.error && typeof r\.value\.count === "number"\)/);
+  assert.match(read("app/admin/layout.tsx"), /<AdminNav badges=\{badges\} \/>/);
+  const nav = read("app/admin/AdminNav.tsx");
+  assert.match(nav, /role="tablist" aria-label="메뉴 묶음"/);
+  assert.match(nav, /\{badge \? \(/);
+  assert.match(read("app/login/LoginClient.tsx"), /인증 링크 만료 또는 이미 사용됨 · 인증을 마쳤다면 아래에서 바로 로그인/);
+});
+
+/* ── [1143] 한 줄 맞춤 — 두 줄로 넘친 짧은 설명 줄만 · 자간 먼저 · 88% · 11px 바닥 ── */
+test("[1143] 한 줄 맞춤 규칙 — 딱 두 줄 · 64자 이하만 · 자간 5단 뒤 글자 3단 · 바닥 밑으로는 안 줄인다", async () => {
+  const m = await import("../../lib/client/one-line-fit.ts");
+  assert.equal(m.isTwoLineOverflow(39, 19.5, 30), true);
+  assert.equal(m.isTwoLineOverflow(19.5, 19.5, 30), false, "한 줄은 그대로");
+  assert.equal(m.isTwoLineOverflow(58.5, 19.5, 30), false, "세 줄 이상은 읽는 글");
+  assert.equal(m.isTwoLineOverflow(39, 19.5, 65), false, "긴 문단은 건드리지 않는다");
+  const a13 = m.fitAttempts(13);
+  assert.deepEqual(a13.slice(0, 5).map((x) => x.scale), [1, 1, 1, 1, 1], "먼저 자간만");
+  assert.deepEqual(a13.slice(5).map((x) => x.scale), [0.96, 0.92, 0.88]);
+  assert.deepEqual(m.fitAttempts(12).slice(5).map((x) => x.scale), [0.96, 0.92], "12px 는 11px 밑으로 안 내려간다");
+  assert.equal(m.fitAttempts(11).length, 5, "11px 는 자간만");
+  const c = read("app/components/OneLineFit.tsx");
+  assert.match(c, /if \(!ok\) \{\s*el\.style\.letterSpacing = prev\.ls;/, "안 맞으면 원래대로");
+  assert.match(read("app/layout.tsx"), /<OneLineFit \/>/);
+});
+
+test("[1143] 게시판 — 인자 정리 · 검색 조건(표마다 열 이름) · 쪽 번호 창 · 주소", async () => {
+  const m = await import("../../lib/community/board-query.ts");
+  assert.deepEqual(m.parseBoardParams({}), { kind: "story", field: "all", q: "", page: 1 });
+  assert.deepEqual(m.parseBoardParams({ kind: "news", in: "tag", q: " 재건축,(1) ", page: "3" }), { kind: "news", field: "tag", q: "재건축 1", page: 3 });
+  assert.equal(m.parseBoardParams({ kind: "x", in: "y", page: "-2" }).page, 1);
+  assert.equal(m.boardOrFilter("story", "all", ""), null);
+  assert.equal(m.boardOrFilter("story", "all", "전세"), "title.ilike.%전세%,body.ilike.%전세%");
+  assert.equal(m.boardOrFilter("news", "content", "전세"), "content.ilike.%전세%");
+  assert.equal(m.boardOrFilter("story", "tag", "전세"), 'tags.cs.{"전세"}');
+  assert.equal(m.boardOrFilter("news", "tag", "전세"), 'tags.cs.["전세"],ai_keywords.cs.["전세"]');
+  assert.equal(m.boardHref({ kind: "story", q: "", field: "all", page: 1 }), "/board");
+  assert.equal(m.boardHref({ kind: "news", q: "전세", field: "title", page: 2 }), "/board?kind=news&q=%EC%A0%84%EC%84%B8&in=title&page=2");
+  assert.deepEqual(m.pageWindow(1, 0), { pages: [1], last: 1, current: 1 });
+  assert.deepEqual(m.pageWindow(6, 400).pages, [1, 0, 4, 5, 6, 7, 8, 0, 20]);
+  assert.equal(m.pageWindow(99, 45).current, 3, "끝을 넘으면 마지막 쪽");
+  const page = read("app/board/page.tsx");
+  assert.match(page, /\.or\("visibility\.is\.null,visibility\.eq\.public"\)/, "링크 전용 글은 목록에 없다");
+  assert.match(page, /\.eq\("is_published", true\)/);
+  assert.match(page, /noIndex: true/);
+  assert.match(read("app/town/page.tsx"), /href="\/board"/);
+});
+
+/* ── [1144] 전문가 홍보 — 100일 무료 · 이후 프로 구독 · 프로필은 유지 ── */
+test("[1144] 홍보 상태 — 100일 무료 · 프로 구독 중이면 계속 · 끝나면 홍보만 멈춤 · 글 규칙 · 날마다 차례", async () => {
+  const m = await import("../../lib/experts/promo.ts");
+  const now = "2026-11-11T00:00:00Z";
+  const day = (n: number) => new Date(Date.parse(now) - n * 86_400_000).toISOString();
+  const free = m.promoState({ createdAt: day(10), plan: "free", planExpiresAt: null, now });
+  assert.deepEqual([free.active, free.mode, free.freeDaysLeft], [true, "free", 90]);
+  assert.equal(m.promoState({ createdAt: day(100), plan: "free", planExpiresAt: null, now }).mode, "ended");
+  assert.equal(m.promoState({ createdAt: day(300), plan: "expert", planExpiresAt: new Date(Date.parse(now) + 86_400_000).toISOString(), now }).mode, "subscribed");
+  assert.equal(m.promoState({ createdAt: day(300), plan: "expert", planExpiresAt: day(1), now }).active, false, "만료된 구독은 구독이 아니다");
+  assert.equal(m.promoState({ createdAt: day(300), plan: "pro", planExpiresAt: null, now }).active, false, "플러스는 홍보 대상이 아니다");
+  assert.equal(m.promoState({ createdAt: null, plan: "free", planExpiresAt: null, now }).active, false);
+  const ok = m.sanitizePromo({ headline: " 분당 재건축 상담!! ", body: "정자동 20년", on: true });
+  assert.deepEqual(ok, { ok: true, value: { headline: "분당 재건축 상담", body: "정자동 20년", on: true } });
+  assert.equal(m.sanitizePromo({ headline: "수익 보장 매물" }).ok, false);
+  assert.equal(m.sanitizePromo({ headline: "문의 https://a.b" }).ok, false);
+  assert.equal(m.sanitizePromo({ headline: "가".repeat(29) }).ok, false);
+  const c = { id: "a", createdAt: day(5), plan: null, planExpiresAt: null, promoOn: true, promoHeadline: "한 줄" };
+  assert.equal(m.isPromoLive(c, now), true);
+  assert.equal(m.isPromoLive({ ...c, promoOn: false }, now), false);
+  assert.equal(m.isPromoLive({ ...c, promoHeadline: null }, now), false);
+  const three = [{ id: "c" }, { id: "a" }, { id: "b" }];
+  assert.notEqual(m.rotatePromo(three, now, 0)[0].id, m.rotatePromo(three, now, 1)[0].id, "자리마다 다른 사람");
+  assert.notEqual(m.rotatePromo(three, now, 0)[0].id, m.rotatePromo(three, "2026-11-12T00:00:00Z", 0)[0].id, "날마다 차례");
+  assert.deepEqual(m.rotatePromo([], now, 0), []);
+});
+
+test("[1144] 홍보 자리 다섯 곳 · 본인만 저장 · 승인된 전문가만 · 요금제 바뀌면 캐시 비움 · 가격은 그대로", () => {
+  assert.match(read("app/complex/[id]/page.tsx"), /<RegionExpertPromo sigungu=\{v\.dong\} city=\{v\.city\} \/>/);
+  assert.match(read("app/town/experts/page.tsx"), /<RotatingExpertPromo slot=\{0\} count=\{2\}/);
+  assert.match(read("app/page.tsx"), /<RotatingExpertPromo slot=\{1\} compact \/>/);
+  assert.match(read("app/town/page.tsx"), /<RotatingExpertPromo slot=\{2\} compact/);
+  assert.match(read("app/notes/(index)/page.tsx"), /promo=\{<RotatingExpertPromo slot=\{3\} compact \/>\}/);
+  assert.match(read("app/notes/notes-feed-client.tsx"), /promo && !mine && i === PROMO_AFTER_INDEX/, "목록 사이 · 내 노트 보기에는 없다");
+  assert.match(read("app/components/experts/ExpertPromo.tsx"), />홍보<\/span>/, "광고임을 밝힌다");
+  const api = read("app/api/me/expert-promo/route.ts");
+  assert.match(api, /\.eq\("owner_email", owner\)/);
+  assert.match(api, /if \(profile\.is_verified !== true\) return NextResponse\.json\(\{ error: "승인된 전문가만/);
+  assert.match(api, /revalidateTag\("verified-experts"\)/);
+  assert.match(read("lib/billing/apply-plan.ts"), /revalidateTag\("verified-experts"\)/);
+  const bp = read("lib/subscriptions/billing-periods.ts");
+  for (const v of ["totalKrw: 2_900", "totalKrw: 27_600", "totalKrw: 18_900", "totalKrw: 181_200", "totalKrw: 1_100"]) assert.ok(bp.includes(v), `${v} 그대로`);
+});
+
+/* ── [1145] 지역 화면 홍보 칸 · 임장노트 검색 · DB 용량 ── */
+test("[1145] 게시판에 임장노트 · 지역 화면 홍보 한 칸 · DB 용량은 포함 용량 대비로 색", async () => {
+  const b = await import("../../lib/community/board-query.ts");
+  assert.equal(b.parseBoardParams({ kind: "notes" }).kind, "notes");
+  assert.equal(b.boardOrFilter("notes", "title", "자이"), "title.ilike.%자이%,apt_name.ilike.%자이%");
+  assert.equal(b.boardOrFilter("notes", "tag", "분당"), "region.ilike.%분당%,apt_name.ilike.%분당%");
+  assert.match(read("app/board/page.tsx"), /\.from\("inspection_notes"\)[\s\S]{0,160}\.eq\("is_public", true\)/, "비공개 노트는 목록에 없다");
+  assert.match(read("app/region/[id]/page.tsx"), /<RegionExpertPromo sigungu=\{name\}/);
+  const s = await import("../../lib/admin/status-board.ts");
+  assert.equal(s.dbSizeLine(null).detail, "확인 실패");
+  const GB = 1024 ** 3;
+  assert.equal(s.dbSizeLine(0.4 * GB).level, "ok");
+  assert.equal(s.dbSizeLine(6.6 * GB).level, "warn");
+  assert.equal(s.dbSizeLine(7.7 * GB).level, "bad");
+  assert.match(s.dbSizeLine(400 * 1024 * 1024, [{ name: "market_transactions", bytes: 245 * 1024 * 1024 }]).detail, /400MB · 포함 용량 8GB 의 5% · 가장 큰 표 market_transactions 245MB/);
+  const sql = read("supabase/rebuild/bridge/20261231000900_bridge_admin_db_stats.sql");
+  assert.match(sql, /revoke all on function public\.admin_db_stats\(\) from public, anon, authenticated;/);
+});
+
+/* ── [1147] 관리자 2단계 인증(TOTP) · 가입 걸음 계측 ── */
+test("[1147] TOTP — RFC 6238 시험값 · 앞뒤 30초 · 암호화 보관 · 서명한 확인 표식(계정 · 만료)", async () => {
+  const m = await import("../../lib/auth/totp.ts");
+  const sec = m.base32Encode(Buffer.from("12345678901234567890"));
+  assert.equal(sec, "GEZDGNBVGY3TQOJQGEZDGNBVGY3TQOJQ");
+  assert.equal(m.base32Decode(sec).toString(), "12345678901234567890");
+  assert.equal(m.totpAt(sec, 59), "287082");
+  assert.equal(m.totpAt(sec, 1111111109), "081804");
+  assert.equal(m.totpAt(sec, 1234567890), "005924");
+  assert.equal(m.totpAt(sec, 2000000000), "279037");
+  assert.equal(m.verifyTotp(sec, "287082", 59_000), true);
+  assert.equal(m.verifyTotp(sec, "287 082", 59_000 + 30_000), true, "한 칸 늦어도 받는다");
+  assert.equal(m.verifyTotp(sec, "287082", 59_000 + 90_000), false, "세 칸 뒤는 안 받는다");
+  assert.equal(m.verifyTotp(sec, "28708", 59_000), false);
+  assert.equal(m.verifyTotp(sec, "abcdef", 59_000), false);
+  const fresh = m.generateTotpSecret();
+  assert.match(fresh, /^[A-Z2-7]{32}$/);
+  const sealed = m.sealSecret(fresh, "k1");
+  assert.ok(!sealed.includes(fresh), "DB 에 평문으로 두지 않는다");
+  assert.equal(m.openSecret(sealed, "k1"), fresh);
+  assert.equal(m.openSecret(sealed, "k2"), null, "다른 열쇠로는 못 연다");
+  assert.equal(m.openSecret("v1.x.y.z", "k1"), null);
+  const now = 1_800_000_000_000;
+  const t = m.signAdmin2fa("A@b.com", "k1", now);
+  assert.equal(m.checkAdmin2fa(t, "a@b.com", "k1", now + 1000), true);
+  assert.equal(m.checkAdmin2fa(t, "other@b.com", "k1", now + 1000), false, "다른 계정에 못 쓴다");
+  assert.equal(m.checkAdmin2fa(t, "a@b.com", "k2", now + 1000), false);
+  assert.equal(m.checkAdmin2fa(t, "a@b.com", "k1", now + (m.ADMIN_2FA_TTL_SEC + 1) * 1000), false, "12시간 뒤 만료");
+  assert.equal(m.checkAdmin2fa(`${Math.floor(now / 1000) + 99999}.AAAA`, "a@b.com", "k1", now), false, "만료만 고친 표식은 서명이 안 맞는다");
+  assert.equal(m.checkAdmin2fa(null, "a@b.com", "k1", now), false);
+  assert.match(m.otpauthUrl(sec, "a@b.com"), /^otpauth:\/\/totp\/.+\?secret=GEZD.+&algorithm=SHA1&digits=6&period=30$/);
+});
+
+test("[1147] 관리자 화면 — 등록한 계정은 번호 확인 없이는 못 들어온다 · 못 읽으면 통과시키지 않는다 · 번호 대입 한도 · 가입 걸음 표식", () => {
+  const lay = read("app/admin/layout.tsx");
+  assert.match(lay, /if \(gate === "need-code" \|\| gate === "error"\) redirect\("\/admin-2fa"\);/);
+  assert.ok(lay.indexOf("canAccessAdminConsole(session)") < lay.indexOf("admin2faGate("), "권한 확인 뒤에 2단계");
+  const g = read("lib/auth/admin-2fa.ts");
+  assert.match(g, /catch \{\s*return "error";/);
+  const api = read("app/api/admin/2fa/route.ts");
+  assert.match(api, /canAccessAdminConsole\(session\) \? email : null/);
+  assert.match(api, /keyRateLimit\(`admin-2fa:\$\{email\}`, \{ max: 8, windowMs: 10 \* 60_000 \}\)/);
+  assert.match(api, /if \(row\?\.enabled\) return NextResponse\.json\(\{ error: "이미 등록됨" \}, \{ status: 409 \}\);/, "등록을 마친 뒤에는 비밀값을 다시 내보내지 않는다");
+  assert.match(api, /httpOnly: true,/);
+  assert.match(read("app/signup/SignupClient.tsx"), /trackStep\("signup_step_2_basic"\);/);
+  assert.match(read("app/admin/traffic/page.tsx"), /signup_step_2_basic: "가입 2단계\(기본 정보 도착\)"/);
+});

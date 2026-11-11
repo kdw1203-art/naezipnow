@@ -163,8 +163,8 @@ function cellClass(col: CompareCol, r: (typeof FEATURE_ROWS)[number], narrow: bo
   if (col.key === "free") return narrow ? (v === "—" ? "text-text-3" : "text-text-2") : `text-center ${v === "—" ? "text-text-3" : "text-text-2"}`;
   if (col.key === "plus")
     return narrow
-      ? `rounded-md bg-[rgba(29,79,216,.04)] py-0.5 ${v === "—" ? "text-text-3" : "font-bold text-primary"}`
-      : `bg-[rgba(29,79,216,.04)] py-1 text-center ${v === "—" ? "text-text-3" : "font-bold text-primary"}`;
+      ? `rounded-md bg-[rgba(27, 75, 145,.04)] py-0.5 ${v === "—" ? "text-text-3" : "font-bold text-primary"}`
+      : `bg-[rgba(27, 75, 145,.04)] py-1 text-center ${v === "—" ? "text-text-3" : "font-bold text-primary"}`;
   const pro = v === "—" ? (narrow ? "text-text-3" : "font-normal text-text-3") : r.proAccent ? "font-bold text-warning" : "font-bold text-primary";
   return narrow ? pro : `text-center ${pro}`;
 }
@@ -449,7 +449,7 @@ export default async function SubscriptionPage() {
           <div className="mb-2 t-sub font-bold text-text-3">기능 비교</div>
           <div className={`sticky top-[62px] z-10 grid ${COMPARE_GRID_NARROW} gap-1.5 rounded-lg bg-surface py-1.5`}>
             {COMPARE_COLS.map((c) => (
-              <div key={c.key} className={`text-center ${c.soft ? "rounded-lg bg-[rgba(29,79,216,.06)] py-0.5" : ""}`}>
+              <div key={c.key} className={`text-center ${c.soft ? "rounded-lg bg-[rgba(27, 75, 145,.06)] py-0.5" : ""}`}>
                 <div className={`t-sub font-bold ${c.tone}`}>{c.name}</div>
                 <div className="t-sub text-text-3">{c.price}</div>
               </div>
@@ -471,7 +471,7 @@ export default async function SubscriptionPage() {
             <div className="mb-1 t-sub font-semibold text-text-2">프로필 인증배지</div>
             <div className={`grid ${COMPARE_GRID_NARROW} items-center gap-1.5 text-center`}>
               {COMPARE_COLS.map((c) => (
-                <span key={c.key} className={c.soft ? "rounded-md bg-[rgba(29,79,216,.04)] py-0.5" : ""}>
+                <span key={c.key} className={c.soft ? "rounded-md bg-[rgba(27, 75, 145,.04)] py-0.5" : ""}>
                   {c.key === "free" ? <span className="t-sub text-text-3">—</span> : <PlanBadge tier={c.key} />}
                 </span>
               ))}
@@ -485,7 +485,7 @@ export default async function SubscriptionPage() {
             <div className={`grid ${COMPARE_GRID_WIDE} items-end gap-2 border-b border-divider pb-3 pt-1.5`}>
               <span className="t-sub text-text-3">기능 비교</span>
               {COMPARE_COLS.map((c) => (
-                <div key={c.key} className={`text-center ${c.soft ? "rounded-lg bg-[rgba(29,79,216,.05)] py-1.5" : ""}`}>
+                <div key={c.key} className={`text-center ${c.soft ? "rounded-lg bg-[rgba(27, 75, 145,.05)] py-1.5" : ""}`}>
                   <div className={`t-body font-bold ${c.tone}`}>{c.name}</div>
                   <div className="t-title text-ink">
                     {c.key === "free" ? "0원" : (
@@ -514,7 +514,7 @@ export default async function SubscriptionPage() {
             <div className={`grid ${COMPARE_GRID_WIDE} items-center gap-2 py-2.5 t-sub`}>
               <span className="text-text-2">프로필 인증배지</span>
               {COMPARE_COLS.map((c) => (
-                <span key={c.key} className={`text-center ${c.soft ? "bg-[rgba(29,79,216,.04)] py-1" : ""}`}>
+                <span key={c.key} className={`text-center ${c.soft ? "bg-[rgba(27, 75, 145,.04)] py-1" : ""}`}>
                   {c.key === "free" ? <span className="text-text-3">—</span> : <PlanBadge tier={c.key} />}
                 </span>
               ))}

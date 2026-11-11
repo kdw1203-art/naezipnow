@@ -64,7 +64,7 @@ export function InquiryForm({
 
   if (done) {
     return (
-      <div className="flex flex-col items-start gap-2 rounded-xl bg-[rgba(29,79,216,.06)] px-4 py-5">
+      <div className="flex flex-col items-start gap-2 rounded-xl bg-[rgba(27, 75, 145,.06)] px-4 py-5">
         <div className="t-section font-bold text-ink">참여 문의가 접수됐어요</div>
         <p className="t-body leading-[1.7] text-text-2">
           등록자에게 문의가 전달됩니다. 이후 계약·정산 조건은 <b>당사자 간에 직접</b>{" "}

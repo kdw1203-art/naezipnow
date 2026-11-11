@@ -110,7 +110,7 @@ export default function GlobalError({
                 fontSize: 13,
                 fontWeight: 700,
                 color: "#fff",
-                background: "#1d4fd8",
+                background: "#1b4b91",
                 cursor: "pointer",
               }}
             >

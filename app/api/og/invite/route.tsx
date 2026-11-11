@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
             height: "600px",
             borderRadius: "9999px",
             background:
-              "radial-gradient(circle at center, rgba(29,79,216,0.18) 0%, rgba(29,79,216,0.06) 45%, rgba(29,79,216,0) 70%)",
+              "radial-gradient(circle at center, rgba(27, 75, 145,0.18) 0%, rgba(27, 75, 145,0.06) 45%, rgba(27, 75, 145,0) 70%)",
             display: "flex",
           }}
         />
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
             height: "560px",
             borderRadius: "9999px",
             background:
-              "radial-gradient(circle at center, rgba(29,79,216,0.14) 0%, rgba(29,79,216,0) 70%)",
+              "radial-gradient(circle at center, rgba(27, 75, 145,0.14) 0%, rgba(27, 75, 145,0) 70%)",
             display: "flex",
           }}
         />
@@ -89,7 +89,7 @@ export async function GET(req: NextRequest) {
                 display: "flex",
                 alignItems: "center",
                 background: "#eaf0ff",
-                color: "#1d4fd8",
+                color: "#1b4b91",
                 fontSize: "28px",
                 fontWeight: 800,
                 padding: "10px 22px",
@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
             <span style={{ display: "flex" }}>가입하면</span>
             <span style={{ display: "flex", alignItems: "baseline" }}>
               <span style={{ display: "flex" }}>둘 다&nbsp;</span>
-              <span style={{ display: "flex", color: "#1d4fd8" }}>300P</span>
+              <span style={{ display: "flex", color: "#1b4b91" }}>300P</span>
             </span>
           </div>
 

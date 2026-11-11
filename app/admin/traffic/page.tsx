@@ -122,6 +122,10 @@ const EVENT_LABEL: Record<string, string> = {
   pwa_install_prompt_view: "PWA 프롬프트 노출",
   /* [1027] 화면이 열릴 때가 아니라 사람이 처음 움직인 뒤 세션당 한 번(app/signup/SignupClient) */
   signup_step_1: "가입 1단계(처음 움직임)",
+  /* [1147] 가입 폼 두 걸음 — 계정 칸 통과 · 제출 누름 · 완료. 걸음 사이 차이가 그 자리에서 그만둔 사람 */
+  signup_step_2_basic: "가입 2단계(기본 정보 도착)",
+  signup_step_4: "가입 제출 누름",
+  signup_complete: "가입 완료",
   onboarding_tour_skip: "온보딩 투어 건너뜀",
   onboarding_tour_complete: "온보딩 투어 완료",
 };

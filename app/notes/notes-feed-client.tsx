@@ -850,6 +850,9 @@ function wantsMineTab(search: string): boolean {
   }
 }
 
+/** [1145] 홍보 칸은 이 순번(0부터) 글 뒤에 */
+const PROMO_AFTER_INDEX = 2;
+
 export function NotesFeedClient({
   notes: publicNotes,
   mine: mineProp,
@@ -861,7 +864,10 @@ export function NotesFeedClient({
   hasBestMonth = false,
   ad = null,
   adSide = null,
+  promo = null,
 }: {
+  /** [1145] 목록 사이 전문가 홍보 — 서버(page.tsx)가 <RotatingExpertPromo> 를 넘긴다. 나갈 사람이 없으면 빈 노드 */
+  promo?: ReactNode;
   /** [1016] 데스크톱 오른쪽 레일 광고(placement="sidebar") — page.tsx 가 넘긴다 */
   adSide?: ReactNode;
   /** [1015 · 규칙 G] 페이지 끝 광고 자리 — 서버(page.tsx)가 <AdZone placement="page_bottom"> 을 넘긴다. 폰·데스크톱 각 1곳 */
@@ -1492,7 +1498,11 @@ export function NotesFeedClient({
                     ),
                   )
                 : visible.map((n, i) => (
-                    <PostCard key={n.id} n={n} priority={view === "feed" && i === 0} />
+                    <Fragment key={n.id}>
+                      <PostCard n={n} priority={view === "feed" && i === 0} />
+                      {/* [1145] 목록 사이 전문가 홍보 한 칸 — 공개 목록의 세 번째 글 뒤(내 노트 보기에는 넣지 않는다) */}
+                      {promo && !mine && i === PROMO_AFTER_INDEX ? <div>{promo}</div> : null}
+                    </Fragment>
                   ))}
             </div>
             )}

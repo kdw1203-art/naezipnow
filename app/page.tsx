@@ -22,6 +22,7 @@ import { HomeHubLinks } from "./components/home/HomeHubLinks";
 import { HomeRecentDeals, toHomeDealRows, type HomeDealRow } from "./components/home/HomeRecentDeals";
 import { HomeMarketBoard } from "./components/home/HomeMarketBoard";
 import { HomeAltBoard } from "./components/home/HomeAltBoard";
+import { RotatingExpertPromo } from "./components/experts/ExpertPromo";
 import { HomeRegionTable } from "./components/home/HomeRegionTable";
 import { listRegionTransactions } from "@/lib/market/store";
 import { complexCanonicalPathFromNames } from "@/lib/complex/complex-store";
@@ -318,6 +319,8 @@ export default async function Home() {
                   </>
                 )}
               </section>
+              {/* [1144] 전문가 홍보 한 칸 — 날마다 차례가 돈다(없으면 안 그린다) */}
+              <RotatingExpertPromo slot={1} compact />
               <AdZone placement="home_feed" seed={0} plan={null} spot="side" className="hidden lg:block" />
               <AdSenseUnit />
             </aside>

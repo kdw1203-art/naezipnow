@@ -263,7 +263,7 @@ export default async function TownGroupDetailPage({
                 style={
                   isPast || (isFull && !isOrganizer)
                     ? undefined
-                    : { boxShadow: "0 10px 26px rgba(29,79,216,.35)" }
+                    : { boxShadow: "0 10px 26px rgba(27, 75, 145,.35)" }
                 }
               >
                 {isOrganizer
@@ -289,7 +289,7 @@ export default async function TownGroupDetailPage({
               <Link
                 href={`/login?callbackUrl=${encodeURIComponent(`/town/groups/${id}`)}`}
                 className="btn-primary rise-in-2 rounded-2xl p-3.5 text-center t-section no-underline"
-                style={{ boxShadow: "0 10px 26px rgba(29,79,216,.35)" }}
+                style={{ boxShadow: "0 10px 26px rgba(27, 75, 145,.35)" }}
               >
                 로그인하고 참여하기
               </Link>

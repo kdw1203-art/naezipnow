@@ -7,6 +7,7 @@ import "server-only";
  *  · 심리   — market_region_series 매수우위(주간, 지역 → 시도) · public_data_cache ecos:housing-csi(주택가격전망 CSI)
  *  · 뉴스   — board_posts 자동 수집 기사 중 제목에 지역 낱말이 있는 최근 60일(우리 자동 글 제외)
  *  · 관심도 — 같은 기사의 30일/직전 30일 수 · page_view_events(단지 화면 조회 표본) · user_watchlist(관심 등록)
+ *             · [1139] public_data_cache naver:search-trend(검색어 트렌드 6개월) · naver:news-daily(일별 기사 건수)
  *  · 거래량 — market_region_monthly(국토부 신고 집계)
  *  · 1년 추이 · 단기 추세 — 라이브 컨텍스트의 REB 월간 흐름 + market_region_series 주간 매매지수
  *  · 매물·공급 — 라이브 컨텍스트의 입주 예정 · KOSIS 세대수 + 기사 제목의 매물 단서
@@ -35,6 +36,14 @@ import {
 import { buildLiveToolContextCached, type LiveToolContext } from "@/lib/ai/live-context";
 import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { logger } from "@/lib/log";
+import {
+  BUZZ_NEWS_KEY,
+  BUZZ_SEARCH_KEY,
+  newsDailySummary,
+  searchTrendSummary,
+  type NewsDailyPayload,
+  type SearchTrendPayload,
+} from "@/lib/buzz/model";
 
 const NEWS_WINDOW_DAYS = 60;
 const DAY_MS = 86_400_000;
@@ -221,6 +230,36 @@ const ecosParts = cache(async (): Promise<EcosParts | Failed> => {
   }
 });
 
+/* ── [1139] 네이버 검색어 트렌드 · 뉴스 건수(전역 한 벌 · region-buzz-ingest 크론이 하루 한 번 적재) ── */
+
+type BuzzParts = { search: SearchTrendPayload["regions"] | null; newsDays: NewsDailyPayload["days"] | null };
+
+async function loadBuzzParts(): Promise<BuzzParts> {
+  const sb = getServiceSupabase();
+  if (!sb) return { search: null, newsDays: null };
+  const { data, error } = await sb.from("public_data_cache").select("cache_key,payload").in("cache_key", [BUZZ_SEARCH_KEY, BUZZ_NEWS_KEY]);
+  if (error) throw new Error(`public_data_cache(naver) 조회 실패: ${error.message}`);
+  const rows = (data ?? []) as Array<{ cache_key: string; payload: Record<string, unknown> | null }>;
+  const get = (k: string) => rows.find((r) => r.cache_key === k)?.payload ?? null;
+  const regions = get(BUZZ_SEARCH_KEY)?.regions;
+  const days = get(BUZZ_NEWS_KEY)?.days;
+  return {
+    search: regions && typeof regions === "object" ? (regions as SearchTrendPayload["regions"]) : null,
+    newsDays: days && typeof days === "object" ? (days as NewsDailyPayload["days"]) : null,
+  };
+}
+
+const loadBuzzPartsCached = unstable_cache(loadBuzzParts, ["signals-buzz-v1"], { revalidate: 21_600, tags: ["buzz"] });
+/** 못 읽으면 null — 관심도는 종전 자료(기사 언급 · 조회)만으로 낸다 */
+const buzzParts = cache(async (): Promise<BuzzParts | null> => {
+  try {
+    return await loadBuzzPartsCached();
+  } catch (e) {
+    logger.warnSampled("signals:buzz", "[signals] 네이버 관심 묶음 조회 실패", e);
+    return null;
+  }
+});
+
 /* ── 내집나우 관심(전역 한 벌 · 1시간) ─────────────────────────────── */
 
 type InterestMap = { views: Record<string, [number, number]>; watchers: Record<string, number> };
@@ -301,7 +340,7 @@ export async function loadSignalReport(opts: LoadSignalOptions): Promise<SignalR
   const regionName = opts.regionName.trim();
   if (!regionName) return null;
   const now = opts.now ?? new Date().toISOString();
-  const [regionR, ecos, interest, ctxR] = await Promise.all([
+  const [regionR, ecos, interest, ctxR, buzz] = await Promise.all([
     regionSignalParts(regionName).catch((e): null => {
       logger.warnSampled("signals:region", "[signals] 지역 묶음 실패", e);
       return null;
@@ -311,6 +350,7 @@ export async function loadSignalReport(opts: LoadSignalOptions): Promise<SignalR
     opts.ctx !== undefined
       ? Promise.resolve(opts.ctx)
       : buildLiveToolContextCached(null, regionName, { complexDurable: false }).catch((): null => null),
+    buzzParts(),
   ]);
   const region = regionR;
   const ctx = ctxR;
@@ -348,10 +388,22 @@ export async function loadSignalReport(opts: LoadSignalOptions): Promise<SignalR
     siteViewsPrior30 = slot[1];
     watchers = interest.watchers[opts.complexId] ?? 0;
   }
+  /* [1139] 네이버 검색 · 기사 건수는 카탈로그 지역 id 로 쌓는다 */
+  const buzzId = region?.regionId ?? regionIdForName(regionName);
   const interestInput: SignalInputs["interest"] =
     newsItems === "failed" && (interest === "failed" || interest === null)
       ? "failed"
-      : { newsRecent30: recent30, newsPrior30: prior30, newsFailed, siteViews30, siteViewsPrior30, watchers, siteFailed };
+      : {
+          newsRecent30: recent30,
+          newsPrior30: prior30,
+          newsFailed,
+          siteViews30,
+          siteViewsPrior30,
+          watchers,
+          siteFailed,
+          search: buzzId && buzz?.search ? searchTrendSummary(buzz.search[buzzId], now) : null,
+          naverNews: buzzId && buzz?.newsDays ? newsDailySummary(buzz.newsDays, buzzId, now) : null,
+        };
 
   /* 거래량 */
   const vol = region ? region.volume : "failed";

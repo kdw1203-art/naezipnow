@@ -143,7 +143,7 @@ export function AiFeedbackButtons({
               type="checkbox"
               checked={quotable}
               onChange={(e) => setQuotable(e.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 accent-[#1d4fd8]"
+              className="mt-0.5 h-4 w-4 shrink-0 accent-[#1b4b91]"
             />
             <span className="t-caption leading-[1.6] text-text-3">
               이 문장을 내집나우 소개에 <b className="text-text-2">이름 없이</b> 인용해도

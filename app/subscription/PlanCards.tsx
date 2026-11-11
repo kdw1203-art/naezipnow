@@ -293,7 +293,7 @@ export function PlanCards({
                 </span>
               ) : (
                 p.badge && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3.5 py-[5px] t-sub font-bold text-white shadow-[0_6px_16px_rgba(29,79,216,.4)]">
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3.5 py-[5px] t-sub font-bold text-white shadow-[0_6px_16px_rgba(27, 75, 145,.4)]">
                     {p.badge}
                   </span>
                 )
