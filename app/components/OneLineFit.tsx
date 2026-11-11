@@ -12,7 +12,7 @@ const MARK = "data-fit-done";
 
 function fitOne(el: HTMLElement): void {
   if (el.hasAttribute(MARK)) return;
-  if (el.closest("label, button, a.btn-primary, table, pre, code, [data-fit-skip]") && !el.hasAttribute("data-fit")) return;
+  if (el.closest("label, button, a.btn-primary, table, pre, code, [data-fit-skip], .side-ad-rail") && !el.hasAttribute("data-fit")) return;
   if (el.querySelector("p, div, ul, ol, li, br, button, input, select, textarea, table")) return;
   const text = (el.textContent ?? "").trim();
   const cs = window.getComputedStyle(el);

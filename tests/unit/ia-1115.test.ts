@@ -779,3 +779,42 @@ test("[1147] 관리자 화면 — 등록한 계정은 번호 확인 없이는 �
   assert.match(read("app/signup/SignupClient.tsx"), /trackStep\("signup_step_2_basic"\);/);
   assert.match(read("app/admin/traffic/page.tsx"), /signup_step_2_basic: "가입 2단계\(기본 정보 도착\)"/);
 });
+
+test("[1148] 좌우 광고 띠 — 세로형 광고만 · 띠 안 안내 카드는 제목 + 바로 가기(낱말 단위 줄바꿈) · 한 줄 맞춤 제외", () => {
+  assert.match(read("app/components/ads/SideAdRails.tsx"), /spot="side" shape="vertical" \/>[\s\S]*spot="side" shape="vertical" \/>/);
+  const u = read("app/components/ads/AdZoneUnit.tsx");
+  assert.match(u, /data-ad-format=\{inArticle \? "fluid" : shape === "vertical" \? "vertical" : "auto"\}/);
+  assert.match(u, /shape === "vertical" \? "false" : "true"/);
+  const css = read("app/globals.css");
+  assert.match(css, /\.side-ad-rail \.card p \{\s*display: none;/);
+  assert.match(css, /\.side-ad-rail \.t-section \{\s*font-size: var\(--fs-body\);[\s\S]{0,80}word-break: keep-all;/);
+  assert.match(read("app/components/OneLineFit.tsx"), /\[data-fit-skip\], \.side-ad-rail"/);
+});
+
+test("[1148] 처음 안내 — 닫기는 이 탭 · 일주일간 보지 않기는 7일 뒤 다시 보임", async () => {
+  const m = await import("../../lib/nav/start-steps.ts");
+  const now = 1_800_000_000_000;
+  assert.equal(m.isStartHidden(null, null, now), false);
+  assert.equal(m.isStartHidden(null, "1", now), true);
+  const until = String(m.startHideUntil(now));
+  assert.equal(m.isStartHidden(until, null, now + 6 * 86_400_000), true);
+  assert.equal(m.isStartHidden(until, null, now + 7 * 86_400_000 + 1), false, "7일 지나면 다시");
+  assert.equal(m.isStartHidden("abc", null, now), false);
+  const c = read("app/components/nav/StartSteps.tsx");
+  assert.match(c, /onClick=\{\(\) => close\(true\)\}[\s\S]{0,140}일주일간 보지 않기/);
+  assert.match(c, /onClick=\{\(\) => close\(false\)\}[\s\S]{0,180}닫기/);
+});
+
+test("[1148] 정비구역 이름표 — 구역명 + 단계 두 줄이 기본 · 다른 보기에서는 아래 줄 없음", async () => {
+  const m = await import("../../lib/redevelopment/map-layer.ts");
+  assert.equal(m.REDEV_LABEL_MODES[0].key, "both");
+  assert.equal(m.isRedevLabelMode("both"), true);
+  const p = { name: "한남3구역", stageKey: "moving", households: 5816 } as Parameters<typeof m.redevMarkerLabel>[0];
+  assert.equal(m.redevMarkerLabel(p, "both"), "한남3구역");
+  assert.ok(m.redevMarkerSubLabel(p, "both"));
+  assert.equal(m.redevMarkerSubLabel(p, "name"), undefined);
+  const nm = read("components/map/NaverMap.tsx");
+  assert.match(nm, /if \(data\.subLabel\) \{\s*return \{ content: buildStackedMarkerHtml\(data\.label, data\.subLabel, color\)/);
+  assert.match(nm, /\$\{escapeHtml\(sub\.trim\(\)\)\}/, "아래 줄도 이스케이프");
+  assert.match(read("app/redevelopment/RedevelopmentMap.tsx"), /subLabel: stageLabel\(p\.stageKey\) \|\| undefined,/);
+});

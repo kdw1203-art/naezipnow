@@ -45,6 +45,11 @@ export interface MapMarkerData {
   /** 마커 핀 색 (HTML 마커) */
   pinColor?: string;
   /**
+   * [1148 · 정비구역 이름표] 이름 아래 한 줄(진행단계 등). 있으면 이름은 핀 색 띠 위 흰 글자, 아래 줄은 흰 바탕 —
+   * 소유자 2026-11-11 "구역 이름 + 단계가 같이 보이게". 사업종류 = 색 · 단계 = 글자(색만으로 구분하지 않는다).
+   */
+  subLabel?: string;
+  /**
    * [1030 · G5] 겹침 정리 우선순위 보정(기본 0). 음수면 같은 자리의 다른 라벨에 먼저 양보한다 —
    * 정비구역 이름표(걸러 보기 층)가 시세 핀(기본 층)을 점으로 접던 것을 뒤집는다(2026-10-04 운영 실측:
    * 구 시세 핀이 회색 점, 그 위에 구역 이름표).
@@ -95,6 +100,7 @@ function markerSignature(d: MapMarkerData, collapsed = false): string {
     d.lat,
     d.lng,
     d.label,
+    d.subLabel ?? "",
     d.pinColor ?? "",
     d.brandPin ? 1 : 0,
     d.pinTextColor ?? "",
@@ -1000,6 +1006,10 @@ export function NaverMap({
       if (data.brandPin) {
         return { content: buildBrandPinHtml(data.label, Boolean(data.selected)), anchor: new maps.Point(0, 0) };
       }
+      /* [1148] 두 줄 이름표(이름 띠 + 단계) */
+      if (data.subLabel) {
+        return { content: buildStackedMarkerHtml(data.label, data.subLabel, color), anchor: new maps.Point(0, 0) };
+      }
       // 이름 알약은 가운데 정렬(transform)로 위치를 맞추므로 앵커는 0,0.
       return { content: buildMarkerHtml(data.label, color), anchor: new maps.Point(0, 0) };
     };
@@ -1278,6 +1288,13 @@ function buildMarkerHtml(label: string, color: string): string {
   /* [1009 · C] 바탕·글자·테두리 raw 색(흰 바탕 rgba(255,255,255,.95)·#3f4b5b) → 토큰. 옆의 시세 말풍선은 이미 var(--surface)라
      다크 모드에서 이 이름 알약만 흰색으로 떠 있었다. 크기(패딩·글자·테두리 1px)는 그대로 — 겹침 계산과 짝이 맞는다. */
   return `<div style="transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:4px;white-space:nowrap;border-radius:9999px;background:var(--surface);color:var(--text-2);font:600 11px sans-serif;padding:4px 9px;box-shadow:0 1px 5px rgba(16,28,54,.18);border:1px solid var(--border)"><span style="width:5px;height:5px;border-radius:9999px;background:${color};flex:none"></span>${escapeHtml(shown)}</div>`;
+}
+
+/** [1148] 두 줄 이름표 — 위: 핀 색 띠에 흰 글자(구역명) · 아래: 흰 바탕(진행단계). 긴 이름은 자른다 */
+function buildStackedMarkerHtml(label: string, sub: string, color: string): string {
+  const name = label.trim();
+  const shown = name.length > NO_PRICE_LABEL_MAX ? `${name.slice(0, NO_PRICE_LABEL_MAX)}…` : name;
+  return `<div style="transform:translate(-50%,-50%);display:inline-flex;flex-direction:column;align-items:stretch;white-space:nowrap;border-radius:6px;overflow:hidden;box-shadow:0 1px 5px rgba(16,28,54,.22);border:1px solid var(--border);text-align:center"><span style="background:${color};color:#fff;font:700 11px sans-serif;padding:3px 8px">${escapeHtml(shown)}</span><span style="background:var(--surface);color:var(--text-2);font:600 10px sans-serif;padding:2px 8px">${escapeHtml(sub.trim())}</span></div>`;
 }
 
 /**

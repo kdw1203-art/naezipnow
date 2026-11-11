@@ -31,7 +31,16 @@ declare global {
  * 애드센스가 <ins> 에 적는 data-ad-status(filled/unfilled)를 CSS(.ad-zone …)가 읽어
  * 채워지면 대체 카드를, 안 채워지면 이 빈 <ins> 를 숨긴다. "광고" 라벨은 채워졌을 때만 보인다.
  */
-export function AdZoneUnit({ placement, className = "" }: { placement: AdPlacement; className?: string }) {
+export function AdZoneUnit({
+  placement,
+  className = "",
+  shape,
+}: {
+  placement: AdPlacement;
+  className?: string;
+  /** [1148] 좁은 세로 띠(160px) — 세로형 광고만 받는다. "auto" 는 좁은 칸에 글자 목록형 광고를 넣어 글이 잘렸다(운영 2026-11-11) */
+  shape?: "vertical";
+}) {
   const client = getAdSenseClient();
   const slot = getSlotForPlacementOrDefault(placement);
   const pathname = usePathname() ?? "/";
@@ -87,9 +96,9 @@ export function AdZoneUnit({ placement, className = "" }: { placement: AdPlaceme
         style={{ display: "block" }}
         data-ad-client={client ?? undefined}
         data-ad-slot={slot}
-        data-ad-format={inArticle ? "fluid" : "auto"}
+        data-ad-format={inArticle ? "fluid" : shape === "vertical" ? "vertical" : "auto"}
         data-ad-layout={inArticle ? "in-article" : undefined}
-        data-full-width-responsive={inArticle ? undefined : "true"}
+        data-full-width-responsive={inArticle ? undefined : shape === "vertical" ? "false" : "true"}
       />
       )}
     </div>

@@ -92,6 +92,7 @@ import {
   isRedevLabelMode,
   redevGroupCounts,
   redevMarkerLabel,
+  redevMarkerSubLabel,
   redevStageCounts,
   type RedevLabelMode,
 } from "@/lib/redevelopment/map-layer";
@@ -1137,7 +1138,7 @@ export function MapClient({
      빈 집합 = 그 축은 걸지 않음. 뷰포트로 받아 온 목록(redevItems)에서만 거른다 — 새 조회 없음. */
   const [redevGroups, setRedevGroups] = useState<Set<ProjectGroupKey>>(() => new Set());
   const [redevStages, setRedevStages] = useState<Set<StageKey>>(() => new Set());
-  const [redevLabelMode, setRedevLabelMode] = useState<RedevLabelMode>("name");
+  const [redevLabelMode, setRedevLabelMode] = useState<RedevLabelMode>("both");
 
   /* ===== [1027] 바탕 지도 — 일반/위성 + 지적편집도. NaverMap 이 이미 받던 props(mapType ·
      nativeLayers.cadastral)인데 /map 만 넘기지 않았다. 지적편집도는 일반·위성 어느 쪽 위에도 얹힌다. */
@@ -3600,6 +3601,7 @@ export function MapClient({
       lat: p.lat,
       lng: p.lng,
       label: redevMarkerLabel(p, redevLabelMode),
+      subLabel: redevMarkerSubLabel(p, redevLabelMode),
       pinColor: colorForType(p.typeKey),
       infoHtml: buildRedevInfoHtml(p),
       priority: -1,

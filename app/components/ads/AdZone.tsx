@@ -32,6 +32,7 @@ export function AdZone({
   signedIn = false,
   className = "",
   spot,
+  shape,
 }: {
   placement: AdPlacement;
   seed?: number;
@@ -41,12 +42,14 @@ export function AdZone({
   className?: string;
   /** [1124] 가운데 흐름 사이("center") · 옆 열이나 끝의 남는 자리("side"). 안 주면 자리 종류로 정한다. */
   spot?: "center" | "side";
+  /** [1148] 좌우 세로 띠 전용 — 세로형 광고 · 좁은 칸에 맞춘 안내 카드 */
+  shape?: "vertical";
 }) {
   if (adFree) return null;
   const where = spot ?? (CENTER_PLACEMENTS.has(placement) ? "center" : "side");
   return (
     <aside className={`ad-zone ${className}`} aria-label="광고 공간" data-placement={placement} data-spot={where}>
-      <AdZoneUnit placement={placement} />
+      <AdZoneUnit placement={placement} shape={shape} />
       <div className="ad-zone-fallback">
         <AdSlot placement={placement} seed={seed} plan={plan} adFree={adFree} signedIn={signedIn} />
       </div>

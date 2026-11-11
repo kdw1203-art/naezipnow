@@ -35,3 +35,20 @@ export const START_HEADING: Record<StartFrom, string> = {
   note: "내 임장도 이렇게 남기는 순서",
   news: "기사 다음 순서",
 };
+
+/* [1148 · 닫기 · 일주일간 보지 않기] 소유자 2026-11-11. 닫기 = 이 탭에서만(sessionStorage) · 일주일 = 이 브라우저에서 7일(localStorage 에 끝나는 시각).
+   순수 규칙 — 화면(StartSteps)이 저장소를 읽어 이 함수에 묻는다. */
+export const START_HIDE_KEY = "nz_start_hide_until";
+export const START_CLOSE_KEY = "nz_start_closed";
+export const START_HIDE_DAYS = 7;
+
+export function startHideUntil(nowMs: number): number {
+  return nowMs + START_HIDE_DAYS * 86_400_000;
+}
+
+/** 저장된 값이 아직 유효한가 — 숫자가 아니거나 지났으면 다시 보인다 */
+export function isStartHidden(storedUntil: string | null, sessionClosed: string | null, nowMs: number): boolean {
+  if (sessionClosed === "1") return true;
+  const until = Number(storedUntil);
+  return Number.isFinite(until) && until > nowMs;
+}

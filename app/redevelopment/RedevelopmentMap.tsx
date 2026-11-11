@@ -158,6 +158,8 @@ export function RedevelopmentMap({
         lat: p.lat,
         lng: p.lng,
         label: p.name,
+        /* [1148] 이름 띠(사업종류 색) + 진행단계 두 줄 이름표 */
+        subLabel: stageLabel(p.stageKey) || undefined,
         pinColor: colorForType(p.typeKey),
         /* [1027] /map 정비사업 레이어와 같은 안내창(이스케이프 · http(s) 출처만 · 구역 상세 링크) */
         infoHtml: buildRedevInfoHtml(p),

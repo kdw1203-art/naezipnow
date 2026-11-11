@@ -19,16 +19,18 @@ import {
 } from "./types";
 
 /** 마커 이름표에 무엇을 적을지 */
-export type RedevLabelMode = "name" | "stage" | "households";
+export type RedevLabelMode = "both" | "name" | "stage" | "households";
 
 export const REDEV_LABEL_MODES: { key: RedevLabelMode; label: string }[] = [
+  /* [1148] 구역명 + 진행단계 두 줄(기본) — 이름만으로는 어디까지 왔는지 눌러 봐야 알았다 */
+  { key: "both", label: "구역명 + 단계" },
   { key: "name", label: "구역명" },
   { key: "stage", label: "진행단계" },
   { key: "households", label: "세대수" },
 ];
 
 export function isRedevLabelMode(v: unknown): v is RedevLabelMode {
-  return v === "name" || v === "stage" || v === "households";
+  return v === "both" || v === "name" || v === "stage" || v === "households";
 }
 
 /** 빈 집합 = 그 축은 걸지 않음(전체). 두 축은 AND. */
@@ -89,6 +91,11 @@ export function redevMarkerLabel(
       : "—";
   }
   return p.name;
+}
+
+/** [1148] 이름표 아래 줄 — "구역명 + 단계" 일 때만 진행단계 */
+export function redevMarkerSubLabel(p: Pick<RedevelopmentProject, "stageKey">, mode: RedevLabelMode): string | undefined {
+  return mode === "both" ? stageLabel(p.stageKey) || undefined : undefined;
 }
 
 const HTML_ESCAPES: Record<string, string> = {

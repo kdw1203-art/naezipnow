@@ -8731,3 +8731,30 @@ html[data-ad-free="1"] :is(.ad-zone, .ad-strip, [data-ad-gate]) {
     display: none !important;
   }
 }
+
+/* ── [1148] 좌우 광고 띠(160px) 안의 글 — 소유자 2026-11-11 "글씨 크기 및 내용 등 조정".
+   띠는 폭이 160px 뿐이라 본문용 카드(제목 15 · 설명 두 줄)를 그대로 넣으면 낱말 가운데서 끊기고 칸이 눌렸다.
+   띠 안에서만: 제목을 본문 크기(13)로 · 설명 문단은 빼고(제목 + 바로 가기만) · 낱말 단위로 줄을 바꾼다. 한 줄 맞춤(OneLineFit)은 여기서 하지 않는다. */
+.side-ad-rail .card {
+  padding: 12px;
+}
+.side-ad-rail .card p {
+  display: none;
+}
+.side-ad-rail .t-section {
+  font-size: var(--fs-body);
+  line-height: 1.4;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.side-ad-rail .t-sub,
+.side-ad-rail .t-caption {
+  letter-spacing: 0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+}
+.side-ad-rail .ad-zone-unit,
+.side-ad-rail ins.adsbygoogle {
+  max-width: 160px;
+  overflow: hidden;
+}

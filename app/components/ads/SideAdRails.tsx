@@ -15,10 +15,10 @@ export function SideAdRails() {
   return (
     <SideRailGate>
       <div className="side-ad-rail" data-side="left">
-        <AdZone placement="sidebar" seed={2} plan={null} spot="side" />
+        <AdZone placement="sidebar" seed={2} plan={null} spot="side" shape="vertical" />
       </div>
       <div className="side-ad-rail" data-side="right">
-        <AdZone placement="sidebar" seed={3} plan={null} spot="side" />
+        <AdZone placement="sidebar" seed={3} plan={null} spot="side" shape="vertical" />
       </div>
     </SideRailGate>
   );

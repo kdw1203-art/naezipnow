@@ -122,7 +122,7 @@ test("이름표 — 구역명 · 진행단계 · 세대수(없으면 — , 0·�
   assert.equal(redevMarkerLabel(p, "households"), "5,816세대");
   assert.equal(redevMarkerLabel(zone({ households: null }), "households"), "—");
   assert.equal(redevMarkerLabel(zone({ households: 0 }), "households"), "—");
-  assert.deepEqual(REDEV_LABEL_MODES.map((m) => m.key), ["name", "stage", "households"]);
+  assert.deepEqual(REDEV_LABEL_MODES.map((m) => m.key), ["both", "name", "stage", "households"]);
   assert.ok(isRedevLabelMode("stage"));
   assert.ok(!isRedevLabelMode("price"));
   assert.ok(!isRedevLabelMode(undefined));
