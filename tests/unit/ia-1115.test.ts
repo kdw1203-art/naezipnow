@@ -864,3 +864,36 @@ test("[1151] 정비구역 분류 값의 순번을 뗀다 — 3)재건축(공동�
   assert.deepEqual([z?.stage, z?.projectType, z?.operator], ["정비구역지정", "재건축(공동주택)", "조합"]);
   assert.match(read("app/api/cron/redev-national-ingest/route.ts"), /revalidatePath\("\/redevelopment\/seoul"\)/);
 });
+
+test("[1152] 정비구역을 지도에 — 조서의 대표 지번으로만 찍는다(이름 맞추기 · 지번 뽑기 · 분류)", async () => {
+  const m = await import("../../lib/redevelopment/zone-locate.ts");
+  assert.equal(m.zoneNameKey("한남3재정비촉진구역"), m.zoneNameKey("한남3 구역"));
+  assert.equal(m.sameZoneKey(m.zoneNameKey("면목9구역"), m.zoneNameKey("면목9-1구역")), null, "옆 구역과 섞지 않는다");
+  assert.equal(m.sameZoneKey(m.zoneNameKey("방배14"), m.zoneNameKey("방배14주택재건축 정비사업")), "eq");
+  assert.equal(m.sameZoneKey(m.zoneNameKey("수색8재정비촉진"), m.zoneNameKey("수색8주택재개발정비구역")), "eq");
+  assert.deepEqual(m.firstLot("용산구 한남동 686번지 일대"), { dong: "한남동", lot: "686" });
+  assert.deepEqual(m.firstLot("용산구 후암동 산1, 401번지일대"), { dong: "후암동", lot: "산1" });
+  assert.deepEqual(m.firstLot("강서구 방화대로21길 70 (공항동 18번지) 일원"), { dong: "공항동", lot: "18" });
+  assert.deepEqual(m.firstLot("문래동3가 9"), { dong: "문래동3가", lot: "9" });
+  assert.deepEqual(m.firstLot("응암동700번지일대"), { dong: "응암동", lot: "700" });
+  assert.equal(m.firstLot("중구 삼각동, 수하동, 장교동 일부"), null, "지번이 없으면 찍지 않는다");
+  assert.equal(m.firstLot("목동10단지아파트"), null);
+  const rows = [
+    { name: "한남3재정비촉진구역", place: "용산구 한남동 686번지 일대", sigungu: "용산구", date: "2018-08-02" },
+    { name: "한남3 재정비촉진구역", place: "용산구 한남동 557 일대", sigungu: "용산구", date: "2025-06-12" },
+    { name: "한남3구역", place: "성동구 옥수동 1", sigungu: "성동구", date: "2026-01-01" },
+  ];
+  assert.equal(m.pickUpisLot({ name: "한남3재정비촉진", sigungu: "용산구" }, rows)?.lot, "557", "같은 구 · 최근 조서");
+  assert.equal(m.pickUpisLot({ name: "한남3재정비촉진", sigungu: "마포구" }, rows), null);
+  assert.equal(m.lotQuery("서울특별시", "용산구", { dong: "한남동", lot: "686" }), "서울특별시 용산구 한남동 686");
+  assert.deepEqual([m.nationalTypeKey("1)재개발(주택정비)"), m.nationalTypeKey("3)재건축(공동주택)"), m.nationalTypeKey("4)재건축(단독주택)"), m.nationalTypeKey("5)주거환경개선")], ["redev", "recon_apt", "recon_house", null]);
+  assert.deepEqual(["2)정비구역지정", "3)추진위구성", "17)사업시행자지정", "5)사업시행인가", "6)관리처분인가", "7)착공", "?"].map(m.nationalStageKey), ["designated", "committee", "union", "plan_approved", "mgmt_approved", "moving", null]);
+  assert.equal(m.shortSido("서울특별시"), "서울");
+  assert.match(m.locateSummary({ stage: "2)정비구역지정", operator: "1)조합" }), /^공표 단계 정비구역지정 · 시행 조합 · 위치는 대표 지번 기준 · 구역 경계 아님$/);
+  assert.equal(m.hitInSigungu("서울특별시 용산구 한남동 686", "용산구"), true);
+  assert.equal(m.hitInSigungu("서울특별시 성동구 옥수동 1", "용산구"), false);
+  const run = read("lib/redevelopment/zone-locate-run.ts");
+  assert.match(run, /hitInSigungu/);
+  assert.doesNotMatch(run, /Math\.random|centroid/, "좌표를 지어내지 않는다");
+  assert.ok((JSON.parse(read("vercel.json")) as { crons: { path: string }[] }).crons.some((c) => c.path === "/api/cron/redev-zone-locate"));
+});

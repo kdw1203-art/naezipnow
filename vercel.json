@@ -37,6 +37,10 @@
       "schedule": "35 17 * * 1"
     },
     {
+      "path": "/api/cron/redev-zone-locate",
+      "schedule": "50 17 * * 1"
+    },
+    {
       "path": "/api/cron/kb-ingest",
       "schedule": "0 1 * * *"
     },
