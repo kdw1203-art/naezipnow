@@ -550,7 +550,8 @@ test("[1139] 관심도 요인 — 네이버 검색 추이가 있으면 점수를
   assert.equal(interestFactor({ ...base, search: { recent3: 1, prior3: 0.5, asOf: "202610" } }).status, "thin");
   const route = read("app/api/cron/region-buzz-ingest/route.ts");
   assert.match(route, /if \(!\(await authorizeCron\(req\)\)\) return/);
-  assert.match(read("vercel.json"), /"path": "\/api\/cron\/region-buzz-ingest"/);
+  /* vercel.json 은 배포 빌드에서 한 줄로 줄어든다 — 글자 모양이 아니라 내용으로 본다(1147 · 1148 배포가 이 줄에서 멈췄다) */
+  assert.ok((JSON.parse(read("vercel.json")) as { crons: { path: string }[] }).crons.some((c) => c.path === "/api/cron/region-buzz-ingest"));
   const ing = read("lib/buzz/ingest.ts");
   assert.match(ing, /if \(res\.status === 401 \|\| res\.status === 403\) break;/, "권한 오류면 한도를 태우지 않는다");
   assert.doesNotMatch(ing, /trends\.google/);
@@ -817,4 +818,38 @@ test("[1148] 정비구역 이름표 — 구역명 + 단계 두 줄이 기본 · 
   assert.match(nm, /if \(data\.subLabel\) \{\s*return \{ content: buildStackedMarkerHtml\(data\.label, data\.subLabel, color\)/);
   assert.match(nm, /\$\{escapeHtml\(sub\.trim\(\)\)\}/, "아래 줄도 이스케이프");
   assert.match(read("app/redevelopment/RedevelopmentMap.tsx"), /subLabel: stageLabel\(p\.stageKey\) \|\| undefined,/);
+});
+
+/* ── [1149] 전국 정비구역 목록(국토교통부 공표 · 좌표 없음) ── */
+test("[1149] 전국 정비구역 — 응답 한 줄 풀기 · 세대수는 지어내지 않는다 · 같은 구역은 같은 열쇠 · 주소", async () => {
+  const m = await import("../../lib/redevelopment/national.ts");
+  const z = m.parseNationalRow({ "시도": "서울특별시", "시군구": "용산구", "구역명칭": " 한남3 재정비촉진구역 ", "현 사업추진단계": "관리처분인가", "사업유형": "재개발사업", "사업시행자": "조합", "공급 예정 세대수": "5,816" });
+  assert.deepEqual(z, { id: "서울특별시|용산구|한남3재정비촉진구역", sido: "서울특별시", sigungu: "용산구", name: "한남3 재정비촉진구역", stage: "관리처분인가", projectType: "재개발사업", operator: "조합", households: 5816 });
+  assert.equal(m.parseNationalRow({ "시도": "서울특별시", "시군구": "", "구역명칭": "x" }), null);
+  assert.equal(m.parseHouseholds("-"), null);
+  assert.equal(m.parseHouseholds("0"), null);
+  assert.equal(m.parseHouseholds("1,234세대"), 1234);
+  assert.equal(m.nationalZoneId("서울", "강남구", "은마 아파트"), m.nationalZoneId("서울", "강남구", "은마아파트"));
+  assert.deepEqual(m.parseNationalParams({ sido: "경기도", q: "광명,(1)", page: "2" }), { sido: "경기도", sigungu: "", q: "광명 1", page: 2 });
+  assert.equal(m.nationalHref({ sido: "", sigungu: "", q: "", page: 1 }), "/redev-list");
+  assert.match(m.NATIONAL_API_PATH, /^15160169\/v1\/uddi:[0-9a-f-]{36}$/);
+  const page = read("app/redev-list/page.tsx");
+  assert.match(page, /noIndex: true/);
+  assert.match(page, /좌표 없는 자료라 지도 대신 목록/);
+  assert.doesNotMatch(read("lib/redevelopment/national-ingest.ts"), /lat|lng/, "좌표를 지어내지 않는다");
+  assert.ok((JSON.parse(read("vercel.json")) as { crons: { path: string }[] }).crons.some((c) => c.path === "/api/cron/redev-national-ingest"));
+});
+
+test("[1150] 단지 정보 갱신 주기 · 서울 구별 정비구역 수 지도(자료가 있을 때만) · vercel.json 은 내용으로 본다", async () => {
+  const crons = (JSON.parse(read("vercel.json")) as { crons: { path: string; schedule: string }[] }).crons;
+  const at = (p: string) => crons.find((c) => c.path.startsWith(p))?.schedule;
+  assert.equal(at("/api/cron/apt-detail-enrich"), "30 1,5,9,13,17,21 * * *", "단지 상세 보강 하루 1회 → 6회");
+  assert.equal(at("/api/cron/geocode-complexes"), "20 1,7,13,19 * * *", "좌표 보강 하루 1회 → 4회");
+  assert.equal(at("/api/cron/complex-crawl"), "10 1,13 * * *");
+  const m = await import("../../lib/region/region-switch.ts");
+  const ms = m.nationalGuMarkers([{ id: "gangnam", name: "강남구", lat: 37.5, lng: 127.0 }] as Parameters<typeof m.nationalGuMarkers>[0], new Map([["강남구", 12]]));
+  assert.equal(ms[0].value, "12곳");
+  assert.match(ms[0].href, /^\/redev-list\?sido=.+&sigungu=/);
+  assert.match(read("app/redevelopment/seoul/page.tsx"), /\{nationalCounts && \(/);
+  assert.doesNotMatch(read("tests/unit/ia-1115.test.ts").split("[1150]")[0], /assert\.match\(read\("vercel\.json"\)/, "vercel.json 을 글자 모양으로 보지 않는다");
 });

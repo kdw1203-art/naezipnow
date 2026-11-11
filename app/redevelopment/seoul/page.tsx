@@ -8,7 +8,8 @@ import { UPIS_SOURCE_URL, type UpisGuSummary } from "@/lib/seoul/upis-display";
 import { logger } from "@/lib/log";
 import { SEOUL_GU, SEOUL_GU_INDEX_HREF, seoulGuHref } from "@/lib/seoul/upis-gu";
 import { RegionMapPicker } from "@/app/components/region/RegionMapPicker";
-import { upisGuMarkers } from "@/lib/region/region-switch";
+import { nationalGuMarkers, upisGuMarkers } from "@/lib/region/region-switch";
+import { loadSeoulNationalCounts } from "@/lib/redevelopment/national-store";
 import { SEOUL_DISTRICTS } from "@/lib/map/seoul-districts";
 
 /* [1045] 서울 자치구별 도시계획 결정 조서 — /redevelopment/seoul. 자치구 25곳 화면(/redevelopment/seoul/[gu])의 목차.
@@ -27,6 +28,7 @@ export const metadata = buildPageMetadata({
 });
 
 export default async function SeoulPlanIndexPage() {
+  const nationalCounts = await loadSeoulNationalCounts();
   let summary: UpisGuSummary[] = [];
   let failed = false;
   try {
@@ -97,6 +99,21 @@ export default async function SeoulPlanIndexPage() {
         /* [1129] 높이는 기본(600 · 폰 420) — 520 에서는 아래쪽 구(금천 · 관악 · 서초) 말풍선이 잘렸다 */
         searchPlaceholder="구 이름"
       />
+      {/* [1150 · 정비구역 수 지도] 국토교통부 공표 목록의 서울 구별 정비구역 수 — 자료가 들어온 뒤에만 그린다 */}
+      {nationalCounts && (
+        <section aria-labelledby="seoul-national-h" className="mt-5">
+          <h2 id="seoul-national-h" className="mb-2 t-section text-ink">
+            자치구별 정비구역 수 <span className="t-sub font-medium text-text-3">재개발 · 재건축 · 주거환경개선 · 국토교통부 공표</span>
+          </h2>
+          <RegionMapPicker
+            markers={nationalGuMarkers(SEOUL_DISTRICTS, nationalCounts)}
+            label="서울 자치구별 정비구역 수 지도"
+            valueLabel="말풍선 = 정비구역 수 · 구 중심 위치(구역 경계 아님) · 누르면 그 구 목록"
+            defaultSido="서울"
+            searchPlaceholder="구 이름"
+          />
+        </section>
+      )}
       <h2 className="mb-2 mt-5 t-section text-ink">자치구 25곳</h2>
       <ul className="grid list-none grid-cols-2 gap-2 p-0 sm:grid-cols-3 lg:grid-cols-5 lg:gap-3">
         {SEOUL_GU.map((g) => {

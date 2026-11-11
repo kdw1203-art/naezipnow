@@ -96,3 +96,20 @@ export function upisGuMarkers(
       keys: [...new Set([d.name, `서울 ${d.name}`, ...(d.aliases ?? [])].map(regionSiseKey).filter(Boolean))],
     }));
 }
+
+/* [1150 · 정비구역 수 지도] 서울 자치구 25곳 말풍선 — 값 = 국토교통부 공표 정비구역 수(재개발 · 재건축 · 주거환경개선).
+   이 자료에도 구역 좌표가 없어 구 중심에 놓는다. 누르면 그 구의 전국 목록(/redev-list). 0곳인 구도 뺴지 않는다. */
+export function nationalGuMarkers(districts: readonly SeoulDistrictInfo[], counts: ReadonlyMap<string, number>): RegionMapMarker[] {
+  return districts
+    .filter((d) => !d.retired && Number.isFinite(d.lat) && Number.isFinite(d.lng) && (d.city ?? "서울") === "서울")
+    .map((d) => ({
+      id: `nz-${d.id}`,
+      name: d.name,
+      sido: "서울",
+      lat: d.lat,
+      lng: d.lng,
+      href: `/redev-list?sido=${encodeURIComponent("서울특별시")}&sigungu=${encodeURIComponent(d.name)}`,
+      value: `${(counts.get(d.name) ?? 0).toLocaleString("ko-KR")}곳`,
+      keys: [...new Set([d.name, `서울 ${d.name}`, ...(d.aliases ?? [])].map(regionSiseKey).filter(Boolean))],
+    }));
+}

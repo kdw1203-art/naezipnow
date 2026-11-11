@@ -33,20 +33,24 @@
       "schedule": "5 16 * * *"
     },
     {
+      "path": "/api/cron/redev-national-ingest",
+      "schedule": "35 17 * * 1"
+    },
+    {
       "path": "/api/cron/kb-ingest",
       "schedule": "0 1 * * *"
     },
     {
       "path": "/api/cron/complex-crawl",
-      "schedule": "10 1 * * *"
+      "schedule": "10 1,13 * * *"
     },
     {
       "path": "/api/cron/geocode-complexes?limit=200",
-      "schedule": "20 1 * * *"
+      "schedule": "20 1,7,13,19 * * *"
     },
     {
       "path": "/api/cron/apt-detail-enrich?limit=100",
-      "schedule": "30 1 * * *"
+      "schedule": "30 1,5,9,13,17,21 * * *"
     },
     {
       "path": "/api/cron/alert-email",

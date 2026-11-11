@@ -185,6 +185,10 @@ export default async function RedevelopmentPage() {
                 관심 지역 검색조건 저장하기
               </Link>
               <span className="t-caption text-text-2">새 매물 알림 · 저장 조건 기준 · 단계 변경 알림 미제공</span>
+              {/* [1149] 전국 정비구역 목록(국토교통부 공표 · 좌표 없는 자료라 목록으로만) */}
+              <Link href="/redev-list" className="tap-line t-sub font-bold text-primary no-underline">
+                전국 정비구역 목록 ›
+              </Link>
             </div>
           </div>
 
