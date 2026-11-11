@@ -2320,7 +2320,11 @@ export function MapClient({
           <button
             type="button"
             aria-pressed={showRedevelopment}
-            onClick={() => setShowRedevelopment((v) => !v)}
+            /* [1155] 정비사업을 켜면 지적도(필지 경계)도 같이 켠다 — 구역이 어느 필지 묶음인지 보이게. 끌 때는 지적도를 건드리지 않는다(따로 끈다) */
+            onClick={() => {
+              if (!showRedevelopment) setShowCadastral(true);
+              setShowRedevelopment((v) => !v);
+            }}
             className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
               showRedevelopment
                 ? "bg-primary-soft font-bold text-primary"

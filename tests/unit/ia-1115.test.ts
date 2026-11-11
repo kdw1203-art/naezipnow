@@ -832,7 +832,7 @@ test("[1149] 전국 정비구역 — 응답 한 줄 풀기 · 세대수는 지�
   assert.equal(m.parseHouseholds("0"), null);
   assert.equal(m.parseHouseholds("1,234세대"), 1234);
   assert.equal(m.nationalZoneId("서울", "강남구", "은마 아파트"), m.nationalZoneId("서울", "강남구", "은마아파트"));
-  assert.deepEqual(m.parseNationalParams({ sido: "경기도", q: "광명,(1)", page: "2" }), { sido: "경기도", sigungu: "", q: "광명 1", page: 2 });
+  assert.deepEqual(m.parseNationalParams({ sido: "경기도", q: "광명,(1)", page: "2" }), { sido: "경기도", sigungu: "", q: "광명 1", page: 2, stage: "", sort: "" });
   assert.equal(m.nationalHref({ sido: "", sigungu: "", q: "", page: 1 }), "/redev-list");
   assert.match(m.NATIONAL_API_PATH, /^15160169\/v1\/uddi:[0-9a-f-]{36}$/);
   const page = read("app/redev-list/page.tsx");
@@ -888,7 +888,7 @@ test("[1152] 정비구역을 지도에 — 조서의 대표 지번으로만 찍�
   assert.equal(m.pickUpisLot({ name: "한남3재정비촉진", sigungu: "용산구" }, rows)?.lot, "557", "같은 구 · 최근 조서");
   assert.equal(m.pickUpisLot({ name: "한남3재정비촉진", sigungu: "마포구" }, rows), null);
   assert.equal(m.lotQuery("서울특별시", "용산구", { dong: "한남동", lot: "686" }), "서울특별시 용산구 한남동 686");
-  assert.deepEqual([m.nationalTypeKey("1)재개발(주택정비)"), m.nationalTypeKey("3)재건축(공동주택)"), m.nationalTypeKey("4)재건축(단독주택)"), m.nationalTypeKey("5)주거환경개선")], ["redev", "recon_apt", "recon_house", null]);
+  assert.deepEqual([m.nationalTypeKey("1)재개발(주택정비)"), m.nationalTypeKey("3)재건축(공동주택)"), m.nationalTypeKey("4)재건축(단독주택)"), m.nationalTypeKey("5)주거환경개선"), m.nationalTypeKey("?")], ["redev", "recon_apt", "recon_house", "env_improve", null]);
   assert.deepEqual(["2)정비구역지정", "3)추진위구성", "17)사업시행자지정", "5)사업시행인가", "6)관리처분인가", "7)착공", "?"].map(m.nationalStageKey), ["designated", "committee", "union", "plan_approved", "mgmt_approved", "moving", null]);
   assert.equal(m.shortSido("서울특별시"), "서울");
   assert.match(m.locateSummary({ stage: "2)정비구역지정", operator: "1)조합" }), /^공표 단계 정비구역지정 · 시행 조합 · 위치는 대표 지번 기준 · 구역 경계 아님$/);
@@ -904,4 +904,33 @@ test("[1153] 관리자 API 도 2단계 인증을 본다 — 등록 계정은 확
   const a = read("lib/admin/api-auth.ts");
   assert.match(a, /admin2faGate\(email\)/);
   assert.match(a, /gate === "ok" \|\| gate === "not-enrolled"/);
+});
+
+test("[1154] 주거환경개선도 지도 분류에 · 아파트 이름 구역은 같은 이름 단지가 하나일 때만 그 좌표", async () => {
+  const m = await import("../../lib/redevelopment/zone-locate.ts");
+  const t = await import("../../lib/redevelopment/types.ts");
+  assert.equal(t.typeMeta("env_improve").label, "주거환경개선");
+  assert.equal(t.typeMeta("env_improve").group, "public");
+  const cs = [{ name: "도곡우성", lat: 37.49, lng: 127.04 }, { name: "한양", lat: 1, lng: 1 }, { name: "한양아파트", lat: 2, lng: 2 }];
+  assert.equal(m.pickComplexPoint("도곡우성아파트", cs)?.lat, 37.49);
+  assert.equal(m.pickComplexPoint("한양아파트", cs), null, "같은 이름이 둘이면 고르지 않는다");
+  assert.equal(m.pickComplexPoint("없는아파트", cs), null);
+  assert.match(m.locateSummaryBy({ stage: "7)착공", operator: null }, "complex"), /^공표 단계 착공 · 위치는 같은 이름 단지 기준 · 구역 경계 아님$/);
+});
+
+test("[1154] 전국 정비구역 목록 — 단계 걸러 보기 · 세대수 많은 순 · 주소에 실린다", async () => {
+  const m = await import("../../lib/redevelopment/national.ts");
+  const p = m.parseNationalParams({ stage: "착공", sort: "households", sido: "서울특별시" });
+  assert.deepEqual([p.stage, p.sort], ["착공", "households"]);
+  assert.equal(m.parseNationalParams({ stage: "아무말", sort: "x" }).stage, "");
+  assert.equal(m.parseNationalParams({ sort: "x" }).sort, "");
+  assert.equal(m.nationalHref({ ...p, page: 2 }), `/redev-list?sido=${encodeURIComponent("서울특별시")}&stage=${encodeURIComponent("착공")}&sort=households&page=2`);
+});
+
+test("[1155] 정비사업 지도는 지적도(필지 경계)와 같이 본다 — /map 은 켤 때 함께 · /redevelopment 는 기본 켬", () => {
+  assert.match(read("app/map/map-client.tsx"), /if \(!showRedevelopment\) setShowCadastral\(true\);/);
+  const r = read("app/redevelopment/RedevelopmentMap.tsx");
+  assert.match(r, /const \[cadastral, setCadastral\] = useState\(true\);/);
+  assert.match(r, /nativeLayers=\{nativeLayers\}/);
+  assert.match(r, /점은 대표 지번 위치 · 구역 경계 아님/);
 });

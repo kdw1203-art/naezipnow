@@ -8,13 +8,16 @@ import {
   firstLot,
   hitInSigungu,
   locateSummary,
+  locateSummaryBy,
   lotQuery,
   nationalStageKey,
   nationalTypeKey,
+  pickComplexPoint,
   pickUpisLot,
   sameZoneKey,
   shortSido,
   zoneNameKey,
+  type ComplexPoint,
   type UpisPlace,
 } from "./zone-locate";
 
@@ -36,6 +39,8 @@ export type ZoneLocateResult = {
   noAddress: number;
   duplicate: number;
   offMap: number;
+  /** [1154] 같은 이름 단지 좌표로 찍은 수 */
+  byComplex: number;
   budgetExhausted: boolean;
 };
 
@@ -53,7 +58,7 @@ async function geocodeLot(query: string, sigungu: string): Promise<{ lat: number
 }
 
 export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promise<ZoneLocateResult> {
-  const empty = { zones: 0, kept: 0, located: 0, notFound: 0, noAddress: 0, duplicate: 0, offMap: 0, budgetExhausted: false };
+  const empty = { zones: 0, kept: 0, located: 0, notFound: 0, noAddress: 0, duplicate: 0, offMap: 0, byComplex: 0, budgetExhausted: false };
   const sb = getServiceSupabase();
   if (!sb) return { ok: false, skipped: true, reason: "Supabase 미설정", ...empty };
   if (!isNaverMapsRestConfigured()) return { ok: false, skipped: true, reason: "지오코딩 키 미설정", ...empty };
@@ -78,6 +83,17 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
   const byId = new Map(projects.map((p) => [p.id, p]));
   const curated = projects.filter((p) => !p.id.startsWith(ID_PREFIX) && p.sido === shortSido(SIDO));
 
+  /* [1154] 단지 좌표(실거래 주소로 지오코딩해 둔 값) — 자치구별. 못 읽어도 지번 경로는 그대로 간다 */
+  const complexByGu = new Map<string, ComplexPoint[]>();
+  {
+    const { data } = await sb.from("complex_geocode").select("region_name,complex_name,lat,lng").like("region_name", `${shortSido(SIDO)} %`).eq("status", "ok").limit(20_000);
+    for (const c of (data ?? []) as { region_name: string; complex_name: string; lat: number | null; lng: number | null }[]) {
+      if (c.lat == null || c.lng == null) continue;
+      const gu = c.region_name.split(/\s+/).slice(1).join(" ");
+      complexByGu.set(gu, [...(complexByGu.get(gu) ?? []), { name: c.complex_name, lat: c.lat, lng: c.lng }]);
+    }
+  }
+
   const r: ZoneLocateResult = { ok: true, ...empty, zones: zones.length };
   const now = new Date().toISOString();
   const out: Record<string, unknown>[] = [];
@@ -94,7 +110,13 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
     const have = byId.get(id);
     if (have) { out.push({ ...base, address: have.address, lat: have.lat, lng: have.lng }); r.kept += 1; continue; }
     const lot = pickUpisLot(z, upis) ?? firstLot(z.name);
-    if (!lot) { r.noAddress += 1; continue; }
+    if (!lot) {
+      const cx = pickComplexPoint(z.name, complexByGu.get(z.sigungu) ?? []);
+      if (!cx) { r.noAddress += 1; continue; }
+      out.push({ ...base, summary: locateSummaryBy(z, "complex"), address: `${z.sigungu} ${cx.name}`, lat: cx.lat, lng: cx.lng });
+      r.byComplex += 1;
+      continue;
+    }
     todo.push({ z, id, query: lotQuery(SIDO, z.sigungu, lot), address: `${z.sigungu} ${lot.dong} ${lot.lot} 일대`, typeKey, stageKey });
     out.push({ ...base, address: `${z.sigungu} ${lot.dong} ${lot.lot} 일대`, lat: null, lng: null });
   }

@@ -7,11 +7,13 @@ import {
   NATIONAL_DATASET,
   NATIONAL_DATASET_URL,
   NATIONAL_PAGE_SIZE,
+  NATIONAL_STAGES,
   nationalHref,
   parseNationalParams,
   stripOrdinal,
   type NationalListParams,
 } from "@/lib/redevelopment/national";
+import { locateId } from "@/lib/redevelopment/zone-locate-run";
 import { logger } from "@/lib/log";
 
 /* [1149 · 전국 정비구역 목록] 국토교통부 공표 목록(약 1,600곳)을 시도 · 시군구 · 구역 이름으로 찾아본다.
@@ -26,18 +28,18 @@ export const metadata = buildPageMetadata({
 
 type Row = { id: string; sido: string; sigungu: string; name: string; stage: string | null; project_type: string | null; operator: string | null; households: number | null };
 
-async function load(p: NationalListParams): Promise<{ rows: Row[]; total: number; sidos: string[] } | "missing" | null> {
+async function load(p: NationalListParams): Promise<{ rows: Row[]; total: number; sidos: string[]; placed: Set<string> } | "missing" | null> {
   const sb = getServiceSupabase();
   if (!sb) return null;
   try {
     const from = (p.page - 1) * NATIONAL_PAGE_SIZE;
     let q = sb
       .from("redev_national_zones")
-      .select("id,sido,sigungu,name,stage,project_type,operator,households", { count: "exact" })
-      .order("sido")
-      .order("sigungu")
-      .order("name")
-      .range(from, from + NATIONAL_PAGE_SIZE - 1);
+      .select("id,sido,sigungu,name,stage,project_type,operator,households", { count: "exact" });
+    /* [1154] 세대수 많은 순 — 세대수 모름은 뒤로 */
+    if (p.sort === "households") q = q.order("households", { ascending: false, nullsFirst: false });
+    q = q.order("sido").order("sigungu").order("name").range(from, from + NATIONAL_PAGE_SIZE - 1);
+    if (p.stage) q = q.ilike("stage", `%${p.stage}`);
     if (p.sido) q = q.eq("sido", p.sido);
     if (p.sigungu) q = q.ilike("sigungu", `%${p.sigungu}%`);
     if (p.q) q = q.ilike("name", `%${p.q}%`);
@@ -48,7 +50,12 @@ async function load(p: NationalListParams): Promise<{ rows: Row[]; total: number
       throw new Error(list.error.message);
     }
     const sidos = [...new Set(((sidoRes.data ?? []) as Array<{ sido: string }>).map((r) => r.sido))].sort((a, b) => a.localeCompare(b, "ko"));
-    return { rows: (list.data ?? []) as Row[], total: list.count ?? 0, sidos };
+    const rows = (list.data ?? []) as Row[];
+    /* [1154] 지도에 찍힌 구역은 이름을 상세(지도)로 잇는다 — 못 읽으면 잇지 않을 뿐 */
+    const ids = rows.map((r) => locateId(r.id));
+    const placedRes = ids.length ? await sb.from("redevelopment_projects").select("id").in("id", ids) : { data: [] };
+    const placed = new Set(((placedRes.data ?? []) as Array<{ id: string }>).map((x) => x.id));
+    return { rows, total: list.count ?? 0, sidos, placed };
   } catch (e) {
     logger.error("[redev-list] 목록 조회 실패", e);
     return null;
@@ -95,6 +102,24 @@ export default async function RedevListPage({ searchParams }: { searchParams: Pr
             구역 이름
           </label>
           <input id="rl-q" name="q" type="search" defaultValue={p.q} maxLength={40} placeholder="구역 이름" className="min-h-10 min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 t-body text-text-1" />
+          <label htmlFor="rl-stage" className="sr-only">
+            추진 단계
+          </label>
+          <select id="rl-stage" name="stage" defaultValue={p.stage} className="min-h-10 rounded-lg border border-line bg-surface px-2.5 t-sub text-text-1">
+            <option value="">단계 전체</option>
+            {NATIONAL_STAGES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
+          <label htmlFor="rl-sort" className="sr-only">
+            정렬
+          </label>
+          <select id="rl-sort" name="sort" defaultValue={p.sort} className="min-h-10 rounded-lg border border-line bg-surface px-2.5 t-sub text-text-1">
+            <option value="">지역순</option>
+            <option value="households">세대수 많은 순</option>
+          </select>
           <button type="submit" className="btn-primary btn-md">
             검색
           </button>
@@ -110,7 +135,7 @@ export default async function RedevListPage({ searchParams }: { searchParams: Pr
               {ok.total.toLocaleString("ko-KR")}곳 · {win.current} / {win.last}쪽
             </p>
             {ok.rows.length === 0 ? (
-              <p className="card m-0 rounded-2xl p-5 t-body text-text-3">{p.sido || p.sigungu || p.q ? "검색 결과 없음" : "정비구역 없음 · 첫 수집 전"}</p>
+              <p className="card m-0 rounded-2xl p-5 t-body text-text-3">{p.sido || p.sigungu || p.q || p.stage ? "검색 결과 없음" : "정비구역 없음 · 첫 수집 전"}</p>
             ) : (
               <div className="card overflow-x-auto rounded-2xl">
                 <table className="w-full min-w-[720px] border-collapse text-left t-sub text-text-1">
@@ -129,7 +154,15 @@ export default async function RedevListPage({ searchParams }: { searchParams: Pr
                         <td className="whitespace-nowrap px-3 py-2.5 text-text-2">
                           {r.sido} {r.sigungu}
                         </td>
-                        <td className="px-3 py-2.5 font-bold text-ink">{r.name}</td>
+                        <td className="px-3 py-2.5 font-bold text-ink">
+                          {ok.placed.has(locateId(r.id)) ? (
+                            <Link href={`/redevelopment/${locateId(r.id)}`} className="tap-line text-primary">
+                              {r.name} · 지도 ›
+                            </Link>
+                          ) : (
+                            r.name
+                          )}
+                        </td>
                         <td className="whitespace-nowrap px-3 py-2.5">{stripOrdinal(r.project_type) ?? "—"}</td>
                         <td className="whitespace-nowrap px-3 py-2.5">{stripOrdinal(r.stage) ?? "—"}</td>
                         <td className="whitespace-nowrap px-3 py-2.5 t-num">{r.households ? `${r.households.toLocaleString("ko-KR")}세대` : "—"}</td>

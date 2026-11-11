@@ -57,7 +57,9 @@ export function parseNationalRow(raw: unknown): NationalZone | null {
   };
 }
 
-export type NationalListParams = { sido: string; sigungu: string; q: string; page: number };
+/** [1154] 추진 단계 걸러 보기 · 세대수 많은 순 */
+export const NATIONAL_STAGES = ["정비구역지정", "추진위구성", "조합설립인가", "사업시행자지정", "사업시행인가", "관리처분인가", "착공"] as const;
+export type NationalListParams = { sido: string; sigungu: string; q: string; page: number; stage: string; sort: "" | "households" };
 
 export function nationalQuery(raw: unknown): string {
   return String(typeof raw === "string" ? raw : "").replace(/[,()%*\\{}"'`]/g, " ").replace(/\s+/g, " ").trim().slice(0, 40);
@@ -66,7 +68,15 @@ export function nationalQuery(raw: unknown): string {
 export function parseNationalParams(sp: Record<string, string | string[] | undefined>): NationalListParams {
   const one = (k: string) => (Array.isArray(sp[k]) ? sp[k]?.[0] : sp[k]) as string | undefined;
   const n = Number.parseInt(one("page") ?? "1", 10);
-  return { sido: nationalQuery(one("sido")), sigungu: nationalQuery(one("sigungu")), q: nationalQuery(one("q")), page: Number.isFinite(n) && n >= 1 ? Math.min(n, 2000) : 1 };
+  const stage = nationalQuery(one("stage"));
+  return {
+    sido: nationalQuery(one("sido")),
+    sigungu: nationalQuery(one("sigungu")),
+    q: nationalQuery(one("q")),
+    page: Number.isFinite(n) && n >= 1 ? Math.min(n, 2000) : 1,
+    stage: (NATIONAL_STAGES as readonly string[]).includes(stage) ? stage : "",
+    sort: one("sort") === "households" ? "households" : "",
+  };
 }
 
 export function nationalHref(p: Partial<NationalListParams>): string {
@@ -74,6 +84,8 @@ export function nationalHref(p: Partial<NationalListParams>): string {
   if (p.sido) qs.set("sido", p.sido);
   if (p.sigungu) qs.set("sigungu", p.sigungu);
   if (p.q) qs.set("q", p.q);
+  if (p.stage) qs.set("stage", p.stage);
+  if (p.sort) qs.set("sort", p.sort);
   if (p.page && p.page > 1) qs.set("page", String(p.page));
   const t = qs.toString();
   return t ? `/redev-list?${t}` : "/redev-list";

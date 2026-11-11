@@ -29,6 +29,7 @@ export type ProjectTypeKey =
   | "dosim_public" // 도심공공복합
   | "station_area" // 역세권활성화
   | "long_jeonse" // 장기전세(역세권시프트)
+  | "env_improve" // 주거환경개선
   | "moa" // 모아타운
   | "garo" // 가로주택정비
   | "small_scale" // 소규모재건축·재개발
@@ -56,6 +57,8 @@ export const PROJECT_TYPES: ProjectTypeMeta[] = [
   { key: "dosim_public", label: "도심공공복합", group: "public", color: "#10b981" },
   { key: "station_area", label: "역세권활성화", group: "public", color: "#fb7a1e" },
   { key: "long_jeonse", label: "장기전세(역세권시프트)", group: "public", color: "#ec4899" },
+  /* [1154] 주거환경개선 — 지자체가 시행하는 정비사업(국토교통부 공표 유형 5). 서울 36곳이 분류가 없어 지도에서 빠져 있었다 */
+  { key: "env_improve", label: "주거환경개선", group: "public", color: "#a16207" },
   // 소규모
   { key: "moa", label: "모아타운", group: "small", color: "#22c55e" },
   { key: "garo", label: "가로주택", group: "small", color: "#15803d" },

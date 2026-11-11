@@ -60,12 +60,13 @@ export function pickUpisLot(zone: { name: string; sigungu: string }, rows: reado
   return best ? { ...best.lot, from: best.from } : null;
 }
 
-/** 공표 사업 유형 → 지도 분류. 주거환경개선은 지도 분류에 없어 찍지 않는다(null) */
+/** 공표 사업 유형 → 지도 분류. 모르는 유형은 찍지 않는다(null) */
 export function nationalTypeKey(projectType: string | null | undefined): ProjectTypeKey | null {
   const t = stripOrdinal(projectType) ?? "";
   if (t.startsWith("재개발")) return "redev";
   if (t.startsWith("재건축(단독")) return "recon_house";
   if (t.startsWith("재건축")) return "recon_apt";
+  if (t.startsWith("주거환경개선")) return "env_improve";
   return null;
 }
 
@@ -92,6 +93,23 @@ export const LOCATE_SOURCE = "국토교통부 전국 도시정비사업 통합 �
 /** 안내창 요약 한 줄 — 공표 단계 · 시행자 · 위치 기준을 적는다(경계가 아님을 숨기지 않는다) */
 export function locateSummary(z: { stage: string | null; operator: string | null }): string {
   return [stripOrdinal(z.stage) ? `공표 단계 ${stripOrdinal(z.stage)}` : null, stripOrdinal(z.operator) ? `시행 ${stripOrdinal(z.operator)}` : null, "위치는 대표 지번 기준 · 구역 경계 아님"].filter(Boolean).join(" · ");
+}
+
+export type ComplexPoint = { name: string; lat: number; lng: number };
+
+/** [1154] 아파트 이름 재건축 구역("도곡우성아파트") — 조서에 지번이 없으면 **같은 자치구 · 같은 이름 단지 하나**의 좌표를 쓴다.
+    같은 이름이 둘 이상이면 고르지 않는다(null). 단지 좌표는 실거래 주소로 지오코딩해 둔 값이다(complex_geocode). */
+export function pickComplexPoint(zoneName: string, complexes: readonly ComplexPoint[]): ComplexPoint | null {
+  const key = zoneNameKey(zoneName);
+  if (key.length < 3) return null;
+  const hits = complexes.filter((c) => zoneNameKey(c.name) === key);
+  return hits.length === 1 ? hits[0] : null;
+}
+
+/** 요약의 위치 기준 글 — 지번 · 단지 */
+export function locateSummaryBy(z: { stage: string | null; operator: string | null }, by: "lot" | "complex"): string {
+  const base = locateSummary(z);
+  return by === "lot" ? base : base.replace("위치는 대표 지번 기준", "위치는 같은 이름 단지 기준");
 }
 
 /** 지오코더가 돌려준 주소가 그 자치구인가 — 다른 구로 찍힌 답은 버린다 */

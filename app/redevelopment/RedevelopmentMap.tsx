@@ -56,6 +56,9 @@ export function RedevelopmentMap({
   /* 구역명 검색(2026-08-22) — 이름·주소가 전부 메모리에 있는데 40곳을 눈으로
      훑는 것 말고는 특정 구역을 찾을 길이 없었다. 공백 무시 부분일치. */
   const [q, setQ] = useState("");
+  /* [1155] 지적도(필지 경계) — 기본으로 켠다. 구역 경계 자료가 없는 동안 필지 묶음으로 자리를 가늠한다 */
+  const [cadastral, setCadastral] = useState(true);
+  const nativeLayers = useMemo(() => ({ cadastral }), [cadastral]);
 
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -378,6 +381,17 @@ export function RedevelopmentMap({
       {/* ===== 지도 뷰 ===== */}
       {view === "map" ? (
         <div className="card overflow-hidden rounded-2xl p-1.5">
+          <div className="flex items-center justify-between gap-2 px-1.5 pb-1.5">
+            <span className="t-caption text-text-3">점은 대표 지번 위치 · 구역 경계 아님</span>
+            <button
+              type="button"
+              aria-pressed={cadastral}
+              onClick={() => setCadastral((v) => !v)}
+              className={`press chip min-h-10 whitespace-nowrap px-3 t-sub ${cadastral ? "chip-active font-bold" : "text-text-2"}`}
+            >
+              지적도
+            </button>
+          </div>
           {/* [1030 · G5] 겹침 정리 — 40곳 이름표가 서울 중심에 포개졌다(한남2·압구정3·반포주공1·잠실주공5 …). 겹치는 구역은
               색 점으로 접히고 확대하면 이름이 돌아온다(/map 과 같은 declutterMarkers). */}
           {/* [1104 · 번들] 높이는 감싸는 상자가 준다 — NaverMap 이 tailwind-merge 를 걷어, 지도에 h-[440px] 를 주면 기본 h-full 과
@@ -391,6 +405,7 @@ export function RedevelopmentMap({
               declutter
               className="h-full w-full"
               onMarkerClick={handleMarkerClick}
+              nativeLayers={nativeLayers}
             />
           </div>
         </div>
