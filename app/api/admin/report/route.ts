@@ -1,3 +1,4 @@
+import { admin2faPassed } from "@/lib/admin/api-auth";
 import { NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { estimateSubscriptionMrrKrw } from "@/lib/admin/subscription-metrics";
@@ -16,7 +17,7 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   const session = await safeAuth();
-  if (!session || session.user.role !== "admin") {
+  if (!session || session.user.role !== "admin" || !(await admin2faPassed(session.user.email))) {
     return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 

@@ -91,7 +91,11 @@ import {
   filterRedevProjects,
   isRedevLabelMode,
   redevGroupCounts,
+  REDEV_COLOR_MODES,
+  redevLegendEntry,
+  redevMarkerColor,
   redevMarkerLabel,
+  type RedevColorMode,
   redevMarkerSubLabel,
   redevStageCounts,
   type RedevLabelMode,
@@ -1139,6 +1143,8 @@ export function MapClient({
   const [redevGroups, setRedevGroups] = useState<Set<ProjectGroupKey>>(() => new Set());
   const [redevStages, setRedevStages] = useState<Set<StageKey>>(() => new Set());
   const [redevLabelMode, setRedevLabelMode] = useState<RedevLabelMode>("both");
+  /* [1157] 마커 색 기준 — 사업종류(기본) · 진행단계 */
+  const [redevColorMode, setRedevColorMode] = useState<RedevColorMode>("type");
 
   /* ===== [1027] 바탕 지도 — 일반/위성 + 지적편집도. NaverMap 이 이미 받던 props(mapType ·
      nativeLayers.cadastral)인데 /map 만 넘기지 않았다. 지적편집도는 일반·위성 어느 쪽 위에도 얹힌다. */
@@ -2552,6 +2558,24 @@ export function MapClient({
                 </button>
               ))}
             </div>
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="마커 색">
+              <span className="t-caption font-bold text-text-3">색</span>
+              {REDEV_COLOR_MODES.map((m) => (
+                <button
+                  key={m.key}
+                  type="button"
+                  aria-pressed={redevColorMode === m.key}
+                  onClick={() => setRedevColorMode(m.key)}
+                  className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors ${
+                    redevColorMode === m.key
+                      ? "bg-primary-soft font-bold text-primary"
+                      : "bg-[var(--glass-bg)] text-text-2"
+                  }`}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
           </div>
         )}
         {/* [940] 구 버블 지표 전환 — 넓은 줌의 구 단위 버블에 어떤 숫자를 띄울지.
@@ -3606,26 +3630,22 @@ export function MapClient({
       lng: p.lng,
       label: redevMarkerLabel(p, redevLabelMode),
       subLabel: redevMarkerSubLabel(p, redevLabelMode),
-      pinColor: colorForType(p.typeKey),
+      pinColor: redevMarkerColor(p, redevColorMode),
       infoHtml: buildRedevInfoHtml(p),
       priority: -1,
     }));
-  }, [showRedevelopment, redevShown, redevLabelMode]);
+  }, [showRedevelopment, redevShown, redevLabelMode, redevColorMode]);
 
   // 정비사업 레이어 범례 (#20) — 화면에 실제 존재하는 사업종류만 색상칩으로 노출
   const redevLegend = useMemo<{ color: string; label: string }[]>(() => {
     if (!showRedevelopment) return [];
     const seen = new Map<string, { color: string; label: string }>();
     for (const p of redevShown) {
-      if (!seen.has(p.typeKey)) {
-        seen.set(p.typeKey, {
-          color: colorForType(p.typeKey),
-          label: labelForType(p.typeKey),
-        });
-      }
+      const e = redevLegendEntry(p, redevColorMode);
+      if (!seen.has(e.key)) seen.set(e.key, { color: e.color, label: e.label });
     }
     return Array.from(seen.values());
-  }, [showRedevelopment, redevShown]);
+  }, [showRedevelopment, redevShown, redevColorMode]);
 
   // 지역(구/시) 실시세 마커 — 한국부동산원(REB) 실데이터. 시·군·구/동 줌에서만 노출.
   const regionMarketMarkers = useMemo<MapMarkerData[]>(() => {

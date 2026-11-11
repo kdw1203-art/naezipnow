@@ -132,7 +132,10 @@ export default async function RedevListPage({ searchParams }: { searchParams: Pr
         ) : (
           <>
             <p className="m-0 px-1 t-caption text-text-3">
-              {ok.total.toLocaleString("ko-KR")}곳 · {win.current} / {win.last}쪽
+              {ok.total.toLocaleString("ko-KR")}곳 · {win.current} / {win.last}쪽 ·{" "}
+              <a href={nationalHref({ ...p, page: 1 }).replace("/redev-list", "/redev-list/export")} className="tap-line font-bold text-primary">
+                엑셀로 내려받기(CSV)
+              </a>
             </p>
             {ok.rows.length === 0 ? (
               <p className="card m-0 rounded-2xl p-5 t-body text-text-3">{p.sido || p.sigungu || p.q || p.stage ? "검색 결과 없음" : "정비구역 없음 · 첫 수집 전"}</p>

@@ -1,3 +1,4 @@
+import { admin2faPassed } from "@/lib/admin/api-auth";
 import { NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { recordAudit } from "@/lib/admin/audit";
@@ -8,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET() {
   const session = await safeAuth();
-  if (!session || session.user.role !== "admin") {
+  if (!session || session.user.role !== "admin" || !(await admin2faPassed(session.user.email))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
   return NextResponse.json({
@@ -29,7 +30,7 @@ type PostBody = {
 
 export async function POST(req: Request) {
   const session = await safeAuth();
-  if (!session || session.user.role !== "admin") {
+  if (!session || session.user.role !== "admin" || !(await admin2faPassed(session.user.email))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

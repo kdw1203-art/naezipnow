@@ -1,3 +1,4 @@
+import { admin2faPassed } from "@/lib/admin/api-auth";
 import { NextResponse } from "next/server";
 import {
   type ReportStatus,
@@ -12,7 +13,7 @@ export async function PATCH(
   ctx: { params: Promise<{ id: string }> },
 ) {
   const session = await safeAuth();
-  if (!session || session.user.role !== "admin") {
+  if (!session || session.user.role !== "admin" || !(await admin2faPassed(session.user.email))) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
   const { id } = await ctx.params;

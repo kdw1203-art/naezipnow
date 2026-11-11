@@ -6,6 +6,7 @@
  *
  * 일반 사용자용: GET /api/banners?placement=home
  */
+import { admin2faPassed } from "@/lib/admin/api-auth";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { logger } from "@/lib/log";
@@ -47,7 +48,7 @@ function invalidCtaUrl(v: unknown): string | null {
 async function assertAdmin() {
   const session = await auth();
   if (!session?.user?.email) return null;
-  if (session.user.role !== "admin") return null;
+  if (session.user.role !== "admin" || !(await admin2faPassed(session.user.email))) return null;
   return session;
 }
 

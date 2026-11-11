@@ -7,6 +7,12 @@ export async function isAdminApiRequest(): Promise<boolean> {
   const session = await safeAuth();
   const email = session?.user?.email;
   if (!email || session.user.role !== "admin") return false;
+  return admin2faPassed(email);
+}
+
+/** [1156] 제 손으로 관리자 확인을 하는 API 가 붙여 쓰는 2단계 인증 확인 — 등록 계정은 확인 표식이 있어야 true. 이메일이 없으면 false */
+export async function admin2faPassed(email: string | null | undefined): Promise<boolean> {
+  if (!email) return false;
   const gate = await admin2faGate(email);
   return gate === "ok" || gate === "not-enrolled";
 }

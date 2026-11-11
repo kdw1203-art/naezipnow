@@ -38,7 +38,7 @@
     },
     {
       "path": "/api/cron/redev-zone-locate",
-      "schedule": "50 17 * * 1"
+      "schedule": "50 5,17 * * *"
     },
     {
       "path": "/api/cron/kb-ingest",
@@ -49,7 +49,7 @@
       "schedule": "10 1,13 * * *"
     },
     {
-      "path": "/api/cron/geocode-complexes?limit=200",
+      "path": "/api/cron/geocode-complexes?limit=800",
       "schedule": "20 1,7,13,19 * * *"
     },
     {

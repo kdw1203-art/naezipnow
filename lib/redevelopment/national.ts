@@ -90,3 +90,19 @@ export function nationalHref(p: Partial<NationalListParams>): string {
   const t = qs.toString();
   return t ? `/redev-list?${t}` : "/redev-list";
 }
+
+/** [1156] 내려받기용 CSV — 엑셀이 한글을 읽도록 BOM 을 붙이고, 수식으로 읽힐 첫 글자(= + - @)는 작은따옴표로 막는다. 마지막 줄에 출처 */
+export function nationalCsv(
+  rows: readonly { sido: string; sigungu: string; name: string; stage: string | null; project_type: string | null; operator: string | null; households: number | null }[],
+  source: string,
+): string {
+  const cell = (v: string | number | null): string => {
+    let t = v == null ? "" : String(v);
+    if (/^[=+\-@]/.test(t)) t = `'${t}`;
+    return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  };
+  const lines = [["시도", "시군구", "구역", "사업 유형", "추진 단계", "공급 예정 세대수", "시행자"].join(",")];
+  for (const r of rows) lines.push([r.sido, r.sigungu, r.name, stripOrdinal(r.project_type), stripOrdinal(r.stage), r.households, stripOrdinal(r.operator)].map(cell).join(","));
+  lines.push(cell(`출처: ${source}`));
+  return `\uFEFF${lines.join("\r\n")}\r\n`;
+}

@@ -5,6 +5,7 @@
  *  PATCH  : { kind, id, ...patch }
  *  DELETE : ?kind=&id=
  */
+import { admin2faPassed } from "@/lib/admin/api-auth";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import {
@@ -30,7 +31,7 @@ export const dynamic = "force-dynamic";
 
 async function assertAdmin() {
   const s = await auth();
-  if (!s?.user?.email || s.user.role !== "admin") return null;
+  if (!s?.user?.email || s.user.role !== "admin" || !(await admin2faPassed(s.user.email))) return null;
   return s;
 }
 

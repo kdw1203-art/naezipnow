@@ -4,6 +4,7 @@
  *  POST { engine, date, periodDays?, clicks?, impressions?, indexedPages?, note? } → { ok: true, report }
  * 규칙은 lib/seo/search-report-rules(순수) · 저장은 lib/admin/search-reports(kv 표). 하드 삭제 없음.
  */
+import { admin2faPassed } from "@/lib/admin/api-auth";
 import { NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { isAdmin } from "@/lib/auth/is-admin";
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 async function adminEmail(): Promise<string | null> {
   const session = await safeAuth();
   const email = session?.user?.email?.trim().toLowerCase() ?? null;
-  if (!email || !isAdmin(session)) return null;
+  if (!email || !isAdmin(session) || !(await admin2faPassed(email))) return null;
   return email;
 }
 

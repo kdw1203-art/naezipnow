@@ -2,6 +2,7 @@
  * GET  /api/admin/users  — 사용자 목록 (관리자 전용)
  * PATCH /api/admin/users — 사용자 계정 조작 (ban/unban/setRole/setPlan)
  */
+import { admin2faPassed } from "@/lib/admin/api-auth";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { auth } from "@/auth";
@@ -15,7 +16,7 @@ export const dynamic = "force-dynamic";
 async function assertAdmin() {
   const session = await auth();
   const role = (session?.user as { role?: string } | undefined)?.role;
-  if (!session || role !== "admin") {
+  if (!session || role !== "admin" || !(await admin2faPassed(session.user?.email))) {
     throw new Error("FORBIDDEN");
   }
   return session?.user?.email ?? "unknown";

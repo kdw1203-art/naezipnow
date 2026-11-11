@@ -121,6 +121,21 @@ export function stageLabel(key: string): string {
   return STAGE_BY_KEY[key]?.label ?? key ?? "";
 }
 
+/** [1157] 진행단계별 마커 색 — 지도에서 "색: 진행단계"를 고르면 쓴다(앞 단계 회색 → 착공 빨강 → 준공 초록) */
+export const STAGE_COLORS: Record<StageKey, string> = {
+  designated: "#6b7280",
+  committee: "#0d9488",
+  union: "#2563eb",
+  plan_approved: "#7c3aed",
+  mgmt_approved: "#c026d3",
+  moving: "#e5484d",
+  done: "#15803d",
+};
+
+export function colorForStage(key: string): string {
+  return (STAGE_COLORS as Record<string, string>)[key] ?? "#6b7280";
+}
+
 export function stageOrder(key: string): number {
   return STAGE_BY_KEY[key]?.order ?? 0;
 }

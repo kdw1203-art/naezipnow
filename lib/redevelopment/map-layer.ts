@@ -8,6 +8,7 @@
 import {
   PROJECT_GROUPS,
   STAGES,
+  colorForStage,
   colorForType,
   labelForType,
   locationLabel,
@@ -28,6 +29,22 @@ export const REDEV_LABEL_MODES: { key: RedevLabelMode; label: string }[] = [
   { key: "stage", label: "진행단계" },
   { key: "households", label: "세대수" },
 ];
+
+/** [1157] 마커 색 기준 — 사업종류(기본) · 진행단계 */
+export type RedevColorMode = "type" | "stage";
+export const REDEV_COLOR_MODES: { key: RedevColorMode; label: string }[] = [
+  { key: "type", label: "사업종류" },
+  { key: "stage", label: "진행단계" },
+];
+export function redevMarkerColor(p: Pick<RedevelopmentProject, "typeKey" | "stageKey">, mode: RedevColorMode): string {
+  return mode === "stage" ? colorForStage(p.stageKey) : colorForType(p.typeKey);
+}
+/** 범례 한 칸 — 색 기준에 맞는 이름 */
+export function redevLegendEntry(p: Pick<RedevelopmentProject, "typeKey" | "stageKey">, mode: RedevColorMode): { key: string; color: string; label: string } {
+  return mode === "stage"
+    ? { key: p.stageKey, color: colorForStage(p.stageKey), label: stageLabel(p.stageKey) }
+    : { key: p.typeKey, color: colorForType(p.typeKey), label: labelForType(p.typeKey) };
+}
 
 export function isRedevLabelMode(v: unknown): v is RedevLabelMode {
   return v === "both" || v === "name" || v === "stage" || v === "households";

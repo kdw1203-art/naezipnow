@@ -5,6 +5,7 @@
  * 관리자가 한 번 눌러 "나갔다 / 왜 안 나갔다"를 본다. 받는 주소는 **로그인한 관리자 자신**뿐이다 — 입력받지 않는다
  * (임의 주소로 보내는 길을 열지 않는다). 계정당 10분 5회.
  */
+import { admin2faPassed } from "@/lib/admin/api-auth";
 import { NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { keyRateLimit } from "@/lib/rate-limit";
@@ -20,7 +21,7 @@ export const maxDuration = 30;
 export async function POST() {
   const session = await safeAuth();
   const email = session?.user?.email?.trim().toLowerCase();
-  if (!email || session?.user?.role !== "admin") {
+  if (!email || session?.user?.role !== "admin" || !(await admin2faPassed(email))) {
     return NextResponse.json({ error: "권한 필요" }, { status: 403 });
   }
 

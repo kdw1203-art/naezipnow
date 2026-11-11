@@ -1,3 +1,4 @@
+import { admin2faPassed } from "@/lib/admin/api-auth";
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { listAcquisitionSignups } from "@/lib/admin/business-dashboards";
@@ -11,7 +12,7 @@ export const dynamic = "force-dynamic";
 
 export async function GET(req: Request) {
   const s = await auth();
-  if (!s?.user?.email || s.user.role !== "admin") {
+  if (!s?.user?.email || s.user.role !== "admin" || !(await admin2faPassed(s.user.email))) {
     return NextResponse.json({ error: "관리자 권한 필요" }, { status: 403 });
   }
   const url = new URL(req.url);

@@ -904,6 +904,10 @@ test("[1153] 관리자 API 도 2단계 인증을 본다 — 등록 계정은 확
   const a = read("lib/admin/api-auth.ts");
   assert.match(a, /admin2faGate\(email\)/);
   assert.match(a, /gate === "ok" \|\| gate === "not-enrolled"/);
+  /* [1156] 제 손으로 관리자 확인을 하는 14개 경로도 같은 확인을 붙였다 */
+  for (const f of ["acquisition", "business", "finance", "roadmap", "moderation", "search-report", "email-test", "talk", "report", "sms", "reports/[id]", "users", "invest", "banners"]) {
+    assert.match(read(`app/api/admin/${f}/route.ts`), /admin2faPassed\(/, f);
+  }
 });
 
 test("[1154] 주거환경개선도 지도 분류에 · 아파트 이름 구역은 같은 이름 단지가 하나일 때만 그 좌표", async () => {
@@ -933,4 +937,27 @@ test("[1155] 정비사업 지도는 지적도(필지 경계)와 같이 본다 �
   assert.match(r, /const \[cadastral, setCadastral\] = useState\(true\);/);
   assert.match(r, /nativeLayers=\{nativeLayers\}/);
   assert.match(r, /점은 대표 지번 위치 · 구역 경계 아님/);
+});
+
+test("[1156] 정비구역 목록 내려받기(CSV) · 단지 좌표 채우기 한 번에 800곳", async () => {
+  const m = await import("../../lib/redevelopment/national.ts");
+  const csv = m.nationalCsv([{ sido: "서울특별시", sigungu: "강남구", name: '=대치"미도', stage: "2)정비구역지정", project_type: "3)재건축(공동주택)", operator: "1)조합", households: 3914 }], "출처기관");
+  assert.ok(csv.startsWith("\uFEFF시도,시군구,구역,"));
+  assert.match(csv, /서울특별시,강남구,"'=대치""미도",재건축\(공동주택\),정비구역지정,3914,조합\r\n/);
+  assert.match(csv, /출처: 출처기관\r\n$/);
+  const crons = (JSON.parse(read("vercel.json")) as { crons: { path: string }[] }).crons;
+  assert.ok(crons.some((c) => c.path === "/api/cron/geocode-complexes?limit=800"));
+  assert.match(read("app/redev-list/page.tsx"), /엑셀로 내려받기\(CSV\)/);
+});
+
+test("[1157] 정비구역 마커 색 — 사업종류 · 진행단계 · 위치 붙이기는 하루 2회(사람이 눌러야 하지 않게)", async () => {
+  const m = await import("../../lib/redevelopment/map-layer.ts");
+  const t = await import("../../lib/redevelopment/types.ts");
+  const p = { typeKey: "redev" as const, stageKey: "moving" as const };
+  assert.equal(m.redevMarkerColor(p, "type"), t.colorForType("redev"));
+  assert.equal(m.redevMarkerColor(p, "stage"), "#e5484d");
+  assert.deepEqual(m.redevLegendEntry(p, "stage"), { key: "moving", color: "#e5484d", label: "이주·철거·착공" });
+  assert.equal(new Set(Object.values(t.STAGE_COLORS)).size, t.STAGES.length, "단계마다 다른 색");
+  const crons = (JSON.parse(read("vercel.json")) as { crons: { path: string; schedule: string }[] }).crons;
+  assert.equal(crons.find((c) => c.path === "/api/cron/redev-zone-locate")?.schedule, "50 5,17 * * *");
 });

@@ -5,6 +5,7 @@
  *  · delete  — 지우기(deleted_at · 지우지 않고 표시만 — 운영 규칙: 하드 삭제 없음)
  * 목록은 /admin/moderation 서버 화면이 직접 읽는다(lib/talk/store listFlaggedTalks).
  */
+import { admin2faPassed } from "@/lib/admin/api-auth";
 import { NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { isAdmin } from "@/lib/auth/is-admin";
@@ -17,7 +18,7 @@ export const dynamic = "force-dynamic";
 export async function PATCH(req: Request) {
   const session = await safeAuth();
   const email = session?.user?.email?.trim().toLowerCase() ?? null;
-  if (!email || !isAdmin(session)) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
+  if (!email || !isAdmin(session) || !(await admin2faPassed(email))) return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   let b: Record<string, unknown>;
   try {
     b = (await req.json()) as Record<string, unknown>;

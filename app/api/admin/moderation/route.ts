@@ -5,6 +5,7 @@
  *
  * body: { source: "content"|"chat", id: string, status: "reviewed"|"dismissed"|"actioned"|"open", note?: string }
  */
+import { admin2faPassed } from "@/lib/admin/api-auth";
 import { NextResponse } from "next/server";
 import { safeAuth } from "@/lib/safe-auth";
 import { updateContentReportStatus, type ReportStatus } from "@/lib/moderation/reports-store";
@@ -20,7 +21,7 @@ const CONTENT_STATUSES = ["open", "reviewed", "dismissed"] as const;
 export async function PATCH(req: Request) {
   const session = await safeAuth();
   const email = session?.user?.email;
-  if (!email || session.user.role !== "admin") {
+  if (!email || session.user.role !== "admin" || !(await admin2faPassed(email))) {
     return NextResponse.json({ error: "권한이 없습니다." }, { status: 403 });
   }
 
