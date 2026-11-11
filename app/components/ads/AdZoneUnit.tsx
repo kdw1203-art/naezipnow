@@ -92,13 +92,16 @@ export function AdZoneUnit({
       <div className="ad-zone-label mb-1">광고</div>
       {boxVisible && (
       <ins
-        className="adsbygoogle"
-        style={{ display: "block" }}
+        className={shape === "vertical" ? "adsbygoogle side-rail-ins" : "adsbygoogle"}
+        /* [1153] 세로 띠는 **고정 크기 칸**(160×600 · 넓은 화면 300×600 — globals.css .side-rail-ins)으로 요청한다.
+           형식을 맡기면(auto · vertical) 좁은 칸에 "자세히 알아보기" 글자 목록형이 들어와 글이 "부동산 …" 으로 잘렸다(운영 2026-11-11).
+           크기를 CSS 로 정하고 data-ad-format 을 빼면 그 크기의 광고만 온다. */
+        style={shape === "vertical" ? { display: "inline-block" } : { display: "block" }}
         data-ad-client={client ?? undefined}
         data-ad-slot={slot}
-        data-ad-format={inArticle ? "fluid" : shape === "vertical" ? "vertical" : "auto"}
+        data-ad-format={shape === "vertical" ? undefined : inArticle ? "fluid" : "auto"}
         data-ad-layout={inArticle ? "in-article" : undefined}
-        data-full-width-responsive={inArticle ? undefined : shape === "vertical" ? "false" : "true"}
+        data-full-width-responsive={inArticle || shape === "vertical" ? undefined : "true"}
       />
       )}
     </div>

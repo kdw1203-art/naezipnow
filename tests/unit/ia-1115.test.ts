@@ -784,8 +784,10 @@ test("[1147] 관리자 화면 — 등록한 계정은 번호 확인 없이는 �
 test("[1148] 좌우 광고 띠 — 세로형 광고만 · 띠 안 안내 카드는 제목 + 바로 가기(낱말 단위 줄바꿈) · 한 줄 맞춤 제외", () => {
   assert.match(read("app/components/ads/SideAdRails.tsx"), /spot="side" shape="vertical" \/>[\s\S]*spot="side" shape="vertical" \/>/);
   const u = read("app/components/ads/AdZoneUnit.tsx");
-  assert.match(u, /data-ad-format=\{inArticle \? "fluid" : shape === "vertical" \? "vertical" : "auto"\}/);
-  assert.match(u, /shape === "vertical" \? "false" : "true"/);
+  /* [1153] 세로 띠는 형식을 맡기지 않고 고정 크기 칸(160×600 · 넓은 화면 300×600)으로 요청한다 */
+  assert.match(u, /data-ad-format=\{shape === "vertical" \? undefined : inArticle \? "fluid" : "auto"\}/);
+  assert.match(u, /side-rail-ins/);
+  assert.match(read("app/globals.css"), /\.side-ad-rail ins\.side-rail-ins \{\s*width: 160px;\s*height: 600px;/);
   const css = read("app/globals.css");
   assert.match(css, /\.side-ad-rail \.card p \{\s*display: none;/);
   assert.match(css, /\.side-ad-rail \.t-section \{\s*font-size: var\(--fs-body\);[\s\S]{0,80}word-break: keep-all;/);
@@ -835,7 +837,7 @@ test("[1149] 전국 정비구역 — 응답 한 줄 풀기 · 세대수는 지�
   assert.match(m.NATIONAL_API_PATH, /^15160169\/v1\/uddi:[0-9a-f-]{36}$/);
   const page = read("app/redev-list/page.tsx");
   assert.match(page, /noIndex: true/);
-  assert.match(page, /좌표 없는 자료라 지도 대신 목록/);
+  assert.match(page, /서울은 대표 지번이 확인된 구역만 지도에 표시/);
   assert.doesNotMatch(read("lib/redevelopment/national-ingest.ts"), /lat|lng/, "좌표를 지어내지 않는다");
   assert.ok((JSON.parse(read("vercel.json")) as { crons: { path: string }[] }).crons.some((c) => c.path === "/api/cron/redev-national-ingest"));
 });
@@ -896,4 +898,10 @@ test("[1152] 정비구역을 지도에 — 조서의 대표 지번으로만 찍�
   assert.match(run, /hitInSigungu/);
   assert.doesNotMatch(run, /Math\.random|centroid/, "좌표를 지어내지 않는다");
   assert.ok((JSON.parse(read("vercel.json")) as { crons: { path: string }[] }).crons.some((c) => c.path === "/api/cron/redev-zone-locate"));
+});
+
+test("[1153] 관리자 API 도 2단계 인증을 본다 — 등록 계정은 확인 표식이 있어야 통과", () => {
+  const a = read("lib/admin/api-auth.ts");
+  assert.match(a, /admin2faGate\(email\)/);
+  assert.match(a, /gate === "ok" \|\| gate === "not-enrolled"/);
 });

@@ -8758,3 +8758,46 @@ html[data-ad-free="1"] :is(.ad-zone, .ad-strip, [data-ad-gate]) {
   max-width: 160px;
   overflow: hidden;
 }
+
+/* ── [1153] 좌우 광고 띠 — 고정 크기 칸. 소유자 2026-11-11 "이 부분 개선도 아직 안 된 것 같아"(글자 목록형 광고가 "부동산 …" 으로 잘림).
+   띠 안 광고 칸은 160×600 으로 못 박고, 여백이 넉넉한 화면(본문 1240 기준 1900px · 넓은 본문 2060px 부터)은 띠 · 칸을 300×600 으로 넓힌다. */
+.side-ad-rail ins.side-rail-ins {
+  width: 160px;
+  height: 600px;
+}
+@media (min-width: 1900px) {
+  body:not(:has(main.max-w-\[1400px\])) .side-ad-rail {
+    width: 300px;
+  }
+  body:not(:has(main.max-w-\[1400px\])) .side-ad-rail[data-side="left"] {
+    left: calc(50% - 620px - 316px);
+  }
+  body:not(:has(main.max-w-\[1400px\])) .side-ad-rail[data-side="right"] {
+    right: calc(50% - 620px - 316px);
+  }
+  body:not(:has(main.max-w-\[1400px\])) .side-ad-rail .ad-zone-unit,
+  body:not(:has(main.max-w-\[1400px\])) .side-ad-rail ins.adsbygoogle {
+    max-width: 300px;
+  }
+  body:not(:has(main.max-w-\[1400px\])) .side-ad-rail ins.side-rail-ins {
+    width: 300px;
+  }
+}
+@media (min-width: 2060px) {
+  body:has(main.max-w-\[1400px\]) .side-ad-rail {
+    width: 300px;
+  }
+  body:has(main.max-w-\[1400px\]) .side-ad-rail[data-side="left"] {
+    left: calc(50% - 700px - 316px);
+  }
+  body:has(main.max-w-\[1400px\]) .side-ad-rail[data-side="right"] {
+    right: calc(50% - 700px - 316px);
+  }
+  body:has(main.max-w-\[1400px\]) .side-ad-rail .ad-zone-unit,
+  body:has(main.max-w-\[1400px\]) .side-ad-rail ins.adsbygoogle {
+    max-width: 300px;
+  }
+  body:has(main.max-w-\[1400px\]) .side-ad-rail ins.side-rail-ins {
+    width: 300px;
+  }
+}

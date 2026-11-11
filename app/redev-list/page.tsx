@@ -69,7 +69,7 @@ export default async function RedevListPage({ searchParams }: { searchParams: Pr
           <a href={NATIONAL_DATASET_URL} target="_blank" rel="noreferrer" className="tap-line font-bold text-primary">
             {NATIONAL_DATASET}
           </a>{" "}
-          · 좌표 없는 자료라 지도 대신 목록 ·{" "}
+          · 서울은 대표 지번이 확인된 구역만 지도에 표시 ·{" "}
           <Link href="/redevelopment" className="tap-line font-bold text-primary">
             지도에서 보기 ›
           </Link>
