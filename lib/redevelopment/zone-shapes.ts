@@ -46,3 +46,17 @@ export function matchZoneShape(zone: { name: string; lat: number; lng: number },
   }
   return insideNamed ?? near?.s ?? null;
 }
+
+/** [1166] 지번을 못 찾은 구역의 위치 — **이름이 꼭 같은 도형이 서울 전체에 하나뿐일 때만** 그 도형의 중심을 쓴다.
+    둘 이상이면 고르지 않는다(null). 호출하는 쪽이 그 좌표의 자치구를 한 번 더 확인한다(역지오코딩). */
+export function uniqueShapeCenter(zoneName: string, shapes: readonly ZoneShape[]): { lng: number; lat: number; shapeName: string } | null {
+  const key = zoneNameKey(zoneName);
+  if (key.length < 3) return null;
+  let hit: ZoneShape | null = null;
+  for (const s of shapes) {
+    if (sameZoneKey(key, zoneNameKey(s.n)) !== "eq") continue;
+    if (hit && roughMeters(hit.c[0], hit.c[1], s.c[0], s.c[1]) > 600) return null;
+    if (!hit || s.a > hit.a) hit = s;
+  }
+  return hit ? { lng: hit.c[0], lat: hit.c[1], shapeName: hit.n } : null;
+}

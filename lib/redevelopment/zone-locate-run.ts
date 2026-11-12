@@ -1,7 +1,8 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import { getServiceSupabase } from "@/lib/supabase/service";
-import { isNaverMapsRestConfigured, naverGeocode } from "@/lib/map/naver-maps-rest";
+import { isNaverMapsRestConfigured, naverGeocode, naverReverseGeocode } from "@/lib/map/naver-maps-rest";
+import { uniqueShapeCenter, type ZoneShapeFile } from "./zone-shapes";
 import { NATIONAL_DATASET_URL } from "./national";
 import {
   LOCATE_SOURCE,
@@ -41,6 +42,8 @@ export type ZoneLocateResult = {
   offMap: number;
   /** [1154] 같은 이름 단지 좌표로 찍은 수 */
   byComplex: number;
+  /** [1166] 구역 경계 도형의 중심으로 찍은 수 */
+  byShape: number;
   budgetExhausted: boolean;
 };
 
@@ -58,7 +61,7 @@ async function geocodeLot(query: string, sigungu: string): Promise<{ lat: number
 }
 
 export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promise<ZoneLocateResult> {
-  const empty = { zones: 0, kept: 0, located: 0, notFound: 0, noAddress: 0, duplicate: 0, offMap: 0, byComplex: 0, budgetExhausted: false };
+  const empty = { zones: 0, kept: 0, located: 0, notFound: 0, noAddress: 0, duplicate: 0, offMap: 0, byComplex: 0, byShape: 0, budgetExhausted: false };
   const sb = getServiceSupabase();
   if (!sb) return { ok: false, skipped: true, reason: "Supabase 미설정", ...empty };
   if (!isNaverMapsRestConfigured()) return { ok: false, skipped: true, reason: "지오코딩 키 미설정", ...empty };
@@ -94,6 +97,15 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
     }
   }
 
+  /* [1166] 구역 경계 도형(서울시 의제처리구역 위치정보) — 서버 묶음에 싣는다. 못 읽으면 도형 경로만 쉰다 */
+  let shapes: ZoneShapeFile["zones"] | null = null;
+  try {
+    shapes = ((await import("@/public/data/seoul-zone-shapes.json")).default as unknown as ZoneShapeFile).zones;
+  } catch {
+    shapes = null;
+  }
+  const shapeTodo: { id: string; base: Record<string, unknown>; lat: number; lng: number; sigungu: string }[] = [];
+
   const r: ZoneLocateResult = { ok: true, ...empty, zones: zones.length };
   const now = new Date().toISOString();
   const out: Record<string, unknown>[] = [];
@@ -112,7 +124,13 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
     const lot = pickUpisLot(z, upis) ?? firstLot(z.name);
     if (!lot) {
       const cx = pickComplexPoint(z.name, complexByGu.get(z.sigungu) ?? []);
-      if (!cx) { r.noAddress += 1; continue; }
+      if (!cx) {
+        /* [1166] 지번도 단지도 없으면 구역 경계 도형(이름이 꼭 같은 것 하나)의 중심 — 자치구는 아래에서 역지오코딩으로 확인 */
+        const sc = shapes ? uniqueShapeCenter(z.name, shapes) : null;
+        if (sc) { shapeTodo.push({ id, base: { ...base, summary: locateSummaryBy(z, "shape"), address: `${z.sigungu} ${z.name} 구역 중심` }, lat: sc.lat, lng: sc.lng, sigungu: z.sigungu }); continue; }
+        r.noAddress += 1;
+        continue;
+      }
       out.push({ ...base, summary: locateSummaryBy(z, "complex"), address: `${z.sigungu} ${cx.name}`, lat: cx.lat, lng: cx.lng });
       r.byComplex += 1;
       continue;
@@ -136,6 +154,20 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
     }
   };
   await Promise.all([worker(), worker(), worker(), worker()]);
+
+  /* [1166] 도형 중심 — 그 좌표가 정말 그 자치구인지 확인된 것만 싣는다 */
+  for (const t of shapeTodo) {
+    if (Date.now() > deadline) { r.budgetExhausted = true; break; }
+    try {
+      const rev = await naverReverseGeocode(t.lat, t.lng);
+      if (rev && hitInSigungu(rev.address, t.sigungu)) {
+        out.push({ ...t.base, lat: t.lat, lng: t.lng });
+        r.byShape += 1;
+      } else r.notFound += 1;
+    } catch {
+      r.notFound += 1;
+    }
+  }
 
   const rows = out
     .map((o) => (o.lat === null ? (coords.has(String(o.id)) ? { ...o, ...coords.get(String(o.id)) } : null) : o))

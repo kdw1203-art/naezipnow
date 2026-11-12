@@ -41,6 +41,7 @@ import { toolSteps } from "@/lib/ai/tool-steps";
 import { formatKrwWon } from "@/lib/format/krw";
 import type { PortfolioItem, ReadyState, RunResult, Similar } from "./workbench-types";
 import { EmptyFrame } from "./empty-frames";
+import { FRAME_TABS, frameTabHref } from "@/lib/ai/frame-tabs";
 import { StepLine } from "@/app/components/StepLine";
 
 /* ============================================================
@@ -678,6 +679,24 @@ export function WorkbenchClient({
             </span>
           )}
         </header>
+      )}
+      {/* [1171] 단지 분석 4종 탭 — 고른 단지를 그대로 들고 옆 도구로 */}
+      {header && (
+        <div role="navigation" className="flex gap-1 overflow-x-auto rounded-2xl bg-surface p-1" aria-label="단지 분석 도구">
+          {FRAME_TABS.map((t) => (
+            <Link
+              key={t.id}
+              prefetch={false}
+              href={frameTabHref(t.id, picked?.id)}
+              aria-current={tool === t.id ? "page" : undefined}
+              className={`flex min-h-[40px] flex-1 items-center justify-center whitespace-nowrap rounded-xl px-3 t-sub font-bold no-underline ${
+                tool === t.id ? "bg-ink text-surface" : "text-text-2"
+              }`}
+            >
+              {t.label}
+            </Link>
+          ))}
+        </div>
       )}
 
       {/* [1026 → 1026b] 절차 한 줄(화면당 한 번) — 단지 · {단지명} → 내 조건 → 결과 · {판정} → 다음 행동(lib/ai/tool-steps) */}

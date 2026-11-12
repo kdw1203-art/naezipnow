@@ -26,6 +26,11 @@ export type ExpertTypeId =
   | "appraiser"
   | "architect"
   | "builder"
+  | "redev_mgmt"
+  | "pm"
+  | "trust"
+  | "securities"
+  | "asset_mgmt"
   | "loan"
   | "other";
 
@@ -133,6 +138,69 @@ export const EXPERT_TYPES: readonly ExpertType[] = [
     },
     extraScope: null,
   },
+  /* [1166] 소유자 지시(2026-11-12) — 부동산 관련 법인 직군 추가: 정비업체 · PM사 · 신탁사 · 증권사 · 자산운용사.
+     조회처는 기관 대표 주소다(상세 조회 화면 주소는 운영 중 확인해 고친다). 법인 · 사업자로만 받고 사업자등록증으로 심사한다(CORPORATE_ONLY).
+     법무사법인 · 법무법인은 넣지 않는다 — 위 "정책 경계"(법률 서비스 유형 입점 불가 · check-toss-review-freeze 가 막는다). */
+  {
+    id: "redev_mgmt",
+    label: "정비업체",
+    desc: "정비사업전문관리 — 재개발·재건축 조합 설립, 인허가, 관리처분 절차",
+    source: {
+      label: "시·도 정비사업전문관리업 등록 현황",
+      authority: "시·도지사 등록(도시정비법)",
+      verificationUrl: "https://news.seoul.go.kr/citybuild",
+      searchHint: "등록한 시·도의 정비사업전문관리업자 현황에서 상호 확인(서울은 주택분야 누리집)",
+    },
+    extraScope: null,
+  },
+  {
+    id: "pm",
+    label: "PM사",
+    desc: "사업관리(PM) — 개발·정비사업 일정, 사업비, 인허가 관리",
+    source: {
+      label: "한국건설엔지니어링협회",
+      authority: "건설엔지니어링업 등록",
+      verificationUrl: "https://www.kenca.or.kr",
+      searchHint: "건설엔지니어링업(건설사업관리) 등록 여부 확인 · 등록 대상이 아닌 PM은 사업자등록증으로 확인",
+    },
+    extraScope: null,
+  },
+  {
+    id: "trust",
+    label: "신탁사",
+    desc: "부동산 신탁 — 신탁 방식 정비사업, 관리·처분·담보 신탁",
+    source: {
+      label: "금융감독원 금융소비자정보포털 파인",
+      authority: "금융감독원",
+      verificationUrl: "https://fine.fss.or.kr",
+      searchHint: "제도권 금융회사 조회에서 상호 확인",
+    },
+    extraScope: null,
+  },
+  {
+    id: "securities",
+    label: "증권사",
+    desc: "부동산 금융 — 프로젝트 금융(PF), 리츠·부동산 펀드 상품",
+    source: {
+      label: "금융감독원 금융소비자정보포털 파인",
+      authority: "금융감독원",
+      verificationUrl: "https://fine.fss.or.kr",
+      searchHint: "제도권 금융회사 조회에서 상호 확인",
+    },
+    extraScope: null,
+  },
+  {
+    id: "asset_mgmt",
+    label: "자산운용사",
+    desc: "부동산 펀드·리츠 운용, 임대 자산 관리",
+    source: {
+      label: "금융감독원 금융소비자정보포털 파인",
+      authority: "금융감독원",
+      verificationUrl: "https://fine.fss.or.kr",
+      searchHint: "제도권 금융회사 조회에서 상호 확인",
+    },
+    extraScope: null,
+  },
   {
     id: "other",
     label: "기타 전문가",
@@ -206,7 +274,7 @@ export const SPECIALTIES: readonly Specialty[] = [
     label: "금융/대출",
     match: ["대출", "금융", "담보", "금리", "한도"],
     desc: "주담대·전세대출 한도와 금리 비교",
-    types: ["loan", "broker"],
+    types: ["loan", "broker", "securities", "asset_mgmt", "trust"],
     quotable: true,
   },
   {
@@ -230,7 +298,7 @@ export const SPECIALTIES: readonly Specialty[] = [
     label: "정비사업",
     match: ["정비", "재건축", "재개발", "조합", "리모델링"],
     desc: "재건축·재개발 단계, 조합·분양권",
-    types: ["broker", "architect"],
+    types: ["broker", "architect", "redev_mgmt", "pm", "trust"],
     quotable: false,
   },
   {
@@ -317,12 +385,13 @@ export const RESPONSE_TIME_OPTIONS = [
 
 /* ---------- [1047] 사업 형태 · 첨부 서류 ---------- */
 
-export type BusinessFormId = "individual" | "sole" | "corporation";
+export type BusinessFormId = "individual" | "sole" | "corporation" | "employee";
 
 export const BUSINESS_FORMS: readonly { id: BusinessFormId; label: string; desc: string }[] = [
   { id: "individual", label: "개인", desc: "자격 보유자 · 사무소·법인 소속 포함" },
   { id: "sole", label: "개인사업자", desc: "사업자등록증이 있는 개인 사무소·업체" },
   { id: "corporation", label: "법인", desc: "법인 사업자(주식회사 등)" },
+  { id: "employee", label: "임직원", desc: "회사 소속 직원 · 명함으로 확인" },
 ] as const;
 
 export function findBusinessForm(v: string | null | undefined): (typeof BUSINESS_FORMS)[number] | null {
@@ -330,11 +399,12 @@ export function findBusinessForm(v: string | null | undefined): (typeof BUSINESS
   return BUSINESS_FORMS.find((f) => f.id === s || f.label === s) ?? null;
 }
 
-export type DocKind = "license" | "business_reg" | "other";
+export type DocKind = "license" | "business_reg" | "business_card" | "other";
 
 export const DOC_KINDS: readonly { id: DocKind; label: string; hint: string }[] = [
   { id: "license", label: "자격증·면허·등록증", hint: "예: 중개사무소 개설등록증, 세무사·회계사·감정평가사 등록증, 건축사 자격증, 건설업 등록증" },
   { id: "business_reg", label: "사업자등록증", hint: "개인사업자·법인은 필수" },
+  { id: "business_card", label: "명함", hint: "회사명 · 이름 · 직책이 보이는 명함 앞면 · 임직원은 이것만으로 신청" },
   { id: "other", label: "기타 증빙", hint: "경력·재직 증명, 포트폴리오 등" },
 ] as const;
 
@@ -342,9 +412,16 @@ export function docKindLabel(kind: string): string {
   return DOC_KINDS.find((d) => d.id === kind)?.label ?? "첨부";
 }
 
-/** 시공사는 사업자로만 받는다(공사 계약 주체) */
+/** [1166] 사업자로만 받는 유형 — 시공사(공사 계약 주체)와 법인 직군(정비업체 · PM사 · 신탁사 · 증권사 · 자산운용사) */
+export const CORPORATE_ONLY: readonly ExpertTypeId[] = ["builder", "redev_mgmt", "pm", "trust", "securities", "asset_mgmt"];
+
+/** [1168] 임직원(명함)으로 신청할 수 있는 유형 — 회사 소속으로 일하는 직군(시공사 · 금융사 등)과 기타 전문가 */
+export const EMPLOYEE_OK: readonly ExpertTypeId[] = [...CORPORATE_ONLY, "other"];
+
+/** 시공사 · 법인 직군은 사업자 또는 그 회사 임직원(명함)으로 받는다 */
 export function allowedBusinessForms(typeId: ExpertTypeId): BusinessFormId[] {
-  return typeId === "builder" ? ["sole", "corporation"] : ["individual", "sole", "corporation"];
+  const base: BusinessFormId[] = CORPORATE_ONLY.includes(typeId) ? ["sole", "corporation"] : ["individual", "sole", "corporation"];
+  return EMPLOYEE_OK.includes(typeId) ? [...base, "employee"] : base;
 }
 
 /**
@@ -354,17 +431,19 @@ export function allowedBusinessForms(typeId: ExpertTypeId): BusinessFormId[] {
  *  · 기타 전문가는 어느 서류든 하나 이상
  */
 export function requiredDocKinds(typeId: ExpertTypeId, form: BusinessFormId): DocKind[] {
+  /* [1168] 임직원은 명함 하나로 받는다 — 사업자등록증은 회사 것이라 직원이 낼 서류가 아니다. */
+  if (form === "employee") return ["business_card"];
   const out: DocKind[] = [];
   const t = EXPERT_TYPES.find((x) => x.id === typeId);
-  if (t?.source && typeId !== "builder") out.push("license");
-  if (form !== "individual" || typeId === "builder") out.push("business_reg");
+  if (t?.source && !CORPORATE_ONLY.includes(typeId)) out.push("license");
+  if (form !== "individual" || CORPORATE_ONLY.includes(typeId)) out.push("business_reg");
   return out;
 }
 
 /** 첨부 목록이 요건을 채우는가 — 모자라면 사람이 읽는 한 문장, 채우면 null */
 export function missingDocsMessage(typeId: ExpertTypeId, form: BusinessFormId, kinds: string[]): string | null {
   if (!allowedBusinessForms(typeId).includes(form)) {
-    return "시공사는 개인사업자 또는 법인으로 신청해 주세요.";
+    return "이 직업군은 개인사업자 · 법인 · 임직원 가운데 하나로 신청해 주세요.";
   }
   const need = requiredDocKinds(typeId, form).filter((k) => !kinds.includes(k));
   if (need.length > 0) return `${need.map(docKindLabel).join(" · ")} 사진이나 PDF 를 첨부해 주세요.`;

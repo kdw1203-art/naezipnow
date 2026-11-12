@@ -49,11 +49,14 @@ export function ChatRoom({
   title,
   metaLine,
   memberCount,
+  shortcuts,
 }: {
   groupId: string;
   title: string;
   metaLine: string;
   memberCount: number;
+  /** [1169] 채팅 위 바로가기 — 다가오는 일정 수 · 게시판 · 투표. 모임 기능이 없는 DB 에서는 넘기지 않는다 */
+  shortcuts?: { href: string; label: string; count?: number }[];
 }) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>("joining");
@@ -327,6 +330,20 @@ export function ChatRoom({
           ☰
         </button>
       </div>
+      {shortcuts && shortcuts.length > 0 && (
+        <nav className="mx-3.5 mt-2 flex gap-1.5 overflow-x-auto" aria-label="모임 바로가기">
+          {shortcuts.map((sc) => (
+            <Link
+              key={sc.href}
+              href={sc.href}
+              className="flex min-h-[40px] shrink-0 items-center gap-1 rounded-xl border border-line bg-surface px-3.5 t-sub font-bold text-ink no-underline"
+            >
+              {sc.label}
+              {sc.count ? <span className="text-primary">{sc.count}</span> : null}
+            </Link>
+          ))}
+        </nav>
+      )}
 
       {/* ---------- 메시지 ---------- */}
       <div

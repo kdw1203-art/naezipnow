@@ -1,3 +1,4 @@
+import { signupTrialColumns } from "@/lib/billing/free-grant";
 import bcrypt from "bcryptjs";
 import { createClient } from "@supabase/supabase-js";
 import { NextRequest, NextResponse } from "next/server";
@@ -548,7 +549,8 @@ export async function POST(req: NextRequest) {
     password_hash,
     name,
     role: "user",
-    plan: "free",
+    /* [1167] 가입 시 프로 요금제 90일 무료 */
+    ...signupTrialColumns(Date.now()),
     marketing_agreed: consent.marketing,
     location_agreed: consent.location,
     consent_updated_at: new Date().toISOString(),

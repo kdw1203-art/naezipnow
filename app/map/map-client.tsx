@@ -1148,6 +1148,9 @@ export function MapClient({
   const [redevColorMode, setRedevColorMode] = useState<RedevColorMode>("type");
   /* [1161] 정비구역 경계 도형 — 정비사업 레이어를 처음 켤 때 한 번 받는다(약 0.3MB · 못 받으면 점만 보인다) */
   const [zoneShapes, setZoneShapes] = useState<ZoneShape[] | null>(null);
+  /* [1166] 구역 경계 켜고 끄기 · 경계가 있는 구역만 보기 */
+  const [showZoneShapes, setShowZoneShapes] = useState(true);
+  const [onlyWithShape, setOnlyWithShape] = useState(false);
 
   /* ===== [1027] 바탕 지도 — 일반/위성 + 지적편집도. NaverMap 이 이미 받던 props(mapType ·
      nativeLayers.cadastral)인데 /map 만 넘기지 않았다. 지적편집도는 일반·위성 어느 쪽 위에도 얹힌다. */
@@ -1405,9 +1408,11 @@ export function MapClient({
   const [redevLoaded, setRedevLoaded] = useState(false);
   /* [1027] 걸러 본 결과·칩 숫자 — 마커·범례·패널이 전부 이 값 하나를 본다(화면 안에서 숫자가 어긋나지 않게) */
   const redevFilterActive = redevGroups.size > 0 || redevStages.size > 0;
-  const redevShown = useMemo(
-    () => filterRedevProjects(redevItems, redevGroups, redevStages),
-    [redevItems, redevGroups, redevStages],
+  const redevShown = useMemo(() => {
+    const base = filterRedevProjects(redevItems, redevGroups, redevStages);
+    /* [1166] 경계 있는 구역만 — 도형이 짝지어진 구역으로 좁힌다 */
+    return onlyWithShape && zoneShapes ? base.filter((p) => matchZoneShape(p, zoneShapes) !== null) : base;
+  }, [redevItems, redevGroups, redevStages, onlyWithShape, zoneShapes],
   );
   /* 칩의 수·비활성은 다 받아 온 뒤에만 — 그 전에는 전부 0 이라 고를 수 없는 것처럼 보인다 */
   const redevCountsReady = redevLoaded && !redevFailed;
@@ -2561,7 +2566,27 @@ export function MapClient({
                 </button>
               ))}
             </div>
-            {zoneShapes && <p className="m-0 t-caption text-text-3">{ZONE_SHAPES_CREDIT}</p>}
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="구역 경계">
+              <span className="t-caption font-bold text-text-3">경계</span>
+              <button
+                type="button"
+                aria-pressed={showZoneShapes}
+                onClick={() => setShowZoneShapes((v) => !v)}
+                className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors ${showZoneShapes ? "bg-primary-soft font-bold text-primary" : "bg-[var(--glass-bg)] text-text-2"}`}
+              >
+                구역 경계
+              </button>
+              <button
+                type="button"
+                aria-pressed={onlyWithShape}
+                disabled={!zoneShapes}
+                onClick={() => setOnlyWithShape((v) => !v)}
+                className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors disabled:opacity-40 ${onlyWithShape ? "bg-primary-soft font-bold text-primary" : "bg-[var(--glass-bg)] text-text-2"}`}
+              >
+                경계 있는 구역만
+              </button>
+            </div>
+            {zoneShapes && showZoneShapes && <p className="m-0 t-caption text-text-3">{ZONE_SHAPES_CREDIT}</p>}
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="마커 색">
               <span className="t-caption font-bold text-text-3">색</span>
               {REDEV_COLOR_MODES.map((m) => (
@@ -3656,7 +3681,7 @@ export function MapClient({
   }, [showRedevelopment, zoneShapes]);
   /* 지금 화면의 구역 가운데 도형이 짝지어진 것만 — 색은 마커와 같은 기준 */
   const redevPolygons = useMemo<MapPolygonData[]>(() => {
-    if (!showRedevelopment || !zoneShapes) return [];
+    if (!showRedevelopment || !zoneShapes || !showZoneShapes) return [];
     const out: MapPolygonData[] = [];
     const used = new Set<ZoneShape>();
     for (const p of redevShown) {
@@ -3666,7 +3691,7 @@ export function MapClient({
       out.push({ id: `zone:${p.id}`, path: s.p, color: redevMarkerColor(p, redevColorMode) });
     }
     return out;
-  }, [showRedevelopment, zoneShapes, redevShown, redevColorMode]);
+  }, [showRedevelopment, zoneShapes, redevShown, redevColorMode, showZoneShapes]);
 
   const redevLegend = useMemo<{ color: string; label: string }[]>(() => {
     if (!showRedevelopment) return [];

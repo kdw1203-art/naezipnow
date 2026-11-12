@@ -48,9 +48,9 @@ test("직업군 — 세무사 · 회계사 · 감정평가사 · 건축사·설�
 });
 
 test("사업 형태 — 개인 · 개인사업자 · 법인, 시공사는 사업자만", () => {
-  assert.deepEqual(BUSINESS_FORMS.map((f) => f.id), ["individual", "sole", "corporation"]);
+  assert.deepEqual(BUSINESS_FORMS.map((f) => f.id), ["individual", "sole", "corporation", "employee"]);
   assert.equal(findBusinessForm("법인")?.id, "corporation");
-  assert.deepEqual(allowedBusinessForms("builder"), ["sole", "corporation"]);
+  assert.deepEqual(allowedBusinessForms("builder"), ["sole", "corporation", "employee"]);
   assert.deepEqual(allowedBusinessForms("tax"), ["individual", "sole", "corporation"]);
 });
 
@@ -62,8 +62,8 @@ test("필요 서류 — 자격 직업군은 면허·등록증, 사업자는 사�
   assert.equal(missingDocsMessage("tax", "individual", ["license"]), null);
   assert.match(missingDocsMessage("tax", "sole", ["license"]) ?? "", /사업자등록증/);
   assert.match(missingDocsMessage("other", "individual", []) ?? "", /하나 이상/);
-  assert.match(missingDocsMessage("builder", "individual", ["business_reg"]) ?? "", /개인사업자 또는 법인/);
-  assert.deepEqual(DOC_KINDS.map((d) => d.id), ["license", "business_reg", "other"]);
+  assert.match(missingDocsMessage("builder", "individual", ["business_reg"]) ?? "", /개인사업자 · 법인 · 임직원/);
+  assert.deepEqual(DOC_KINDS.map((d) => d.id), ["license", "business_reg", "business_card", "other"]);
 });
 
 test("인증 마크 문구 — '인증 세무사' · 기타는 '인증 전문가'", () => {

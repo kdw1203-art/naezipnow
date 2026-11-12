@@ -75,7 +75,69 @@ export type PersonalDigest = {
   watchlist?: { complexCount: number; txCount: number; items: PersonalDigestComplex[] };
   myNotes?: { complexCount: number; items: PersonalDigestNoteComplex[] };
   apply?: { count: number; items: PersonalDigestApply[] };
+  /** [1168] 내 모임의 앞으로 7일 일정 — 개인 섹션(이것만 있어도 요약이 나간다) */
+  groups?: { count: number; items: PersonalDigestGroupSchedule[] };
+  /** [1168] 이번 주 공개 임장노트(관심 지역 우선 · 본인 노트 제외) — 곁들임(이것만으로는 보내지 않는다) */
+  pickNotes?: PersonalDigestPickNote[];
+  /** [1168] 거래가 많았던 지역(관심 지역 제외) — 곁들임 */
+  pickRegions?: PersonalDigestPickRegion[];
 };
+
+export type PersonalDigestGroupSchedule = {
+  groupId: string;
+  groupTitle: string;
+  title: string;
+  /** ISO */
+  scheduledAt: string;
+  place: string | null;
+};
+export type PersonalDigestPickNote = { id: string; title: string; region: string | null };
+export type PersonalDigestPickRegion = { regionName: string; regionId: string | null; tradeCount: number; period: string | null };
+
+/** "11/14(토) 14:00" — 한국 시간 */
+export function kstWhen(iso: string): string {
+  const ts = Date.parse(iso);
+  if (!Number.isFinite(ts)) return "";
+  const k = new Date(ts + 9 * 3600 * 1000);
+  const dow = ["일", "월", "화", "수", "목", "금", "토"][k.getUTCDay()];
+  return `${k.getUTCMonth() + 1}/${k.getUTCDate()}(${dow}) ${String(k.getUTCHours()).padStart(2, "0")}:${String(k.getUTCMinutes()).padStart(2, "0")}`;
+}
+
+export function groupScheduleLine(g: PersonalDigestGroupSchedule): string {
+  return [`모임 일정 ${kstWhen(g.scheduledAt)} ${g.title}`, g.place, g.groupTitle].filter(Boolean).join(" · ");
+}
+
+/** 공개 노트 후보에서 3개 — 관심 지역 이름이 들어간 노트 먼저, 본인 노트 제외 */
+export function choosePickNotes(
+  candidates: readonly (PersonalDigestPickNote & { authorEmail: string })[],
+  email: string,
+  regionNames: readonly string[],
+  max = 3,
+): PersonalDigestPickNote[] {
+  const me = email.trim().toLowerCase();
+  const tokens = regionNames.map((n) => n.trim().split(/\s+/).pop() ?? "").filter((t) => t.length >= 2);
+  const near = (r: string | null) => (r && tokens.some((t) => r.includes(t)) ? 1 : 0);
+  return candidates
+    .filter((c) => c.authorEmail.trim().toLowerCase() !== me && c.title.trim())
+    .map((c, i) => ({ c, i, n: near(c.region) }))
+    .sort((a, b) => b.n - a.n || a.i - b.i)
+    .slice(0, max)
+    .map(({ c }) => ({ id: c.id, title: c.title, region: c.region }));
+}
+
+/** 거래 건수 상위 지역 3곳 — 관심 지역으로 이미 실린 곳은 뺀다 */
+export function choosePickRegions(
+  all: readonly PersonalDigestPickRegion[],
+  shown: readonly string[],
+  max = 3,
+): PersonalDigestPickRegion[] {
+  const skip = new Set(shown);
+  return all
+    .filter((r) => r.tradeCount > 0 && !skip.has(r.regionName))
+    .slice()
+    .sort((a, b) => b.tradeCount - a.tradeCount)
+    .slice(0, max);
+}
 
 /* ── 상한 ─────────────────────────────────────────────────────────────── */
 
@@ -133,7 +195,8 @@ export function isPersonalDigestEmpty(d: PersonalDigest | null | undefined): boo
     !(d.regions && d.regions.length > 0) &&
     !(d.watchlist && d.watchlist.complexCount > 0) &&
     !(d.myNotes && d.myNotes.complexCount > 0) &&
-    !(d.apply && d.apply.count > 0)
+    !(d.apply && d.apply.count > 0) &&
+    !(d.groups && d.groups.count > 0)
   );
 }
 
@@ -144,6 +207,7 @@ export function personalDigestTitleParts(d: PersonalDigest): string[] {
   if (d.watchlist && d.watchlist.complexCount > 0) parts.push(`새 실거래 ${d.watchlist.complexCount}단지`);
   if (d.myNotes && d.myNotes.complexCount > 0) parts.push(`임장 단지 ${d.myNotes.complexCount}곳`);
   if (d.apply && d.apply.count > 0) parts.push(`청약 ${d.apply.count}건`);
+  if (d.groups && d.groups.count > 0) parts.push(`모임 일정 ${d.groups.count}건`);
   return parts;
 }
 
@@ -204,6 +268,11 @@ export function personalDigestLines(d: PersonalDigest): string[] {
   }
   for (const c of d.myNotes?.items ?? []) lines.push(complexLine(c, "임장 다녀온 "));
   for (const a of d.apply?.items ?? []) lines.push(applyLine(a));
+  for (const g of d.groups?.items ?? []) lines.push(groupScheduleLine(g));
+  for (const n of d.pickNotes ?? []) lines.push(`새 임장노트 ${n.title}${n.region ? ` (${n.region})` : ""}`);
+  if (d.pickRegions && d.pickRegions.length > 0) {
+    lines.push(`거래 많은 지역 ${d.pickRegions.map((r) => `${r.regionName} ${r.tradeCount.toLocaleString("ko-KR")}건`).join(" · ")}`);
+  }
   return lines;
 }
 
@@ -331,6 +400,40 @@ export function formatPersonalDigestEmail(
     }
     blocks.push(p(link(abs("/apply"), "청약 일정 보기 ›")));
   }
+  if (d.groups && d.groups.count > 0) {
+    blocks.push(h2(`내 모임 일정 ${d.groups.count}건`));
+    for (const g of d.groups.items) {
+      blocks.push(
+        p(
+          `${link(abs(`/town/groups/${encodeURIComponent(g.groupId)}?tab=schedule`), g.title)} ${escapeHtml(kstWhen(g.scheduledAt))}` +
+            `<span style="color:${MUTED};font-size:12px;"> ${escapeHtml([g.place, g.groupTitle].filter(Boolean).join(" · "))}</span>`,
+        ),
+      );
+    }
+  }
+  if (d.pickNotes && d.pickNotes.length > 0) {
+    blocks.push(h2("이번 주 새 임장노트"));
+    for (const n of d.pickNotes) {
+      blocks.push(
+        p(
+          link(abs(`/notes/${encodeURIComponent(n.id)}`), n.title) +
+            (n.region ? ` <span style="color:${MUTED};font-size:12px;">${escapeHtml(n.region)}</span>` : ""),
+        ),
+      );
+    }
+  }
+  if (d.pickRegions && d.pickRegions.length > 0) {
+    blocks.push(h2("거래가 많았던 지역"));
+    for (const r of d.pickRegions) {
+      const ym = ymLabel(r.period);
+      blocks.push(
+        p(
+          `${link(abs(r.regionId ? `/region/${encodeURIComponent(r.regionId)}` : `/map?region=${encodeURIComponent(r.regionName)}`), r.regionName)} 거래 ${r.tradeCount.toLocaleString("ko-KR")}건` +
+            (ym ? ` <span style="color:${MUTED};font-size:12px;">(${ym} 기준)</span>` : ""),
+        ),
+      );
+    }
+  }
 
   const html = emailLayout(`
     <h1 style="margin:0 0 6px;font-size:19px;color:${TXT};">${escapeHtml(d.weekLabel)} 내 주간 요약</h1>
@@ -349,4 +452,36 @@ export function formatPersonalDigestEmail(
   ].join("\n");
 
   return { subject, html, text };
+}
+
+
+/* ── [1168] 일간 요약 ─────────────────────────────────────────────────── */
+
+/** 주간 요약에서 "어제부터 달라진 것"만 남긴다 — 월 단위 지역 시세와 곁들임은 뺀다. 남는 게 없으면 null. */
+export function toDailyDigest(d: PersonalDigest | null | undefined): PersonalDigest | null {
+  if (!d) return null;
+  const { regions: _r, pickNotes: _n, pickRegions: _p, ...rest } = d;
+  void _r;
+  void _n;
+  void _p;
+  return isPersonalDigestEmpty(rest) ? null : rest;
+}
+
+export function formatDailyDigestInbox(d: PersonalDigest, ymd: string): { title: string; body: string } {
+  const parts = personalDigestTitleParts(d);
+  return {
+    title: `${mdLabel(ymd)} 오늘의 요약${parts.length ? ` — ${parts.join(" · ")}` : ""}`,
+    body: clampLines(personalDigestLines(d), INBOX_BODY_MAX),
+  };
+}
+
+export function formatDailyDigestEmail(d: PersonalDigest, ymd: string, opts: { siteUrl: string }) {
+  const weekly = formatPersonalDigestEmail(d, opts);
+  const head = `${mdLabel(ymd)} 오늘의 요약`;
+  const parts = personalDigestTitleParts(d);
+  return {
+    subject: `(광고) [내집나우] ${head}${parts.length ? ` — ${parts.join(" · ")}` : ""}`,
+    html: weekly.html.split(`${escapeHtml(d.weekLabel)} 내 주간 요약`).join(escapeHtml(head)),
+    text: weekly.text.split(`${d.weekLabel} 내 주간 요약`).join(head),
+  };
 }

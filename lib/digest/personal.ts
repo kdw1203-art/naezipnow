@@ -21,7 +21,8 @@ import type {
   PersonalDigestNoteComplex,
   PersonalDigestRegion,
 } from "@/lib/digest/personal-format";
-import { isPersonalDigestEmpty } from "@/lib/digest/personal-format";
+import { choosePickNotes, choosePickRegions, isPersonalDigestEmpty } from "@/lib/digest/personal-format";
+import type { PersonalDigestPickNote } from "@/lib/digest/personal-format";
 
 /**
  * [995-4] 개인 주간 다이제스트 — 데이터 로더(서버 전용).
@@ -71,6 +72,8 @@ export type PersonalDigestShared = {
   snapshots: Map<string, RegionMarketSnapshot> | null;
   /** 앞으로 days 일 안에 접수 시작하는 공고만(rcept_bgnde 기준) */
   upcomingApply: AnnouncementRow[] | null;
+  /** [1168] 최근 days 일 공개 임장노트 후보(최신 30) — 못 읽으면 null(섹션 생략) */
+  recentPublicNotes?: Array<PersonalDigestPickNote & { authorEmail: string }> | null;
   windowFrom: string;
   windowTo: string;
   applyFrom: string;
@@ -95,10 +98,12 @@ export async function loadPersonalDigestShared(now: Date, days = DEFAULT_DAYS): 
   const nowMs = now.getTime();
   const applyFrom = kstYmd(nowMs);
   const applyTo = kstYmd(nowMs + days * 86_400_000);
-  const [snapR, applyR] = await Promise.allSettled([
+  const [snapR, applyR, notesR] = await Promise.allSettled([
     getAllRegionSnapshots(),
     listAnnouncementsInWindow(applyFrom, applyTo),
+    loadRecentPublicNotes(new Date(nowMs - days * 86_400_000).toISOString()),
   ]);
+  if (notesR.status === "rejected") logger.warn("[1168] 공개 임장노트 후보 조회 실패", notesR.reason);
   if (snapR.status === "rejected") logger.warn("[995] 지역 스냅샷 조회 실패", snapR.reason);
   if (applyR.status === "rejected") logger.warn("[995] 청약 공고 조회 실패", applyR.reason);
   return {
@@ -108,10 +113,75 @@ export async function loadPersonalDigestShared(now: Date, days = DEFAULT_DAYS): 
       applyR.status === "fulfilled"
         ? applyR.value.filter((a) => a.rcept_bgnde && a.rcept_bgnde >= applyFrom && a.rcept_bgnde <= applyTo)
         : null,
+    recentPublicNotes: notesR.status === "fulfilled" ? notesR.value : null,
     windowFrom: kstYmd(nowMs - days * 86_400_000),
     windowTo: applyFrom,
     applyFrom,
     applyTo,
+  };
+}
+
+/** [1168] 최근 공개 임장노트 후보 — 실행당 한 번 */
+async function loadRecentPublicNotes(sinceIso: string): Promise<Array<PersonalDigestPickNote & { authorEmail: string }>> {
+  const sb = getServiceSupabase();
+  if (!sb) return [];
+  const { data, error } = await sb
+    .from("inspection_notes")
+    .select("id,title,region,author_email,created_at")
+    .eq("is_public", true)
+    .gte("created_at", sinceIso)
+    .order("created_at", { ascending: false })
+    .limit(30);
+  if (error) throw new Error(`inspection_notes(공개 후보): ${error.message}`);
+  return (data ?? []).map((r) => ({
+    id: String(r.id),
+    title: String(r.title ?? "").trim(),
+    region: r.region ? String(r.region) : null,
+    authorEmail: String(r.author_email ?? ""),
+  }));
+}
+
+/** [1168] 내 모임의 앞으로 days 일 일정. 모임 테이블이 아직 없거나 못 읽으면 undefined(섹션 생략). */
+async function loadGroupSchedules(
+  em: string,
+  now: Date,
+  days: number,
+  signal: AbortSignal,
+): Promise<PersonalDigest["groups"]> {
+  const sb = getServiceSupabase();
+  if (!sb) return undefined;
+  const mem = await sb.from("group_members").select("meeting_id").eq("user_email", em).eq("status", "joined").limit(50).abortSignal(signal);
+  const own = await sb.from("meetings").select("id,title").eq("organizer_email", em).limit(50).abortSignal(signal);
+  if (mem.error || own.error) return undefined;
+  const ids = [...new Set([...(mem.data ?? []).map((r) => String(r.meeting_id)), ...(own.data ?? []).map((r) => String(r.id))])];
+  if (ids.length === 0) return undefined;
+  const sch = await sb
+    .from("group_schedules")
+    .select("meeting_id,title,scheduled_at,place,status")
+    .in("meeting_id", ids)
+    .gte("scheduled_at", now.toISOString())
+    .lt("scheduled_at", new Date(now.getTime() + days * 86_400_000).toISOString())
+    .order("scheduled_at", { ascending: true })
+    .limit(20)
+    .abortSignal(signal);
+  if (sch.error) return undefined;
+  const rows = (sch.data ?? []).filter((r) => String(r.status ?? "open") !== "cancelled");
+  if (rows.length === 0) return undefined;
+  const titles = new Map<string, string>((own.data ?? []).map((r) => [String(r.id), String(r.title ?? "")]));
+  const missing = ids.filter((id) => !titles.has(id));
+  if (missing.length > 0) {
+    const t = await sb.from("meetings").select("id,title").in("id", missing).abortSignal(signal);
+    for (const r of t.data ?? []) titles.set(String(r.id), String(r.title ?? ""));
+  }
+  return {
+    count: rows.length,
+    items: rows.slice(0, 3).map((r) => ({
+      groupId: String(r.meeting_id),
+      groupTitle: titles.get(String(r.meeting_id)) ?? "",
+      title: String(r.title ?? ""),
+      scheduledAt: String(r.scheduled_at),
+      place: r.place ? String(r.place) : null,
+    })),
   };
 }
 
@@ -420,6 +490,23 @@ async function buildInner(
     }
   }
 
+  /* [1168] (e) 내 모임 일정 — 개인 섹션. (f)(g) 는 곁들임: 위 섹션이 하나라도 있을 때만 붙는다. */
+  const groups = await loadGroupSchedules(em, opts.now, opts.days, signal).catch(() => undefined);
+  const hasCore = regions.length > 0 || Boolean(watchlist) || Boolean(myNotes) || Boolean(apply) || Boolean(groups);
+  const pickNotes = hasCore && shared.recentPublicNotes ? choosePickNotes(shared.recentPublicNotes, em, regionNames) : [];
+  const pickRegions =
+    hasCore && shared.snapshots
+      ? choosePickRegions(
+          [...shared.snapshots.values()].map((sn) => ({
+            regionName: sn.regionName,
+            regionId: sn.regionId ?? null,
+            tradeCount: typeof sn.tradeCount === "number" ? sn.tradeCount : 0,
+            period: sn.period ?? null,
+          })),
+          regions.map((r) => r.regionName),
+        )
+      : [];
+
   const digest: PersonalDigest = {
     weekLabel: weekLabelOf(opts.now),
     windowFrom: shared.windowFrom,
@@ -428,6 +515,9 @@ async function buildInner(
     ...(watchlist ? { watchlist } : {}),
     ...(myNotes ? { myNotes } : {}),
     ...(apply ? { apply } : {}),
+    ...(groups ? { groups } : {}),
+    ...(pickNotes.length > 0 ? { pickNotes } : {}),
+    ...(pickRegions.length > 0 ? { pickRegions } : {}),
   };
   return isPersonalDigestEmpty(digest) ? null : digest;
 }

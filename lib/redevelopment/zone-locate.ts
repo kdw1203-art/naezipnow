@@ -107,8 +107,9 @@ export function pickComplexPoint(zoneName: string, complexes: readonly ComplexPo
 }
 
 /** 요약의 위치 기준 글 — 지번 · 단지 */
-export function locateSummaryBy(z: { stage: string | null; operator: string | null }, by: "lot" | "complex"): string {
+export function locateSummaryBy(z: { stage: string | null; operator: string | null }, by: "lot" | "complex" | "shape"): string {
   const base = locateSummary(z);
+  if (by === "shape") return base.replace("위치는 대표 지번 기준 · 구역 경계 아님", "위치는 구역 경계 중심 기준");
   return by === "lot" ? base : base.replace("위치는 대표 지번 기준", "위치는 같은 이름 단지 기준");
 }
 

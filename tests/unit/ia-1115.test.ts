@@ -676,11 +676,11 @@ test("[1144] 홍보 상태 — 100일 무료 · 프로 구독 중이면 계속 �
   const now = "2026-11-11T00:00:00Z";
   const day = (n: number) => new Date(Date.parse(now) - n * 86_400_000).toISOString();
   const free = m.promoState({ createdAt: day(10), plan: "free", planExpiresAt: null, now });
-  assert.deepEqual([free.active, free.mode, free.freeDaysLeft], [true, "free", 90]);
-  assert.equal(m.promoState({ createdAt: day(100), plan: "free", planExpiresAt: null, now }).mode, "ended");
-  assert.equal(m.promoState({ createdAt: day(300), plan: "expert", planExpiresAt: new Date(Date.parse(now) + 86_400_000).toISOString(), now }).mode, "subscribed");
-  assert.equal(m.promoState({ createdAt: day(300), plan: "expert", planExpiresAt: day(1), now }).active, false, "만료된 구독은 구독이 아니다");
-  assert.equal(m.promoState({ createdAt: day(300), plan: "pro", planExpiresAt: null, now }).active, false, "플러스는 홍보 대상이 아니다");
+  assert.deepEqual([free.active, free.mode, free.freeDaysLeft], [true, "free", 355]); /* [1167] 100일 → 365일 */
+  assert.equal(m.promoState({ createdAt: day(365), plan: "free", planExpiresAt: null, now }).mode, "ended");
+  assert.equal(m.promoState({ createdAt: day(400), plan: "expert", planExpiresAt: new Date(Date.parse(now) + 86_400_000).toISOString(), now }).mode, "subscribed");
+  assert.equal(m.promoState({ createdAt: day(400), plan: "expert", planExpiresAt: day(1), now }).active, false, "만료된 구독은 구독이 아니다");
+  assert.equal(m.promoState({ createdAt: day(400), plan: "pro", planExpiresAt: null, now }).active, false, "플러스는 홍보 대상이 아니다");
   assert.equal(m.promoState({ createdAt: null, plan: "free", planExpiresAt: null, now }).active, false);
   const ok = m.sanitizePromo({ headline: " 분당 재건축 상담!! ", body: "정자동 20년", on: true });
   assert.deepEqual(ok, { ok: true, value: { headline: "분당 재건축 상담", body: "정자동 20년", on: true } });
@@ -845,8 +845,11 @@ test("[1149] 전국 정비구역 — 응답 한 줄 풀기 · 세대수는 지�
 test("[1150] 단지 정보 갱신 주기 · 서울 구별 정비구역 수 지도(자료가 있을 때만) · vercel.json 은 내용으로 본다", async () => {
   const crons = (JSON.parse(read("vercel.json")) as { crons: { path: string; schedule: string }[] }).crons;
   const at = (p: string) => crons.find((c) => c.path.startsWith(p))?.schedule;
-  assert.equal(at("/api/cron/apt-detail-enrich"), "30 1,5,9,13,17,21 * * *", "단지 상세 보강 하루 1회 → 6회");
-  assert.equal(at("/api/cron/geocode-complexes"), "20 1,7,13,19 * * *", "좌표 보강 하루 1회 → 4회");
+  /* [1166] 단지 정보 수집을 더 빠르게 — 상세 보강 매시간 200곳 · 좌표 매시간 800곳 · 단지 마스터 2시간마다 */
+  assert.equal(at("/api/cron/apt-detail-enrich"), "30 * * * *");
+  assert.ok(crons.some((c) => c.path === "/api/cron/apt-detail-enrich?limit=200"));
+  assert.equal(at("/api/cron/geocode-complexes"), "20 * * * *");
+  assert.equal(at("/api/cron/apt-master-ingest"), "0 */2 * * *");
   assert.equal(at("/api/cron/complex-crawl"), "10 1,13 * * *");
   const m = await import("../../lib/region/region-switch.ts");
   const ms = m.nationalGuMarkers([{ id: "gangnam", name: "강남구", lat: 37.5, lng: 127.0 }] as Parameters<typeof m.nationalGuMarkers>[0], new Map([["강남구", 12]]));
@@ -1069,4 +1072,227 @@ test("[1163] 다녀온 단지 변동 — 방문 뒤 새 실거래 · 같은 평�
   ]);
   assert.deepEqual(v.map((x) => [x.complexId, x.rounds, x.noteId, x.visitYmd]), [["c1", 2, "b", "2026-11-09"], ["c2", 1, "d", "2026-10-01"]]);
   assert.match(read("app/my/history/page.tsx"), /<VisitedChanges visited=\{visited\} \/>/);
+});
+
+test("[1166] 구역 경계 켜고 끄기 · 경계 있는 구역만 · 지번 없는 구역은 이름이 꼭 같은 도형 하나의 중심으로", async () => {
+  const m = await import("../../lib/redevelopment/zone-shapes.ts");
+  const z = await import("../../lib/redevelopment/zone-locate.ts");
+  const a = { n: "가나1구역", k: "UQ1221", c: [127.0, 37.5] as [number, number], a: 100, p: [] };
+  const far = { n: "가나1 재개발구역", k: "UQ1221", c: [127.2, 37.6] as [number, number], a: 50, p: [] };
+  const near = { n: "가나1재정비촉진구역", k: "UQ1221", c: [127.001, 37.5] as [number, number], a: 300, p: [] };
+  assert.deepEqual(m.uniqueShapeCenter("가나1", [a]), { lng: 127.0, lat: 37.5, shapeName: "가나1구역" });
+  assert.equal(m.uniqueShapeCenter("가나1", [a, far]), null, "같은 이름이 떨어진 곳에 또 있으면 고르지 않는다");
+  assert.equal(m.uniqueShapeCenter("가나1", [a, near])?.shapeName, "가나1재정비촉진구역", "가까이 겹친 같은 이름은 큰 도형");
+  assert.equal(m.uniqueShapeCenter("다라", [a]), null);
+  assert.match(z.locateSummaryBy({ stage: "7)착공", operator: null }, "shape"), /^공표 단계 착공 · 위치는 구역 경계 중심 기준$/);
+  const run = read("lib/redevelopment/zone-locate-run.ts");
+  assert.match(run, /naverReverseGeocode\(t\.lat, t\.lng\)/);
+  assert.match(run, /hitInSigungu\(rev\.address, t\.sigungu\)/, "자치구가 확인된 좌표만 싣는다");
+  const map = read("app/map/map-client.tsx");
+  assert.match(map, /구역 경계\n/);
+  assert.match(map, /경계 있는 구역만/);
+  assert.match(read("app/redevelopment/RedevelopmentMap.tsx"), /aria-pressed=\{showShapes\}/);
+});
+
+test("[1166] 전문가 직군 — 정비업체 · PM사 · 신탁사 · 증권사 · 자산운용사 추가(사업자로만) · 법률 유형은 계속 없음", async () => {
+  const m = await import("../../lib/experts/taxonomy.ts");
+  const labels = m.EXPERT_TYPES.map((t) => t.label);
+  for (const want of ["정비업체", "PM사", "신탁사", "증권사", "자산운용사"]) assert.ok(labels.includes(want), want);
+  assert.ok(!labels.some((l) => /변호|법무|법률/.test(l)), "법률 서비스 유형은 넣지 않는다");
+  for (const id of ["redev_mgmt", "pm", "trust", "securities", "asset_mgmt"] as const) {
+    assert.deepEqual(m.allowedBusinessForms(id), ["sole", "corporation", "employee"], id);
+    assert.deepEqual(m.requiredDocKinds(id, "corporation"), ["business_reg"], id);
+  }
+  assert.equal(new Set(m.EXPERT_TYPES.map((t) => t.id)).size, m.EXPERT_TYPES.length);
+  assert.equal(m.EXPERT_TYPES[m.EXPERT_TYPES.length - 1].id, "other", "기타는 맨 끝");
+});
+
+test("[1167] 무료 이용 기간 — 가입 프로 90일 · 전문가 승인 프로 365일 + 홍보 365일 · 자동결제 구독은 건드리지 않는다", async () => {
+  const m = await import("../../lib/billing/free-grant.ts");
+  const p = await import("../../lib/experts/promo.ts");
+  const now = Date.parse("2026-11-12T00:00:00Z");
+  assert.deepEqual(m.signupTrialColumns(now), { plan: "expert", plan_expires_at: "2027-02-10T00:00:00.000Z" });
+  assert.equal(p.PROMO_FREE_DAYS, 365);
+  assert.deepEqual(m.expertGrantDecision({ plan: "free", planExpiresAt: null }, now), { grant: true, expiresAt: "2027-11-12T00:00:00.000Z" });
+  assert.deepEqual(m.expertGrantDecision({ plan: "expert", planExpiresAt: "2027-02-10T00:00:00.000Z" }, now), { grant: true, expiresAt: "2028-02-10T00:00:00.000Z" }, "가입 무료 기간이 남았으면 이어 붙인다");
+  assert.deepEqual(m.expertGrantDecision({ plan: "expert", planExpiresAt: null }, now), { grant: false, reason: "subscription" }, "자동결제 구독 중이면 만료를 적지 않는다");
+  assert.deepEqual(m.expertGrantDecision({ plan: "pro", planExpiresAt: "2027-01-01T00:00:00.000Z" }, now), { grant: false, reason: "other-plan" });
+  for (const f of ["lib/auth/ensure-app-user.ts", "lib/auth/kakao-user-store.ts", "lib/auth/toss-user-store.ts", "app/api/auth/register/route.ts"]) assert.match(read(f), /\.\.\.signupTrialColumns\(Date\.now\(\)\)/, f);
+  assert.match(read("lib/experts/verification-store.ts"), /expertGrantDecision\(/);
+  assert.match(read("app/signup/SignupClient.tsx"), /자동 결제 없음/);
+});
+
+test("[1168] 전문가 증빙 — 회사 임직원은 명함 하나로 신청(사업자등록번호 없이) · 자격 직군은 그대로", async () => {
+  const m = await import("../../lib/experts/taxonomy.ts");
+  for (const id of ["builder", "securities", "trust", "asset_mgmt", "pm", "redev_mgmt", "other"] as const) {
+    assert.ok(m.allowedBusinessForms(id).includes("employee"), id);
+    assert.deepEqual(m.requiredDocKinds(id, "employee"), ["business_card"], id);
+    assert.equal(m.missingDocsMessage(id, "employee", ["business_card"]), null, id);
+    assert.match(m.missingDocsMessage(id, "employee", ["other"]) ?? "", /명함/, id);
+  }
+  for (const id of ["broker", "tax", "appraiser"] as const) assert.ok(!m.allowedBusinessForms(id).includes("employee"), id);
+  assert.equal(m.docKindLabel("business_card"), "명함");
+  assert.equal(m.findBusinessForm("employee")?.label, "임직원");
+  const route = read("app/api/experts/register/route.ts");
+  assert.match(route, /form\.id === "employee" && businessName\.length < 2/);
+  assert.match(route, /form\.id !== "individual" && form\.id !== "employee" && !\//);
+});
+
+test("[1168] 임장 모임 — 일정 검증 · 달력 · 1인 비용 · 투표 집계 · 게시판 분류", async () => {
+  const m = await import("../../lib/groups/club.ts");
+  const now = Date.parse("2026-11-12T07:00:00Z");
+  assert.equal(m.kstToIso("2026-11-14", "14:00"), "2026-11-14T05:00:00.000Z");
+  assert.equal(m.kstToIso("2026-02-30", "14:00"), null, "없는 날짜");
+  assert.deepEqual(m.kstParts("2026-11-14T05:00:00.000Z"), { ymd: "2026-11-14", y: 2026, m: 11, d: 14, dow: "토", time: "오후 2:00" });
+  assert.equal(m.kstParts("2026-11-13T15:30:00Z")?.time, "오전 12:30");
+  const ok = m.validateSchedule({ title: " 마포 도보 임장 ", date: "2026-11-14", time: "14:00", place: "공덕역 1번 출구", maxMembers: 6, mode: "도보 임장", costTotal: "25000" }, now);
+  assert.ok(ok.ok);
+  if (ok.ok) assert.deepEqual(ok.value, { title: "마포 도보 임장", scheduledAt: "2026-11-14T05:00:00.000Z", place: "공덕역 1번 출구", complexId: null, maxMembers: 6, mode: "도보 임장", costTotal: 25000 });
+  assert.deepEqual(m.validateSchedule({ title: "지난", date: "2026-11-11", time: "10:00", maxMembers: 4 }, now), { ok: false, message: "지난 시각은 선택 불가" });
+  assert.deepEqual(m.validateSchedule({ title: "인원", date: "2026-11-14", time: "10:00", maxMembers: 1 }, now), { ok: false, message: "인원 2~50명" });
+  assert.deepEqual(m.validateSchedule({ title: "a", date: "2026-11-14", time: "10:00", maxMembers: 4 }, now), { ok: false, message: "일정 이름 2자 이상" });
+  const grid = m.monthGrid(2026, 11);
+  assert.deepEqual(grid[0], [1, 2, 3, 4, 5, 6, 7]);
+  assert.deepEqual(grid[grid.length - 1], [29, 30, null, null, null, null, null]);
+  assert.equal(m.monthGrid(2027, 2).flat().filter((d) => d !== null).length, 28);
+  assert.deepEqual(m.shiftMonth(2026, 12, 1), { year: 2027, month: 1 });
+  assert.deepEqual(m.shiftMonth(2026, 1, -1), { year: 2025, month: 12 });
+  assert.equal(m.perHead(25000, 3), 8340, "10원 단위 올림");
+  assert.equal(m.perHead(25000, 0), null);
+  assert.equal(m.perHead(null, 3), null);
+  assert.equal(m.scheduleState({ scheduledAt: "2026-11-11T00:00:00Z", maxMembers: 4, attendeeCount: 1 }, now), "past");
+  assert.equal(m.scheduleState({ scheduledAt: "2026-11-14T00:00:00Z", maxMembers: 4, attendeeCount: 4 }, now), "full");
+  assert.equal(m.scheduleLine({ scheduledAt: "2026-11-14T05:00:00Z", place: "공덕역", maxMembers: 6, attendeeCount: 3 }), "11월 14일 (토) 오후 2:00 · 공덕역 · 3/6명");
+  assert.deepEqual(m.countByDay([{ scheduledAt: "2026-11-14T05:00:00Z" }, { scheduledAt: "2026-11-14T15:30:00Z" }]), { "2026-11-14": 1, "2026-11-15": 1 }, "한국 날짜로 센다");
+  const poll = m.validatePoll({ title: "다음 임장 지역", options: ["마포", "성동", "마포", " "], multiple: true });
+  assert.ok(poll.ok);
+  if (poll.ok) {
+    assert.deepEqual(poll.value.options, [{ id: "o1", label: "마포" }, { id: "o2", label: "성동" }]);
+    assert.deepEqual(m.sanitizeVote(poll.value.options, ["o1", "o9", "o1"], false), ["o1"]);
+    assert.equal(m.sanitizeVote(poll.value.options, ["o1", "o2"], false), null, "단일 선택에 둘");
+    assert.deepEqual(m.tallyPoll(poll.value.options, [{ optionIds: ["o1"] }, { optionIds: ["o1", "o2"] }, { optionIds: ["x"] }]), { counts: { o1: 2, o2: 1 }, voters: 2, topIds: ["o1"] });
+  }
+  assert.deepEqual(m.validatePoll({ title: "하나뿐", options: ["마포"] }), { ok: false, message: "항목 2개 이상" });
+  const dates = m.validatePoll({ title: "언제 갈까", kind: "date", options: ["2026-11-21", "2026-11-14", "토요일"] });
+  assert.ok(dates.ok);
+  if (dates.ok) assert.deepEqual(dates.value.options.map((o) => o.label), ["2026-11-14", "2026-11-21"]);
+  assert.equal(m.pollOptionLabel("date", "2026-11-14"), "11월 14일 (토)");
+  const post = m.validatePost({ board: "없는분류", body: " 다녀왔습니다 ", noteId: "nope", scheduleId: "8b6f2c1e-1d2a-4f3b-9c4d-5e6f7a8b9c0d" });
+  assert.deepEqual(post, { ok: true, value: { board: "free", body: "다녀왔습니다", scheduleId: "8b6f2c1e-1d2a-4f3b-9c4d-5e6f7a8b9c0d", noteId: null, parentId: null } });
+  assert.deepEqual(m.validatePost({ body: "  " }), { ok: false, message: "내용 입력" });
+  assert.equal(m.clubTab("poll"), "poll");
+  assert.equal(m.clubTab("nope"), "home");
+  assert.ok(m.isMissingTable({ code: "PGRST205" }));
+  assert.ok(m.isMissingTable({ message: 'relation "public.group_schedules" does not exist' }));
+  assert.ok(!m.isMissingTable({ message: "timeout" }));
+  const route = read("app/api/groups/[id]/club/route.ts");
+  assert.match(route, /if \(!role\.member\) return bad\("모임 참여 후 이용 가능", 403\)/);
+  assert.match(route, /공지는 모임장만 작성 가능/);
+  const types = read("lib/groups/club-types.ts");
+  assert.ok(!/email/i.test(types.replace(/이메일/g, "")), "화면으로 가는 모양에 이메일 필드가 없다");
+});
+
+test("[1168] 함께한 기록 — 일주일 · 한 달 · 6개월 · 1년(한국 날짜) · 한 일 한 줄 · 메일은 (광고) 표기", async () => {
+  const m = await import("../../lib/me/milestones.ts");
+  const now = Date.parse("2026-11-12T03:00:00Z");
+  assert.equal(m.daysSince("2026-11-04T16:00:00Z", now), 7, "KST 11/5 01:00 가입 → 11/12 는 7일째");
+  assert.equal(m.daysSince("2026-11-04T14:00:00Z", now), 8, "KST 11/4 23:00 가입");
+  assert.equal(m.daysSince("2026-12-01T00:00:00Z", now), null);
+  assert.equal(m.tenureMarkToday("2026-11-04T16:00:00Z", now)?.id, "d7");
+  assert.equal(m.tenureMarkToday("2026-11-04T14:00:00Z", now), null);
+  assert.equal(m.tenureMarkRecent("2026-11-04T14:00:00Z", now)?.id, "d7", "그 주 안에는 팝업");
+  assert.equal(m.tenureMarkRecent("2026-10-25T14:00:00Z", now), null);
+  assert.equal(m.tenureMarkRecent("2025-11-12T03:00:00Z", now)?.id, "d365");
+  const w = m.signupWindow(7, now);
+  assert.deepEqual(w, { from: "2026-11-04T15:00:00.000Z", to: "2026-11-05T15:00:00.000Z" });
+  assert.equal(m.tenureMarkToday(w.from, now)?.id, "d7");
+  assert.equal(m.activityLine({ notes: 3, analyses: 0, watchlist: 5, groups: 1 }), "임장노트 3개 · 관심 단지 5곳 · 모임 1곳");
+  const msg = m.milestoneMessage("d30", "대웅", { notes: 3, analyses: 2, watchlist: 0, groups: 0 });
+  assert.deepEqual(msg, { kind: "d30", title: "대웅님과 함께한 한 달", body: "임장노트 3개 · AI 분석 2회", href: "/my/history", cta: "내 임장 이력 보기" });
+  assert.equal(m.milestoneMessage("d7", "", { notes: 0, analyses: 0, watchlist: 0, groups: 0 }).href, "/notes/new");
+  assert.equal(m.milestoneMessage("first_note", "대웅", { notes: 1, analyses: 0, watchlist: 0, groups: 0 }).title, "대웅님의 첫 임장노트");
+  const cron = read("app/api/cron/milestone-greetings/route.ts");
+  assert.match(cron, /consent\.has\(t\.email\)/, "메일은 동의자만");
+  assert.match(read("lib/me/milestone-mail.ts"), /\(광고\) \[내집나우\]/);
+  assert.match(read(".github/workflows/etl.yml"), /call milestone-greetings/);
+});
+
+test("[1168] 다이제스트 — 주간에 모임 일정 · 새 임장노트 · 거래 많은 지역 / 일간은 달라진 것만", async () => {
+  const m = await import("../../lib/digest/personal-format.ts");
+  const base = { weekLabel: "11월 2주차", windowFrom: "2026-11-05", windowTo: "2026-11-12" };
+  const g = { groupId: "g1", groupTitle: "마포 모임", title: "성수 둘러보기", scheduledAt: "2026-11-14T05:00:00Z", place: "성수역 3번 출구" };
+  assert.equal(m.kstWhen(g.scheduledAt), "11/14(토) 14:00");
+  assert.equal(m.groupScheduleLine(g), "모임 일정 11/14(토) 14:00 성수 둘러보기 · 성수역 3번 출구 · 마포 모임");
+  assert.equal(m.isPersonalDigestEmpty({ ...base, groups: { count: 1, items: [g] } }), false, "모임 일정만 있어도 나간다");
+  assert.equal(m.isPersonalDigestEmpty({ ...base, pickNotes: [{ id: "n1", title: "노트", region: null }] }), true, "곁들임만으로는 보내지 않는다");
+  const cands = [
+    { id: "a", title: "내 노트", region: "마포구", authorEmail: "Me@x.com" },
+    { id: "b", title: "강남 노트", region: "서울 강남구", authorEmail: "o@x.com" },
+    { id: "c", title: "마포 노트", region: "서울 마포구", authorEmail: "p@x.com" },
+    { id: "d", title: " ", region: null, authorEmail: "q@x.com" },
+  ];
+  assert.deepEqual(m.choosePickNotes(cands, "me@x.com", ["서울 마포구"]).map((n) => n.id), ["c", "b"], "관심 지역 먼저 · 본인 제외 · 제목 없는 것 제외");
+  const regs = [
+    { regionName: "마포구", regionId: "r1", tradeCount: 90, period: "202610" },
+    { regionName: "송파구", regionId: "r2", tradeCount: 300, period: "202610" },
+    { regionName: "노원구", regionId: null, tradeCount: 250, period: "202610" },
+    { regionName: "세종", regionId: null, tradeCount: 0, period: null },
+  ];
+  assert.deepEqual(m.choosePickRegions(regs, ["마포구"]).map((r) => r.regionName), ["송파구", "노원구"]);
+  const full = { ...base, groups: { count: 1, items: [g] }, pickNotes: [{ id: "c", title: "마포 노트", region: "서울 마포구" }], pickRegions: regs.slice(1, 3) };
+  const mail = m.formatPersonalDigestEmail(full, { siteUrl: "https://naezipnow.com" });
+  assert.match(mail.subject, /모임 일정 1건/);
+  assert.match(mail.html, /town\/groups\/g1\?tab=schedule/);
+  assert.match(mail.html, /이번 주 새 임장노트/);
+  assert.match(mail.html, /거래가 많았던 지역/);
+  const daily = m.toDailyDigest({ ...full, regions: [] });
+  assert.ok(daily && !("pickNotes" in daily) && !("pickRegions" in daily) && !("regions" in daily));
+  assert.equal(m.toDailyDigest({ ...base, pickNotes: full.pickNotes }), null);
+  if (daily) {
+    assert.equal(m.formatDailyDigestInbox(daily, "2026-11-12").title, "11.12 오늘의 요약 — 모임 일정 1건");
+    const dm = m.formatDailyDigestEmail(daily, "2026-11-12", { siteUrl: "https://naezipnow.com" });
+    assert.match(dm.subject, /^\(광고\) \[내집나우\] 11\.12 오늘의 요약/);
+    assert.ok(!dm.html.includes("내 주간 요약"));
+  }
+  assert.match(read(".github/workflows/etl.yml"), /call daily-digest/);
+});
+
+test("[1169] 전문가 등록 — 홍보 안내는 신청 칸 아래 · 채팅 위 바로가기 · MY 내 모임 한 줄", () => {
+  const apply = read("app/town/experts/apply/page.tsx");
+  assert.ok(apply.indexOf("<ApplyForm />") < apply.indexOf('id="apply-promo-h"'), "신청 칸이 먼저");
+  const chat = read("app/town/groups/[id]/chat/page.tsx");
+  assert.match(chat, /sched\.state === "missing"\s*\?\s*undefined/, "모임 테이블이 없으면 바로가기를 숨긴다");
+  assert.match(read("app/town/groups/[id]/ChatRoom.tsx"), /aria-label="모임 바로가기"/);
+  assert.match(read("app/my/MyHubView.tsx"), /\{groupLine && \(/);
+});
+
+test("[1170] 모임 — 캘린더 저장(.ics) · 날짜 투표에서 일정 만들기 · 탭에 필요한 것만 읽기 · 지도 자료 캐시", async () => {
+  const m = await import("../../lib/groups/club.ts");
+  const ics = m.scheduleIcs({ id: "s1", title: "성수, 둘러보기", scheduledAt: "2026-11-14T05:00:00.000Z", place: "성수역 3번 출구" }, "마포 모임", "https://naezipnow.com/town/groups/g1?tab=schedule");
+  assert.ok(ics);
+  const lines = (ics ?? "").split("\r\n");
+  assert.equal(lines[0], "BEGIN:VCALENDAR");
+  assert.ok(lines.includes("DTSTART:20261114T050000Z"));
+  assert.ok(lines.includes("DTEND:20261114T070000Z"));
+  assert.ok(lines.includes("SUMMARY:성수\\, 둘러보기 · 마포 모임"), "쉼표는 이스케이프");
+  assert.ok(lines.includes("LOCATION:성수역 3번 출구"));
+  assert.equal(lines[lines.length - 1], "END:VCALENDAR");
+  assert.equal(m.scheduleIcs({ id: "s", title: "x", scheduledAt: "nope", place: null }, "", ""), null);
+  const page = read("app/town/groups/[id]/page.tsx");
+  assert.match(page, /tab === "poll" \? loadPolls/);
+  assert.match(page, /\(tab === "board" \|\| tab === "home"\) \? loadPosts/);
+  assert.match(read("app/town/groups/[id]/ClubPolls.tsx"), /tab=schedule&date=/);
+  assert.match(read("app/town/groups/[id]/chat/page.tsx"), /countUpcomingSchedules\(id\)/);
+  assert.match(read("next.config.ts"), /source: "\/data\/:path\*"[\s\S]{0,120}max-age=86400, stale-while-revalidate=604800/);
+});
+
+test("[1171] 단지 분석 4종 탭 — 고른 단지를 들고 옆 도구로 · 일정에 관심 단지 붙이기", async () => {
+  const m = await import("../../lib/ai/frame-tabs.ts");
+  const f = await import("../../app/analysis/ai/[tool]/frame-tools.ts");
+  assert.deepEqual([...m.FRAME_TABS.map((t) => t.id)].sort(), [...f.FRAME_TOOLS].sort(), "탭 = 머리를 쓰는 4종");
+  assert.equal(m.frameTabHref("ai-timing", "서울 마포구|가나"), "/analysis/ai/ai-timing?complexId=%EC%84%9C%EC%9A%B8%20%EB%A7%88%ED%8F%AC%EA%B5%AC%7C%EA%B0%80%EB%82%98");
+  assert.equal(m.frameTabHref("ai-diagnosis", null), "/analysis/ai/ai-diagnosis");
+  const wb = read("app/analysis/ai/[tool]/WorkbenchClient.tsx");
+  assert.match(wb, /frameTabHref\(t\.id, picked\?\.id\)/);
+  assert.match(read("app/town/groups/[id]/ClubSchedule.tsx"), /complexId: complexId \|\| null/);
 });

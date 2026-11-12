@@ -3,7 +3,8 @@
    노출 = 지역·단지 화면 / 전문가 찾기 상단 / 홈 / 임장노트·동네 글 목록.
    순수 규칙(server-only 없음) — 화면 · API · node:test 가 같이 쓴다. */
 
-export const PROMO_FREE_DAYS = 100;
+/* [1167] 100일 → 365일(소유자 2026-11-12 "전문가 등록하면 1년 무료") */
+export const PROMO_FREE_DAYS = 365;
 export const PROMO_HEADLINE_MAX = 28;
 export const PROMO_BODY_MAX = 80;
 /** 홍보를 켜 주는 요금제(lib/subscriptions — 프로 = expert) */

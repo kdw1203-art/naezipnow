@@ -1,4 +1,6 @@
+import { SIGNUP_FREE_PLAN, expertGrantDecision } from "@/lib/billing/free-grant";
 import { getServiceSupabase } from "@/lib/supabase/service";
+import { logger } from "@/lib/log";
 import { getAppUserIdByEmail } from "@/lib/me/profile";
 import {
   createExpert,
@@ -544,6 +546,24 @@ export async function approveExpertVerification(
       ok: false,
       error: "신청은 승인됐지만 프로필 인증 표시 실패 · 다시 승인을 눌러 주세요.",
     };
+  }
+
+  /* [1167] 인증 승인 — 프로 요금제 1년 무료(자동결제 구독 중이거나 다른 유료 요금제면 건드리지 않는다). 실패해도 승인은 그대로 */
+  try {
+    const sbGrant = getServiceSupabase();
+    const em = applicantEmail.trim().toLowerCase();
+    if (sbGrant && em) {
+      const { data: cur } = await sbGrant.from("app_users").select("plan, plan_expires_at").eq("email", em).maybeSingle();
+      if (cur) {
+        const d = expertGrantDecision({ plan: cur.plan as string | null, planExpiresAt: cur.plan_expires_at as string | null }, Date.now());
+        if (d.grant) {
+          const { error: gErr } = await sbGrant.from("app_users").update({ plan: SIGNUP_FREE_PLAN, plan_expires_at: d.expiresAt, updated_at: new Date().toISOString() }).eq("email", em);
+          if (gErr) logger.warn("[experts] 승인 무료 기간 적용 실패", gErr.message);
+        }
+      }
+    }
+  } catch (e) {
+    logger.warn("[experts] 승인 무료 기간 적용 실패", e);
   }
 
   return {

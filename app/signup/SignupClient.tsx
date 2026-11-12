@@ -1,6 +1,7 @@
 "use client";
 /* [1026c · 폰 배율 1] 동의 체크박스 — 폰 간격 단위(3px)에서 h-5 가 15px 이었다. 20px 고정 + 40px 손끝 칸(span)으로 감싼다(옆 글자가 탭을 가져가지 않게). */
 
+import { SIGNUP_FREE_DAYS } from "@/lib/billing/free-grant";
 import { validateRequiredBasicInfo, type BasicField } from "@/lib/account/basic-info";
 import { BasicInfoFields, EMPTY_DRAFT, basicFieldId, type BasicDraft } from "@/app/components/account/BasicInfoFields";
 import { capsLockOn } from "@/lib/auth/auth-ux";
@@ -554,6 +555,10 @@ export function SignupClient({
       <h1 className="rise-in t-title font-bold leading-[1.35] text-ink">
         회원가입
       </h1>
+      {/* [1167] 가입 혜택 한 줄 — 결제가 일어나지 않는다는 사실까지 */}
+      <p className="rise-in m-0 mt-1 t-sub font-bold text-primary">
+        가입 시 프로 요금제 {SIGNUP_FREE_DAYS}일 무료 · 자동 결제 없음
+      </p>
       {/* [1040] 가입 3단계 — 계정 → 메일 인증 → 관심 지역. 머리의 채움 막대(칸을 채운 비율)를 대신한다:
           "이 화면 다음에 무엇이 남았나"를 인증 메일 안내·환영 화면과 같은 띠로 잇는다 */}
       <SignupSteps current={0} className="rise-in" />

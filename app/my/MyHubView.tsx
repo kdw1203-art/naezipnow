@@ -52,6 +52,8 @@ export type MyHubAlert = { id: string; type: "region" | "keyword" | string; valu
 export type MyHubPurchase = { id: string; title: string; amount: number; at: string };
 
 export type MyHubData = {
+  /** [1169] 내 모임 한 줄 — 모임이 없으면 null(줄 없음) */
+  groupLine?: { href: string; label: string; detail: string } | null;
   name: string;
   avatarUrl: string | null;
   plan: ProfilePlanTier;
@@ -257,6 +259,7 @@ export function MyHubView({
   rightExtra?: React.ReactNode;
 }) {
   const {
+    groupLine,
     name,
     avatarUrl,
     plan,
@@ -457,6 +460,12 @@ export function MyHubView({
               <span className="t-body font-bold text-ink">내 임장 이력</span>
               <span className="t-sub font-bold text-primary">날짜순 보기 ›</span>
             </Link>
+            {groupLine && (
+              <Link href={groupLine.href} className="card press flex min-h-12 items-center justify-between gap-3 rounded-2xl px-4 py-3 no-underline">
+                <span className="shrink-0 t-body font-bold text-ink">{groupLine.label}</span>
+                <span className="truncate t-sub font-bold text-primary">{groupLine.detail} ›</span>
+              </Link>
+            )}
             <SectionHead
               title="내 임장노트"
               href={notes.kind === "items" ? "/notes?mine=1" : "/notes/new"}

@@ -1,3 +1,4 @@
+import { signupTrialColumns } from "@/lib/billing/free-grant";
 import { normalizePlan, type AppPlan } from "@/lib/billing/plan";
 import type { UserRole } from "@/lib/auth/types";
 import { getServiceSupabase } from "@/lib/supabase/service";
@@ -106,7 +107,7 @@ export async function linkKakaoUser(
       password_hash: KAKAO_PASSWORD_SENTINEL,
       name: input.name ?? email.split("@")[0] ?? "카카오 회원",
       role: "user",
-      plan: "free",
+      ...signupTrialColumns(Date.now()),
       avatar_url: input.image,
       kakao_user_id: kakaoUserId,
       kakao_linked_at: now,

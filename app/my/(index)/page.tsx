@@ -46,6 +46,11 @@ import {
 import { noteCoverUrl } from "@/lib/notes/cover/resolve";
 import { buildMyActivity } from "@/lib/me/my-activity";
 import { MyHubView, type MyHubData, type MyHubNote } from "../MyHubView";
+import { MilestonePopup } from "../MilestonePopup";
+import { loadMyGroupLine } from "@/lib/groups/club-store";
+import { scheduleLine } from "@/lib/groups/club";
+import { milestoneMessage, tenureMarkRecent } from "@/lib/me/milestones";
+import { loadActivityStats } from "@/lib/me/milestone-stats";
 import { FollowedAuthorsNotes } from "../FollowedAuthorsNotes";
 
 /* 마이 허브 — 프로필·활동 요약·임장노트·관심·구독·포인트를 한 화면에.
@@ -85,6 +90,33 @@ function toHubNote(n: InspectionNote, mine: boolean): MyHubNote {
     /* [1015 · 규칙 H] 목록 썸네일 — 커버 규칙 한 곳(lib/notes/cover/resolve). 정사각 44px 자리. */
     cover: noteCoverUrl(n),
   };
+}
+
+/** [1168] 함께한 기록 팝업 — 가입 뒤 일주일 · 한 달 · 6개월 · 1년이 된 주에만. 곁다리라 실패하면 띄우지 않는다. */
+async function loadMilestone(email: string, name: string) {
+  const sb = getServiceSupabase();
+  if (!sb) return null;
+  try {
+    const { data } = await sb.from("app_users").select("created_at").eq("email", email.trim().toLowerCase()).maybeSingle();
+    const mark = tenureMarkRecent(data?.created_at ? String(data.created_at) : null, Date.now());
+    if (!mark) return null;
+    const stats = await loadActivityStats(email);
+    const m = milestoneMessage(mark.id, name, stats);
+    return {
+      markId: mark.id,
+      title: m.title,
+      href: m.href,
+      cta: m.cta,
+      cells: [
+        { label: "임장노트", value: `${stats.notes}개` },
+        { label: "AI 분석", value: `${stats.analyses}회` },
+        { label: "관심 단지", value: `${stats.watchlist}곳` },
+        { label: "모임", value: `${stats.groups}곳` },
+      ],
+    };
+  } catch {
+    return null;
+  }
 }
 
 /** 일회성 결제·포인트 교환 플랜의 만료 시각 — 구독 카드 표기용 (자동결제 구독은 null) */
@@ -234,6 +266,8 @@ export default async function MyPage() {
     expert,
     onboarding,
     planExpiresAt,
+    milestone,
+    myGroup,
   ] = await Promise.all([
     loadMeProfile(email, {
       name: session.user.name,
@@ -253,6 +287,8 @@ export default async function MyPage() {
     // 온보딩 진행은 저장된 신고값이 아니라 실데이터 서버 판정 (완주 200P 도 여기서 멱등 지급)
     getVerifiedOnboarding(email),
     loadPlanExpiresAt(email),
+    loadMilestone(email, session.user.name ?? ""),
+    loadMyGroupLine(email).catch(() => null),
   ]);
 
   /* 구독 카드에 결제 사실을 붙인다 — 자동결제면 다음 결제일·금액, 아니면 최근 결제 1건. */
@@ -313,6 +349,13 @@ export default async function MyPage() {
     : { ok: false };
 
   const data: MyHubData = {
+    groupLine: myGroup
+      ? {
+          href: myGroup.next ? `/town/groups/${myGroup.groupId}?tab=schedule` : myGroup.groupCount === 1 ? `/town/groups/${myGroup.groupId}` : "/town/groups",
+          label: `내 모임 ${myGroup.groupCount}곳`,
+          detail: myGroup.next ? scheduleLine({ ...myGroup.next, place: myGroup.next.title, maxMembers: 0, attendeeCount: 0 }).replace(/ · 0\/0명$/, "") : "모임 보기",
+        }
+      : null,
     name,
     avatarUrl: profile.avatarUrl ?? null,
     plan: profile.plan,
@@ -400,6 +443,7 @@ export default async function MyPage() {
   return (
     <>
       <ShellTitle>마이</ShellTitle>
+      {milestone && <MilestonePopup {...milestone} />}
       {/* [1122 · 마이 정리] 격자 밖에 전폭으로 붙던 세 칸(저장한 글 · 팔로우 새 노트 · 내 분석)을 2열 격자 안으로 —
           왼쪽(활동) 끝 = 저장한 글 · 팔로우 / 오른쪽(관리) = 내 분석이 "더 보기" 위. 화면이 한 덩어리로 읽힌다 */}
       <MyHubView

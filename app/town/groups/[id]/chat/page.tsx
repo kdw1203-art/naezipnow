@@ -1,4 +1,5 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 임의 px(text-[NNpx]·text-xs) → 램프 유틸(t-caption/t-sub/t-body/t-section/t-title) · 이모지 아이콘 식별자 → 선 아이콘 이름. 구조·데이터 변경 없음. */
+import { countUpcomingSchedules } from "@/lib/groups/club-store";
 import Link from "@/app/components/IntentLink";
 import { getMeeting } from "@/lib/meetings/store-db";
 import { safeAuth } from "@/lib/safe-auth";
@@ -67,6 +68,21 @@ export default async function TownGroupChatPage({
     .filter(Boolean)
     .join(" · ");
 
+  /* [1169] 채팅 위 바로가기 — 일정 수는 곁다리(못 읽으면 수 없이, 테이블이 없으면 바로가기 자체를 숨긴다) */
+  const sched = await countUpcomingSchedules(id).catch(() => ({ state: "error" as const }));
+  const shortcuts =
+    sched.state === "missing"
+      ? undefined
+      : [
+          {
+            href: `/town/groups/${id}?tab=schedule`,
+            label: "일정",
+            count: sched.state === "ok" ? sched.data : undefined,
+          },
+          { href: `/town/groups/${id}?tab=board`, label: "게시판" },
+          { href: `/town/groups/${id}?tab=poll`, label: "투표" },
+        ];
+
   if (!myEmail) {
     return (
       <ChatScreen>
@@ -112,6 +128,7 @@ export default async function TownGroupChatPage({
         title={meeting.title}
         metaLine={metaLine}
         memberCount={meeting.currentMembers}
+        shortcuts={shortcuts}
       />
     </ChatScreen>
   );

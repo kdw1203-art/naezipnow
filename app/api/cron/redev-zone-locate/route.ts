@@ -21,7 +21,7 @@ export async function GET(req: Request) {
       origin: "cron-fetch",
       rows: r.located + r.kept,
       status: r.ok ? "ok" : r.skipped ? "skipped" : "error",
-      message: r.reason ?? `구역 ${r.zones} · 새로 찍음 ${r.located} · 유지 ${r.kept} · 못 찾음 ${r.notFound} · 단지 기준 ${r.byComplex} · 위치 없음 ${r.noAddress} · 정리본과 겹침 ${r.duplicate}${r.budgetExhausted ? " · 예산 소진(다음 실행이 이어서)" : ""}`,
+      message: r.reason ?? `구역 ${r.zones} · 새로 찍음 ${r.located} · 유지 ${r.kept} · 못 찾음 ${r.notFound} · 단지 기준 ${r.byComplex} · 경계 중심 ${r.byShape} · 위치 없음 ${r.noAddress} · 정리본과 겹침 ${r.duplicate}${r.budgetExhausted ? " · 예산 소진(다음 실행이 이어서)" : ""}`,
     });
     if (r.ok) {
       revalidatePath("/redevelopment");

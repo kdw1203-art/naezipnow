@@ -253,6 +253,14 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
       },
+      /* [1170] 지도 자료(구역 경계 1.2MB · gzip 316KB) — 기본값(max-age=0)이라 지도에 올 때마다 다시 확인했다.
+         하루는 그대로 쓰고, 그 뒤 일주일은 쓰면서 뒤에서 새로 받는다(자료는 분기마다 바뀐다). */
+      {
+        source: "/data/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=604800" },
+        ],
+      },
     ];
 
     const pwaHeaders = [

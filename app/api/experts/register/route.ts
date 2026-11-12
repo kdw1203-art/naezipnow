@@ -100,14 +100,18 @@ export async function POST(req: Request) {
      첨부는 이 계정 폴더(expert-docs)에 올린 경로만 받는다(lib/experts/document-rules). */
   const form = findBusinessForm(String(body.applicantKind ?? "individual"));
   if (!form) {
-    return NextResponse.json({ error: "사업 형태(개인·개인사업자·법인)를 골라 주세요." }, { status: 400 });
+    return NextResponse.json({ error: "사업 형태(개인·개인사업자·법인·임직원)를 골라 주세요." }, { status: 400 });
   }
   const businessName = String(body.businessName ?? "").trim().slice(0, 60);
   if (form.id === "corporation" && businessName.length < 2) {
     return NextResponse.json({ error: "법인명을 입력해 주세요." }, { status: 400 });
   }
+  /* [1168] 임직원 — 사업자등록번호 대신 회사명과 명함으로 받는다. */
+  if (form.id === "employee" && businessName.length < 2) {
+    return NextResponse.json({ error: "회사명을 입력해 주세요." }, { status: 400 });
+  }
   const bizNo = String(body.businessRegNo ?? "").replace(/\s+/g, "");
-  if (form.id !== "individual" && !/^\d{3}-?\d{2}-?\d{5}$/.test(bizNo)) {
+  if (form.id !== "individual" && form.id !== "employee" && !/^\d{3}-?\d{2}-?\d{5}$/.test(bizNo)) {
     return NextResponse.json({ error: "사업자등록번호 10자리를 입력해 주세요. (예: 123-45-67890)" }, { status: 400 });
   }
   const files = parseDocFiles(body.documents, session.user.email);
@@ -138,7 +142,7 @@ export async function POST(req: Request) {
         applicantKind: form.id,
         businessName: businessName || null,
         documentFiles: files.files,
-        businessRegNo: form.id !== "individual" ? bizNo : null,
+        businessRegNo: form.id !== "individual" && form.id !== "employee" ? bizNo : null,
         payoutAccountHolder: body.payoutAccountHolder
           ? String(body.payoutAccountHolder)
           : null,

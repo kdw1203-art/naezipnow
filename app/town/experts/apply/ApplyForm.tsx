@@ -9,6 +9,7 @@ import {
   BUSINESS_FORMS,
   DOC_KINDS,
   EXPERT_TYPES,
+  CORPORATE_ONLY,
   SPECIALTIES,
   allowedBusinessForms,
   docKindLabel,
@@ -178,6 +179,8 @@ export function ApplyForm() {
   const forms = allowedBusinessForms(typeId);
   const effectiveForm: BusinessFormId = forms.includes(formId) ? formId : forms[0];
   const required = requiredDocKinds(typeId, effectiveForm);
+  const needsBizNo = effectiveForm === "sole" || effectiveForm === "corporation";
+  const isEmployee = effectiveForm === "employee";
   const districts = (DISTRICTS as Record<string, string[]>)[city] ?? [];
   const isOtherCity = city === "기타(전국)";
   const suggested = useMemo(
@@ -240,12 +243,13 @@ export function ApplyForm() {
     const cityValue = isOtherCity ? customCity.trim() : city;
     if (name.trim().length < 2) return setError("대표자명(실명)을 입력해 주세요.");
     if (effectiveForm === "corporation" && businessName.trim().length < 2) return setError("법인명을 입력해 주세요.");
-    if (effectiveForm !== "individual" && !BIZ_NO_RE.test(bizNo.replace(/\s+/g, ""))) {
+    if (isEmployee && businessName.trim().length < 2) return setError("회사명을 입력해 주세요.");
+    if (needsBizNo && !BIZ_NO_RE.test(bizNo.replace(/\s+/g, ""))) {
       return setError("사업자등록번호 10자리를 입력해 주세요. (예: 123-45-67890)");
     }
     const cert = normalizeCertInput(certNumber);
     if (cert && !isValidCertNumber(cert)) return setError(CERT_NUMBER_ERROR);
-    if (type.source && typeId !== "builder" && !cert) {
+    if (type.source && !CORPORATE_ONLY.includes(typeId) && !cert) {
       return setError(`${type.label}는 ${type.source.label} 조회를 위해 등록·자격번호가 필요해요.`);
     }
     if (!cityValue) return setError("주 활동 지역(시/도)을 골라 주세요.");
@@ -263,7 +267,7 @@ export function ApplyForm() {
           expertType: type.label,
           applicantKind: effectiveForm,
           businessName: businessName.trim() || null,
-          businessRegNo: effectiveForm !== "individual" ? bizNo.replace(/\s+/g, "") : null,
+          businessRegNo: needsBizNo ? bizNo.replace(/\s+/g, "") : null,
           name: name.trim(),
           organization: businessName.trim() || null,
           city: cityValue,
@@ -373,21 +377,21 @@ export function ApplyForm() {
       <Section title="2. 기본 정보">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           <div>
-            <Label htmlFor={ids.name}>대표자명 (실명)</Label>
+            <Label htmlFor={ids.name}>{isEmployee ? "이름 (실명)" : "대표자명 (실명)"}</Label>
             <input id={ids.name} value={name} onChange={(e) => setName(e.target.value)} maxLength={40} placeholder="홍길동" className={inputCls} />
           </div>
           <div>
-            <Label htmlFor={ids.business} hint={effectiveForm === "corporation" ? "" : "(선택)"}>{effectiveForm === "corporation" ? "법인명" : "상호 · 사무소명"}</Label>
+            <Label htmlFor={ids.business} hint={effectiveForm === "corporation" || isEmployee ? "" : "(선택)"}>{isEmployee ? "회사명" : effectiveForm === "corporation" ? "법인명" : "상호 · 사무소명"}</Label>
             <input id={ids.business} value={businessName} onChange={(e) => setBusinessName(e.target.value)} maxLength={60} placeholder={effectiveForm === "corporation" ? "예: 주식회사 내집건설" : "예: 관양세무회계"} className={inputCls} />
           </div>
-          {effectiveForm !== "individual" && (
+          {needsBizNo && (
             <div>
               <Label htmlFor={ids.bizNo}>사업자등록번호</Label>
               <input id={ids.bizNo} value={bizNo} onChange={(e) => setBizNo(e.target.value.replace(/[^0-9-]/g, ""))} maxLength={12} inputMode="numeric" placeholder="123-45-67890" className={inputCls} />
             </div>
           )}
           <div>
-            <Label htmlFor={ids.cert} hint={type.source && typeId !== "builder" ? "" : "(선택)"}>{typeId === "builder" ? "건설업 등록번호" : "등록 · 자격번호"}</Label>
+            <Label htmlFor={ids.cert} hint={type.source && !CORPORATE_ONLY.includes(typeId) ? "" : "(선택)"}>{typeId === "builder" ? "건설업 등록번호" : "등록 · 자격번호"}</Label>
             <input id={ids.cert} value={certNumber} onChange={(e) => setCertNumber(e.target.value)} maxLength={40} placeholder="예: 제2024-12345호" className={inputCls} />
           </div>
           <div>

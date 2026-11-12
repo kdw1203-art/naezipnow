@@ -1,3 +1,4 @@
+import { signupTrialColumns } from "@/lib/billing/free-grant";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { normalizePlan, type AppPlan } from "@/lib/billing/plan";
 import type { UserRole } from "@/lib/auth/types";
@@ -139,7 +140,7 @@ export async function linkTossUser(
       password_hash: TOSS_PASSWORD_SENTINEL,
       name: profile.name ?? null,
       role: "user",
-      plan: "free",
+      ...signupTrialColumns(Date.now()),
       toss_user_key: profile.userKey,
       toss_ci: profile.ci ?? null,
       toss_linked_at: now,

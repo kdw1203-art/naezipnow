@@ -10,6 +10,12 @@ import { LocationMap } from "../../LocationMap";
 import { Icon } from "@/app/components/Icon";
 import { formatKstLongDate } from "@/lib/format/kst";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
+import { CLUB_BOARDS, CLUB_TABS, clubTab, isUuid, kstParts, scheduleLine, type ClubBoardId } from "@/lib/groups/club";
+import { clubRole, loadMyComplexes, loadMyNoteTitles, loadPolls, loadPosts, loadSchedules } from "@/lib/groups/club-store";
+import type { Loaded, PollView, PostView } from "@/lib/groups/club-types";
+import { ClubSchedule } from "./ClubSchedule";
+import { ClubBoard } from "./ClubBoard";
+import { ClubPolls } from "./ClubPolls";
 /* [1012] 규칙 8 — 굵기 3단(400/500/700): 이 파일의 font-bold(800) 를 전부 font-bold(700) 로 내렸다. */
 
 /* 시안 8o(모임 상세) 고도화 — 모임 정보 카드(일정·장소·정원·참여자) + 공유 +
@@ -60,10 +66,13 @@ function formatSchedule(iso: string | null): string {
 
 export default async function TownGroupDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const { id } = await params;
+  const sp = await searchParams;
   /* 이 모임이 이 페이지의 존재 이유다. 예전에는 `.catch(() => null)` 로 조회
      실패를 삼켜서 "모임을 찾을 수 없어요"(삭제된 모임과 똑같은 화면)를 200 으로
      내보냈다. 못 읽은 것과 없는 것은 다른 사실이다 — 조회가 실패하면 던져서
@@ -121,6 +130,33 @@ export default async function TownGroupDetailPage({
   const isOrganizer = myEmail !== null && meeting.organizerEmail?.trim().toLowerCase() === myEmail;
   const fillPct = Math.min(100, Math.round((meeting.currentMembers / Math.max(1, meeting.maxMembers)) * 100));
 
+  /* [1168] 모임 일정 · 게시판 · 투표. 일정은 누구나 보고(모집에 필요), 글과 투표는 멤버만 본다.
+     테이블이 아직 없는 DB 에서는 탭을 그리지 않고 예전 화면 그대로 둔다. */
+  /* [1170] 권한 확인과 일정 읽기를 같이 보내고, 글 · 투표 · 내 노트는 그 탭(과 홈의 공지)에서만 읽는다 —
+     탭마다 5~7번 가던 왕복이 2~4번으로 준다. */
+  const wantTab = clubTab(sp.tab);
+  const none = <T,>(): Promise<Loaded<T> | null> => Promise.resolve(null);
+  const [role, schedules] = await Promise.all([
+    clubRole(id, meeting.organizerEmail, myEmail).catch(() => ({ member: isOrganizer, organizer: isOrganizer })),
+    loadSchedules(id, myEmail),
+  ]);
+  const clubOn = schedules.state !== "missing";
+  const tab = clubOn ? wantTab : "home";
+  const [posts, polls, myNotes, myComplexes] = await Promise.all([
+    clubOn && role.member && (tab === "board" || tab === "home") ? loadPosts(id, myEmail, role.organizer) : none<PostView[]>(),
+    clubOn && role.member && tab === "poll" ? loadPolls(id, myEmail) : none<PollView[]>(),
+    clubOn && role.member && tab === "board" ? loadMyNoteTitles(myEmail) : Promise.resolve([]),
+    clubOn && role.member && tab === "schedule" ? loadMyComplexes(myEmail) : Promise.resolve([]),
+  ]);
+  const nowIso = new Date().toISOString();
+  const scheduleList = schedules.state === "ok" ? schedules.data : [];
+  const upcoming = scheduleList.filter((s) => s.scheduledAt >= nowIso);
+  const notices = posts?.state === "ok" ? posts.data.filter((p) => p.board === "notice").slice(0, 2) : [];
+  const writeRaw = typeof sp.write === "string" ? sp.write : "";
+  const initialWrite = (CLUB_BOARDS.find((b) => b.id === writeRaw)?.id ?? null) as ClubBoardId | null;
+  const failed = <div className="card p-5 text-center t-body text-text-3">모임 정보 불러오기 실패 · 잠시 후 다시</div>;
+  const membersOnly = <div className="card p-5 text-center t-body text-text-3">모임 참여 후 열람 가능</div>;
+
   return (
     <ShellNarrow>
       <ShellBreadcrumb>동네이야기 › 임장 모임</ShellBreadcrumb>
@@ -128,6 +164,81 @@ export default async function TownGroupDetailPage({
       <div className="mx-auto grid max-w-[900px] grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         {/* ---------- 모임 정보 카드 ---------- */}
         <div className="flex flex-col gap-4">
+          {clubOn && (
+            <nav className="flex gap-1 overflow-x-auto rounded-2xl bg-surface p-1" aria-label="모임 메뉴">
+              {CLUB_TABS.map((t) => (
+                <Link
+                  key={t.id}
+                  href={t.id === "home" ? `/town/groups/${id}` : `/town/groups/${id}?tab=${t.id}`}
+                  aria-current={tab === t.id ? "page" : undefined}
+                  className={`flex min-h-[40px] flex-1 items-center justify-center whitespace-nowrap rounded-xl px-3 t-sub font-bold no-underline ${
+                    tab === t.id ? "bg-ink text-surface" : "text-text-2"
+                  }`}
+                >
+                  {t.label}
+                  {t.id === "schedule" && upcoming.length > 0 ? ` ${upcoming.length}` : ""}
+                </Link>
+              ))}
+              <Link
+                href={`/town/groups/${id}/chat`}
+                className="flex min-h-[40px] flex-1 items-center justify-center whitespace-nowrap rounded-xl px-3 t-sub font-bold text-text-2 no-underline"
+              >
+                채팅
+              </Link>
+            </nav>
+          )}
+          {tab === "schedule" &&
+            (schedules.state === "ok" ? (
+              <ClubSchedule
+                groupId={id}
+                schedules={scheduleList}
+                canWrite={role.member}
+                isOrganizer={role.organizer}
+                nowIso={nowIso}
+                groupTitle={meeting.title}
+                myComplexes={myComplexes}
+                initialDate={typeof sp.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : null}
+              />
+            ) : (
+              failed
+            ))}
+          {tab === "board" &&
+            (!role.member ? (
+              membersOnly
+            ) : posts?.state === "ok" ? (
+              <ClubBoard
+                groupId={id}
+                posts={posts.data}
+                canWrite={role.member}
+                isOrganizer={role.organizer}
+                myNotes={myNotes}
+                pastSchedules={scheduleList
+                  .filter((s) => s.scheduledAt < nowIso)
+                  .reverse()
+                  .slice(0, 30)
+                  .map((s) => ({ id: s.id, title: s.title }))}
+                initialWrite={initialWrite}
+                initialSchedule={isUuid(sp.schedule) ? sp.schedule : null}
+              />
+            ) : (
+              failed
+            ))}
+          {tab === "poll" &&
+            (!role.member ? (
+              membersOnly
+            ) : polls?.state === "ok" ? (
+              <ClubPolls
+                groupId={id}
+                polls={polls.data}
+                canWrite={role.member}
+                isOrganizer={role.organizer}
+                minDate={kstParts(nowIso)?.ymd ?? ""}
+              />
+            ) : (
+              failed
+            ))}
+          {tab === "home" && (
+          <>
           <div className="rise-in card flex flex-col gap-3 p-6">
             <div className="flex items-center justify-between">
               <span className={`rounded-md chip-pad t-sub font-bold ${statusStyle}`}>
@@ -197,6 +308,34 @@ export default async function TownGroupDetailPage({
               참여 확정 시 채팅방에서 멤버들과 일정·체크리스트를 나눌 수 있어요 · 연락처는 공개되지 않아요
             </p>
           </div>
+          {clubOn && (notices.length > 0 || upcoming.length > 0) && (
+            <div className="rise-in-1 card flex flex-col gap-2.5 p-5">
+              {notices.map((n) => (
+                <Link
+                  key={n.id}
+                  href={`/town/groups/${id}?tab=board`}
+                  className="flex items-center gap-2 t-sub text-text-1 no-underline"
+                >
+                  <span className="shrink-0 rounded-md bg-warning-soft chip-pad t-caption font-bold text-warning">공지</span>
+                  <span className="truncate">{n.body.split("\n")[0]}</span>
+                </Link>
+              ))}
+              {upcoming.slice(0, 3).map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/town/groups/${id}?tab=schedule`}
+                  className="flex items-center gap-2 t-sub text-text-1 no-underline"
+                >
+                  <span className="shrink-0 rounded-md bg-primary-soft chip-pad t-caption font-bold text-primary">일정</span>
+                  <span className="truncate">
+                    <span className="font-bold text-ink">{s.title}</span> · {scheduleLine(s)}
+                  </span>
+                </Link>
+              ))}
+            </div>
+          )}
+          </>
+          )}
         </div>
 
         {/* ---------- 사이드: 위치 + 공유 + CTA ---------- */}
@@ -268,6 +407,8 @@ export default async function TownGroupDetailPage({
               >
                 {isOrganizer
                   ? "모임 채팅방 관리"
+                  : role.member
+                    ? "모임 채팅방 입장"
                   : isPast
                     ? "일정 종료 · 모임 채팅 보기"
                     : isFull
@@ -277,6 +418,8 @@ export default async function TownGroupDetailPage({
               <p className="rise-in-3 text-center t-sub text-text-3">
                 {isOrganizer
                   ? "내가 만든 모임이에요"
+                  : role.member
+                    ? "참여 중인 모임"
                   : isPast
                     ? "일정이 지난 모임이에요. 후기·정리는 채팅에서"
                     : isFull

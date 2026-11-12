@@ -18,6 +18,8 @@ import { seoAlternates } from "@/lib/seo/alternates";
 import { DEFAULT_DESKTOP_ORIGIN } from "@/lib/platform-shell";
 import { formatKstDate } from "@/lib/format/kst";
 import { DEFAULT_OG_IMAGES } from "@/lib/seo/page-metadata";
+import { encodeQr } from "@/lib/qr/encode";
+import { qrSvgProps } from "@/lib/qr/svg";
 
 /* 전문가 상세 (953 개편).
    공유·색인되는 유일한 전문가 주소. 인증 전문가만 index, 심사 중은 noindex.
@@ -101,6 +103,13 @@ export default async function ExpertDetailPage({
   const showContact = e.isVerified;
   const kakaoOk = showContact && e.contactKakao && /^https:\/\//i.test(e.contactKakao.trim());
   const specialties = e.specialties.filter(Boolean);
+  /* [1168] 명함 — 인증 전문가의 이름 · 직군 · 소속 · 지역 · 분야를 한 장으로. QR 은 이 프로필 주소. */
+  const cardQr = e.isVerified
+    ? qrSvgProps(encodeQr(`${DEFAULT_DESKTOP_ORIGIN}/town/experts/${e.id}?utm_source=expert&utm_medium=card`, { ecLevel: "M" }).modules, {
+        moduleSize: 3,
+        quietZone: 2,
+      })
+    : null;
 
   /* 같은 자격·겹치는 지역의 인증 전문가 — 최대 3명 */
   const regionKeys = new Set(e.regions.map((r) => r.split(/[\s·]/)[0]).filter(Boolean));
@@ -284,6 +293,37 @@ export default async function ExpertDetailPage({
             <p className="t-caption text-text-3">이 자격의 추가 권한: {type.extraScope}</p>
           )}
         </Section>
+
+        {/* ---------- [1168] 명함 ---------- */}
+        {cardQr && (
+          <Section title="명함" delay={2}>
+            <div className="flex items-stretch justify-between gap-4 rounded-2xl border border-line bg-surface p-5">
+              <div className="flex min-w-0 flex-col justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="t-caption font-bold text-primary">{expertBadgeText(e.category)}</div>
+                  <div className="truncate t-title font-bold text-ink">{e.name}</div>
+                  {e.organization && <div className="truncate t-sub text-text-2">{e.organization}</div>}
+                </div>
+                <div className="flex flex-col gap-0.5 t-caption text-text-3">
+                  <span>{e.regions.slice(0, 3).join(" · ") || "전국"}</span>
+                  {specialties.length > 0 && <span className="truncate">{specialties.slice(0, 3).join(" · ")}</span>}
+                </div>
+              </div>
+              <svg
+                viewBox={cardQr.viewBox}
+                width={96}
+                height={96}
+                role="img"
+                aria-label={`${e.name} 프로필 QR`}
+                shapeRendering="crispEdges"
+                className="shrink-0 rounded-lg"
+              >
+                <rect width="100%" height="100%" fill="#ffffff" />
+                <path d={cardQr.path} fill="#111827" />
+              </svg>
+            </div>
+          </Section>
+        )}
 
         {/* ---------- 사무소 · 연락처 ---------- */}
         {showContact && (e.organization || e.brokerRegistrationNo || e.contactPhone || kakaoOk) && (

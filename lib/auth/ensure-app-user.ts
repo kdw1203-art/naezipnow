@@ -1,3 +1,4 @@
+import { signupTrialColumns } from "@/lib/billing/free-grant";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
 import { claimGuestPayments } from "@/lib/payments/guest-claim";
@@ -41,7 +42,8 @@ export async function ensureAppUserRow(input: {
       email,
       name,
       role: "user",
-      plan: "free",
+      /* [1167] 가입 시 프로 요금제 90일 무료(결제 없음 · 만료 스윕이 무료로 돌린다) */
+      ...signupTrialColumns(Date.now()),
       /* 비밀번호 로그인은 Supabase Auth 쪽 — app_users 해시 없이 sentinel */
       password_hash: "supabase-auth-linked",
     };

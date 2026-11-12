@@ -175,6 +175,8 @@ export function RedevelopmentMap({
   );
   /* [1161] 구역 경계 도형 — 지도 탭을 볼 때 한 번 받는다. 짝지어진 구역만 그린다 */
   const [zoneShapes, setZoneShapes] = useState<ZoneShape[] | null>(null);
+  /* [1166] 구역 경계 켜고 끄기 */
+  const [showShapes, setShowShapes] = useState(true);
   useEffect(() => {
     if (view !== "map" || zoneShapes) return;
     let alive = true;
@@ -189,7 +191,7 @@ export function RedevelopmentMap({
     };
   }, [view, zoneShapes]);
   const polygons = useMemo<MapPolygonData[]>(() => {
-    if (!zoneShapes) return [];
+    if (!zoneShapes || !showShapes) return [];
     const out: MapPolygonData[] = [];
     const used = new Set<ZoneShape>();
     for (const p of filtered) {
@@ -199,7 +201,7 @@ export function RedevelopmentMap({
       out.push({ id: `zone:${p.id}`, path: s.p, color: redevMarkerColor(p, colorMode) });
     }
     return out;
-  }, [zoneShapes, filtered, colorMode]);
+  }, [zoneShapes, filtered, colorMode, showShapes]);
   /* [1158] 범례 — 지금 보이는 구역에 실제로 있는 색만 */
   const colorLegend = useMemo(() => {
     const seen = new Map<string, { key: string; color: string; label: string }>();
@@ -435,6 +437,14 @@ export function RedevelopmentMap({
                 </button>
               ))}
             </div>
+            <button
+              type="button"
+              aria-pressed={showShapes}
+              onClick={() => setShowShapes((v) => !v)}
+              className={`press chip min-h-10 whitespace-nowrap px-3 t-sub ${showShapes ? "chip-active font-bold" : "text-text-2"}`}
+            >
+              구역 경계
+            </button>
             <button
               type="button"
               aria-pressed={cadastral}
