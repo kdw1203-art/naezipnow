@@ -3411,7 +3411,7 @@ export function MapClient({
       label: n.title,
       /* [961] 내 임장노트 = 브랜드 핀(처마+온점). 노트가 쌓일수록 지도 위에 심볼이 퍼진다 */
       brandPin: true,
-      infoHtml: `<div style="min-width:160px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(n.title)}</p><p style="font-size:11px;color:#888;margin:3px 0 0">${escapeHtml(n.visitDate ?? "내 임장 기록")}${n.avgScore ? ` · 평점 ${n.avgScore}/5` : ""}</p><a href="/notes/${encodeURIComponent(n.id)}" style="font-size:11px;color:var(--primary);font-weight:700">노트 열기 →</a></div>`,
+      infoHtml: `<div style="min-width:160px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(n.title)}</p><p style="font-size:12px;color:var(--text-3);margin:3px 0 0">${escapeHtml(n.visitDate ?? "내 임장 기록")}${n.avgScore ? ` · 평점 ${n.avgScore}/5` : ""}</p><a href="/notes/${encodeURIComponent(n.id)}" style="font-size:12px;color:var(--primary);font-weight:700">노트 열기 →</a></div>`,
     }));
   }, [showMyNotes, myNotes]);
 
@@ -3506,7 +3506,7 @@ export function MapClient({
       lng: r.lng,
       label: `${r.name} 월세 ${r.wolseShare}%`,
       pinColor: color(r.wolseShare),
-      infoHtml: `<div style="min-width:170px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(r.name)}</p><p style="font-size:12px;margin:3px 0 0;color:#333">월세 비중 <b>${r.wolseShare}%</b> · 표본 ${r.sample.toLocaleString()}건</p>${manwon(r.monthlyMedianKrw) ? `<p style=\"font-size:11px;color:#888;margin:2px 0 0\">월세 중앙값 ${manwon(r.monthlyMedianKrw)}</p>` : ""}<p style="font-size:10px;color:#aaa;margin:3px 0 0">최근 3개월 신고 · 갱신·신규 미구분</p></div>`,
+      infoHtml: `<div style="min-width:170px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(r.name)}</p><p style="font-size:12px;margin:3px 0 0;color:#333">월세 비중 <b>${r.wolseShare}%</b> · 표본 ${r.sample.toLocaleString()}건</p>${manwon(r.monthlyMedianKrw) ? `<p style=\"font-size:12px;color:var(--text-3);margin:2px 0 0\">월세 중앙값 ${manwon(r.monthlyMedianKrw)}</p>` : ""}<p style="font-size:10px;color:#aaa;margin:3px 0 0">최근 3개월 신고 · 갱신·신규 미구분</p></div>`,
     }));
   }, [showRentShare, rentShareItems]);
 
@@ -3569,7 +3569,7 @@ export function MapClient({
       lng: s.lng,
       label: s.name,
       pinColor: "#2e7d32",
-      infoHtml: `<div style="min-width:140px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(s.name)}</p><p style="font-size:11px;color:#555;margin:2px 0 0">${escapeHtml(s.category ?? "학교")}</p><p style="font-size:11px;color:#aaa;margin:2px 0 0">전국초중등학교위치 표준데이터</p></div>`,
+      infoHtml: `<div style="min-width:140px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(s.name)}</p><p style="font-size:12px;color:#555;margin:2px 0 0">${escapeHtml(s.category ?? "학교")}</p><p style="font-size:12px;color:#aaa;margin:2px 0 0">전국초중등학교위치 표준데이터</p></div>`,
     }));
   }, [showSchools, poiData]);
 
@@ -3581,7 +3581,7 @@ export function MapClient({
       lng: s.lng,
       label: s.line ? `${s.name} (${s.line})` : s.name,
       pinColor: "#00579b",
-      infoHtml: `<div style="min-width:140px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(s.name)}</p><p style="font-size:11px;color:#555;margin:2px 0 0">${escapeHtml(s.line ?? "도시철도")}</p><p style="font-size:11px;color:#aaa;margin:2px 0 0">전국도시철도역사 표준데이터</p></div>`,
+      infoHtml: `<div style="min-width:140px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(s.name)}</p><p style="font-size:12px;color:#555;margin:2px 0 0">${escapeHtml(s.line ?? "도시철도")}</p><p style="font-size:12px;color:#aaa;margin:2px 0 0">전국도시철도역사 표준데이터</p></div>`,
     }));
   }, [showStations, poiData]);
 
@@ -3603,9 +3603,9 @@ export function MapClient({
           ? `<div style="margin:5px 0 0;border-top:1px solid rgba(16,28,54,.08);padding-top:5px">${a.top
               .map(
                 (t) =>
-                  `<p style="font-size:11px;margin:2px 0 0;color:#444;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px">${
+                  `<p style="font-size:12px;margin:2px 0 0;color:var(--text-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:220px">${
                     t.endYmd ? `<b style="color:#7c3aed">${escapeHtml(t.endYmd)}</b> ` : ""
-                  }${escapeHtml(t.name)}${eok(t.minBidKrw) ? ` <span style="color:#888">${eok(t.minBidKrw)}~</span>` : ""}</p>`,
+                  }${escapeHtml(t.name)}${eok(t.minBidKrw) ? ` <span style="color:var(--text-3)">${eok(t.minBidKrw)}~</span>` : ""}</p>`,
               )
               .join("")}</div>`
           : "";
@@ -3616,7 +3616,7 @@ export function MapClient({
         lng: a.lng,
         label: `${a.name} 공매 ${a.count}건`,
         pinColor: "#7c3aed",
-        infoHtml: `<div style="min-width:190px;max-width:240px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(a.name)}</p><p style="font-size:13px;margin:3px 0 0;color:#333">공매 진행 <b>${a.count}건</b>${minBid ? ` · 최저입찰 ${minBid}~` : ""}</p>${topHtml}<p style="font-size:11px;color:#888;margin:4px 0 0">온비드(한국자산관리공사) · 구 단위 집계 · 위치는 구 중심 표시${a.top?.length ? " · 굵은 날짜는 입찰 마감일" : ""}</p><a href="/auctions?gu=${encodeURIComponent(a.name)}" style="font-size:11px;color:var(--primary);font-weight:700">물건 목록 보기 →</a></div>`,
+        infoHtml: `<div style="min-width:190px;max-width:240px"><p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(a.name)}</p><p style="font-size:13px;margin:3px 0 0;color:#333">공매 진행 <b>${a.count}건</b>${minBid ? ` · 최저입찰 ${minBid}~` : ""}</p>${topHtml}<p style="font-size:12px;color:var(--text-3);margin:4px 0 0">온비드(한국자산관리공사) · 구 단위 집계 · 위치는 구 중심 표시${a.top?.length ? " · 굵은 날짜는 입찰 마감일" : ""}</p><a href="/auctions?gu=${encodeURIComponent(a.name)}" style="font-size:12px;color:var(--primary);font-weight:700">물건 목록 보기 →</a></div>`,
       };
     });
   }, [showAuctions, auctionItems]);
@@ -3627,12 +3627,12 @@ export function MapClient({
       const ymLabel =
         s.moveInYm.length === 6 ? `${s.moveInYm.slice(0, 4)}.${s.moveInYm.slice(4)}` : s.moveInYm;
       const hh = s.households
-        ? `<p style="font-size:11px;color:#888;margin:2px 0 0">${s.households.toLocaleString()}세대</p>`
+        ? `<p style="font-size:12px;color:var(--text-3);margin:2px 0 0">${s.households.toLocaleString()}세대</p>`
         : "";
       const infoHtml = `<div style="min-width:170px;max-width:230px">
         <p style="font-size:13px;font-weight:700;color:var(--ink);margin:0">${escapeHtml(s.name)}</p>
         <p style="font-size:12px;margin:3px 0 0;color:#0d9488;font-weight:700">${escapeHtml(ymLabel)} 입주 예정</p>
-        <p style="font-size:11px;color:#888;margin:3px 0 0">${escapeHtml(s.region)} · 청약홈 공고 기준</p>
+        <p style="font-size:12px;color:var(--text-3);margin:3px 0 0">${escapeHtml(s.region)} · 청약홈 공고 기준</p>
         ${hh}
       </div>`;
       return {
@@ -3713,7 +3713,7 @@ export function MapClient({
       const chgDir = deltaDir(r.changePct);
       const chgHtml =
         r.changePct != null && chgDir
-          ? `<span style="color:${chgDir === "up" ? "var(--up)" : chgDir === "down" ? "var(--down)" : "var(--text-3)"};font-weight:700">${deltaText(r.changePct, { compact: true })}</span> <span style="font-size:11px;color:var(--text-3)">전월 대비 · 한국부동산원</span>`
+          ? `<span style="color:${chgDir === "up" ? "var(--up)" : chgDir === "down" ? "var(--down)" : "var(--text-3)"};font-weight:700">${deltaText(r.changePct, { compact: true })}</span> <span style="font-size:12px;color:var(--text-3)">전월 대비 · 한국부동산원</span>`
           : "";
       /* [지도확장 2026-08-31] 주간 시장 온도 — /analysis/temperature 에만 있던
          지표를 지역 마커에 함께. 색은 온도계 관례(높음=붉음, 낮음=푸름, 50 중립).
@@ -3727,13 +3727,13 @@ export function MapClient({
       const tempTok = t == null ? "var(--text-3)" : t >= 65 ? "var(--up)" : t >= 50 ? "var(--warning)" : "var(--down)";
       const tempHtml =
         t != null
-          ? `<p style="font-size:11px;margin:2px 0 0;color:var(--text-2)">시장 온도 <b style="color:${tempTok}">${Math.round(t)}</b><span style="color:var(--text-3)">/100${r.tempWeek ? ` · ${r.tempWeek.slice(5).replace("-", ".")}주` : ""}</span></p>`
+          ? `<p style="font-size:12px;margin:2px 0 0;color:var(--text-2)">시장 온도 <b style="color:${tempTok}">${Math.round(t)}</b><span style="color:var(--text-3)">/100${r.tempWeek ? ` · ${r.tempWeek.slice(5).replace("-", ".")}주` : ""}</span></p>`
           : "";
-      const infoHtml = `<div style="padding:10px 14px;min-width:150px;font-family:sans-serif;background:var(--surface);color:var(--ink)">
+      const infoHtml = `<div style="padding:10px 14px;min-width:150px;font-family:var(--font-sans);background:var(--surface);color:var(--ink)">
         <p style="font-weight:700;font-size:13px;margin:0;color:var(--ink)">${escapeHtml(r.name)}</p>
         <p style="font-size:12px;margin:3px 0 0;color:var(--text-2)">평균 매매 <b style="color:var(--ink)">${price}</b> ${chgHtml}</p>
         ${tempHtml}
-        <p style="font-size:11px;color:var(--text-3);margin:2px 0 0">거래 ${r.tradeCount.toLocaleString("ko-KR")}건${r.jeonseRatio != null ? ` · 전세가율 ${Math.round(r.jeonseRatio)}%` : ""}</p>
+        <p style="font-size:12px;color:var(--text-3);margin:2px 0 0">거래 ${r.tradeCount.toLocaleString("ko-KR")}건${r.jeonseRatio != null ? ` · 전세가율 ${Math.round(r.jeonseRatio)}%` : ""}</p>
         <p style="font-size:10px;color:var(--text-3);margin:2px 0 0">${r.period.slice(0, 4)}.${r.period.slice(4, 6)} · 한국부동산원 · 온도는 자체 산출</p>
       </div>`;
       /* [940] 지표 전환 — 버블 숫자를 평균가/㎡당/전세가율/온도로 바꿔 띄운다.

@@ -1394,7 +1394,7 @@ function buildPriceMarkerHtml(data: MapMarkerData): string {
   const pct = data.momPct;
   const hasPct = pct !== undefined && Number.isFinite(pct);
   const pctHtml = hasPct
-    ? `<span style="font-size:11px;font-weight:700;color:${markerPctColor(pct as number)}">${markerPctText(pct as number)}</span>`
+    ? `<span style="font-size:12px;font-weight:700;color:${markerPctColor(pct as number)}">${markerPctText(pct as number)}</span>`
     : "";
   const tier = data.tierColor;
   const selected = data.selected;
@@ -1406,7 +1406,7 @@ function buildPriceMarkerHtml(data: MapMarkerData): string {
   const priceColor = tier ? `color-mix(in srgb, ${tier} 55%, var(--ink))` : "var(--ink)";
   const bg = selected ? "var(--primary-soft)" : "var(--surface)";
   const star = data.favorite
-    ? `<span style="font-size:11px;color:var(--warning);margin-left:1px">★</span>`
+    ? `<span style="font-size:12px;color:var(--warning);margin-left:1px">★</span>`
     : "";
   const tip = selected ? "var(--primary)" : "var(--surface)";
   /*
@@ -1421,12 +1421,12 @@ function buildPriceMarkerHtml(data: MapMarkerData): string {
   const rawName = data.label?.trim() ?? "";
   const nameHtml =
     data.showName && rawName
-      ? `<span style="font-size:11px;font-weight:700;color:var(--text-2);max-width:96px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(
+      ? `<span style="font-size:12px;font-weight:700;color:var(--text-2);max-width:96px;overflow:hidden;text-overflow:ellipsis">${escapeHtml(
           rawName.length > 8 ? `${rawName.slice(0, 8)}…` : rawName,
         )}</span><span style="width:1px;height:10px;background:var(--border-strong)"></span>`
       : "";
   return `
-  <div style="display:inline-block;transform:translate(-50%,-100%);white-space:nowrap;font-family:sans-serif">
+  <div style="display:inline-block;transform:translate(-50%,-100%);white-space:nowrap;font-family:var(--font-sans)">
     <div style="display:inline-flex;align-items:center;gap:4px;background:${bg};border:${borderWidth}px solid ${borderColor};border-radius:9999px;padding:3px 9px;box-shadow:0 2px 6px rgba(0,0,0,.18)">
       ${nameHtml}<span style="font-size:12px;font-weight:700;color:${priceColor}">${price}</span>
       ${pctHtml}${star}
@@ -1531,17 +1531,17 @@ function buildInfoHtml(data: MapMarkerData): string {
         : null);
   const hasPct = data.momPct !== undefined && Number.isFinite(data.momPct);
   const trend = hasPct
-    ? `<span style="color:${markerPctColor(data.momPct as number)};font-weight:700">${deltaText(data.momPct as number)}</span> <span style="color:var(--text-3);font-size:11px">전월 대비</span>`
+    ? `<span style="color:${markerPctColor(data.momPct as number)};font-weight:700">${deltaText(data.momPct as number)}</span> <span style="color:var(--text-3);font-size:12px">전월 대비</span>`
     : "";
   const priceLine =
     price || trend
       ? `<p style="font-size:12px;color:var(--text-2);margin:0">${price ? escapeHtml(price) : ""} ${trend}</p>`
       : "";
   return `
-    <div style="padding:10px 14px;min-width:160px;font-family:sans-serif;background:var(--surface);color:var(--ink)">
+    <div style="padding:10px 14px;min-width:160px;font-family:var(--font-sans);background:var(--surface);color:var(--ink)">
       <p style="font-weight:700;font-size:13px;margin:0 0 4px">${escapeHtml(data.label)}</p>
       ${priceLine}
-      ${data.tradeCount30d !== undefined ? `<p style="font-size:11px;color:var(--text-3);margin:4px 0 0">30일 거래 ${data.tradeCount30d}건</p>` : ""}
+      ${data.tradeCount30d !== undefined ? `<p style="font-size:12px;color:var(--text-3);margin:4px 0 0">30일 거래 ${data.tradeCount30d}건</p>` : ""}
     </div>
   `;
 }
