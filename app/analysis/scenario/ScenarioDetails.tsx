@@ -41,7 +41,7 @@ export function ScenarioDetails({
     /* [1028] 숫자와 사실만, 해요체로 — "대출 비율을 낮추거나 예산을 재조정하세요" 권유는 걷고 판정(위험 범위)만 적는다. 계산·숫자는 그대로 */
     const head = baseline
       ? `${baseline.regionName} 평균 매매가 ${baseline.avgSaleLabel}(${baseline.period} 기준)와 입력한 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%)으로 계산했어요.`
-      : `예시 시세(8.4억)와 입력한 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%)으로 계산했어요. 지역을 고르면 실제 평균가로 다시 계산해요.`;
+      : `예시 시세(8.4억)와 입력한 조건(연 소득 ${incomeManwon.toLocaleString("ko-KR")}만원 · 대출 ${ltvPct}%)으로 계산했어요.`;
     const body =
       stress.label !== "위험"
         ? `금리가 1%p 올라도 월 ${scenarioWon(calc.payStress)}(소득 대비 ${(calc.dsrStress * 100).toFixed(0)}%)로 ${stress.label} 범위예요.`

@@ -294,7 +294,7 @@ export default async function Home() {
                     <EmptyState
                       icon="map"
                       title="지역 동향 없음"
-                      desc="지역 집계가 준비되면 여기에 표시돼요."
+                      desc="지역 집계 준비 중"
                       action={{ label: "지도에서 찾아보기", href: "/map" }}
                     />
                   )
@@ -363,7 +363,6 @@ export default async function Home() {
                     <EmptyState
                       icon="notebook-pen"
                       title="공개된 임장노트 없음"
-                      desc="공개로 저장한 노트가 여기에 보여요."
                       action={{ label: "첫 공개 노트 남기기", href: "/notes/new" }}
                     />
                   )

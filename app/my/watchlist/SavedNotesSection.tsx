@@ -61,7 +61,7 @@ export async function SavedNotesSection({ email }: { email: string }) {
           icon="bookmark"
           className="rise-in"
           title="저장한 노트 없음"
-          desc="공개 노트 상세의 “저장”으로 담은 노트가 여기에 모여요."
+          desc="공개 노트 상세의 저장으로 담음"
           action={{ label: "공개 노트 보기", href: "/notes" }}
         />
       ) : (

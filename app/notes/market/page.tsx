@@ -171,8 +171,7 @@ export default async function NotesMarketPage() {
       {/* 작성자 CTA + 정직 고지 */}
       <div className="rounded-lg border border-line bg-bg px-4 py-3.5">
         <p className="t-body text-text-2">
-          기준(사진 {MIN_PHOTOS}장+ · 본문 {MIN_TEXT.toLocaleString("ko-KR")}자+)을 넘긴 공개 노트는
-          자동으로 진열.{" "}
+          기준(사진 {MIN_PHOTOS}장+ · 본문 {MIN_TEXT.toLocaleString("ko-KR")}자+)을 넘긴 공개 노트 진열 ·{" "}
           <Link href="/notes/new" className="inline-block py-[5px] font-bold text-primary no-underline">
             임장노트 쓰기 ›
           </Link>

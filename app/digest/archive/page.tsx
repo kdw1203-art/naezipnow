@@ -105,8 +105,7 @@ export default async function DigestArchivePage() {
           </div>
         ) : (
           <div className="mt-6 card rounded-2xl px-5 py-8 text-center t-body text-text-3">
-            아직 아카이브에 실을 주가 없습니다. 한 주에 {MIN_ITEMS}건 이상이 쌓이면 그 주가
-            끝난 뒤 자동으로 만들어집니다.
+            아카이브 없음 · 한 주 {MIN_ITEMS}건 이상인 주만 수록
           </div>
         )}
 

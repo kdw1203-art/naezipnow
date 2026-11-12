@@ -179,11 +179,11 @@ test("NoteForm — 세 조각은 next/dynamic · 1단계에 지도·타입, 2단
   for (const name of ["NoteMapPick", "NoteUnitPick", "NoteFieldDetail"]) {
     assert.match(s, new RegExp(`const ${name} = nextDynamic\\(\\(\\) => import\\("./${name}"\\)`), `${name} 지연 조각`);
   }
-  assert.match(s, /\{step === 1 && <NoteMapPick value=\{loc\} onPick=\{setLoc\} fallbackCenter=\{carryOverCenter\} \/>\}/);
+  assert.match(s, /\{\(onePage \|\| step === 1\) && <NoteMapPick value=\{loc\} onPick=\{setLoc\} fallbackCenter=\{carryOverCenter\} \/>\}/);
   /* [1033] 단지 id 없는 위치(빌라·오피스텔)도 타입 카드 — 위치가 정해지면(renderUnitPick · 1단계와 퀵모드가 같은 것) */
   assert.match(s, /const renderUnitPick = \(\) =>\s*loc\.aptName\.trim\(\) \? \(\s*<NoteUnitPick/);
   assert.match(s, /complexId=\{loc\.complexId \?\? null\}/);
-  assert.match(s, /\{step === 2 && <NoteFieldDetail value=\{fieldDetail\} onChange=\{setFieldDetail\} \/>\}/);
+  assert.match(s, /\{\(onePage \|\| step === 2\) && <NoteFieldDetail value=\{fieldDetail\} onChange=\{setFieldDetail\} \/>\}/);
   /* [1033] 비면 null 로 보낸다 — PATCH 가 기존 metadata 위에 덮어쓰므로 "비움"이 전달돼야 한다(서버 sanitizeUnitMeta 가 키를 지운다) */
   assert.match(s, /unit: unitForSave\(unit\) \?\? null,\s*fieldDetail: fieldDetailLooseForSave\(fieldDetail\) \?\? null,\s*photoRoles: photoRolesForSave\(photoRoles, savePhotos\) \?\? null,/);
   /* 초안: 쓰기·복원·의존성 */

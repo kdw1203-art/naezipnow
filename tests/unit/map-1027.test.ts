@@ -231,7 +231,7 @@ test("map-client — 우하단 범례 열은 매물 등록 버튼(아래끝 220p
 });
 
 test("/redevelopment 지도도 같은 안내창을 쓴다(자기 사본 없음) · 펼친 패널에서 구역 상세로", () => {
-  assert.ok(redevMap.includes('import { buildRedevInfoHtml, redevDetailHref } from "@/lib/redevelopment/map-layer";'));
+  assert.match(redevMap, /import \{[^}]*buildRedevInfoHtml, redevDetailHref[^}]*\} from "@\/lib\/redevelopment\/map-layer";/);
   assert.ok(redevMap.includes("infoHtml: buildRedevInfoHtml(p),"));
   assert.ok(!redevMap.includes("function buildInfoHtml("));
   assert.ok(redevMap.includes("detailHref={redevDetailHref(selectedProject.id)}"));

@@ -217,7 +217,7 @@ export default async function WatchlistDashboardPage({
           className="rise-in"
           title="담아 둔 단지 없음"
           /* [1015 · 규칙 B] 빈 화면의 긴 권유문(사용법 두 문장) → 한 줄 */
-          desc="단지 화면의 “단지 팔로우”나 지도의 “관심 단지 담기”로 담은 단지가 여기에 모여요."
+          desc="단지 화면의 단지 팔로우 · 지도의 관심 단지 담기로 담음"
           action={{ label: "지도에서 단지 찾기", href: "/map" }}
         />
       ) : items.length === 0 ? (

@@ -210,7 +210,7 @@ export default async function InvitePage({
 
         <p className="mt-4 flex items-center justify-center gap-1 t-sub text-text-3">
           <Icon name="check" size={12} className="text-primary" />
-          가입만 완료하면 포인트가 자동으로 적립돼요
+          가입 완료 시 포인트 적립
         </p>
       </div>
 

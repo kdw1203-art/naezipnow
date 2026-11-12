@@ -300,7 +300,7 @@ export default async function NotesComparePage({
           ? /* [1097] 예외 문장(result.message)을 그대로 보이지 않는다 — 사실 낱말 한 줄 · 원문은 서버 로그에 */
             "회차 비교 불러오기 실패 · 잠시 후 다시"
           : result.kind === "need_more"
-            ? "같은 단지 노트 2회 이상부터 표·타임라인이 채워져요."
+            ? "같은 단지 노트 2회 이상 필요"
             : result.kind === "need_note" && result.candidates.length > 0
               ? `같은 단지를 2회 이상 기록한 단지 ${result.candidates.length}곳 · 누르면 회차 비교`
               : "같은 단지를 2회 이상 기록하면 회차 비교가 열린다 · 노트 상세의 ‘회차 전체 비교’에서도";

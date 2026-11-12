@@ -225,6 +225,8 @@ type NaverMapsApi = {
   }) => NaverMarker;
   InfoWindow: new (opts: { content: string }) => NaverInfoWindow;
   TrafficLayer: new () => NaverLayer;
+  /** [1161] 구역 경계 — 다각형 오버레이 */
+  Polygon?: new (opts: Record<string, unknown>) => NaverLayer;
   CadastralLayer: new () => NaverLayer;
   BicycleLayer: new () => NaverLayer;
   Circle: new (opts: {

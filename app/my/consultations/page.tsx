@@ -189,7 +189,7 @@ export default async function MyConsultationsPage() {
         {sent.length === 0 ? (
           <EmptyCard
             title="보낸 상담 없음"
-            body="전문가 프로필에서 '상담 신청'을 누르면 여기에 쌓여요. 임장노트 링크를 함께 붙이면 더 정확한 답을 받을 수 있어요."
+            body="전문가 프로필의 상담 신청으로 보냄"
             cta={{ href: "/town/experts", label: "전문가 찾아보기" }}
           />
         ) : (
@@ -282,7 +282,7 @@ export default async function MyConsultationsPage() {
 
                   {proposals.length === 0 ? (
                     <p className="rounded-xl bg-bg px-3.5 py-2.5 t-sub text-text-3">
-제안 없음 · 인증 전문가가 요청을 보고 제안을 보내면 여기에 표시되고 알림도 함께 가요.
+제안 없음
                     </p>
                   ) : (
                     <div className="flex flex-col gap-2">
@@ -438,7 +438,7 @@ export default async function MyConsultationsPage() {
             </div>
           ) : board.length === 0 ? (
             <div className="card rounded-2xl px-4 py-6 text-center t-sub text-text-3">
-열린 견적 요청 없음 · 새 요청이 올라오면 여기에 표시됩니다.
+열린 견적 요청 없음
             </div>
           ) : (
             <div className="flex flex-col gap-2.5">

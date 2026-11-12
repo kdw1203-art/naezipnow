@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { scrollIntoViewSafely } from "@/lib/ui/scroll";
 import { NaverMap } from "@/components/map/NaverMapLazy";
-import type { MapMarkerData } from "@/components/map/NaverMap";
+import type { MapMarkerData, MapPolygonData } from "@/components/map/NaverMap";
+import { ZONE_SHAPES_CREDIT, ZONE_SHAPES_URL, matchZoneShape, type ZoneShape, type ZoneShapeFile } from "@/lib/redevelopment/zone-shapes";
 import {
   STAGES,
   colorForType,
@@ -14,7 +15,7 @@ import {
   type RedevelopmentProject,
   type StageKey,
 } from "@/lib/redevelopment/types";
-import { buildRedevInfoHtml, redevDetailHref } from "@/lib/redevelopment/map-layer";
+import { REDEV_COLOR_MODES, buildRedevInfoHtml, redevDetailHref, redevLegendEntry, redevMarkerColor, type RedevColorMode } from "@/lib/redevelopment/map-layer";
 import { Icon } from "@/app/components/Icon";
 import { HScroll } from "@/app/components/HScroll";
 import { TypeFilterPanel } from "./TypeFilterPanel";
@@ -59,6 +60,8 @@ export function RedevelopmentMap({
   /* [1155] 지적도(필지 경계) — 기본으로 켠다. 구역 경계 자료가 없는 동안 필지 묶음으로 자리를 가늠한다 */
   const [cadastral, setCadastral] = useState(true);
   const nativeLayers = useMemo(() => ({ cadastral }), [cadastral]);
+  /* [1158] 색 기준 — 사업종류(기본) · 진행단계. 지도 마커 · 목록 점 · 범례가 같이 바뀐다 */
+  const [colorMode, setColorMode] = useState<RedevColorMode>("type");
 
   const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
@@ -163,13 +166,49 @@ export function RedevelopmentMap({
         label: p.name,
         /* [1148] 이름 띠(사업종류 색) + 진행단계 두 줄 이름표 */
         subLabel: stageLabel(p.stageKey) || undefined,
-        pinColor: colorForType(p.typeKey),
+        pinColor: redevMarkerColor(p, colorMode),
         /* [1027] /map 정비사업 레이어와 같은 안내창(이스케이프 · http(s) 출처만 · 구역 상세 링크) */
         infoHtml: buildRedevInfoHtml(p),
         selected: p.id === selectedId,
       })),
-    [filtered, selectedId],
+    [filtered, selectedId, colorMode],
   );
+  /* [1161] 구역 경계 도형 — 지도 탭을 볼 때 한 번 받는다. 짝지어진 구역만 그린다 */
+  const [zoneShapes, setZoneShapes] = useState<ZoneShape[] | null>(null);
+  useEffect(() => {
+    if (view !== "map" || zoneShapes) return;
+    let alive = true;
+    fetch(ZONE_SHAPES_URL)
+      .then((r) => (r.ok ? (r.json() as Promise<ZoneShapeFile>) : null))
+      .then((j) => {
+        if (alive && j && Array.isArray(j.zones)) setZoneShapes(j.zones);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [view, zoneShapes]);
+  const polygons = useMemo<MapPolygonData[]>(() => {
+    if (!zoneShapes) return [];
+    const out: MapPolygonData[] = [];
+    const used = new Set<ZoneShape>();
+    for (const p of filtered) {
+      const s = matchZoneShape(p, zoneShapes);
+      if (!s || used.has(s)) continue;
+      used.add(s);
+      out.push({ id: `zone:${p.id}`, path: s.p, color: redevMarkerColor(p, colorMode) });
+    }
+    return out;
+  }, [zoneShapes, filtered, colorMode]);
+  /* [1158] 범례 — 지금 보이는 구역에 실제로 있는 색만 */
+  const colorLegend = useMemo(() => {
+    const seen = new Map<string, { key: string; color: string; label: string }>();
+    for (const p of filtered) {
+      const e = redevLegendEntry(p, colorMode);
+      if (!seen.has(e.key)) seen.set(e.key, e);
+    }
+    return [...seen.values()];
+  }, [filtered, colorMode]);
 
   const center = selectedProject
     ? { lat: selectedProject.lat, lng: selectedProject.lng }
@@ -381,8 +420,21 @@ export function RedevelopmentMap({
       {/* ===== 지도 뷰 ===== */}
       {view === "map" ? (
         <div className="card overflow-hidden rounded-2xl p-1.5">
-          <div className="flex items-center justify-between gap-2 px-1.5 pb-1.5">
-            <span className="t-caption text-text-3">점은 대표 지번 위치 · 구역 경계 아님</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 px-1.5 pb-1.5">
+            <span className="t-caption text-text-3">{polygons.length > 0 ? ZONE_SHAPES_CREDIT : "점은 대표 지번 위치 · 구역 경계 아님"}</span>
+            <div className="flex items-center gap-1.5" role="group" aria-label="마커 색">
+              {REDEV_COLOR_MODES.map((m) => (
+                <button
+                  key={m.key}
+                  type="button"
+                  aria-pressed={colorMode === m.key}
+                  onClick={() => setColorMode(m.key)}
+                  className={`press chip min-h-10 whitespace-nowrap px-3 t-sub ${colorMode === m.key ? "chip-active font-bold" : "text-text-2"}`}
+                >
+                  색 {m.label}
+                </button>
+              ))}
+            </div>
             <button
               type="button"
               aria-pressed={cadastral}
@@ -396,6 +448,16 @@ export function RedevelopmentMap({
               색 점으로 접히고 확대하면 이름이 돌아온다(/map 과 같은 declutterMarkers). */}
           {/* [1104 · 번들] 높이는 감싸는 상자가 준다 — NaverMap 이 tailwind-merge 를 걷어, 지도에 h-[440px] 를 주면 기본 h-full 과
               둘 다 남아 CSS 순서로 갈린다(NaverMap joinClasses 주석). 지도 상자 크기는 예전과 같다(폭 100% · 440/560px). */}
+          {colorLegend.length > 0 && (
+            <ul className="m-0 flex list-none flex-wrap gap-x-3 gap-y-1 px-1.5 pb-1.5 t-caption text-text-2">
+              {colorLegend.map((e) => (
+                <li key={e.key} className="flex items-center gap-1">
+                  <span aria-hidden="true" className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: e.color }} />
+                  {e.label}
+                </li>
+              ))}
+            </ul>
+          )}
           <div className="h-[440px] md:h-[560px]">
             <NaverMap
               markers={markers}
@@ -406,6 +468,7 @@ export function RedevelopmentMap({
               className="h-full w-full"
               onMarkerClick={handleMarkerClick}
               nativeLayers={nativeLayers}
+              polygons={polygons}
             />
           </div>
         </div>
@@ -432,7 +495,7 @@ export function RedevelopmentMap({
         ) : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             {filtered.map((p) => {
-              const color = colorForType(p.typeKey);
+              const color = redevMarkerColor(p, colorMode);
               const active = selectedId === p.id;
               const households = householdsLabel(p.households);
               const loc = locationLabel({ sigungu: p.sigungu, address: p.address });
@@ -602,8 +665,7 @@ export function RedevelopmentMap({
               })}
             </ol>
             <p className="mt-2 t-caption text-text-3">
-              단계 이름을 누르면 그 단계만 걸러서 볼 수 있어요. 각 구역이 단계를 언제
-              통과했는지(인가일)는 확보한 자료에 없어 표시하지 않아요.
+              단계별 인가일 자료 없음
             </p>
           </section>
 

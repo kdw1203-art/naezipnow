@@ -41,8 +41,8 @@ test("R2 시장 온도 — 파랑 · 기록 없는 칸은 이름만 · 세는 �
 
 test("R3 빈 상태 벽 — 노트 쓰기 한 줄 · 진열대 죽은 단추 없음 · 크리에이터 사실 한 번", () => {
   const rail = read("app/notes/new/NotePreviewRail.tsx");
-  assert.match(rail, /\{total != null \? \(\s*<ScoreRadar items=\{previewRadarItems\(p\.scores\)\} \/>\s*\) : \(/);
-  assert.match(rail, /현장 체크\(2단계\)를 표시하면 5축 점수가 채워짐 ›/);
+  assert.match(rail, /\{total != null \? \(\s*<>\s*<ScoreRadar items=\{previewRadarItems\(p\.scores\)\} \/>/);
+  assert.match(rail, /현장 체크 ›/);
   assert.match(rail, /onClick=\{\(\) => p\.onGoStep\(2\)\}/);
   const m = read("app/notes/market/page.tsx");
   assert.doesNotMatch(m, /disabled\s*title="결제 기능 오픈 후/);

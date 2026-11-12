@@ -31,7 +31,7 @@ export async function MissionsSection({ email }: { email: string }) {
     <>
       <h2 className="rise-in t-section text-ink">미션</h2>
       <p className="rise-in-1 mt-1 t-body text-text-2">
-        실제 활동으로 진행도가 채워짐 · 달성 시 적립 청구
+        달성 시 적립 청구
       </p>
 
       {!board ? (

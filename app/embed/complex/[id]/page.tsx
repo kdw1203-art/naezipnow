@@ -137,7 +137,7 @@ function EmbedPrice({ view }: { view: EmbedView }) {
           {view.txFailed ? "실거래 불러오기 실패" : "신고된 매매 실거래 없음"}
         </div>
         <div className="t-caption text-text-3">
-          {view.txFailed ? "잠시 후 다시 시도해 주세요" : "신고가 들어오면 여기에 보여요"}
+          {view.txFailed ? "잠시 후 다시 시도해 주세요" : "실거래 신고 없음"}
         </div>
       </div>
     );

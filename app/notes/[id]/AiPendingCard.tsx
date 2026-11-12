@@ -99,7 +99,7 @@ export function AiPendingCard({
             <span className="t-body font-bold text-white">AI 정리 중…</span>
           </div>
           <p className="t-sub text-ai-muted">
-            노트는 저장됐어요. 정리가 끝나면 이 화면에 자동으로 반영돼요.
+            노트 저장됨 · AI 정리 중
           </p>
         </div>
       ) : (

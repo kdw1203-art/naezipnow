@@ -43,7 +43,7 @@ import {
   type MapChromeEvent,
   type MapChromeState,
 } from "@/lib/map/chrome-state";
-import { NaverMap, type MapIdleInfo, type MapMarkerData } from "@/components/map/NaverMap";
+import { NaverMap, type MapIdleInfo, type MapMarkerData, type MapPolygonData } from "@/components/map/NaverMap";
 /* [1009 · C] 호버 말풍선 등락 표기 — 사이트 공통 규칙(상승 ▲ 빨강 · 하락 ▼ 파랑 · 보합) */
 import { DELTA_CLASS, deltaDir, deltaText } from "@/lib/format/delta";
 import { stepLevel, syncCenterState, syncLevelState } from "@/lib/map/viewport-sync";
@@ -100,6 +100,7 @@ import {
   redevStageCounts,
   type RedevLabelMode,
 } from "@/lib/redevelopment/map-layer";
+import { ZONE_SHAPES_CREDIT, ZONE_SHAPES_URL, matchZoneShape, type ZoneShape, type ZoneShapeFile } from "@/lib/redevelopment/zone-shapes";
 import { Icon } from "@/app/components/Icon";
 import { TabBar } from "@/app/components/TabBar";
 import {
@@ -1145,6 +1146,8 @@ export function MapClient({
   const [redevLabelMode, setRedevLabelMode] = useState<RedevLabelMode>("both");
   /* [1157] 마커 색 기준 — 사업종류(기본) · 진행단계 */
   const [redevColorMode, setRedevColorMode] = useState<RedevColorMode>("type");
+  /* [1161] 정비구역 경계 도형 — 정비사업 레이어를 처음 켤 때 한 번 받는다(약 0.3MB · 못 받으면 점만 보인다) */
+  const [zoneShapes, setZoneShapes] = useState<ZoneShape[] | null>(null);
 
   /* ===== [1027] 바탕 지도 — 일반/위성 + 지적편집도. NaverMap 이 이미 받던 props(mapType ·
      nativeLayers.cadastral)인데 /map 만 넘기지 않았다. 지적편집도는 일반·위성 어느 쪽 위에도 얹힌다. */
@@ -2558,6 +2561,7 @@ export function MapClient({
                 </button>
               ))}
             </div>
+            {zoneShapes && <p className="m-0 t-caption text-text-3">{ZONE_SHAPES_CREDIT}</p>}
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="마커 색">
               <span className="t-caption font-bold text-text-3">색</span>
               {REDEV_COLOR_MODES.map((m) => (
@@ -3637,6 +3641,33 @@ export function MapClient({
   }, [showRedevelopment, redevShown, redevLabelMode, redevColorMode]);
 
   // 정비사업 레이어 범례 (#20) — 화면에 실제 존재하는 사업종류만 색상칩으로 노출
+  useEffect(() => {
+    if (!showRedevelopment || zoneShapes) return;
+    let alive = true;
+    fetch(ZONE_SHAPES_URL)
+      .then((r) => (r.ok ? (r.json() as Promise<ZoneShapeFile>) : null))
+      .then((j) => {
+        if (alive && j && Array.isArray(j.zones)) setZoneShapes(j.zones);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [showRedevelopment, zoneShapes]);
+  /* 지금 화면의 구역 가운데 도형이 짝지어진 것만 — 색은 마커와 같은 기준 */
+  const redevPolygons = useMemo<MapPolygonData[]>(() => {
+    if (!showRedevelopment || !zoneShapes) return [];
+    const out: MapPolygonData[] = [];
+    const used = new Set<ZoneShape>();
+    for (const p of redevShown) {
+      const s = matchZoneShape(p, zoneShapes);
+      if (!s || used.has(s)) continue;
+      used.add(s);
+      out.push({ id: `zone:${p.id}`, path: s.p, color: redevMarkerColor(p, redevColorMode) });
+    }
+    return out;
+  }, [showRedevelopment, zoneShapes, redevShown, redevColorMode]);
+
   const redevLegend = useMemo<{ color: string; label: string }[]>(() => {
     if (!showRedevelopment) return [];
     const seen = new Map<string, { color: string; label: string }>();
@@ -4457,6 +4488,7 @@ export function MapClient({
         /* [1027] 바탕 지도 — 일반/위성 · 지적편집도(패널 "지도 레이어" 절에서 고른다) */
         mapType={baseMap}
         nativeLayers={nativeMapLayers}
+        polygons={redevPolygons}
         ncpKeyId={ncpKeyId}
         onInteractionStart={handleMapInteractionStart}
         /* 모바일22 — 지도 화면에 현재 위치 버튼이 아예 없었다(매물 등록 폼에만

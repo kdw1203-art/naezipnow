@@ -238,9 +238,6 @@ export function SavedSearchClient({ initial, initialFailed = false }: { initial:
             <Icon name="search" size={20} />
           </span>
           <p className="t-body font-bold text-ink">저장한 검색 없음</p>
-          <p className="t-sub text-text-3">
-            위에서 관심 조건을 저장하면 여기에 모아 볼 수 있어요.
-          </p>
         </div>
       ) : (
         <ul className="flex flex-col gap-3">

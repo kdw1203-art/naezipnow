@@ -452,6 +452,11 @@ export function MyHubView({
 
           {/* ── 내 임장노트 — 빈 상태 그림은 여기 한 곳만. [1015 · 규칙 H·I] 썸네일 행 목록 = hanji 톤 ── */}
           <section className="flex flex-col gap-2.5">
+            {/* [1162] 다녀온 곳 · 분석 기록을 날짜 줄로 — 내 임장 이력 */}
+            <Link href="/my/history" className="card press flex min-h-12 items-center justify-between gap-3 rounded-2xl px-4 py-3 no-underline">
+              <span className="t-body font-bold text-ink">내 임장 이력</span>
+              <span className="t-sub font-bold text-primary">날짜순 보기 ›</span>
+            </Link>
             <SectionHead
               title="내 임장노트"
               href={notes.kind === "items" ? "/notes?mine=1" : "/notes/new"}
@@ -466,7 +471,6 @@ export function MyHubView({
               <EmptyState
                 icon="notebook-pen"
                 title="임장노트 없음"
-                desc="현장 기록을 남기면 여기에 모여요"
                 action={{ label: "첫 노트 쓰기", href: "/notes/new" }}
               />
             ) : (

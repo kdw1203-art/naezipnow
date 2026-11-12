@@ -245,7 +245,7 @@ function LoanCard({ loan }: { loan: LoanCalc | null }) {
   if (!loan) {
     return (
       <SigFigure title="대출 계산">
-        <p className="t-sub text-text-2">내 조건에 대출 비율과 금리를 넣고 다시 계산하면 대출액·월 상환액·이자가 여기에 나와요.</p>
+        <p className="t-sub text-text-2">내 조건에 대출 비율 · 금리 입력 필요</p>
       </SigFigure>
     );
   }

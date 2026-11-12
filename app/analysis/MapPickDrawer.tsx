@@ -355,7 +355,7 @@ export function MapPickDrawer({
                     : loading
                       ? "이 화면의 단지를 찾는 중…"
                       : view.mode === "clusters"
-                        ? "묶음을 누르면 그 자리로 확대돼요"
+                        ? "묶음 누르면 확대"
                         : view.points.length > 0
                           ? "마커를 누르거나 아래 목록에서 고르세요"
                           : "이 화면에는 실거래가 있는 단지 없음 · 지도를 옮기거나 위에서 검색"}

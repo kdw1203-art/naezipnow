@@ -88,7 +88,7 @@ export async function WishlistSection({ email }: { email: string }) {
           icon="heart"
           className="rise-in"
           title="저장한 매물 없음"
-          desc="매물의 관심(♥) 버튼으로 저장한 매물이 여기에 모여요."
+          desc="매물의 관심(♥) 단추로 담음"
           action={{ label: "매물 둘러보기", href: "/listings" }}
         />
       ) : (

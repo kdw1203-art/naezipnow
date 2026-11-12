@@ -66,8 +66,7 @@ export function MyCriteriaRank({ items }: { items: CriteriaInput[] }) {
           내 기준으로 줄 세우기
         </h2>
         <p className="mt-0.5 t-sub text-text-3">
-          위 표의 값만 써요. 기준마다 중요도를 고르면 순위를 바로 다시 매겨요 — 중요는 두 배로 치고, 안 봄은
-          계산에서 빼요.
+          위 표의 값 기준 · 중요는 두 배 · 안 봄은 제외
         </p>
       </div>
 

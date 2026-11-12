@@ -93,8 +93,8 @@ export function MyRecordsTab({
     const search = typeof window !== "undefined" ? window.location.search : "";
     return (
       <EmptyState
-        title="로그인하면 이 단지에 남긴 임장노트가 여기에 모여요"
-        desc="방문 회차·점수·판정이 단지별로 쌓이고, 관심 단지로 저장하면 새 실거래 알림도 받아요"
+        title="로그인 필요 · 이 단지 내 임장노트"
+        desc="방문 회차 · 점수 · 판정 기록 · 관심 단지 새 실거래 알림"
         action={{ label: "로그인", href: recordsLoginHref(pathname ?? "", search) }}
       />
     );
@@ -116,7 +116,6 @@ export function MyRecordsTab({
       <div className="flex flex-col gap-2.5">
         <EmptyState
           title="이 단지 임장노트 없음"
-          desc="직접 방문해 기록하면 회차별 점수·판정이 여기에 쌓여요"
           action={{ label: `${complexName} 임장노트 쓰기`, href: noteHref }}
         />
         {watching === true && (

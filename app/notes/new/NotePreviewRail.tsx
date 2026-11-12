@@ -18,7 +18,7 @@ import type { DecisionChoice } from "@/lib/inspection/decision";
 import type { NoteScores } from "@/lib/notes/note-scores";
 import type { NoteStep } from "@/lib/notes/form-steps";
 import type { Completeness } from "@/lib/notes/form-progress";
-import { noteTotalScore, previewRadarItems } from "@/lib/notes/note-preview";
+import { axisVerdicts, noteTotalScore, previewRadarItems } from "@/lib/notes/note-preview";
 import type { VisitFacts } from "@/lib/notes/finish-summary";
 import { NotePreviewCard } from "./NotePreviewCard";
 
@@ -84,6 +84,7 @@ export type NotePreviewRailProps = {
 export function NotePreviewRail(p: NotePreviewRailProps) {
   const c = p.completeness;
   const total = noteTotalScore(p.scores);
+  const verdicts = axisVerdicts(p.scores);
   const missing = c.items.filter((x) => !x.done);
   const saveLabel = p.isEdit ? "수정 완료" : p.step < 3 ? "여기까지 저장" : "기록 완료 → AI 정리 받기";
   return (
@@ -156,14 +157,33 @@ export function NotePreviewRail(p: NotePreviewRailProps) {
           {/* [1077] 현장 체크를 하나도 안 했으면 오각형에 "자료 없음" 다섯 개가 선다(운영 실측 — 빈 벽) → 사실 한 줄.
               하나라도 표시하면 예전처럼 레이더(없는 축은 "자료 없음"). */}
           {total != null ? (
-            <ScoreRadar items={previewRadarItems(p.scores)} />
+            <>
+              <ScoreRadar items={previewRadarItems(p.scores)} />
+              {/* [1159] 점수를 말로 — 강점 · 약점 · 확인 남음(축 이름만 · 없으면 그 줄을 그리지 않는다) */}
+              <dl className="m-0 mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 t-sub">
+                {(
+                  [
+                    ["강점", verdicts.strong, "text-up"],
+                    ["약점", verdicts.weak, "text-down"],
+                    ["확인 남음", verdicts.missing, "text-text-3"],
+                  ] as const
+                ).map(([k, list, tone]) =>
+                  list.length > 0 ? (
+                    <div key={k} className="contents">
+                      <dt className={`font-bold ${tone}`}>{k}</dt>
+                      <dd className="m-0 text-text-1">{list.join(" · ")}</dd>
+                    </div>
+                  ) : null,
+                )}
+              </dl>
+            </>
           ) : (
             <button
               type="button"
               onClick={() => p.onGoStep(2)}
               className="mt-2 inline-flex min-h-10 items-center text-left t-sub text-text-2 hover:text-primary"
             >
-              현장 체크(2단계)를 표시하면 5축 점수가 채워짐 ›
+              현장 체크 ›
             </button>
           )}
         </div>

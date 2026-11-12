@@ -939,6 +939,28 @@ test("[1155] 정비사업 지도는 지적도(필지 경계)와 같이 본다 �
   assert.match(r, /점은 대표 지번 위치 · 구역 경계 아님/);
 });
 
+test("[1161] 정비구역 경계 — 도형 자료 · 점이 도형 안이거나 이름이 같고 가까울 때만 짝 · 지도 두 곳에 그린다", async () => {
+  const m = await import("../../lib/redevelopment/zone-shapes.ts");
+  const file = JSON.parse(read("public/data/seoul-zone-shapes.json")) as { meta: { source: string; note: string }; zones: Array<{ n: string; k: string; c: [number, number]; a: number; p: number[] }> };
+  assert.ok(file.zones.length > 2000);
+  assert.match(file.meta.source, /서울특별시/);
+  assert.match(file.meta.note, /법적 효력 없는 참고 자료/);
+  assert.ok(file.zones.every((z) => z.k.startsWith("UQ12") && z.p.length >= 8 && z.p.length % 2 === 0));
+  const sq = { n: "가나1구역", k: "UQ1221", c: [127.0, 37.5] as [number, number], a: 100, p: [126.999, 37.499, 127.001, 37.499, 127.001, 37.501, 126.999, 37.501, 126.999, 37.499] };
+  assert.equal(m.pointInShape(127.0, 37.5, sq.p), true);
+  assert.equal(m.pointInShape(127.01, 37.5, sq.p), false);
+  assert.equal(m.matchZoneShape({ name: "가나1 재정비촉진", lat: 37.5, lng: 127.0 }, [sq]), sq);
+  assert.equal(m.matchZoneShape({ name: "가나1구역", lat: 37.505, lng: 127.004 }, [sq]), sq, "이름이 같고 1.2km 안");
+  assert.equal(m.matchZoneShape({ name: "다라2구역", lat: 37.505, lng: 127.004 }, [sq]), null, "이름도 다르고 밖이면 그리지 않는다");
+  assert.equal(m.matchZoneShape({ name: "다라2구역", lat: 37.5, lng: 127.0 }, [sq]), null, "이름이 다르면 점이 안에 있어도 그리지 않는다");
+  assert.equal(m.matchZoneShape({ name: "가나1구역", lat: 37.6, lng: 127.2 }, [sq]), null, "멀면 그리지 않는다");
+  const han = file.zones.find((z) => z.n.includes("한남3"));
+  assert.ok(han && Math.abs(han.c[0] - 127.0015) < 0.01 && Math.abs(han.c[1] - 37.53) < 0.01, "좌표 변환 — 한남3구역이 한남동에");
+  assert.match(read("app/map/map-client.tsx"), /polygons=\{redevPolygons\}/);
+  assert.match(read("app/redevelopment/RedevelopmentMap.tsx"), /polygons=\{polygons\}/);
+  assert.match(read("components/map/NaverMap.tsx"), /clickable: false/);
+});
+
 test("[1156] 정비구역 목록 내려받기(CSV) · 단지 좌표 채우기 한 번에 800곳", async () => {
   const m = await import("../../lib/redevelopment/national.ts");
   const csv = m.nationalCsv([{ sido: "서울특별시", sigungu: "강남구", name: '=대치"미도', stage: "2)정비구역지정", project_type: "3)재건축(공동주택)", operator: "1)조합", households: 3914 }], "출처기관");
@@ -960,4 +982,91 @@ test("[1157] 정비구역 마커 색 — 사업종류 · 진행단계 · 위치 
   assert.equal(new Set(Object.values(t.STAGE_COLORS)).size, t.STAGES.length, "단계마다 다른 색");
   const crons = (JSON.parse(read("vercel.json")) as { crons: { path: string; schedule: string }[] }).crons;
   assert.equal(crons.find((c) => c.path === "/api/cron/redev-zone-locate")?.schedule, "50 5,17 * * *");
+});
+
+test("[1158] 정비사업 화면 지도 — 색 기준(사업종류 · 진행단계)과 범례", () => {
+  const r = read("app/redevelopment/RedevelopmentMap.tsx");
+  assert.match(r, /pinColor: redevMarkerColor\(p, colorMode\)/);
+  assert.match(r, /redevLegendEntry\(p, colorMode\)/);
+  assert.match(r, /REDEV_COLOR_MODES\.map/);
+});
+
+test("[1159] 임장노트 쓰기 — 넓은 화면은 3단계를 한 화면에 · 레일에 강점 약점 확인 남음", async () => {
+  const f = read("app/notes/new/NoteForm.tsx");
+  assert.match(f, /const onePage = showRail;/);
+  for (const n of [1, 2, 3]) assert.match(f, new RegExp(`onePage \\|\\| step === ${n} \\? "flex flex-col gap-3" : "hidden"`));
+  assert.match(f, /id="note-sec-1"[\s\S]*id="note-sec-2"[\s\S]*id="note-sec-3"/);
+  assert.match(f, /\{onePage \? null : step < NOTE_STEPS\.length \? \(/, "한 화면에서는 이전 · 다음 단추를 그리지 않는다");
+  const m = await import("../../lib/notes/note-preview.ts");
+  const v = m.axisVerdicts({ location: 5, school: 3, transport: 1, facility: 4.2, future: 0 });
+  assert.equal(v.strong.length, 2);
+  assert.equal(v.weak.length, 1);
+  assert.equal(v.missing.length, 1);
+});
+
+test("[1160] 사용법을 풀어 쓴 문구를 걷었다 — '~하면 자동으로 ~돼요' 식 설명 대신 사실 한 줄", () => {
+  const gone: Array<[string, RegExp]> = [
+    ["app/notes/new/NotePreviewRail.tsx", /채워짐/],
+    ["app/my/points/MissionsSection.tsx", /진행도가 채워짐/],
+    ["app/notes/[id]/AiPendingCard.tsx", /자동으로 반영돼요/],
+    ["app/notes/compare/page.tsx", /채워져요/],
+    ["app/invite/[code]/page.tsx", /자동으로 적립돼요/],
+    ["app/analysis/compare/MyCriteriaRank.tsx", /바로 다시 매겨요/],
+    ["app/my/watchlist/SavedSearchClient.tsx", /모아 볼 수 있어요/],
+    ["app/redevelopment/RedevelopmentMap.tsx", /걸러서 볼 수 있어요/],
+  ];
+  for (const [f, re] of gone) assert.doesNotMatch(read(f), re, f);
+});
+
+test("[1162] 내 임장 이력 — 노트(방문일)와 분석(실행일)을 날짜 줄 하나로 · 좌표 있는 노트만 지도에", async () => {
+  const m = await import("../../lib/me/history-timeline.ts");
+  assert.equal(m.kstYmd("2026-11-11T16:30:00Z"), "2026-11-12", "한국 날짜");
+  assert.equal(m.kstYmd("x"), "");
+  const notes = [
+    { id: "n1", title: "t", aptName: "가나아파트", region: "서울 강남구", visitDate: "2026-11-11", createdAt: "2026-11-11T01:00:00Z", score: 68, decisionLabel: "다시 보기", lat: 37.5, lng: 127 },
+    { id: "n2", title: "제목만", aptName: null, region: "", visitDate: "", createdAt: "2026-10-30T20:00:00Z", score: null, decisionLabel: null },
+  ];
+  const runs = [{ id: "r1", toolTitle: "종합 진단", createdAt: "2026-11-11T05:00:00Z", headline: "72점" }];
+  const h = m.buildHistory(notes, runs);
+  assert.deepEqual(h.map((x) => x.label), ["2026년 11월", "2026년 10월"]);
+  assert.deepEqual(h[0].days[0].items.map((i) => i.key), ["note:n1", "run:r1"], "같은 날은 노트 먼저");
+  assert.equal(h[0].days[0].items[0].sub, "임장노트 · 다시 보기 · 서울 강남구");
+  assert.equal(h[0].days[0].items[0].score, 68, "[1164] 점수는 오른쪽 큰 숫자로");
+  assert.deepEqual(m.historySummary(notes, "2026-11-12"), { monthVisits: 1, avgScore: 68, places: 2 });
+  assert.deepEqual(m.historySummary([], "2026-11-12"), { monthVisits: 0, avgScore: null, places: 0 });
+  assert.equal(h[1].days[0].date, "2026-10-31", "방문일이 없으면 쓴 날(한국 날짜)");
+  assert.equal(h[1].days[0].items[0].sub, "임장노트", "없는 값은 적지 않는다");
+  assert.deepEqual(m.historyPoints(notes), [{ id: "n1", name: "가나아파트", lat: 37.5, lng: 127 }]);
+  assert.match(read("app/my/MyHubView.tsx"), /href="\/my\/history"/);
+  assert.match(read("app/my/history/page.tsx"), /robots: \{ index: false, follow: false \}/);
+  for (const [f, re] of [["app/my/watchlist/page.tsx", /여기에 모여요/], ["app/page.tsx", /여기에 (표시돼요|보여요)/], ["app/my/consultations/page.tsx", /여기에 (쌓여요|표시)/]] as const) assert.doesNotMatch(read(f), re, f);
+});
+
+test("[1163] 다녀온 단지 변동 — 방문 뒤 새 실거래 · 같은 평형끼리만 견줌 · 없는 것은 적지 않는다", async () => {
+  const m = await import("../../lib/me/visit-changes.ts");
+  const deals = [
+    { ym: "202611", day: 20, man: 126000, area: 84.9 },
+    { ym: "202611", day: 2, man: 121000, area: 59.9 },
+    { ym: "202610", day: 15, man: 120000, area: 84.5 },
+    { ym: "202611", day: 25, man: 999999, area: 84.9, cancelled: true },
+    { ym: "202611", day: null, man: 110000, area: 84.9 },
+  ];
+  const c = m.visitChange(deals, "2026-11-10");
+  assert.equal(c.newDeals, 1, "해제 · 일 모르는 같은 달 거래는 방문 뒤로 치지 않는다");
+  assert.deepEqual(c.diff, { pct: 5, beforeMan: 120000, afterMan: 126000, area: 85 });
+  assert.equal(m.changeLine(c), "방문 뒤 새 실거래 1건 · 85㎡ 12억 → 12.6억(+5%)");
+  assert.deepEqual(m.changeParts(c), { text: "방문 뒤 새 실거래 1건 · 85㎡ 12억 → 12.6억", delta: { label: "+5%", dir: "up" } });
+  assert.equal(m.changeParts(m.visitChange([], "2026-11-30")).delta, null);
+  assert.equal(m.changeLine(m.visitChange(deals, "2026-11-30")), "방문 뒤 새 실거래 없음 · 최근 12.6억(26.11.20)");
+  assert.equal(m.changeLine(m.visitChange([], "2026-11-30")), "실거래 자료 없음");
+  assert.equal(m.visitChange([{ ym: "202611", day: 20, man: 126000, area: 84 }, { ym: "202610", day: 1, man: 90000, area: 59 }], "2026-11-10").diff, null, "평형이 다르면 견주지 않는다");
+  assert.equal(m.manShort(9800), "9,800만");
+  const v = m.visitedComplexes([
+    { id: "a", complexId: "c1", name: "가", visitYmd: "2026-11-01" },
+    { id: "b", complexId: "c1", name: "가", visitYmd: "2026-11-09" },
+    { id: "c", complexId: "", name: "나", visitYmd: "2026-11-10" },
+    { id: "d", complexId: "c2", name: "다", visitYmd: "2026-10-01" },
+  ]);
+  assert.deepEqual(v.map((x) => [x.complexId, x.rounds, x.noteId, x.visitYmd]), [["c1", 2, "b", "2026-11-09"], ["c2", 1, "d", "2026-10-01"]]);
+  assert.match(read("app/my/history/page.tsx"), /<VisitedChanges visited=\{visited\} \/>/);
 });

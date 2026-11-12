@@ -114,3 +114,14 @@ export function sameComplexLink(i: {
   if (i.complexHref) return { href: i.complexHref, label: "같은 단지 다른 노트" };
   return null;
 }
+
+/** [1159] 레일의 "강점 · 약점 · 확인 남음" — 5축 점수에서 그대로 읽는다(80 이상 강점 · 40 이하 약점 · 표시 안 한 축은 확인 남음). 지어내는 말 없음 */
+export function axisVerdicts(scores: Parameters<typeof previewRadarItems>[0]): { strong: string[]; weak: string[]; missing: string[] } {
+  const out = { strong: [] as string[], weak: [] as string[], missing: [] as string[] };
+  for (const a of previewRadarItems(scores)) {
+    if (a.score == null) out.missing.push(a.label);
+    else if (a.score >= 80) out.strong.push(a.label);
+    else if (a.score <= 40) out.weak.push(a.label);
+  }
+  return out;
+}

@@ -484,8 +484,7 @@ export function NoteCardStudio({
             )}
           </div>
           <p className="t-sub text-text-3">
-            표지는 항상 첫 장이에요. 담은 장의 내용은 임장노트에서 기록한 값으로 자동으로 채워지고,
-            데이터가 없는 장은 목록에 나오지 않아요.
+            표지는 첫 장 고정 · 자료 없는 장은 목록에서 빠짐
           </p>
         </div>
       ) : (

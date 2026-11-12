@@ -950,7 +950,7 @@ export function DecideClient({ signedIn, initialWeights }: { signedIn: boolean; 
                     <div className="t-caption">{weightsLine(weights)}</div>
                   </TimelineItem>
                   <TimelineItem tone="ghost" last>
-                    <p className="t-sub">저장한 결정이 여기에 쌓여요 · 날짜 · 단지 · 결정</p>
+                    <p className="t-sub">저장한 결정 없음</p>
                   </TimelineItem>
                 </ul>
               ) : (

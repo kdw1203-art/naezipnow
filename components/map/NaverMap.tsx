@@ -143,6 +143,9 @@ export interface MapIdleInfo {
   bounds: { swLat: number; swLng: number; neLat: number; neLng: number } | null;
 }
 
+/** [1161] 지도 위 다각형(정비구역 경계) — path 는 [경도, 위도] 쌍을 이어 붙인 숫자 배열 */
+export type MapPolygonData = { id: string; path: readonly number[]; color: string };
+
 export type NaverNativeLayers = {
   traffic?: boolean;
   cadastral?: boolean;
@@ -160,6 +163,8 @@ interface NaverMapProps {
   showControls?: boolean;
   /** 공식 예제 — TrafficLayer / CadastralLayer / BicycleLayer */
   nativeLayers?: NaverNativeLayers;
+  /** [1161] 다각형 오버레이(정비구역 경계) — 누를 수 없다(누르는 것은 마커가 맡는다) */
+  polygons?: readonly MapPolygonData[];
   /** 마커가 2개 이상이면 fitBounds */
   fitToMarkers?: boolean;
   /** HTML5 Geolocation — 내 위치 버튼 */
@@ -272,6 +277,7 @@ export function NaverMap({
   onMarkerClick,
   showControls = true,
   nativeLayers,
+  polygons,
   fitToMarkers = false,
   enableGeolocation = false,
   geolocationButtonPosition = "top-right",
@@ -581,6 +587,39 @@ export function NaverMap({
     toggleLayer(cadastralLayerRef, maps.CadastralLayer, nativeLayers?.cadastral);
     toggleLayer(bicycleLayerRef, maps.BicycleLayer, nativeLayers?.bicycle);
   }, [loaded, nativeLayers?.traffic, nativeLayers?.cadastral, nativeLayers?.bicycle]);
+
+  /* [1161] 다각형 오버레이 — 목록이 바뀌면 지우고 다시 그린다(수백 개 수준 · 누를 수 없음) */
+  const polygonRefs = useRef<NaverLayer[]>([]);
+  useEffect(() => {
+    if (!loaded || !mapRef.current) return;
+    const maps = getNaverMapsWindow().naver?.maps;
+    const map = mapRef.current;
+    const quiet = (fn: () => void) => {
+      try {
+        fn();
+      } catch {
+        /* 지도가 이미 내려간 뒤의 정리 — 무시 */
+      }
+    };
+    for (const pg of polygonRefs.current) quiet(() => pg.setMap(null));
+    polygonRefs.current = [];
+    if (!maps?.Polygon || !polygons || polygons.length === 0) return;
+    for (const p of polygons) {
+      const path: unknown[] = [];
+      for (let i = 0; i + 1 < p.path.length; i += 2) path.push(new maps.LatLng(p.path[i + 1], p.path[i]));
+      if (path.length < 3) continue;
+      const Polygon = maps.Polygon;
+      quiet(() => {
+        polygonRefs.current.push(
+          new Polygon({ map, paths: [path], strokeColor: p.color, strokeOpacity: 0.9, strokeWeight: 2, fillColor: p.color, fillOpacity: 0.16, clickable: false }),
+        );
+      });
+    }
+    return () => {
+      for (const pg of polygonRefs.current) quiet(() => pg.setMap(null));
+      polygonRefs.current = [];
+    };
+  }, [loaded, polygons]);
 
   // 지도 유형 (일반/위성)
   useEffect(() => {

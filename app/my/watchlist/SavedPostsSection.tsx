@@ -77,7 +77,7 @@ export async function SavedPostsSection({ email }: { email: string }) {
           icon="bookmark"
           className="rise-in"
           title="저장한 글 없음"
-          desc="동네 글 상세의 “저장”으로 담은 글이 여기에 모여요."
+          desc="동네 글 상세의 저장으로 담음"
           action={{ label: "동네이야기 보기", href: "/town" }}
         />
       ) : (

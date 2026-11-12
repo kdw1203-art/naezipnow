@@ -127,7 +127,7 @@ export async function ReferralSection({ email }: { email: string }) {
               친구를 초대하고 둘 다 300P
             </h1>
             <p className="t-sub text-text-3">
-              아래 링크로 친구가 가입하면 친구와 나 모두 300P가 적립돼요
+              친구 가입 시 친구와 나 각 300P 적립
             </p>
           </div>
 

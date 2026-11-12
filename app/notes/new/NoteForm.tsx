@@ -963,6 +963,9 @@ export function NoteForm({
   /* [1026] 데스크톱(lg+) 레일 — 퀵모드(현장 한 화면)는 레일 없이 가운데 한 열 그대로 */
   const isDesktop = useSyncExternalStore(subscribeDesktop, readDesktop, readDesktopServer);
   const showRail = isDesktop && !quickMode;
+  /* [1159 · 한 화면] 넓은 화면(레일이 보이는 PC)에서는 3단계를 넘기지 않고 한 화면에 펼친다 — 왼쪽에 적고 오른쪽 레일에서 정리된 결과를 본다.
+     폰은 예전처럼 한 단계씩(체크 39개를 한 줄로 늘이면 끝이 안 보인다). 단계 단추는 그 칸으로 내려가는 바로 가기가 된다. */
+  const onePage = showRail;
 
   /* ── [984 · 01] 3단계 ────────────────────────────────────────────────
      예전엔 위치부터 공개 설정까지 **한 화면 3,000px** 이 이어졌다. 현장에서
@@ -1004,6 +1007,11 @@ export function NoteForm({
   });
   const goStep = (n: NoteStep) => {
     setStep(n);
+    if (onePage) {
+      const calm = typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      document.getElementById(`note-sec-${n}`)?.scrollIntoView({ behavior: calm ? "auto" : "smooth", block: "start" });
+      return;
+    }
     /* 단계를 바꾸면 그 단계의 처음을 보여 준다 — 스크롤 위치가 남아 있으면
        "아무 일도 안 일어난 것"처럼 보인다. */
     const reduce =
@@ -2538,7 +2546,9 @@ export function NoteForm({
           <div className="truncate t-caption text-text-3">
             {quickMode
               ? "현장 퀵 기록 · 위치 · 사진 · 한 줄"
-              : `${step}단계 · ${STEP_TITLE[step]} · ${step}/${NOTE_STEPS.length}`}
+              : onePage
+                ? "위치 · 체크 · 기록 한 화면"
+                : `${step}단계 · ${STEP_TITLE[step]} · ${step}/${NOTE_STEPS.length}`}
           </div>
         </div>
         {/* [967 · 10] 수정 모드도 임시저장이 도니 버튼을 같이 보인다.
@@ -2860,7 +2870,12 @@ export function NoteForm({
         {!quickMode && (
           <>
         {/* [984] 1단계 — 어디를 봤나. [1005 · B5] 퀵모드는 아래 한 화면이 대신한다 */}
-        <div className={step === 1 ? "flex flex-col gap-3" : "hidden"}>
+        {onePage && (
+          <h2 id="note-sec-1" className="m-0 scroll-mt-24 px-1 t-section text-ink">
+            1 위치와 방문
+          </h2>
+        )}
+        <div className={onePage || step === 1 ? "flex flex-col gap-3" : "hidden"}>
         {/* [995 · 3] 회차 배너 — 무엇을 이어받았고 무엇은 새로 적는지 먼저 말한다.
             말없이 채워진 칸은 도움이 아니라 불안이다(984 · 05 와 같은 원칙). */}
         {/* [1015 · 규칙 C·D] 파란 띠 → 흰 카드, 설명 문장 → 사실 나열 */}
@@ -2914,7 +2929,7 @@ export function NoteForm({
         {!isEdit && renderPhotoPickers()}
         </div>
         {/* [984] 1단계 — 어디를 봤나 */}
-        <div className={step === 1 ? "flex flex-col gap-3" : "hidden"}>
+        <div className={onePage || step === 1 ? "flex flex-col gap-3" : "hidden"}>
         {/* [984 · 05] 단지 이어받기 — 직전에 저장한 단지가 있고, 아직 이 노트의
             위치를 안 골랐을 때만. 언제 것인지 밝혀 준다("3일 전") — 모르는 값이
             저절로 채워지면 도움이 아니라 불안이다. 한 번 쓰거나 닫으면 사라진다. */}
@@ -2965,7 +2980,7 @@ export function NoteForm({
 
         {/* [1032] 지도에서 고르기 — 검색과 같은 결과(NoteLocation). 1단계에 있을 때만 마운트(지연 조각 + 지도 SDK 지연).
             [1033] 위치가 비었으면 직전에 쓴 단지 자리에서 시작(없으면 서울시청 · 위치 권한 준 기기는 내 위치) */}
-        {step === 1 && <NoteMapPick value={loc} onPick={setLoc} fallbackCenter={carryOverCenter} />}
+        {(onePage || step === 1) && <NoteMapPick value={loc} onPick={setLoc} fallbackCenter={carryOverCenter} />}
 
         {/* [1026b] 이 단지 한눈에 + 내 지난 노트 — 응답에 있는 값만, 실패하면 없음. 좌표가 비었으면 응답 좌표로(새 노트만 → 방문 인증 카드) */}
         {loc.complexId && (
@@ -3091,7 +3106,7 @@ export function NoteForm({
                         promptSignup({
                           action: "note_ai_draft",
                           title: "로그인 필요 · AI 초안",
-                          benefit: "로그인하면 실거래·시세 데이터로 초안이 채워져요. 적은 내용은 그대로 남아요.",
+                          benefit: "실거래 · 시세 자료 기반 초안 · 적은 내용 유지",
                           callbackUrl: withResume(window.location.pathname + window.location.search, "note_continue"),
                         })
                       }
@@ -3253,7 +3268,12 @@ export function NoteForm({
         </div>
 
         {/* [984] 2단계 — 무엇을 봤나 */}
-        <div className={step === 2 ? "flex flex-col gap-3" : "hidden"}>
+        {onePage && (
+          <h2 id="note-sec-2" className="m-0 scroll-mt-24 px-1 t-section text-ink">
+            2 현장 체크
+          </h2>
+        )}
+        <div className={onePage || step === 2 ? "flex flex-col gap-3" : "hidden"}>
         {/* [984] 예전 [#68] 퀵모드 배너("세부 항목 펼치기")를 걷었다 — 접힌 섹션을
             여는 통로였는데, 이제 그 섹션들이 **2단계 자체**라 열 것이 없다.
             대신 이 단계가 건너뛰어도 되는 곳이라는 사실만 한 줄로 적는다. */}
@@ -3375,7 +3395,7 @@ export function NoteForm({
             5축 점수·판단 카드가 만들어진다(lib/notes/note-scores). 열면 예전 그대로다.
             [996 · 4] 본체는 NoteDetailFields(지연 로드) — 2단계에 있을 때만 내려받고 그린다.
             마크업·open 기본 규칙은 그대로다; 상태는 전부 여기 것이라 단계를 오가도 남는다. */}
-        {step === 2 && (
+        {(onePage || step === 2) && (
           <NoteDetailFields
             checklistGroups={checklistGroups}
             groupChecked={groupChecked}
@@ -3407,16 +3427,21 @@ export function NoteForm({
           />
         )}
         {/* [1032] 세부 기록 — 측정값·선택지(도로 소음·주차·채광·도보 분·호가·들은 말). 2단계에 있을 때만(지연 조각) */}
-        {step === 2 && <NoteFieldDetail value={fieldDetail} onChange={setFieldDetail} />}
+        {(onePage || step === 2) && <NoteFieldDetail value={fieldDetail} onChange={setFieldDetail} />}
 
         </div>
 
         {/* [984] 3단계 — 무엇을 남길까 */}
-        <div className={step === 3 ? "flex flex-col gap-3" : "hidden"}>
+        {onePage && (
+          <h2 id="note-sec-3" className="m-0 scroll-mt-24 px-1 t-section text-ink">
+            3 기록 · 판단
+          </h2>
+        )}
+        <div className={onePage || step === 3 ? "flex flex-col gap-3" : "hidden"}>
         {/* [996 · 4] 판단 — 3단계 맨 위. 규칙이 제안하고 내가 고른다(DecisionStep, 지연 로드).
             #decision — 상세의 "판단 남기기 ›" 가 여기로 온다. */}
         <div id="decision" className="scroll-mt-24">
-          {step === 3 && (
+          {(onePage || step === 3) && (
             <DecisionStep
               checks={checks}
               checklistDoneCount={checklistDoneCount}
@@ -3430,7 +3455,7 @@ export function NoteForm({
           )}
         </div>
         {/* 메모 · 사진 · 공개 스위치 · 소셜 동의 — [1006] NoteFinishStep(지연 로드), 3단계에서만 */}
-        {step === 3 && (
+        {(onePage || step === 3) && (
           <NoteFinishStep
             memo={memo}
             memoMax={MEMO_MAX}
@@ -3543,7 +3568,7 @@ export function NoteForm({
         )}
         {/* AI 처리 고지 — 버튼을 누르기 전에 알린다 (몰래 보내지 않는다) */}
         {!showRail && <FieldCaptureConsentNotice />}
-        {step < NOTE_STEPS.length ? (
+        {onePage ? null : step < NOTE_STEPS.length ? (
           <div className="flex items-stretch gap-2">
             {!oneHand && (
               <button
@@ -3625,8 +3650,8 @@ export function NoteForm({
             completeness={completeness}
             checklistDone={checklistDoneCount}
             checklistTotal={checklistTotal}
-            step={step}
-            nextStepShort={step < NOTE_STEPS.length ? NOTE_STEPS[step].short : null}
+            step={onePage ? (NOTE_STEPS.length as NoteStep) : step}
+            nextStepShort={!onePage && step < NOTE_STEPS.length ? NOTE_STEPS[step].short : null}
             isEdit={isEdit}
             saving={saving}
             saveError={saveError}
