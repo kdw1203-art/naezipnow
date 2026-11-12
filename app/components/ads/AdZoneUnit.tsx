@@ -92,16 +92,17 @@ export function AdZoneUnit({
       <div className="ad-zone-label mb-1">광고</div>
       {boxVisible && (
       <ins
-        className={shape === "vertical" ? "adsbygoogle side-rail-ins" : "adsbygoogle"}
+        /* [1173] 본문 칸도 고정 크기(336×280 · 좁은 폰 300×250 — globals.css .rect-ins). 형식을 Google 에 맡기면(auto)
+           본문 폭만큼 넓은 "자세히 알아보기" 글자 목록이 들어왔다(소유자 2026-11-12). 글 끝 전용 단위(인아티클)는 예외. */
+        className={shape === "vertical" ? "adsbygoogle side-rail-ins" : inArticle ? "adsbygoogle" : "adsbygoogle rect-ins"}
         /* [1153] 세로 띠는 **고정 크기 칸**(160×600 · 넓은 화면 300×600 — globals.css .side-rail-ins)으로 요청한다.
            형식을 맡기면(auto · vertical) 좁은 칸에 "자세히 알아보기" 글자 목록형이 들어와 글이 "부동산 …" 으로 잘렸다(운영 2026-11-11).
            크기를 CSS 로 정하고 data-ad-format 을 빼면 그 크기의 광고만 온다. */
-        style={shape === "vertical" ? { display: "inline-block" } : { display: "block" }}
+        style={shape === "vertical" || !inArticle ? { display: "inline-block" } : { display: "block" }}
         data-ad-client={client ?? undefined}
         data-ad-slot={slot}
-        data-ad-format={shape === "vertical" ? undefined : inArticle ? "fluid" : "auto"}
+        data-ad-format={inArticle ? "fluid" : undefined}
         data-ad-layout={inArticle ? "in-article" : undefined}
-        data-full-width-responsive={inArticle || shape === "vertical" ? undefined : "true"}
       />
       )}
     </div>

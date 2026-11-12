@@ -77,9 +77,12 @@ const PLACEMENT_ENV: Record<AdPlacement, string> = {
    위 env 이름으로 넣는다(형식: 디스플레이 = auto, 인아티클 = fluid/in-article). */
 export const DEFAULT_ADSENSE_SLOT = "9196083291";
 
-/** 공간별 슬롯 ID — env 우선, 없으면 공용 디스플레이 단위 */
+/* [1173] 좌우 세로 띠 전용 단위 — 소유자 2026-11-12 애드센스에서 만든 "수직형" 디스플레이 단위(공개 값). */
+export const SIDEBAR_ADSENSE_SLOT = "8506807172";
+
+/** 공간별 슬롯 ID — env 우선, 없으면 좌우 띠는 수직형 단위 · 나머지는 공용 디스플레이 단위 */
 export function getSlotForPlacementOrDefault(placement: AdPlacement): string {
-  return getSlotForPlacement(placement) ?? DEFAULT_ADSENSE_SLOT;
+  return getSlotForPlacement(placement) ?? (placement === "sidebar" ? SIDEBAR_ADSENSE_SLOT : DEFAULT_ADSENSE_SLOT);
 }
 
 /** 공간별로 전용 단위가 env 에 지정됐는지 — 지정된 경우에만 인아티클 레이아웃을 쓴다 */

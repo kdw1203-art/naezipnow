@@ -8801,3 +8801,32 @@ html[data-ad-free="1"] :is(.ad-zone, .ad-strip, [data-ad-gate]) {
     width: 300px;
   }
 }
+
+
+/* [1173] 광고 칸 크기 고정 — 소유자 2026-11-12 "자세히 알아보기" 목록형이 크고 글씨가 사이트와 달랐다.
+   광고 안 글자는 Google iframe 이라 바꿀 수 없어 칸 크기만 정한다. 크기를 CSS 로 주고 data-ad-format 을 빼면 그 크기의 광고만 요청한다.
+   · 좌우 띠: 넓은 화면에서도 160×600(예전 300×600 을 덮는다) · 띠 안 가운데
+   · 본문 칸: 336×280, 폰 폭이 좁으면(380px 미만) 300×250 */
+.side-ad-rail ins.side-rail-ins,
+body .side-ad-rail ins.side-rail-ins {
+  width: 160px !important;
+  height: 600px !important;
+}
+.side-ad-rail .ad-zone-unit {
+  text-align: center;
+}
+ins.adsbygoogle.rect-ins {
+  width: 336px;
+  height: 280px;
+  max-width: 100%;
+}
+@media (max-width: 379px) {
+  ins.adsbygoogle.rect-ins {
+    width: 300px;
+    height: 250px;
+  }
+}
+.ad-zone-unit:has(ins.rect-ins),
+div:has(> ins.adsbygoogle.rect-ins) {
+  text-align: center;
+}

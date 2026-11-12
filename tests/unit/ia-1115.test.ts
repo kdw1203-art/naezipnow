@@ -785,7 +785,7 @@ test("[1148] 좌우 광고 띠 — 세로형 광고만 · 띠 안 안내 카드�
   assert.match(read("app/components/ads/SideAdRails.tsx"), /spot="side" shape="vertical" \/>[\s\S]*spot="side" shape="vertical" \/>/);
   const u = read("app/components/ads/AdZoneUnit.tsx");
   /* [1153] 세로 띠는 형식을 맡기지 않고 고정 크기 칸(160×600 · 넓은 화면 300×600)으로 요청한다 */
-  assert.match(u, /data-ad-format=\{shape === "vertical" \? undefined : inArticle \? "fluid" : "auto"\}/);
+  assert.match(u, /data-ad-format=\{inArticle \? "fluid" : undefined\}/, "[1173] 세로 띠 · 본문 칸 모두 고정 크기(형식 없음)");
   assert.match(u, /side-rail-ins/);
   assert.match(read("app/globals.css"), /\.side-ad-rail ins\.side-rail-ins \{\s*width: 160px;\s*height: 600px;/);
   const css = read("app/globals.css");
@@ -1295,4 +1295,21 @@ test("[1171] 단지 분석 4종 탭 — 고른 단지를 들고 옆 도구로 ·
   const wb = read("app/analysis/ai/[tool]/WorkbenchClient.tsx");
   assert.match(wb, /frameTabHref\(t\.id, picked\?\.id\)/);
   assert.match(read("app/town/groups/[id]/ClubSchedule.tsx"), /complexId: complexId \|\| null/);
+});
+
+test("[1173] 광고 칸 크기 고정 — 좌우 띠 160×600(수직형 단위) · 본문 336×280(좁은 폰 300×250) · 형식 맡기기 없음", async () => {
+  const p = await import("../../lib/ads/adsense-policy.ts");
+  assert.equal(p.getSlotForPlacementOrDefault("sidebar"), process.env.NEXT_PUBLIC_ADSENSE_SLOT_WEB?.trim() || "8506807172");
+  assert.equal(p.getSlotForPlacementOrDefault("page_bottom"), process.env.NEXT_PUBLIC_ADSENSE_SLOT_PAGE_BOTTOM?.trim() || p.DEFAULT_ADSENSE_SLOT);
+  const z = read("app/components/ads/AdZoneUnit.tsx");
+  assert.match(z, /"adsbygoogle rect-ins"/);
+  assert.ok(!/data-ad-format=\{[^}]*"auto"/.test(z), "본문 칸에 auto 형식 없음");
+  const u = read("app/components/ads/AdSenseUnit.tsx");
+  assert.match(u, /className="adsbygoogle rect-ins"/);
+  assert.ok(!/data-ad-format/.test(u));
+  const css = read("app/globals.css");
+  const tail = css.slice(css.lastIndexOf("[1173]"));
+  assert.match(tail, /width: 160px !important;\s*height: 600px !important;/);
+  assert.match(tail, /width: 336px;\s*height: 280px;/);
+  assert.match(tail, /max-width: 379px\)[\s\S]*width: 300px;\s*height: 250px;/);
 });

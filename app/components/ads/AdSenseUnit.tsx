@@ -91,12 +91,11 @@ export function AdSenseUnit({ className }: { className?: string }) {
       <div className="mb-1 t-caption font-semibold tracking-wide text-text-3">광고</div>
       {boxVisible && (
       <ins
-        className="adsbygoogle"
-        style={{ display: "block" }}
+        /* [1173] 고정 크기 336×280(globals.css .rect-ins) — 형식을 맡기면 넓은 글자 목록형이 들어왔다 */
+        className="adsbygoogle rect-ins"
+        style={{ display: "inline-block" }}
         data-ad-client={client ?? undefined}
         data-ad-slot={slot ?? undefined}
-        data-ad-format="auto"
-        data-full-width-responsive="false"
       />
       )}
     </div>
