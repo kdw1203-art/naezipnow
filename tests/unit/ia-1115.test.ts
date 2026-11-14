@@ -1457,3 +1457,37 @@ test("[1182] 피드 기본 · 한 줄 목록 · 지도 서랍 · 추천 기능 �
   assert.match(m, /const \[showRedevelopment, setShowRedevelopment\] = useState\(true\);/);
   assert.match(m, /"noredev"/);
 });
+
+test("[1183] 정비구역 위치 — 전국(이름 속 지번 · 같은 이름 단지) · 시군구 표기", async () => {
+  const m = await import("@/lib/redevelopment/zone-locate");
+  assert.equal(m.shortSido("충청북도"), "충북");
+  assert.equal(m.shortSido("경상남도"), "경남");
+  assert.equal(m.shortSido("경기도"), "경기");
+  assert.equal(m.shortSido("부산광역시"), "부산");
+  assert.equal(m.shortSido("전북특별자치도"), "전북");
+  assert.deepEqual(m.sigunguParts("성남중원구"), ["성남", "중원구"]);
+  assert.deepEqual(m.sigunguParts("고양일산동구"), ["고양", "일산동구"]);
+  assert.deepEqual(m.sigunguParts("군포시"), ["군포시"]);
+  assert.deepEqual(m.sigunguParts("금정구"), ["금정구"]);
+  assert.equal(m.complexRegionKey("부산광역시", "금정구"), "부산금정구");
+  assert.equal(m.complexRegionKey("경기도", "성남중원구"), "성남중원구");
+  assert.equal(m.complexRegionKey("서울특별시", "강남구"), "서울강남구");
+  assert.equal(m.mapSigungu("서울특별시", "용산구"), "용산구");
+  assert.equal(m.mapSigungu("부산광역시", "동구"), "부산 동구");
+  assert.equal(m.hitInSigungu("경기도 성남시 중원구 은행동 550", "성남중원구"), true);
+  assert.equal(m.hitInSigungu("경기도 성남시 수정구 신흥동 1", "성남중원구"), false);
+  const run = readFileSync("lib/redevelopment/zone-locate-run.ts", "utf8");
+  assert.match(run, /seoul \? pickUpisLot\(z, upis\) : null/);
+  assert.match(run, /seoul \|\| \/번지\//);
+});
+
+test("[1183] 부산 정비사업 정보 — 응답 꼴이 달라도 areaName 객체를 찾는다", async () => {
+  const m = await import("@/lib/redevelopment/busan");
+  const a = { getMaintenanceBusiness1: { header: { resultCode: "00" }, item: [{ areaName: "양정1", location: "양정동 271-2", step: "조합설립인가", generationJoo: "1,234" }], totalCount: 1 } };
+  const b = { response: { body: { items: { item: [{ areaName: "연산7", location: null }] }, totalCount: "250" } } };
+  assert.deepEqual(m.parseBusanItem(m.findBusanItems(a)[0]), { name: "양정1", location: "양정동 271-2", step: "조합설립인가", households: 1234 });
+  assert.equal(m.findBusanItems(b).length, 1);
+  assert.equal(m.findBusanTotal(b), 250);
+  assert.equal(m.findBusanItems({ error: "x" }).length, 0);
+  assert.equal(m.parseBusanItem({ areaName: " " }), null);
+});

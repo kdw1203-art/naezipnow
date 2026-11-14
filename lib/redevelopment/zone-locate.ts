@@ -85,7 +85,34 @@ export function nationalStageKey(stage: string | null | undefined): StageKey | n
 
 /** 시도 이름 → 지도 표의 짧은 이름("서울특별시" → "서울") */
 export function shortSido(sido: string): string {
+  /* [1183] 충청북도 · 충청남도처럼 앞 두 글자가 같은 도는 관용 약칭으로(충북 · 충남 · 전북 · 전남 · 경북 · 경남) */
+  const m = /^(충청|전라|경상)(북|남)도$/.exec(sido);
+  if (m) return `${m[1][0]}${m[2]}`;
   return sido.replace(/특별자치시|특별자치도|특별시|광역시|도$/g, "").slice(0, 2) || sido;
+}
+
+/** [1183] 광역시 · 특별시인가 — 구가 시 바로 아래인 곳 */
+export function isMetroSido(sido: string): boolean {
+  return /특별시$|광역시$/.test(sido);
+}
+
+/** [1183] 공표 시군구("성남중원구" · "군포시" · "금정구") → 주소에서 찾을 조각들. "성남중원구" → ["성남", "중원구"] */
+export function sigunguParts(sigungu: string): string[] {
+  const t = sigungu.replace(/\s/g, "");
+  const m = /^(.{2,3}?)(.{1,3}구)$/.exec(t);
+  if (m && !/[시군]$/.test(t) && t.length >= 5) return [m[1], m[2]];
+  return [t];
+}
+
+/** [1183] 공표 시도 · 시군구 → 단지 좌표 표(complex_geocode)의 지역 이름 열쇠(공백 없이). 광역시는 "부산금정구", 도는 "성남중원구" · "군포시" */
+export function complexRegionKey(sido: string, sigungu: string): string {
+  const g = sigungu.replace(/\s/g, "");
+  return isMetroSido(sido) ? `${shortSido(sido)}${g}` : g;
+}
+
+/** [1183] 지도 표에 적을 시군구 — 서울은 그대로("용산구"), 그 밖은 시도 약칭을 붙인다("부산 동구" · "경기 군포시"). 같은 이름 구가 여러 시에 있다 */
+export function mapSigungu(sido: string, sigungu: string): string {
+  return sido === "서울특별시" ? sigungu : `${shortSido(sido)} ${sigungu}`;
 }
 
 export const LOCATE_SOURCE = "국토교통부 전국 도시정비사업 통합 데이터 · 서울 도시계획 결정 조서";
@@ -115,5 +142,9 @@ export function locateSummaryBy(z: { stage: string | null; operator: string | nu
 
 /** 지오코더가 돌려준 주소가 그 자치구인가 — 다른 구로 찍힌 답은 버린다 */
 export function hitInSigungu(hitAddress: string | null | undefined, sigungu: string): boolean {
-  return String(hitAddress ?? "").replace(/\s/g, "").includes(sigungu.replace(/\s/g, ""));
+  const a = String(hitAddress ?? "").replace(/\s/g, "");
+  if (a.includes(sigungu.replace(/\s/g, ""))) return true;
+  /* [1183] "성남중원구" ↔ "경기도 성남시 중원구" — 시 이름과 구 이름이 둘 다 있으면 같은 곳 */
+  const parts = sigunguParts(sigungu);
+  return parts.length === 2 && a.includes(`${parts[0]}시${parts[1]}`);
 }

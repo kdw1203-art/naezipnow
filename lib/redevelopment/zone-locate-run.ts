@@ -4,13 +4,16 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { isNaverMapsRestConfigured, naverGeocode, naverReverseGeocode } from "@/lib/map/naver-maps-rest";
 import { uniqueShapeCenter, type ZoneShapeFile } from "./zone-shapes";
 import { NATIONAL_DATASET_URL } from "./national";
+import { BUSAN_REDEV_URL, findBusanItems, findBusanTotal, parseBusanItem, type BusanZone } from "./busan";
 import {
   LOCATE_SOURCE,
+  complexRegionKey,
   firstLot,
   hitInSigungu,
   locateSummary,
   locateSummaryBy,
   lotQuery,
+  mapSigungu,
   nationalStageKey,
   nationalTypeKey,
   pickComplexPoint,
@@ -44,10 +47,12 @@ export type ZoneLocateResult = {
   byComplex: number;
   /** [1166] 구역 경계 도형의 중심으로 찍은 수 */
   byShape: number;
+  /** [1183] 부산 정비사업 정보에서 읽은 구역 수(0 = 키 없음 · 활용신청 전 · 조회 실패) */
+  busanRows: number;
   budgetExhausted: boolean;
 };
 
-type ZoneRow = { id: string; sigungu: string; name: string; stage: string | null; project_type: string | null; operator: string | null; households: number | null };
+type ZoneRow = { id: string; sido: string; sigungu: string; name: string; stage: string | null; project_type: string | null; operator: string | null; households: number | null };
 type ProjRow = { id: string; name: string; sido: string; sigungu: string; lat: number; lng: number; address: string | null };
 
 export function locateId(zoneId: string): string {
@@ -61,15 +66,20 @@ async function geocodeLot(query: string, sigungu: string): Promise<{ lat: number
 }
 
 export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promise<ZoneLocateResult> {
-  const empty = { zones: 0, kept: 0, located: 0, notFound: 0, noAddress: 0, duplicate: 0, offMap: 0, byComplex: 0, byShape: 0, budgetExhausted: false };
+  const empty = { zones: 0, kept: 0, located: 0, notFound: 0, noAddress: 0, duplicate: 0, offMap: 0, byComplex: 0, byShape: 0, busanRows: 0, budgetExhausted: false };
   const sb = getServiceSupabase();
   if (!sb) return { ok: false, skipped: true, reason: "Supabase 미설정", ...empty };
   if (!isNaverMapsRestConfigured()) return { ok: false, skipped: true, reason: "지오코딩 키 미설정", ...empty };
   const deadline = Date.now() + (opts.budgetMs ?? 90_000);
 
-  const { data: zData, error: zErr } = await sb.from("redev_national_zones").select("id,sigungu,name,stage,project_type,operator,households").eq("sido", SIDO).limit(3000);
-  if (zErr) throw new Error(`redev_national_zones 조회 실패: ${zErr.message}`);
-  const zones = (zData ?? []) as ZoneRow[];
+  /* [1183] 전국 — 서울은 조서 · 경계 도형까지, 그 밖은 이름 속 지번 · 같은 이름 단지 하나로만(위치를 지어내지 않는다) */
+  const zones: ZoneRow[] = [];
+  for (let from = 0; from < 10_000; from += 1000) {
+    const { data, error } = await sb.from("redev_national_zones").select("id,sido,sigungu,name,stage,project_type,operator,households").order("id").range(from, from + 999);
+    if (error) throw new Error(`redev_national_zones 조회 실패: ${error.message}`);
+    zones.push(...((data ?? []) as ZoneRow[]));
+    if ((data ?? []).length < 1000) break;
+  }
 
   const upis: UpisPlace[] = [];
   for (let from = 0; from < 20_000; from += 1000) {
@@ -84,18 +94,27 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
   if (pErr) throw new Error(`redevelopment_projects 조회 실패: ${pErr.message}`);
   const projects = (pData ?? []) as ProjRow[];
   const byId = new Map(projects.map((p) => [p.id, p]));
-  const curated = projects.filter((p) => !p.id.startsWith(ID_PREFIX) && p.sido === shortSido(SIDO));
+  const curated = projects.filter((p) => !p.id.startsWith(ID_PREFIX));
 
   /* [1154] 단지 좌표(실거래 주소로 지오코딩해 둔 값) — 자치구별. 못 읽어도 지번 경로는 그대로 간다 */
   const complexByGu = new Map<string, ComplexPoint[]>();
-  {
-    const { data } = await sb.from("complex_geocode").select("region_name,complex_name,lat,lng").like("region_name", `${shortSido(SIDO)} %`).eq("status", "ok").limit(20_000);
-    for (const c of (data ?? []) as { region_name: string; complex_name: string; lat: number | null; lng: number | null }[]) {
+  for (let from = 0; from < 60_000; from += 1000) {
+    const { data, error } = await sb.from("complex_geocode").select("region_name,complex_name,lat,lng").eq("status", "ok").order("region_name").order("complex_name").range(from, from + 999);
+    if (error) break;
+    const rows = (data ?? []) as { region_name: string; complex_name: string; lat: number | null; lng: number | null }[];
+    for (const c of rows) {
       if (c.lat == null || c.lng == null) continue;
-      const gu = c.region_name.split(/\s+/).slice(1).join(" ");
-      complexByGu.set(gu, [...(complexByGu.get(gu) ?? []), { name: c.complex_name, lat: c.lat, lng: c.lng }]);
+      /* 열쇠 = 지역 이름에서 공백을 뺀 것("부산 금정구" → "부산금정구" · "고양 덕양구" → "고양덕양구" · "서울 강남구" → "서울강남구") */
+      const key = c.region_name.replace(/\s/g, "");
+      const list = complexByGu.get(key);
+      if (list) list.push({ name: c.complex_name, lat: c.lat, lng: c.lng });
+      else complexByGu.set(key, [{ name: c.complex_name, lat: c.lat, lng: c.lng }]);
     }
+    if (rows.length < 1000) break;
   }
+
+  /* [1183] 부산 정비사업 정보 — 구역 이름 → 대표 지번. 키가 없거나 활용신청 전이면 0건(부산은 이름 · 단지 경로만) */
+  const busan: BusanZone[] = await loadBusanZones().catch(() => []);
 
   /* [1166] 구역 경계 도형(서울시 의제처리구역 위치정보) — 서버 묶음에 싣는다. 못 읽으면 도형 경로만 쉰다 */
   let shapes: ZoneShapeFile["zones"] | null = null;
@@ -106,7 +125,7 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
   }
   const shapeTodo: { id: string; base: Record<string, unknown>; lat: number; lng: number; sigungu: string }[] = [];
 
-  const r: ZoneLocateResult = { ok: true, ...empty, zones: zones.length };
+  const r: ZoneLocateResult = { ok: true, ...empty, zones: zones.length, busanRows: busan.length };
   const now = new Date().toISOString();
   const out: Record<string, unknown>[] = [];
   const todo: { z: ZoneRow; id: string; query: string; address: string; typeKey: string; stageKey: string }[] = [];
@@ -116,27 +135,33 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
     const stageKey = nationalStageKey(z.stage);
     if (!typeKey || !stageKey) { r.offMap += 1; continue; }
     const key = zoneNameKey(z.name);
-    if (curated.some((p) => p.sigungu === z.sigungu && sameZoneKey(key, zoneNameKey(p.name)))) { r.duplicate += 1; continue; }
+    const seoul = z.sido === SIDO;
+    const guLabel = mapSigungu(z.sido, z.sigungu);
+    if (curated.some((p) => p.sido === shortSido(z.sido) && p.sigungu === guLabel && sameZoneKey(key, zoneNameKey(p.name)))) { r.duplicate += 1; continue; }
     const id = locateId(z.id);
-    const base = { id, name: z.name, type_key: typeKey, stage_key: stageKey, sido: shortSido(SIDO), sigungu: z.sigungu, households: z.households, summary: locateSummary(z), source: LOCATE_SOURCE, source_url: NATIONAL_DATASET_URL, is_sample: false, updated_at: now };
+    const base = { id, name: z.name, type_key: typeKey, stage_key: stageKey, sido: shortSido(z.sido), sigungu: guLabel, households: z.households, summary: locateSummary(z), source: LOCATE_SOURCE, source_url: NATIONAL_DATASET_URL, is_sample: false, updated_at: now };
     const have = byId.get(id);
     if (have) { out.push({ ...base, address: have.address, lat: have.lat, lng: have.lng }); r.kept += 1; continue; }
-    const lot = pickUpisLot(z, upis) ?? firstLot(z.name);
+    /* 서울 밖은 이름 속 숫자가 구역 번호인 경우가 많다("산성동2" = 2구역) — "번지"가 적혀 있거나 세 자리 이상 · 부번이 있는 지번만 믿는다 */
+    const nameLot = firstLot(z.name);
+    const nameLotOk = nameLot && (seoul || /번지/.test(z.name) || /\d{3}|-/.test(nameLot.lot)) ? nameLot : null;
+    const busanLot = z.sido === "부산광역시" ? pickBusanLot(z.name, busan) : null;
+    const lot = (seoul ? pickUpisLot(z, upis) : null) ?? busanLot ?? nameLotOk;
     if (!lot) {
-      const cx = pickComplexPoint(z.name, complexByGu.get(z.sigungu) ?? []);
+      const cx = pickComplexPoint(z.name, complexByGu.get(complexRegionKey(z.sido, z.sigungu)) ?? []);
       if (!cx) {
         /* [1166] 지번도 단지도 없으면 구역 경계 도형(이름이 꼭 같은 것 하나)의 중심 — 자치구는 아래에서 역지오코딩으로 확인 */
-        const sc = shapes ? uniqueShapeCenter(z.name, shapes) : null;
-        if (sc) { shapeTodo.push({ id, base: { ...base, summary: locateSummaryBy(z, "shape"), address: `${z.sigungu} ${z.name} 구역 중심` }, lat: sc.lat, lng: sc.lng, sigungu: z.sigungu }); continue; }
+        const sc = seoul && shapes ? uniqueShapeCenter(z.name, shapes) : null;
+        if (sc) { shapeTodo.push({ id, base: { ...base, summary: locateSummaryBy(z, "shape"), address: `${guLabel} ${z.name} 구역 중심` }, lat: sc.lat, lng: sc.lng, sigungu: z.sigungu }); continue; }
         r.noAddress += 1;
         continue;
       }
-      out.push({ ...base, summary: locateSummaryBy(z, "complex"), address: `${z.sigungu} ${cx.name}`, lat: cx.lat, lng: cx.lng });
+      out.push({ ...base, summary: locateSummaryBy(z, "complex"), address: `${guLabel} ${cx.name}`, lat: cx.lat, lng: cx.lng });
       r.byComplex += 1;
       continue;
     }
-    todo.push({ z, id, query: lotQuery(SIDO, z.sigungu, lot), address: `${z.sigungu} ${lot.dong} ${lot.lot} 일대`, typeKey, stageKey });
-    out.push({ ...base, address: `${z.sigungu} ${lot.dong} ${lot.lot} 일대`, lat: null, lng: null });
+    todo.push({ z, id, query: lotQuery(z.sido, z.sigungu, lot), address: `${guLabel} ${lot.dong} ${lot.lot} 일대`, typeKey, stageKey });
+    out.push({ ...base, address: `${guLabel} ${lot.dong} ${lot.lot} 일대`, lat: null, lng: null });
   }
 
   /* 지오코딩 — 4개씩 나란히, 예산이 다하면 멈춘다(남은 구역은 다음 실행) */
@@ -177,4 +202,37 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
     if (error) throw new Error(`redevelopment_projects 저장 실패: ${error.message}`);
   }
   return r;
+}
+
+/** [1183] 부산 정비사업 정보 전 건 — 100건씩 최대 10쪽. 실패는 빈 목록(다른 경로는 그대로 간다) */
+async function loadBusanZones(): Promise<BusanZone[]> {
+  const key = process.env.DATA_GO_KR_SERVICE_KEY?.trim();
+  if (!key) return [];
+  const out: BusanZone[] = [];
+  for (let page = 1; page <= 10; page++) {
+    const url = new URL(BUSAN_REDEV_URL);
+    url.searchParams.set("serviceKey", key);
+    url.searchParams.set("pageNo", String(page));
+    url.searchParams.set("numOfRows", "100");
+    url.searchParams.set("resultType", "json");
+    const res = await fetch(url.toString(), { headers: { Accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(15_000) });
+    if (!res.ok) break;
+    const json = (await res.json().catch(() => null)) as unknown;
+    const items = findBusanItems(json);
+    for (const it of items) {
+      const z = parseBusanItem(it);
+      if (z) out.push(z);
+    }
+    const total = findBusanTotal(json);
+    if (items.length < 100 || (total != null && out.length >= total)) break;
+  }
+  return out;
+}
+
+/** 같은 이름(꼭 같은 것 하나)의 부산 구역 지번 — 둘 이상이면 고르지 않는다. 자치구는 지오코딩 답으로 확인한다(hitInSigungu) */
+function pickBusanLot(name: string, rows: readonly BusanZone[]): { dong: string; lot: string } | null {
+  const key = zoneNameKey(name);
+  if (key.length < 2) return null;
+  const hits = rows.filter((b) => zoneNameKey(b.name) === key && firstLot(b.location));
+  return hits.length === 1 ? firstLot(hits[0].location) : null;
 }

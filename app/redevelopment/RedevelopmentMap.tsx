@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { NaverMap } from "@/components/map/NaverMapLazy";
 import type { MapMarkerData, MapPolygonData } from "@/components/map/NaverMap";
 import { ZONE_SHAPES_CREDIT, ZONE_SHAPES_URL, matchZoneShape, type ZoneShape, type ZoneShapeFile } from "@/lib/redevelopment/zone-shapes";
@@ -48,6 +48,8 @@ export function RedevelopmentMap({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [sigungu, setSigungu] = useState<string | null>(null);
   const [view, setView] = useState<ViewKey>("map");
+  /* [1183] 탭을 누른 표시는 바로, 본문(지도 · 집계) 바꿔 그리기는 뒤로 — 누름이 382ms 막히던 것(운영 INP 경고 2026-11-15) */
+  const shownView = useDeferredValue(view);
   /* 구역명 검색(2026-08-22) — 이름·주소가 전부 메모리에 있는데 40곳을 눈으로
      훑는 것 말고는 특정 구역을 찾을 길이 없었다. 공백 무시 부분일치. */
   const [q, setQ] = useState("");
@@ -428,7 +430,7 @@ export function RedevelopmentMap({
       </div>
 
       {/* ===== 지도 뷰 ===== */}
-      {view === "map" ? (
+      {shownView === "map" ? (
         <div className="card overflow-hidden rounded-2xl p-1.5">
           <div className="flex flex-wrap items-center justify-between gap-2 px-1.5 pb-1.5">
             <span className="t-caption text-text-3">{polygons.length > 0 ? ZONE_SHAPES_CREDIT : "점은 대표 지번 위치 · 구역 경계 아님"}</span>
@@ -506,7 +508,7 @@ export function RedevelopmentMap({
 
       {/* ===== 내용 뷰 — 지금 조건에 맞는 구역들의 집계 =====
            집계는 전부 화면에 올라온 행에서만 낸다. 표본 밖 값을 추정해 채우지 않는다. */}
-      {view === "content" ? (
+      {shownView === "content" ? (
         <div className="flex flex-col gap-3">
           <section className="card rounded-2xl px-5 py-4">
             <div className="flex items-baseline justify-between">

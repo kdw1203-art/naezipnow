@@ -8,7 +8,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 
-const DATASET = "서울 정비구역 지도 위치(대표 지번)";
+const DATASET = "정비구역 지도 위치(대표 지번 · 같은 이름 단지)";
 
 /** [1152] 서울 정비구역에 대표 지번 좌표를 붙여 지도에 싣는다 — 주 1회(전국 목록 적재 뒤). 보호: CRON_SECRET 또는 관리자 세션. */
 export async function GET(req: Request) {
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
       origin: "cron-fetch",
       rows: r.located + r.kept,
       status: r.ok ? "ok" : r.skipped ? "skipped" : "error",
-      message: r.reason ?? `구역 ${r.zones} · 새로 찍음 ${r.located} · 유지 ${r.kept} · 못 찾음 ${r.notFound} · 단지 기준 ${r.byComplex} · 경계 중심 ${r.byShape} · 위치 없음 ${r.noAddress} · 정리본과 겹침 ${r.duplicate}${r.budgetExhausted ? " · 예산 소진(다음 실행이 이어서)" : ""}`,
+      message: r.reason ?? `구역 ${r.zones} · 새로 찍음 ${r.located} · 유지 ${r.kept} · 못 찾음 ${r.notFound} · 단지 기준 ${r.byComplex} · 경계 중심 ${r.byShape} · 위치 없음 ${r.noAddress} · 정리본과 겹침 ${r.duplicate} · 부산 자료 ${r.busanRows}${r.budgetExhausted ? " · 예산 소진(다음 실행이 이어서)" : ""}`,
     });
     if (r.ok) {
       revalidatePath("/redevelopment");
