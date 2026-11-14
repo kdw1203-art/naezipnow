@@ -63,6 +63,9 @@ async function trySendSelfTokenEmail(email: string, baseUrl: string, next: strin
   }
 }
 
+/* [1181] SMTP 는 포트를 바꿔 한 번 더 한다(최대 16초 남짓) */
+export const maxDuration = 30;
+
 export async function POST(req: NextRequest) {
   const rl = rateLimit(`forgot-password:${getClientIp(req)}`, {
     limit: 5,

@@ -10,6 +10,7 @@ import { formatTicketNo, TICKET_REPLY_MAX } from "@/lib/support/ticket-labels";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/admin/support/[id]/reply — 문의 답변 (관리자).

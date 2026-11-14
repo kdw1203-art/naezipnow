@@ -1413,3 +1413,17 @@ test("[1180] 사진 메모(60자 · 남은 사진만) · 공개 노트 저장 �
   assert.match(read("app/notes/[id]/NotePhotoCarousel.tsx"), /captions\?\.\[photos\[idx\]\]/);
   assert.match(read("app/notes/[id]/(index)/page.tsx"), /countSavedForTarget\("note", noteId\)\.catch\(\(\) => 0\)/);
 });
+
+test("[1181] SMTP 연결 실패 → 짝 포트로 한 번 더", async () => {
+  const m = await import("@/lib/email/smtp-config");
+  const base = { host: "smtp.example.test", port: 587, secure: false, requireTLS: true, user: "a@example.test", pass: "x" };
+  assert.deepEqual(m.smtpFallbackConfig(base), { ...base, port: 465, secure: true, requireTLS: false });
+  assert.deepEqual(m.smtpFallbackConfig({ ...base, port: 465, secure: true, requireTLS: false }), { ...base, port: 587, secure: false, requireTLS: true });
+  assert.equal(m.smtpFallbackConfig({ ...base, port: 25 }).port, 465);
+  assert.equal(m.isSmtpConnectFailure({ code: "ETIMEDOUT" }), true);
+  assert.equal(m.isSmtpConnectFailure({ code: "ESOCKET", message: "wrong version number" }), true);
+  assert.equal(m.isSmtpConnectFailure({ code: "EAUTH", responseCode: 535 }), false);
+  assert.equal(m.isSmtpConnectFailure({ responseCode: 550 }), false);
+  assert.equal(m.isSmtpConnectFailure({ code: "EDNS" }), false);
+  assert.match(m.smtpBothPortsReason(587, 465, "SMTP 서버 연결 실패(ETIMEDOUT) · 호스트·포트 확인"), /포트 587·465 모두 실패$/);
+});

@@ -111,3 +111,27 @@ export function smtpFailureReason(err: unknown): string {
   if (rc && rc >= 400 && rc < 500) return `SMTP 일시 거절${tail} · 잠시 후 다시`;
   return `SMTP 오류${tail || "(원인 미상)"}`;
 }
+
+/* [1181] 연결 실패 때 한 번 더 — 표준 포트의 짝(465 ↔ 587).
+ * 운영에서 ETIMEDOUT 이 났다(2026-11-12). 포트가 막혀 있거나(서버리스는 25 를 막는다) 값이 틀려도
+ * 같은 호스트의 다른 표준 포트는 열려 있는 경우가 많다. 인증·주소 거절은 포트 문제가 아니므로 다시 하지 않는다. */
+const CONNECT_CODES = new Set(["ETIMEDOUT", "ECONNECTION", "ESOCKET", "ECONNREFUSED", "ECONNRESET", "ETLS"]);
+
+/** 포트를 바꿔 다시 해 볼 만한 실패인가 — 서버 응답 코드가 있으면(인증·주소 거절) 아니다 */
+export function isSmtpConnectFailure(err: unknown): boolean {
+  const e = (err ?? {}) as SmtpErrorLike;
+  if (typeof e.responseCode === "number") return false;
+  if (typeof e.code === "string" && CONNECT_CODES.has(e.code)) return true;
+  return /ssl|tls|wrong version number|timeout/i.test(String(e.message ?? ""));
+}
+
+/** 짝 포트 설정 — 465 면 587(STARTTLS 필수), 그 밖은 465(접속부터 TLS). 계정은 그대로 */
+export function smtpFallbackConfig(cfg: SmtpConfig): SmtpConfig {
+  if (cfg.port === 465) return { ...cfg, port: 587, secure: false, requireTLS: true };
+  return { ...cfg, port: 465, secure: true, requireTLS: false };
+}
+
+/** 두 포트 모두 실패했을 때의 사유 한 줄 */
+export function smtpBothPortsReason(first: number, second: number, lastReason: string): string {
+  return `${lastReason} · 포트 ${first}·${second} 모두 실패`;
+}

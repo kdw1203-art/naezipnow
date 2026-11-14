@@ -15,6 +15,7 @@ import { RESPONSE_TIME } from "@/lib/support/constants";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/support — 1:1 문의 접수.

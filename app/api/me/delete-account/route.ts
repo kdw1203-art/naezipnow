@@ -12,6 +12,7 @@ import { DELETE_CONFIRM_WORD, DELETE_GRACE_DAYS as GRACE_DAYS } from "@/lib/acco
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 30;
 
 /**
  * POST /api/me/delete-account — 회원탈퇴 요청(서비스 내 기능).
