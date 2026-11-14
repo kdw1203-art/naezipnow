@@ -1,3 +1,4 @@
+import { firstErrorOf } from "@/lib/market/ingest-outcome";
 import "server-only";
 
 import { getServiceSupabase } from "@/lib/supabase/service";
@@ -42,6 +43,8 @@ export type IngestLogSummaryRow = {
   skipped: number;
   error: number;
   lastMessage: string | null;
+  /** [1177] 가장 최근 오류 행의 "첫오류=" 사유(없으면 그 행 메시지 앞부분) — 숫자("오류 2")만 보고는 원인을 알 수 없었다 */
+  lastError?: string | null;
 };
 
 export async function loadIngestLogSummary24h(): Promise<IngestLogSummaryRow[] | null> {
@@ -66,7 +69,12 @@ export async function loadIngestLogSummary24h(): Promise<IngestLogSummaryRow[] |
       const status = String(r.status ?? "");
       if (status === "ok") row.ok += 1;
       else if (status === "skipped") row.skipped += 1;
-      else if (status === "error") row.error += 1;
+      else if (status === "error") {
+        row.error += 1;
+        if (row.lastError == null) {
+          row.lastError = (firstErrorOf(r.message ? String(r.message) : null) ?? String(r.message ?? "")).slice(0, 200) || null;
+        }
+      }
       if (row.lastMessage === null && r.message) row.lastMessage = String(r.message).slice(0, 120);
       map.set(source, row);
     }

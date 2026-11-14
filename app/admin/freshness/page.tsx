@@ -1,3 +1,4 @@
+import { failureReasonLabel } from "@/lib/market/ingest-outcome";
 import { formatKstDateTime } from "@/lib/format/kst";
 import { loadSourceFreshness } from "@/lib/admin/source-freshness";
 import { loadNewsRegionLinkage } from "@/lib/admin/news-region-link";
@@ -139,15 +140,18 @@ export default async function AdminFreshnessPage() {
             <div className="text-[13px] font-bold text-ink">최근 24시간 수집 로그</div>
             <div className="mt-2 flex flex-col gap-1">
               {ingestLog.slice(0, 8).map((r) => (
-                <div key={r.source} className="flex items-center gap-2 text-[12px]">
+                <div key={r.source} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[12px]">
                   <span className="w-24 shrink-0 font-bold text-ink">{r.source}</span>
                   <span className="text-success">ok {r.ok}</span>
                   <span className="text-text-3">skip {r.skipped}</span>
                   <span className={r.error > 0 ? "font-bold text-danger" : "text-text-3"}>
                     err {r.error}
                   </span>
-                  {r.error > 0 && r.lastMessage && (
-                    <span className="min-w-0 truncate text-[10px] text-text-3">{r.lastMessage}</span>
+                  {/* [1177] 오류 사유를 끝까지 — 예전엔 메시지 앞 120자를 한 줄로 잘라 "첫오류=" 뒤(진짜 원인)가 안 보였다 */}
+                  {r.error > 0 && (r.lastError || r.lastMessage) && (
+                    <span className="w-full pl-[104px] text-[12px] leading-[1.5] text-danger [overflow-wrap:anywhere]">
+                      {failureReasonLabel(r.lastError) ?? r.lastError ?? r.lastMessage}
+                    </span>
                   )}
                 </div>
               ))}

@@ -36,6 +36,8 @@ type SourceDef = {
   column: string;
   /** [945] 같은 표에 성격이 다른 행이 섞일 때(자동/수동 글 등) 최신 시각을 가르는 필터 */
   filter?: { column: string; value: boolean | string | number };
+  /** [1177] 조건이 둘 이상일 때(적재 기록에서 "이 출처 · 성공"만) */
+  filters?: { column: string; value: boolean | string | number }[];
   thresholdHours: number;
 };
 
@@ -60,9 +62,16 @@ const SOURCES: SourceDef[] = [
     key: "supply",
     label: "입주 예정 물량",
     pipeline: "etl.yml → /api/cron/supply-ingest (매일, 청약홈 분양공고)",
-    table: "apartment_supply",
+    /* [1177] apartment_supply.created_at 은 1,036행 전부 비어 있다(운영 2026-11-14 · 적재가 그 칸을 채우지 않는다).
+       그래서 "마지막 확인 불가"가 매일 울렸는데 적재는 매일 성공하고 있었다(적재 기록 11-13 ok).
+       마지막 성공 적재 시각을 적재 기록에서 읽는다. */
+    table: "market_ingest_log",
     column: "created_at",
-    thresholdHours: 24 * 14, // 신규 분양공고는 주 단위로 나온다 — 2주 무소식이면 이상
+    filters: [
+      { column: "source", value: "applyhome" },
+      { column: "status", value: "ok" },
+    ],
+    thresholdHours: 48, // 매일 도는 적재 — 이틀 넘게 성공 기록이 없으면 이상
   },
   {
     key: "applyhome",
@@ -82,17 +91,15 @@ const SOURCES: SourceDef[] = [
   },
   {
     key: "market_index",
-    label: "시세 지수 (REB/KB)",
-    pipeline: "etl.yml → reb-ingest·kb-ingest (매일)",
-    table: "market_price_indices",
-    /* [A006 2026-08-31] created_at → updated_at. 이 표에는 created_at 이 없어서
-       조회가 매번 실패했고, 경보는 "마지막 확인 불가"로 7번 울리면서 정작
-       진짜 나이(마지막 갱신 07-18)는 아무도 몰랐다. 고치고 나면 이 경보는
-       "6주 지남"으로 정직하게 울린다 — 그게 맞다. 월간 지수 적재가 실제로
-       멈춰 있고, 홈은 그동안 5월 값을 시점 표기 없이 띄우고 있었다
-       (loadSaleIndexSeoul 에 기준월 표기를 같이 넣었다). */
+    label: "시세 지수 (부동산원)",
+    pipeline: "etl.yml → reb-ingest (매일)",
+    /* [1177] market_price_indices(서울 광역 지수 전용)는 0행이다(운영 2026-11-14 · 적재 기록 seoulIdx=0).
+       화면이 실제로 읽는 것은 구 단위 시계열(market_region_series)이고 그쪽은 매일 갱신된다.
+       빈 표를 보고 울리던 경보를, 화면이 쓰는 표의 마지막 갱신으로 바꾼다. */
+    table: "market_region_series",
     column: "updated_at",
-    thresholdHours: 24 * 10, // 주간 지수 — 열흘 넘게 새 행이 없으면 이상
+    filter: { column: "source", value: "reb" },
+    thresholdHours: 72, // 매일 도는 적재 — 사흘 넘게 갱신이 없으면 이상
   },
   {
     key: "molit_tx",
@@ -136,7 +143,9 @@ export async function loadSourceFreshness(): Promise<SourceFreshnessRow[]> {
             .select(s.column)
             .order(s.column, { ascending: false })
             .limit(1);
-          if (s.filter) q = q.eq(s.filter.column, s.filter.value);
+          for (const f of [...(s.filter ? [s.filter] : []), ...(s.filters ?? [])]) q = q.eq(f.column, f.value);
+          /* [1177] 빈 값은 건너뛴다 — 내림차순 정렬은 빈 값을 맨 앞에 두어 "확인 불가"로 읽혔다 */
+          q = q.not(s.column, "is", null);
           const { data } = await q.maybeSingle();
           const raw = (data as Record<string, unknown> | null)?.[s.column];
           lastAt = typeof raw === "string" ? raw : null;

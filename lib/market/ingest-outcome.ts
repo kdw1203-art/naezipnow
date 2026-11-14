@@ -172,6 +172,11 @@ export function failureReasonLabel(detail: string | null | undefined): string | 
   const t = String(detail ?? "").trim();
   if (!t) return null;
   if (/statement timeout|57014/i.test(t)) return "DB 시간 제한(8초) · 다음 실행 자동 재시도";
+  /* [1177] 지역 표에 없는 시군구 코드 — 그 구의 행이 통째로 저장되지 않는다(세종 36110 · 운영 2026-11-14) */
+  if (/market_transactions_region_code_fkey/.test(t)) {
+    const code = /^(\d{5}):/.exec(t)?.[1];
+    return `지역 표(legal_regions)에 없는 시군구 코드${code ? ` ${code}` : ""} · 그 구의 실거래가 저장되지 않음`;
+  }
   if (isServiceNotRegistered(t) || /등록되지 않은 서비스키/.test(t)) return "공공데이터포털 활용신청 필요";
   if (/LIMITED_NUMBER_OF_SERVICE_REQUESTS|(^|\s)22(\s|$)/.test(t)) return "공공데이터 일일 호출 한도 초과";
   if (/fetch failed|ETIMEDOUT|ECONNRESET|timeout|네트워크/i.test(t)) return "원천 응답 지연 · 다음 실행 자동 재시도";

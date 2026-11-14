@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { loadSourceFreshness } from "@/lib/admin/source-freshness";
 import { logger } from "@/lib/log";
+import { loadIngestLogSummary24h } from "@/lib/admin/data-health-extras";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -29,8 +30,16 @@ export async function GET(req: Request) {
       } (임계 ${r.thresholdHours}h). 경로: ${r.pipeline}`,
     );
   }
+  /* [1177] 지난 24시간 적재 오류도 사유와 함께 올린다 — 세종(36110)이 지역 표에 없어 실거래 1,634행이
+     매번 버려지던 것이 적재 기록에만 남고 어디에도 울리지 않았다(운영 2026-11-14). */
+  const ingest = (await loadIngestLogSummary24h()) ?? [];
+  const failing = ingest.filter((r) => r.error > 0);
+  for (const r of failing) {
+    logger.error(`[freshness-watch] 적재 오류 ${r.source} — 24시간 ${r.error}회 · ${r.lastError ?? "사유 없음"}`);
+  }
   return NextResponse.json({
     ok: true,
+    ingestErrors: failing.map((r) => ({ source: r.source, error: r.error, reason: r.lastError ?? null })),
     checked: rows.length,
     stale: stale.map((r) => ({ key: r.key, lastAt: r.lastAt, ageHours: r.ageHours })),
   });

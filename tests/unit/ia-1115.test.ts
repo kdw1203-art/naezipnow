@@ -1341,3 +1341,24 @@ test("[1176] 개인정보보호책임자 — 대표(고대웅) · 이메일 · �
   assert.equal(info.privacyEmail, "nuguzip@naver.com");
   assert.ok(info.phone);
 });
+
+test("[1177] 신선도 — 빈 표를 보던 경보 두 개를 실제 적재 기준으로 · 적재 오류 사유 · 세종 지역 행 SQL", async () => {
+  const src = read("lib/admin/source-freshness.ts");
+  const supply = src.slice(src.indexOf('key: "supply"'), src.indexOf('key: "applyhome"'));
+  assert.match(supply, /table: "market_ingest_log"/);
+  assert.match(supply, /\{ column: "source", value: "applyhome" \}/);
+  assert.match(supply, /\{ column: "status", value: "ok" \}/);
+  const idx = src.slice(src.indexOf('key: "market_index"'), src.indexOf('key: "molit_tx"'));
+  assert.match(idx, /table: "market_region_series"/);
+  assert.match(idx, /filter: \{ column: "source", value: "reb" \}/);
+  assert.match(src, /q = q\.not\(s\.column, "is", null\)/, "빈 값이 맨 앞에 오지 않게");
+  const m = await import("../../lib/market/ingest-outcome.ts");
+  const msg = 'slice=6 시도=16 오류=1 첫오류=36110: insert or update on table "market_transactions" violates foreign key constraint "market_transactions_region_code_fkey"(0/1634행 저장)';
+  assert.equal(m.failureReasonLabel(m.firstErrorOf(msg)), "지역 표(legal_regions)에 없는 시군구 코드 36110 · 그 구의 실거래가 저장되지 않음");
+  assert.match(read("app/api/cron/freshness-watch/route.ts"), /적재 오류 \$\{r\.source\}/);
+  const sql = read("supabase/rebuild/bridge/20261231001400_bridge_legal_region_sejong.sql");
+  assert.match(sql, /'36110', '세종', '세종시'/);
+  assert.match(sql, /on conflict \(lawd_cd\) do nothing/);
+  const t = await import("../../lib/market/molit-transactions.ts");
+  assert.ok(t.listMolitSigungu().some((i) => i.sigunguCd === "36110"), "수집 대상에 세종이 있다");
+});
