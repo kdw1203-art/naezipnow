@@ -5,6 +5,7 @@ import { formatKrwWon } from "@/lib/format/krw";
 import { hubRanges, ymLongKo, ymShortDot } from "@/lib/complex/hub-price";
 import { ScrubLineLazy } from "@/app/components/viz/ScrubLineLazy";
 import { ExplainLazy as Explain } from "./ExplainLazy";
+import { jeonseRatioTrend, ratioTrendLine, type RatioPoint } from "@/lib/complex/jeonse-ratio-trend";
 
 /* [#94 잔여] 단지 전월세 이력 — 지역 페이지 전월세 탭(1회차)의 단지 버전.
    market_transactions(rent) 를 (region_name, complex_name) 등치로 읽어
@@ -38,8 +39,56 @@ function calendarMonths(first: string, last: string): string[] {
   return out;
 }
 
-export function RentView({ hist, name }: { hist: ComplexRentHistory; name: string }) {
+/** [1179] 전세가율 선 — 서버가 그리는 작은 SVG(차트 청크 없음). 값 없는 달에서 선을 끊는다 */
+function RatioSpark({ points, label }: { points: readonly RatioPoint[]; label: string }) {
+  const vals = points.map((p) => p.pct).filter((v): v is number => v !== null);
+  const lo = Math.min(...vals);
+  const hi = Math.max(...vals);
+  const W = 300;
+  const H = 48;
+  const x = (i: number) => (points.length <= 1 ? W / 2 : (i / (points.length - 1)) * (W - 8) + 4);
+  const y = (v: number) => (hi === lo ? H / 2 : H - 6 - ((v - lo) / (hi - lo)) * (H - 12));
+  const segs: string[] = [];
+  let cur: string[] = [];
+  points.forEach((p, i) => {
+    if (p.pct === null) {
+      if (cur.length > 1) segs.push(cur.join(" "));
+      cur = [];
+    } else cur.push(`${x(i).toFixed(1)},${y(p.pct).toFixed(1)}`);
+  });
+  if (cur.length > 1) segs.push(cur.join(" "));
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="h-12 w-full" preserveAspectRatio="none" role="img" aria-label={label}>
+      {segs.map((s) => (
+        <polyline key={s} points={s} fill="none" stroke="var(--primary)" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+      ))}
+      {points.map((p, i) =>
+        p.pct === null ? null : <circle key={p.ym} cx={x(i)} cy={y(p.pct)} r="2" fill="var(--primary)" />,
+      )}
+    </svg>
+  );
+}
+
+export function RentView({
+  hist,
+  name,
+  trades,
+}: {
+  hist: ComplexRentHistory;
+  name: string;
+  /** [1179] 매매(해제 제외) — 전세가율 추이용. 없으면 추이 칸을 그리지 않는다 */
+  trades?: readonly { ym: string; man: number }[] | null;
+}) {
   if (hist.months.length === 0) return null;
+  /* [1179] 전세가율 추이 — 카드와 같은 규칙(최근 6개월 표본 중앙 · 각 3건 이상)을 달마다 */
+  const ratio = trades
+    ? jeonseRatioTrend(
+        trades,
+        hist.samples.filter((x) => x.monthlyKrw === 0).map((x) => ({ ym: x.ym, depositKrw: x.depositKrw })),
+      )
+    : [];
+  const ratioLine = ratioTrendLine(ratio);
+  const ratioValued = ratio.filter((r) => r.pct !== null).length;
   const shown = hist.months.slice(0, 12);
   const jeonseTotal = hist.months.reduce((s, m) => s + m.jeonseCount, 0);
   const wolseTotal = hist.months.reduce((s, m) => s + m.wolseCount, 0);
@@ -96,6 +145,20 @@ export function RentView({ hist, name }: { hist: ComplexRentHistory; name: strin
             ariaLabel={`${name} 월별 전세 보증금 중앙값 추이`}
             footnote="국토교통부 전월세 신고 · 월별 중앙값(면적 혼합) · 속 빈 점은 그 달 전세 1~2건"
           />
+        </div>
+      )}
+
+      {/* [1179] 전세가율 추이 — 값이 있는 달이 둘 이상일 때만. 못 채운 달은 선을 끊는다(지어내지 않는다) */}
+      {ratioLine && ratioValued >= 2 && (
+        <div className="card mb-2 flex flex-col gap-1.5 rounded-2xl px-4 py-3.5">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+            <span className="t-sub font-bold text-ink">전세가율 추이</span>
+            <span className="t-sub font-bold tabular-nums text-ink">{ratioLine}</span>
+          </div>
+          <RatioSpark points={ratio} label={`${name} 전세가율 추이`} />
+          <span className="t-caption text-text-3">
+            그 달까지 최근 6개월 전세 중앙 ÷ 매매 중앙 · 각 3건 이상인 달만 · 면적 미가중
+          </span>
         </div>
       )}
 
@@ -174,9 +237,11 @@ function ymDot(ym: string): string {
 export async function ComplexRentSection({
   region,
   name,
+  trades,
 }: {
   region: string;
   name: string;
+  trades?: readonly { ym: string; man: number }[] | null;
 }) {
   let hist: ComplexRentHistory | null = null;
   try {
@@ -187,5 +252,5 @@ export async function ComplexRentSection({
     return null; // 곁다리 섹션 — 못 읽으면 접는다 (본문 실거래와 달리 페이지 정체성이 아님)
   }
   if (!hist || hist.months.length === 0) return null;
-  return <RentView hist={hist} name={name} />;
+  return <RentView hist={hist} name={name} trades={trades} />;
 }

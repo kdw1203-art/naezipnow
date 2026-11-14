@@ -322,6 +322,8 @@ jobs:
           # [1168] 함께한 기록 — 가입 뒤 일주일·한 달·6개월·1년이 되는 날, 첫 임장노트, 전문가 승인.
           # 수신함(항상) + 메일(발송 설정 + 마케팅 수신 동의자만). 같은 제목이 30일 안에 있으면 건너뛴다.
           call milestone-greetings "${SITE}/api/cron/milestone-greetings"
+          # [1179] 모임 일정 전날 알림 — 내일(KST) 일정에 참석을 누른 사람의 수신함에 한 줄. 같은 알림이 2일 안에 있으면 건너뛴다.
+          call group-schedule-reminders "${SITE}/api/cron/group-schedule-reminders"
           # [1168] 일간 요약 — 관심 단지 새 실거래 · 오늘 청약 접수 · 오늘 모임 일정이 있는 사람에게만.
           # 월요일은 주간 요약이 같은 내용을 싣고 나가므로 건너뛴다.
           if [ "$(date -u +%u)" != "1" ]; then

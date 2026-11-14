@@ -1859,7 +1859,7 @@ export default async function ComplexHubPage({
               → 동네(관련 기사 · 인근 단지+비교 · 정비사업 · 입주물량 · 전문가) → 읽을거리 → 출처. 예전엔 임장노트 카드 · 거주민 후기 ·
               단지 토론이 세 머리로 흩어져 각각 "없음"으로 비었고, 인근 단지와 비교 칩이 같은 상대 단지를 두 번 말했다. */}
           {/* [#94 잔여] 전월세 실거래 이력(월별 표) — 실거래 묶음의 끝 */}
-          <ComplexRentSection region={region} name={v.name} />
+          <ComplexRentSection region={region} name={v.name} trades={dealsKnown} />
 
           {/* 기록 — 임장노트(서버 HTML) · 거주민 후기 · 단지 토론(지연 조각)을 칩 한 줄로.
               후기는 실단지(정규 name-id 로 해독되는 단지)에만([1058 · C2] 키는 socialId) · 토론은 수도권 토론 지역의 해독 가능한 단지만([1057 · B8]) */}

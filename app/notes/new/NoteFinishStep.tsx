@@ -40,6 +40,9 @@ export function NoteFinishStep(p: {
   onRemovePhoto: (url: string) => void;
   onShiftPhoto: (index: number, dir: -1 | 1) => void;
   onCoverPhoto: (index: number) => void;
+  /** [1180] 사진 메모(url → 한 줄) */
+  photoCaptions?: Record<string, string>;
+  onPhotoCaption?: (url: string, text: string) => void;
   uploads: UploadItem[];
   uploadSummary: string;
   onRetryUploads: () => void;
@@ -119,6 +122,8 @@ export function NoteFinishStep(p: {
           onRemove={p.onRemovePhoto}
           onShift={p.onShiftPhoto}
           onCover={p.onCoverPhoto}
+          captions={p.photoCaptions}
+          onCaption={p.onPhotoCaption}
         />
 
         {/* [967 · 1·6] 업로드 진행 줄 — 파일별 done/failed, XHR 진행률이 오면 %

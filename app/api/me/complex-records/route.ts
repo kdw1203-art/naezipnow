@@ -32,6 +32,9 @@ import {
 import { isWatching } from "@/lib/watchlist/store-db";
 import { dbUnavailable } from "@/lib/api/db-unavailable";
 import { logger } from "@/lib/log";
+import { getComplexDeals } from "@/lib/complex/complex-store";
+import { changeLine, visitChange } from "@/lib/me/visit-changes";
+import { loadMyGroupLine } from "@/lib/groups/club-store";
 import type { ComplexRecordNote, ComplexRecordsResponse } from "@/lib/complex/my-records";
 
 export const runtime = "nodejs";
@@ -102,9 +105,20 @@ export async function GET(req: NextRequest) {
     updatedAt: n.updatedAt,
   }));
 
+  /* [1178] 곁다리 둘 — 첫 방문 뒤 실거래 변동 · 내 모임. 실패하면 그 줄만 없다(노트 목록은 그대로). */
+  const firstVisit = notes[0]?.visitDate ?? null;
+  const [changeR, groupR] = await Promise.allSettled([
+    firstVisit && /^\d{4}-\d{2}-\d{2}/.test(firstVisit)
+      ? getComplexDeals(complexId).then((deals) => changeLine(visitChange(deals, firstVisit.slice(0, 10))))
+      : Promise.resolve(null),
+    loadMyGroupLine(email),
+  ]);
+
   const body: ComplexRecordsResponse = {
     notes,
     watching: watchingR.status === "fulfilled" ? watchingR.value : null,
+    changeLine: changeR.status === "fulfilled" ? changeR.value : null,
+    groupId: groupR.status === "fulfilled" ? (groupR.value?.groupId ?? null) : null,
   };
   return NextResponse.json(body, { headers: NO_STORE });
 }

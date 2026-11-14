@@ -197,6 +197,11 @@ export default async function TownGroupDetailPage({
                 nowIso={nowIso}
                 groupTitle={meeting.title}
                 myComplexes={myComplexes}
+                initialComplex={
+                  typeof sp.complex === "string" && sp.complex.trim() && typeof sp.cname === "string" && sp.cname.trim()
+                    ? { id: sp.complex.trim().slice(0, 40), name: sp.cname.trim().slice(0, 40) }
+                    : null
+                }
                 initialDate={typeof sp.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(sp.date) ? sp.date : null}
               />
             ) : (

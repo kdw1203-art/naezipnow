@@ -8,6 +8,7 @@ import { EmptyState, ErrorState } from "@/app/components/ui/EmptyState";
 import { SkLine } from "@/app/components/ui/Skeleton";
 import {
   formatVisitDate,
+  groupScheduleHref,
   recordsLoginHref,
   visitOrdinal,
   type ComplexRecordsResponse,
@@ -109,7 +110,16 @@ export function MyRecordsTab({
     );
   }
 
-  const { notes, watching } = state.data;
+  const { notes, watching, changeLine, groupId } = state.data;
+  /* [1178] 내 모임이 있으면 이 단지로 일정을 만드는 바로가기 */
+  const groupLink = groupId ? (
+    <Link
+      href={groupScheduleHref(groupId, altComplexId || complexId, complexName)}
+      className="btn-secondary rounded-xl p-3 text-center t-body font-bold no-underline"
+    >
+      이 단지로 모임 일정 만들기
+    </Link>
+  ) : null;
 
   if (notes.length === 0) {
     return (
@@ -123,6 +133,7 @@ export function MyRecordsTab({
             관심 단지로 저장돼 있어요 · 새 실거래가 신고되면 알림을 보내요
           </p>
         )}
+        {groupLink}
       </div>
     );
   }
@@ -139,6 +150,9 @@ export function MyRecordsTab({
           내 노트 전체 보기 ›
         </Link>
       </div>
+      {changeLine && (
+        <p className="rounded-lg bg-primary-soft px-3.5 py-2.5 t-sub font-bold text-primary tabular-nums">{changeLine}</p>
+      )}
       {notes.map((n, i) => (
         <Link
           key={n.id}
@@ -167,6 +181,7 @@ export function MyRecordsTab({
       <Link href={noteHref} className="btn-primary btn-cta rounded-xl p-3 text-center t-body no-underline">
         {notes.length + 1}회차 임장노트 쓰기
       </Link>
+      {groupLink}
     </div>
   );
 }

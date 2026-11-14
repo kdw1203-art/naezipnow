@@ -1362,3 +1362,54 @@ test("[1177] 신선도 — 빈 표를 보던 경보 두 개를 실제 적재 기
   const t = await import("../../lib/market/molit-transactions.ts");
   assert.ok(t.listMolitSigungu().some((i) => i.sigunguCd === "36110"), "수집 대상에 세종이 있다");
 });
+
+test("[1178] 단지 상세 › 내 기록 — 첫 방문 뒤 변동 한 줄 · 이 단지로 모임 일정 만들기", async () => {
+  const m = await import("../../lib/complex/my-records.ts");
+  assert.equal(m.groupScheduleHref("g1", "서울 마포구|가나", "가나아파트"), "/town/groups/g1?tab=schedule&complex=%EC%84%9C%EC%9A%B8+%EB%A7%88%ED%8F%AC%EA%B5%AC%7C%EA%B0%80%EB%82%98&cname=%EA%B0%80%EB%82%98%EC%95%84%ED%8C%8C%ED%8A%B8");
+  const api = read("app/api/me/complex-records/route.ts");
+  assert.match(api, /changeLine\(visitChange\(deals, firstVisit\.slice\(0, 10\)\)\)/);
+  assert.match(api, /Promise\.allSettled\(\[/, "곁다리는 실패해도 노트 목록을 막지 않는다");
+  const tab = read("app/complex/[id]/MyRecordsTab.tsx");
+  assert.match(tab, /\{changeLine && \(/);
+  assert.match(tab, /이 단지로 모임 일정 만들기/);
+  const sch = read("app/town/groups/[id]/ClubSchedule.tsx");
+  assert.match(sch, /useState\(initialComplex\?\.id \?\? ""\)/);
+});
+
+test("[1179] 전세가율 추이(카드와 같은 규칙을 달마다) · 모임 일정 전날 알림", async () => {
+  const m = await import("../../lib/complex/jeonse-ratio-trend.ts");
+  const trades = ["202606", "202607", "202608", "202609", "202610", "202611"].map((ym) => ({ ym, man: 100000 }));
+  const jeonse = ["202606", "202607", "202608", "202609"].map((ym) => ({ ym, depositKrw: 600_000_000 })).concat([{ ym: "202611", depositKrw: 700_000_000 }]);
+  const pts = m.jeonseRatioTrend(trades, jeonse, 4);
+  assert.deepEqual(pts.map((p) => p.ym), ["202608", "202609", "202610", "202611"]);
+  assert.deepEqual(pts.map((p) => p.pct), [60, 60, 60, 60], "6개월 창 · 각 3건 이상 · 표본 중앙");
+  assert.deepEqual(pts[3], { ym: "202611", pct: 60, tradeCount: 6, jeonseCount: 5 });
+  const thin = m.jeonseRatioTrend(trades.slice(0, 2), jeonse, 3);
+  assert.ok(thin.every((p) => p.pct === null), "매매 3건 미만이면 값을 만들지 않는다");
+  assert.deepEqual(m.jeonseRatioTrend([], jeonse), []);
+  assert.equal(m.ratioTrendLine([{ ym: "202512", pct: 58.3, tradeCount: 5, jeonseCount: 4 }, { ym: "202601", pct: null, tradeCount: 1, jeonseCount: 4 }, { ym: "202611", pct: 61.2, tradeCount: 6, jeonseCount: 5 }]), "25.12 58.3% → 26.11 61.2% · +2.9%p");
+  assert.equal(m.ratioTrendLine(thin), null);
+  const c = await import("../../lib/groups/club.ts");
+  const now = Date.parse("2026-11-14T12:00:00Z"); // KST 11/14 21:00
+  assert.deepEqual(c.kstTomorrowRange(now), { from: "2026-11-14T15:00:00.000Z", to: "2026-11-15T15:00:00.000Z", ymd: "2026-11-15" });
+  assert.equal(c.groupReminderBody({ title: "성수 둘러보기", scheduledAt: "2026-11-15T05:00:00Z", place: "성수역 3번 출구" }, "마포 모임"), "오후 2:00 성수 둘러보기 · 성수역 3번 출구 · 마포 모임");
+  assert.match(read(".github/workflows/etl.yml"), /call group-schedule-reminders/);
+  assert.match(read("app/complex/[id]/page.tsx"), /<ComplexRentSection region=\{region\} name=\{v\.name\} trades=\{dealsKnown\} \/>/);
+});
+
+test("[1180] 사진 메모(60자 · 남은 사진만) · 공개 노트 저장 수", async () => {
+  const m = await import("../../lib/notes/unit-core.ts");
+  assert.deepEqual(m.photoCaptionsFromMetadata({ photoCaptions: { a: "  거실   남향 ", b: 3, c: "", d: "x".repeat(80) } }), { a: "거실 남향", d: "x".repeat(60) });
+  assert.deepEqual(m.photoCaptionsForSave({ a: "거실", gone: "지운 사진" }, ["a", "b"]), { a: "거실" });
+  assert.equal(m.photoCaptionsForSave({ gone: "x" }, ["a"]), undefined);
+  const d = await import("../../lib/notes/unit-detail.ts");
+  const meta: Record<string, unknown> = { photoCaptions: { ["u".repeat(700)]: "길다", ok: "현관 신발장" } };
+  d.sanitizeUnitMeta(meta);
+  assert.deepEqual(meta.photoCaptions, { ok: "현관 신발장" });
+  const empty: Record<string, unknown> = { photoCaptions: {} };
+  d.sanitizeUnitMeta(empty);
+  assert.ok(!("photoCaptions" in empty), "빈 값은 키를 지운다");
+  assert.match(read("app/notes/new/NoteForm.tsx"), /photoCaptions: photoCaptionsForSave\(photoCaptions, savePhotos\) \?\? null/);
+  assert.match(read("app/notes/[id]/NotePhotoCarousel.tsx"), /captions\?\.\[photos\[idx\]\]/);
+  assert.match(read("app/notes/[id]/(index)/page.tsx"), /countSavedForTarget\("note", noteId\)\.catch\(\(\) => 0\)/);
+});

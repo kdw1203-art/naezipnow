@@ -100,6 +100,32 @@ export function photoRolesForSave(roles: Record<string, PhotoRole>, photos: stri
   return Object.keys(o).length ? o : undefined;
 }
 
+/* ── [1180] 사진 메모 ─────────────────────────────────────────────────────── */
+
+export const PHOTO_CAPTION_MAX = 60;
+
+/** metadata.photoCaptions → { url: 메모 } (문자열만 · 공백 정리 · 60자) */
+export function photoCaptionsFromMetadata(meta: unknown): Record<string, string> {
+  const r = rec(rec(meta)?.photoCaptions);
+  const out: Record<string, string> = {};
+  if (!r) return out;
+  for (const [url, v] of Object.entries(r)) {
+    if (typeof v !== "string" || !url) continue;
+    const t = v.replace(/\s+/g, " ").trim().slice(0, PHOTO_CAPTION_MAX);
+    if (t) out[url] = t;
+  }
+  return out;
+}
+
+/** 저장용 — 노트에 남은 사진의 메모만(지운 사진의 메모는 버린다). 비면 undefined */
+export function photoCaptionsForSave(captions: Record<string, string>, photos: string[]): Record<string, string> | undefined {
+  const keep = new Set(photos);
+  const clean = photoCaptionsFromMetadata({ photoCaptions: captions });
+  const o: Record<string, string> = {};
+  for (const [url, t] of Object.entries(clean)) if (keep.has(url)) o[url] = t;
+  return Object.keys(o).length ? o : undefined;
+}
+
 
 /* ── 세부 기록(폼 쪽 느슨한 처리) ─────────────────────────────────────── */
 

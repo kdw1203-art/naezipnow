@@ -329,3 +329,20 @@ export function isMissingTable(error: { message?: string; code?: string } | null
   if (error.code === "42P01" || error.code === "PGRST205") return true;
   return /does not exist|schema cache|could not find the table/i.test(error.message ?? "");
 }
+
+/* ── [1179] 일정 전날 알림 ─────────────────────────────── */
+export const GROUP_REMINDER_TITLE = "내일 모임 일정";
+
+/** 한국 날짜로 "내일" 하루의 시작 · 끝(ISO) */
+export function kstTomorrowRange(nowMs: number): { from: string; to: string; ymd: string } {
+  const DAY = 86400 * 1000;
+  const dayIdx = Math.floor((nowMs + KST) / DAY) + 1;
+  const from = dayIdx * DAY - KST;
+  return { from: new Date(from).toISOString(), to: new Date(from + DAY).toISOString(), ymd: new Date(from + KST).toISOString().slice(0, 10) };
+}
+
+/** 알림 본문 — "오후 2:00 성수 전략정비구역 둘러보기 · 성수역 3번 출구 · 마포 모임" */
+export function groupReminderBody(s: { title: string; scheduledAt: string; place: string | null }, groupTitle: string): string {
+  const p = kstParts(s.scheduledAt);
+  return [`${p ? `${p.time} ` : ""}${s.title}`, s.place, groupTitle].filter(Boolean).join(" · ");
+}

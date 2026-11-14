@@ -25,6 +25,8 @@ import { buildImageSrcSet, canOptimizeImage } from "@/lib/images/srcset";
 type Props = {
   /** [1033] 사진 역할 — url → "floorplan"(평면도). 있으면 그 장에 "평면도" 표식 */
   roles?: Record<string, "floorplan">;
+  /** [1180] 사진 메모(url → 한 줄) — 그 장을 볼 때 사진 아래 한 줄 */
+  captions?: Record<string, string>;
   photos: string[];
   /** 스크린리더용 이름 (예: "현장 사진") */
   label?: string;
@@ -44,7 +46,7 @@ const NotePhotoLightbox = nextDynamic(
   { ssr: false },
 );
 
-export function NotePhotoCarousel({ photos, label = "현장 사진", roles }: Props) {
+export function NotePhotoCarousel({ photos, label = "현장 사진", roles, captions }: Props) {
   const total = photos.length;
   const [idx, setIdx] = useState(0);
   const [zoom, setZoom] = useState(false);
@@ -267,6 +269,13 @@ export function NotePhotoCarousel({ photos, label = "현장 사진", roles }: Pr
           </button>
         )}
       </div>
+
+      {/* [1180] 사진 메모 — 작성자가 그 장에 적은 한 줄 */}
+      {captions?.[photos[idx]] && (
+        <p className="m-0 px-1 t-sub text-text-2" aria-live="polite">
+          {captions[photos[idx]]}
+        </p>
+      )}
 
       {/* ── 썸네일 레일 ──────────────────────────────────────── */}
       {total > 1 && (

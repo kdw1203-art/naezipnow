@@ -69,6 +69,8 @@ import {
   fieldDetailLoose,
   fieldDetailLooseForSave,
   isEmptyUnit,
+  photoCaptionsForSave,
+  photoCaptionsFromMetadata,
   photoRolesForSave,
   photoRolesFromMetadata,
   unitForSave,
@@ -921,6 +923,11 @@ export function NoteForm({
     pendingRoleRef.current = role;
     (capture ? captureRef : fileRef).current?.click();
   };
+  /* [1180] 사진 메모(url → 한 줄) — 저장할 때 metadata.photoCaptions 로 */
+  const [photoCaptions, setPhotoCaptions] = useState<Record<string, string>>(() =>
+    initialNote ? photoCaptionsFromMetadata(initialNote.metadata) : {},
+  );
+  const setCaption = (url: string, text: string) => setPhotoCaptions((prev) => ({ ...prev, [url]: text.slice(0, 60) }));
   const toggleFloorplan = (url: string) =>
     setPhotoRoles((prev) => {
       const next = { ...prev };
@@ -2174,6 +2181,7 @@ export function NoteForm({
           unit: unitForSave(unit) ?? null,
           fieldDetail: fieldDetailLooseForSave(fieldDetail) ?? null,
           photoRoles: photoRolesForSave(photoRoles, savePhotos) ?? null,
+          photoCaptions: photoCaptionsForSave(photoCaptions, savePhotos) ?? null,
         },
         isPublic,
       };
@@ -2402,6 +2410,8 @@ export function NoteForm({
         onCover={setCoverPhoto}
         roles={photoRoles}
         onToggleFloorplan={toggleFloorplan}
+        captions={photoCaptions}
+        onCaption={setCaption}
       />
     ) : null;
 
@@ -3469,6 +3479,8 @@ export function NoteForm({
             onRemovePhoto={removePhoto}
             onShiftPhoto={shiftPhoto}
             onCoverPhoto={setCoverPhoto}
+            photoCaptions={photoCaptions}
+            onPhotoCaption={setCaption}
             uploads={uploads}
             uploadSummary={uploadSummary}
             onRetryUploads={retryFailedUploads}

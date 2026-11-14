@@ -3,6 +3,7 @@
 /* [1023 · 임장노트] docs/review-1022.md 1장 — ① RelatedNotes 에 aptName 을 넘겨 같은 단지를 앞줄로 · ② 댓글 조회 실패 자리에 "다시 시도"
    (CommentsRetry — 서버 조회를 router.refresh 로 다시 돌린다) · ③ 지역·단지 칩 마지막 칩의 네이비 채움 → 테두리 칩 + 굵기(화면당 채움 1개 규칙).
    [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
+import { countSavedForTarget } from "@/lib/bookmarks/settings-store";
 import { areaBandDisplayLabel } from "@/lib/complex/area-band-label";
 import Link from "@/app/components/IntentLink";
 import { CommentsRetry } from "../comments-retry";
@@ -81,6 +82,7 @@ import { relativeTime } from "@/lib/notes/feed-note";
 import { isAdmin } from "@/lib/auth/is-admin";
 import { decisionFromMetadata } from "@/lib/inspection/decision";
 /* [1032] 임장한 타입 · 세부 기록 · 평면도 사진 — 작성 폼이 metadata.unit/fieldDetail/photoRoles 에 남긴 값(없으면 블록 없음) */
+import { photoCaptionsFromMetadata } from "@/lib/notes/unit-core";
 import { fieldDetailFromMetadata, photoRolesFromMetadata, unitFromMetadata, unitSummary } from "@/lib/notes/unit-detail";
 import { fieldDetailLines } from "@/lib/notes/unit-detail-lines";
 import { buildRevisitDelta, revisitOfId, type RevisitDelta } from "@/lib/inspection/revisit";
@@ -520,6 +522,17 @@ function noteJsonLd(
 }
 
 /* ---------- 페이지 ---------- */
+
+/** [1180] 저장한 사람 수 한 칸 — 곁다리라 못 읽으면 없다 */
+async function NoteSavedCount({ noteId }: { noteId: string }) {
+  const n = await countSavedForTarget("note", noteId).catch(() => 0);
+  if (!n) return null;
+  return (
+    <span className="chip inline-flex min-h-[32px] items-center border border-line bg-surface px-3 t-sub font-bold tabular-nums text-text-2">
+      저장 {n.toLocaleString("ko-KR")}명
+    </span>
+  );
+}
 
 export default async function NoteDetailPage({
   params,
@@ -981,6 +994,12 @@ export default async function NoteDetailPage({
 
       {/* 상단 액션 — 공유(클립보드)·공개 토글(소유자) 실동작 */}
       <div className="rise-in mb-4 flex flex-wrap items-center justify-end gap-2">
+        {/* [1180] 공개 노트를 저장한 사람 수 — 0명 · 조회 실패면 그리지 않는다 */}
+        {realNote.isPublic && (
+          <Suspense fallback={null}>
+            <NoteSavedCount noteId={realNote.id} />
+          </Suspense>
+        )}
         <NoteDetailActions
           noteId={id}
           isOwner={isOwner}
@@ -1275,6 +1294,7 @@ export default async function NoteDetailPage({
               <NotePhotoCarousel
                 photos={v.photos}
                 roles={photoRolesFromMetadata(realNote.metadata)}
+                captions={photoCaptionsFromMetadata(realNote.metadata)}
                 label={v.lab ? "자료 이미지" : "현장 사진"}
               />
             )}

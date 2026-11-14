@@ -23,6 +23,16 @@ export interface ComplexRecordsResponse {
   notes: ComplexRecordNote[];
   /** 관심 단지 여부 — 조회 실패면 null(false 와 구분) */
   watching: boolean | null;
+  /** [1178] 첫 방문 뒤 변동 한 줄("방문 뒤 새 실거래 3건 · 84㎡ 12.1억 → 12.6억(+4.1%)") — 노트가 없거나 못 읽으면 null */
+  changeLine?: string | null;
+  /** [1178] 내가 속한 모임(가장 가까운 일정이 있는 곳 · 없으면 첫 모임) — 이 단지로 일정을 만드는 바로가기용. 없으면 null */
+  groupId?: string | null;
+}
+
+/** [1178] 모임 일정 만들기 주소 — 일정 탭이 이 단지를 고른 채로 열린다 */
+export function groupScheduleHref(groupId: string, complexId: string, complexName: string): string {
+  const qs = new URLSearchParams({ tab: "schedule", complex: complexId, cname: complexName.slice(0, 40) });
+  return `/town/groups/${encodeURIComponent(groupId)}?${qs.toString()}`;
 }
 
 /** 로그인 뒤 이 화면(내 기록 탭)으로 돌아오는 주소 */

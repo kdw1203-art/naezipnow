@@ -30,6 +30,7 @@ export function ClubSchedule({
   groupTitle,
   initialDate,
   myComplexes,
+  initialComplex,
 }: {
   groupId: string;
   schedules: ScheduleView[];
@@ -41,6 +42,8 @@ export function ClubSchedule({
   initialDate: string | null;
   /** [1171] 일정에 붙일 내 관심 단지 */
   myComplexes: { id: string; name: string }[];
+  /** [1178] 단지 화면에서 넘어온 단지 — 있으면 그 단지를 고른 채로 만들기 창을 연다 */
+  initialComplex: { id: string; name: string } | null;
 }) {
   const router = useRouter();
   const nowMs = Date.parse(nowIso);
@@ -53,7 +56,8 @@ export function ClubSchedule({
   const [day, setDay] = useState<string | null>(initialDate ?? today?.ymd ?? null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [open, setOpen] = useState(Boolean(initialDate) && canWrite);
+  const [open, setOpen] = useState((Boolean(initialDate) || Boolean(initialComplex)) && canWrite);
+  const complexChoices = initialComplex && !myComplexes.some((c) => c.id === initialComplex.id) ? [initialComplex, ...myComplexes] : myComplexes;
 
   const counts = useMemo(() => countByDay(schedules), [schedules]);
   const upcoming = schedules.filter((s) => Date.parse(s.scheduledAt) >= nowMs);
@@ -271,7 +275,8 @@ export function ClubSchedule({
       <ScheduleForm
         groupId={groupId}
         open={open}
-        myComplexes={myComplexes}
+        myComplexes={complexChoices}
+        initialComplex={initialComplex}
         defaultDate={day ?? today?.ymd ?? ""}
         minDate={today?.ymd ?? ""}
         onClose={() => setOpen(false)}
@@ -288,6 +293,7 @@ function ScheduleForm({
   groupId,
   open,
   myComplexes,
+  initialComplex,
   defaultDate,
   minDate,
   onClose,
@@ -296,19 +302,20 @@ function ScheduleForm({
   groupId: string;
   open: boolean;
   myComplexes: { id: string; name: string }[];
+  initialComplex: { id: string; name: string } | null;
   defaultDate: string;
   minDate: string;
   onClose: () => void;
   onDone: () => void;
 }) {
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState(initialComplex ? `${initialComplex.name} 임장` : "");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("14:00");
   const [place, setPlace] = useState("");
   const [maxMembers, setMaxMembers] = useState("4");
   const [mode, setMode] = useState<string>(SCHEDULE_MODES[0]);
   const [cost, setCost] = useState("");
-  const [complexId, setComplexId] = useState("");
+  const [complexId, setComplexId] = useState(initialComplex?.id ?? "");
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const useDate = date || (defaultDate >= minDate ? defaultDate : minDate);

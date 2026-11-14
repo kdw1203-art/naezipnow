@@ -13,7 +13,7 @@
 /* 돈 표기(formatKrwManwon)를 쓰는 줄 만들기는 unit-detail-lines.ts. [1033] 폼 첫 로드에 실리는 핵심(NoteUnit·파서·사진 역할)은 unit-core.ts —
    여기서 다시 내보낸다(기존 import 유지). 이 파일 자체는 지연 조각·서버·목록 빌더만 가져온다. */
 export * from "@/lib/notes/unit-core";
-import { areaTypeLabel, photoRolesFromMetadata, unitForSave, unitFromMetadata } from "@/lib/notes/unit-core";
+import { areaTypeLabel, photoCaptionsFromMetadata, photoRolesFromMetadata, unitForSave, unitFromMetadata } from "@/lib/notes/unit-core";
 
 function rec(v: unknown): Record<string, unknown> | null {
   return v && typeof v === "object" && !Array.isArray(v) ? (v as Record<string, unknown>) : null;
@@ -221,5 +221,12 @@ export function sanitizeUnitMeta(meta: Record<string, unknown>): void {
     const kept = Object.fromEntries(Object.entries(r).filter(([url]) => url.length <= 600));
     if (Object.keys(kept).length) meta.photoRoles = kept;
     else delete meta.photoRoles;
+  }
+  /* [1180] 사진 메모 — 문자열 60자 · 주소 600자 이하만 */
+  if ("photoCaptions" in meta) {
+    const c = photoCaptionsFromMetadata({ photoCaptions: meta.photoCaptions });
+    const kept = Object.fromEntries(Object.entries(c).filter(([url]) => url.length <= 600));
+    if (Object.keys(kept).length) meta.photoCaptions = kept;
+    else delete meta.photoCaptions;
   }
 }

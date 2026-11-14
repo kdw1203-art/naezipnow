@@ -122,6 +122,8 @@ export function NotePhotoStrip({
   onCover,
   roles,
   onToggleFloorplan,
+  captions,
+  onCaption,
 }: {
   photos: string[];
   onRemove: (url: string) => void;
@@ -130,6 +132,9 @@ export function NotePhotoStrip({
   /** [1032] 사진 역할(url → "floorplan") — 평면도 표식. 없으면 토글을 그리지 않는다(구 호출부 호환) */
   roles?: Record<string, "floorplan">;
   onToggleFloorplan?: (url: string) => void;
+  /** [1180] 사진 메모(url → 한 줄) — onCaption 이 없으면 칸을 그리지 않는다 */
+  captions?: Record<string, string>;
+  onCaption?: (url: string, text: string) => void;
 }) {
   if (photos.length === 0) return null;
   return (
@@ -212,6 +217,16 @@ export function NotePhotoStrip({
               >
                 {isPlan ? "평면도로 표시됨" : "평면도로 표시"}
               </button>
+            )}
+            {onCaption && (
+              <input
+                value={captions?.[p] ?? ""}
+                onChange={(e) => onCaption(p, e.target.value)}
+                maxLength={60}
+                placeholder="사진 메모"
+                aria-label={`${i + 1}번째 사진 메모`}
+                className="mt-1.5 h-10 w-full rounded-lg border border-line bg-surface px-2 t-caption text-ink outline-none placeholder:text-text-3 focus:border-primary"
+              />
             )}
           </li>
         );
