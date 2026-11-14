@@ -1330,3 +1330,14 @@ test("[1175] 사업장 주소는 도로명까지만 — 동·호수 · 건물명
     assert.ok(!/1010호|302동/.test(read(f)), f);
   }
 });
+
+test("[1176] 개인정보보호책임자 — 대표(고대웅) · 이메일 · 대표전화 · '미정' 문구 없음", async () => {
+  const src = read("app/legal/privacy/page.tsx");
+  assert.ok(!/미정 \(오픈 시 기재\)|전화<\/strong>: 오픈 시 기재/.test(src));
+  assert.match(src, /개인정보보호책임자<\/strong>: \{info\.representative \|\| "고대웅"\} \(대표\)/);
+  const m = await import("../../lib/brand/business-info.ts");
+  const info = m.getBusinessInfo();
+  assert.equal(info.representative, "고대웅");
+  assert.equal(info.privacyEmail, "nuguzip@naver.com");
+  assert.ok(info.phone);
+});

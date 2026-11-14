@@ -12,7 +12,8 @@ export const metadata = buildPageMetadata({
 /* [992] 수탁·국외이전 표에서 Stripe, Inc. 행을 뺐다 — 결제 레일이 토스페이먼츠 하나로
    정리되어(승인 0건인 채 남아 있던 Stripe 코드 삭제) 더 이상 처리 위탁이 없다.
    범위 **축소**는 30일 사전 고지 대상이 아니지만 시행일은 사실대로 올린다. */
-const UPDATED = "2026년 9월 13일";
+/* [1176] 개인정보보호책임자(대표) · 연락처 기재 — 수집 항목 · 제공 범위 변화 없음(사전 고지 대상 아님) · 시행일만 사실대로. */
+const UPDATED = "2026년 11월 14일";
 
 const Section = ({
   num,
@@ -270,14 +271,15 @@ export default function PrivacyPage() {
 
         <Section num="8" title="개인정보보호책임자">
           <div className="space-y-1 rounded-lg border border-line bg-bg p-4 t-body">
+            {/* [1176] 소유자 2026-11-14 지정 — 대표가 개인정보보호책임자 · 관리자를 겸한다 */}
             <p>
-              <strong>개인정보보호책임자</strong>: 미정 (오픈 시 기재)
+              <strong>개인정보보호책임자</strong>: {info.representative || "고대웅"} (대표)
             </p>
             <p>
               <strong>이메일</strong>: {info.privacyEmail}
             </p>
             <p>
-              <strong>전화</strong>: 오픈 시 기재
+              <strong>전화</strong>: {info.phone || "—"}
             </p>
             <p className="mt-2 text-xs text-text-3">
               개인정보 침해에 대한 신고·상담은 아래 기관에 문의하실 수 있습니다.
