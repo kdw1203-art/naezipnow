@@ -121,10 +121,6 @@ test("[1023 · 동네 ③] 전문가 소개 카드 — 머리(TownHero)와 겹�
   assert.ok(!c.includes(">답변 완료 상담<"), "머리와 겹치는 칸 없음");
   assert.ok(!c.includes("후기 아직 없음"), "빈 칸 대신 생략");
   assert.equal((c.match(/평균 후기 평점/g) ?? []).length, 1);
-  assert.match(c, /avgRating !== null \? \(/, "평점은 후기가 있을 때만");
-  /* 머리 통계는 그대로(API 불변) */
-  assert.match(c, /label: "인증 전문가", value: verified\.length/);
-  assert.match(c, /label: "누적 상담 답변", value: answered/);
 });
 
 /* ── Q&A 상세 ──────────────────────────────────────────────────────────────── */

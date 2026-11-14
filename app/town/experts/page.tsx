@@ -4,7 +4,6 @@
 import type { Metadata } from "next";
 import Link from "@/app/components/IntentLink";
 import { ShellBreadcrumb } from "../../components/PageShell";
-import { ExpertApplyCta } from "./ExpertApplyCta";
 import { RotatingExpertPromo } from "@/app/components/experts/ExpertPromo";
 import { QuoteRequestBanner } from "./QuoteRequest";
 import { ExpertsClient, type ExpertPublicRow } from "./ExpertsClient";
@@ -14,7 +13,7 @@ import { countExpertTypes } from "@/lib/experts/type-counts";
 import { EXPERT_FAQ } from "@/lib/experts/faq";
 import { Icon } from "@/app/components/Icon";
 import { FaqCompact } from "@/app/components/compact/FaqCompact";
-import { Fineprint } from "@/app/components/Fineprint";
+import { PopupSheet } from "@/app/components/PopupSheet";
 import { JsonLd } from "@/app/components/JsonLd";
 import { faqJsonLd } from "@/lib/seo/jsonld";
 import { TownCategoryNav } from "../TownCategoryNav";
@@ -77,26 +76,6 @@ function toPublicRow(e: UserExpertProfile): ExpertPublicRow {
   };
 }
 
-/* [1062 · 글 줄이기] 접힌 FAQ 의 핵심 낱말 칩 — 답(EXPERT_FAQ) 안에 있는 사실 낱말만 적는다(답에 없는 말 금지).
-   답은 지우지 않는다 — FaqCompact 안 <details> 에 그대로 있고 FAQPage JSON-LD 도 같은 배열에서 나온다. */
-function faqKeys(q: string): string[] {
-  switch (q) {
-    case "전문가 상담은 어떻게 진행되나요?":
-      return ["글로 답변", "마이 › 상담함", "로그인 후 가능", "플러스 월 2회 · 프로 월 10회"];
-    case "'인증' 배지는 무엇을 확인한 건가요?":
-      return ["면허·등록증·사업자등록증", "운영자 심사·승인", "협회·기관 공개 조회", "인증 전문가만 상담 신청"];
-    case "후기와 평점은 누가 남기나요?":
-      return ["답변이 완료된 상담의 의뢰자만", "상담 1건당 1번", "후기 없는 전문가는 평가 없음"];
-    case "견적 요청은 상담 신청과 무엇이 다른가요?":
-      return ["필요한 내용·지역", "인증 전문가들이 제안", "마이 › 상담함에서 비교", "시간당 3회"];
-    case "상담료는 어떻게 되나요?":
-      return ["전문가가 직접 적은 안내 금액", "플랫폼에서 처리하지 않음", "플랫폼 밖 선결제 신고 대상"];
-    case "법률 상담도 받을 수 있나요?":
-      return ["법률 서비스 상담 제공하지 않음", "법률 전문가에게 직접 문의", "가이드(계약 전 체크리스트)"];
-    default:
-      return [];
-  }
-}
 
 export default async function TownExpertsPage() {
   const loaded = await listExpertsAll();
@@ -128,62 +107,57 @@ export default async function TownExpertsPage() {
           ("전문가로 참여" → /town/experts/join)가 그대로 그린다. */}
       <TownHero
         href="/town/experts"
-        stats={[
-          { label: "인증 전문가", value: verified.length, unit: "명" },
-          { label: "누적 상담 답변", value: answered, unit: "건" },
-        ]}
-        note="등록된 전문가 기준"
       />
       <TownCategoryNav stick />
-      {/* ---------- 소개 ---------- */}
-      {/* [1022 · 정렬·글씨·테마] 네이비 면(card + 워터마크) → 흰 카드. 1017 이 9칸 머리에서 네이비를 걷었는데 이 소개
-          블록만 네이비로 남아 전문가 화면만 튀었다. 내용·숫자는 그대로, 색만 토큰(text-ink · text-text-2 · border-line). */}
-      <section className="rise-in card mb-5 overflow-hidden rounded-2xl px-5 py-6 md:px-7 md:py-7 max-md:mb-3 max-md:py-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="max-w-[560px]">
-            {/* [1012] 규칙 5 — "지금 물어보기" 슬로건 → 명사형 사실
-                [1015] 대시 잇기·설명 두 문장("…상담함으로 와요. …비교할 수 있어요")을 명사 줄로(브리프 규칙 D) */}
-            {/* [1075] 소유자(2026-10-18, 이 칸 캡처): "2줄로 되어 있는 부분, 불필요 설명이 있는 부분 — 신뢰도 하락".
-                두 줄 제목(인증 전문가 · 분야 7개 나열) + 설명 세 줄(자격·절차·보증)을 걷고 제목 한 줄 + 분야 칩(누르면 그 분야 목록)으로.
-                자격·심사·보증은 머리 한 줄("면허·사업자 서류 심사 뒤 승인된 전문가")과 아래 FAQ 가 이미 말한다 — 같은 사실 두 곳 금지. */}
-            <p className="t-section text-ink">인증 전문가</p>
-            <nav className="mt-2 flex flex-wrap gap-1.5" aria-label="분야별 전문가">
-              {EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => (
-                <Link
-                  key={t.id}
-                  href={`/town/experts/c/${t.id}`}
-                  className="chip inline-flex min-h-[40px] items-center border border-line bg-surface px-2.5 t-sub font-bold text-text-2 no-underline md:min-h-[32px]"
-                >
-                  {t.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
-          {/* [972] "전문가로 참여" 는 공통 머리의 action 으로 올라갔다 — 같은 화면에
-              같은 링크가 둘이면 어느 쪽이 주인지 알 수 없다. 여기는 목록으로
-              내려가는 한 개만 남긴다. */}
-          <div className="flex shrink-0 gap-2 md:flex-col md:items-end">
-            {/* [1015] 채움 파랑 → 네이비 위 보조 칩. 화면의 채움 파랑은 카드의 "상담 신청" 하나로(브리프 규칙 J) */}
-            <a href="#experts" className="btn-outline btn-md rounded-xl no-underline">
-              전문가 보기
-            </a>
-          </div>
+      {/* [1184 · 통폐합] 소유자(2026-11-15): "여기도 중복된 내용들 정리". 같은 사실이 두세 번 나오던 것을 한 번씩으로:
+          인증 전문가 수(머리 · 소개 · 목록 → 목록 한 곳) · 분야 목록(칩 줄 · 12줄 판 → 칩 줄 + 누르면 창) ·
+          전문가 등록(머리 단추 · 아래 판 단추 → 머리 단추 + 링크 한 줄) · FAQ(낱말 칩 + 답 → 답). */}
+      <section className="rise-in card mb-4 flex flex-col gap-2 rounded-2xl px-4 py-3 max-md:mb-3">
+        <nav className="flex flex-wrap gap-1.5" aria-label="분야별 전문가">
+          {typeCounts
+            .filter((t) => t.id !== "other")
+            .map((t) => (
+              <Link
+                key={t.id}
+                href={`/town/experts/c/${t.id}`}
+                className="chip inline-flex min-h-[40px] items-center border border-line bg-surface px-2.5 t-sub font-bold text-text-2 no-underline md:min-h-[32px]"
+              >
+                {t.label}
+                {t.count > 0 && <span className="ml-1 t-num font-medium text-primary">{t.count}</span>}
+              </Link>
+            ))}
+        </nav>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 t-sub text-text-2">
+          {avgRating !== null && (
+            <span>
+              평균 후기 평점 <b className="t-num text-ink">{avgRating.toFixed(1)}</b> · 후기{" "}
+              <b className="t-num text-ink">{reviewed.reduce((n, e) => n + e.reviews, 0).toLocaleString("ko-KR")}</b>건
+            </span>
+          )}
+          {answered > 0 && (
+            <span>
+              누적 상담 답변 <b className="t-num text-ink">{answered.toLocaleString("ko-KR")}</b>건
+            </span>
+          )}
+          <PopupSheet title="분야별 안내 · 자격 확인 기관" className="tap-line t-sub font-bold text-primary" trigger="분야별 안내 · 자격 확인 기관 ›">
+            <ul className="m-0 flex list-none flex-col divide-y divide-line p-0" data-tone="plain">
+              {typeCounts
+                .filter((t) => t.id !== "other")
+                .map((t) => (
+                  <li key={t.id} className="py-2">
+                    <span className="flex items-baseline justify-between gap-3">
+                      <b className="t-body text-ink">{t.label}</b>
+                      <span className="shrink-0 t-caption text-text-3">{t.count > 0 ? `인증 ${t.count}명` : "모집 중"}</span>
+                    </span>
+                    <span className="mt-0.5 block t-sub text-text-2">
+                      {t.desc}
+                      {t.source ? ` · 자격 확인 · ${t.source.label}` : ""}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          </PopupSheet>
         </div>
-        {/* 커버리지 — 실측만. 0 이면 0.
-            [970 · C-13] 다만 등록 전문가가 아예 0명이면 "0 · 0 · —" 세 칸은 지표가 아니라
-            빈 칸 세 개다 — 모집 중이라는 사실 한 줄로 바꾼다(조회 실패는 목록 쪽이 말한다).
-            [1023 · 동네 ③] 인증 전문가·누적 상담 답변 두 칸은 머리(TownHero stats)와 같은 숫자였다 — 한 번만.
-            머리에 없는 수는 평균 후기 평점뿐이라 그것만, 후기가 있을 때만 한 줄로 남긴다("후기 아직 없음" 빈 칸 삭제). */}
-        {loaded.ok && loaded.items.length === 0 ? (
-          <p className="mt-5 border-t border-line pt-4 t-sub text-text-2">
-            모집 중 · 인증 심사 통과 순으로 공개
-          </p>
-        ) : avgRating !== null ? (
-          <p className="mt-5 border-t border-line pt-4 t-sub text-text-2">
-            평균 후기 평점 <b className="t-num text-ink">{avgRating.toFixed(1)}</b> · 후기{" "}
-            <b className="t-num text-ink">{reviewed.reduce((n, e) => n + e.reviews, 0).toLocaleString("ko-KR")}</b>건
-          </p>
-        ) : null}
       </section>
 
       {/* ---------- 목록 ---------- */}
@@ -213,63 +187,26 @@ export default async function TownExpertsPage() {
         <QuoteRequestBanner />
       </div>
 
-      {/* ---------- 자격별 안내 ---------- */}
-      <section className="mb-6 max-md:mb-4">
-        {/* [1015] 물음형 제목("어떤 전문가에게 무엇을 물을까") → 명사(브리프 규칙 D) */}
-        <h2 className="mb-3 t-section text-ink">분야별 전문가</h2>
-        {/* [1062 · 글 줄이기] 테두리 카드 7장(한 장에 세 줄) → 한 판 안 머리카락 선 행 7줄: 왼쪽 이름, 오른쪽 인원.
-            설명·자격 확인 출처는 같은 행 둘째 줄에 그대로 둔다(문구 삭제 없음). */}
-        <div className="card flex flex-col divide-y divide-line rounded-2xl">
-          {typeCounts
-            .filter((t) => t.id !== "other")
-            .map((t) => (
-              <Link
-                key={t.id}
-                href={`/town/experts/c/${t.id}`}
-                className="press flex min-h-[40px] items-baseline justify-between gap-3 px-4 py-3 no-underline max-md:px-3.5"
-              >
-                <span className="min-w-0">
-                  <span className="t-body font-bold text-ink">{t.label}</span>
-                  <span className="mt-0.5 block t-sub text-text-2">
-                    {t.desc}
-                    {t.source ? ` · 자격 확인 · ${t.source.label}` : ""}
-                  </span>
-                </span>
-                <span className="shrink-0 t-caption text-text-3">{t.count > 0 ? `인증 ${t.count}명` : "모집 중"}</span>
-              </Link>
-            ))}
-        </div>
-      </section>
-
-      {/* ---------- 전문가 참여 ----------
-          [1015] 한지 면 띠 → 흰 카드 + 1px 선(브리프 규칙 C — 브랜드 면은 히어로·네이비 띠에만). "전문가이신가요?"
-          물음 라벨과 기능 설명 5줄(프로필 노출·제안 보내기·직접 관리·후기·리드)은 걷었다(규칙 B·D) — 절차·비용·FAQ 는
-          /town/experts/join 이 전부 담고 있고 링크가 바로 옆에 있다. 인증 대상·정책 링크는 남긴다. */}
-      <section id="apply" className="card mb-6 scroll-mt-24 rounded-2xl px-5 py-5 md:px-7 max-md:mb-4 max-md:px-3.5 max-md:py-4">
-        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-          <div className="max-w-[560px]">
-            <h2 className="t-section text-ink">전문가 등록</h2>
-            <p className="mt-1 t-sub text-text-2">면허·사업자 서류 심사 · 관리자 승인 · 인증 마크 · 분야별 목록과 단지 화면 무료 노출</p>
-            {/* [1062 · 글 줄이기] 늘 펼쳐져 있던 인증 대상·정책 문단 → 한 줄 접기(문구·링크 그대로 DOM 에 있다) */}
-            <Fineprint className="mt-2" label="인증 대상 · 운영정책">
-              인증 대상: {EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => t.label).join("·")} 및 서류·인터뷰 심사를 거친 기타 전문가.
-              법률 서비스는 정책상 유료 입점 불가. 절차·검증 기준은{" "}
-              <Link href="/legal/expert" className="inline-block py-[5px] font-bold text-primary underline underline-offset-2">
-                전문가 운영정책
-              </Link>
-              에 있습니다.
-            </Fineprint>
-          </div>
-          <div className="flex shrink-0 flex-col items-start gap-2 md:items-end">
-            <ExpertApplyCta />
-            <Link href="/town/experts/join" className="tap-line t-sub font-bold text-primary underline underline-offset-2">
-              참여 안내(절차·비용·FAQ) ›
+      {/* ---------- 전문가 등록 — 한 줄(단추는 머리에 하나) ---------- */}
+      <section id="apply" className="card mb-6 flex scroll-mt-24 flex-wrap items-center gap-x-4 gap-y-1 rounded-2xl px-4 py-3 max-md:mb-4">
+        <h2 className="t-body font-bold text-ink">전문가 등록</h2>
+        <span className="min-w-0 t-sub text-text-2">서류 심사 · 관리자 승인 · 인증 마크 · 무료 노출</span>
+        <Link href="/town/experts/join" className="tap-line t-sub font-bold text-primary no-underline">
+          참여 안내 ›
+        </Link>
+        <Link href="/partners" className="tap-line t-sub font-bold text-primary no-underline">
+          중개사무소 제휴 ›
+        </Link>
+        <PopupSheet title="인증 대상 · 운영정책" className="tap-line t-sub font-bold text-primary" trigger="인증 대상 · 운영정책 ›">
+          <p className="m-0 t-sub text-text-2">
+            인증 대상: {EXPERT_TYPES.filter((t) => t.id !== "other").map((t) => t.label).join("·")} 및 서류·인터뷰 심사를 거친 기타 전문가.
+            법률 서비스는 정책상 유료 입점 불가. 절차·검증 기준은{" "}
+            <Link href="/legal/expert" className="inline-block py-[5px] font-bold text-primary underline underline-offset-2">
+              전문가 운영정책
             </Link>
-            <Link href="/partners" className="tap-line t-sub font-bold text-primary underline underline-offset-2">
-              중개사무소 제휴 안내 ›
-            </Link>
-          </div>
-        </div>
+            에 있습니다.
+          </p>
+        </PopupSheet>
       </section>
 
       {/* ---------- FAQ (JSON-LD 와 같은 배열) ----------
@@ -278,7 +215,7 @@ export default async function TownExpertsPage() {
       <FaqCompact
         className="mb-6 rounded-2xl"
         jsonLd={false}
-        items={EXPERT_FAQ.map((f) => ({ q: f.q, a: f.a, keys: faqKeys(f.q) }))}
+        items={EXPERT_FAQ.map((f) => ({ q: f.q, a: f.a }))}
       />
 
       {/* 베타 공급 부족의 실제 대안 */}

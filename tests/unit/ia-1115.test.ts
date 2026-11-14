@@ -1491,3 +1491,20 @@ test("[1183] 부산 정비사업 정보 — 응답 꼴이 달라도 areaName 객
   assert.equal(m.findBusanItems({ error: "x" }).length, 0);
   assert.equal(m.parseBusanItem({ areaName: " " }), null);
 });
+
+test("[1184] 운영 경보 — ops.cron_job 의 서명 없는 ok 가 그 검사 경보를 닫는다", async () => {
+  const { foldHealthAlerts } = await import("@/lib/admin/health-alerts-fold");
+  const now = new Date("2026-11-14T23:30:00Z");
+  const rows = [
+    { check_name: "ops.cron_job", severity: "ok", detail: "cron 잡 연속 실패 해소 — 최근 24시간 중단 상태 잡 없음", checked_at: "2026-11-14T22:10:00Z", age_hours: 0 },
+    { check_name: "ops.cron_job", severity: "critical", detail: "cron billing-renewals(9) 최근 24시간 실패 2건", checked_at: "2026-11-14T15:10:00Z", age_hours: 2 },
+    { check_name: "ops.cron_job", severity: "critical", detail: "cron billing-renewals(9) 최근 24시간 실패 2건", checked_at: "2026-11-14T09:10:00Z", age_hours: 8 },
+    { check_name: "other.check", severity: "ok", detail: "괜찮음", checked_at: "2026-11-14T22:10:00Z", age_hours: 0 },
+    { check_name: "other.check", severity: "warn", detail: "문제", checked_at: "2026-11-14T21:10:00Z", age_hours: 1 },
+  ];
+  const out = foldHealthAlerts(rows as never, now);
+  const cron = out.find((a) => a.checkName === "ops.cron_job");
+  assert.ok(cron && cron.active === false && cron.recoveredAt === "2026-11-14T22:10:00Z");
+  const other = out.find((a) => a.checkName === "other.check");
+  assert.ok(other && other.recoveredAt === null, "다른 검사의 서명 없는 ok 는 닫지 않는다");
+});

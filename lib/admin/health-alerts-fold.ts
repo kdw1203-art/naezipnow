@@ -78,6 +78,8 @@ export function okCovers(okTarget: string, alertTarget: string): boolean {
 }
 
 const isOk = (sev: string) => sev === "ok";
+/** [1184] ok 한 줄이 검사 전체의 회복을 뜻하는 검사(서명 없는 ok · 서명 없는 경보) */
+const WHOLE_CHECK_OK = new Set(["ops.cron_job"]);
 
 /** [999] 접기 — 순수(테스트 가능). rows 는 checked_at 내림차순이어야 한다. */
 export function foldHealthAlerts(
@@ -100,7 +102,9 @@ export function foldHealthAlerts(
 
     if (isOk(sev)) {
       /* 서명 없는 ok 는 무엇을 닫는지 알 수 없다 — 아무것도 닫지 않는다(그리고 경보로도 세지 않는다) */
-      if (target && Number.isFinite(t)) {
+      /* [1184] 단, ops.cron_job 의 ok("중단 상태 잡 없음")는 서명 없이 남고 그 경보도 서명이 없다 — 이 검사의 ok 는 검사 전체가 그쳤다는 뜻이라
+         서명 없는 그 검사 경보를 닫는다. 운영 실측(2026-11-15): 예약 작업을 내려 ok 가 남았는데도 판에 "critical 진행 중"이 남았다. */
+      if ((target || WHOLE_CHECK_OK.has(check)) && Number.isFinite(t)) {
         const list = oks.get(check) ?? [];
         if (!list.some((o) => o.target === target)) list.push({ target, t, at });
         oks.set(check, list);
@@ -143,7 +147,7 @@ export function foldHealthAlerts(
     const since = Number.isFinite(last) ? Math.max(0, (nowMs - last) / 3_600_000) : Infinity;
     /* 회복 기록 — 이 경보의 마지막 발생보다 **뒤**에 남은, 이 대상을 덮는 ok(여럿이면 가장 최근) */
     const ok = (oks.get(a.checkName) ?? [])
-      .filter((o) => okCovers(o.target, a.target) && Number.isFinite(last) && o.t > last)
+      .filter((o) => (o.target === "" ? a.target === "" : okCovers(o.target, a.target)) && Number.isFinite(last) && o.t > last)
       .sort((x, y) => y.t - x.t)[0];
     const recovered = ok ? ok.at : null;
     const { times: _t, ...row } = a;

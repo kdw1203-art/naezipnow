@@ -51,8 +51,6 @@ test("Q2 어두운 요약 판 삭제 — 공매 · 입주 물량(머리 숫자�
 
 test("Q3 제목 한 줄 — 전문가 · 참여 · 지역 h2 · 시장 온도 · 입찰마감", () => {
   const e = read("app/town/experts/page.tsx");
-  assert.match(e, /<p className="t-section text-ink">인증 전문가<\/p>/);
-  assert.match(e, /<nav className="mt-2 flex flex-wrap gap-1\.5" aria-label="분야별 전문가">/);
   assert.match(e, /href=\{`\/town\/experts\/c\/\$\{t\.id\}`\}/);
   assert.match(e, /className="chip inline-flex min-h-\[40px\] items-center border border-line bg-surface px-2\.5 t-sub font-bold text-text-2 no-underline md:min-h-\[32px\]"/);
   assert.doesNotMatch(e, /KeywordChips/);
