@@ -170,7 +170,7 @@ function SellReportForm({
           className="input w-full"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder="예) 공작아파트 302동 임장 심화 리포트"
+          placeholder="예) ○○아파트 임장 심화 리포트"
           maxLength={80}
         />
       </label>

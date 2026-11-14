@@ -28,7 +28,7 @@ function badgeColor(label: string): { fg: string; bg: string } {
 }
 
 export async function GET(req: NextRequest) {
-  const title = q(req, "title", "공작 302동 3차 임장 — 채광은 확실, 주차가 관건");
+  const title = q(req, "title", "예시 단지 3차 임장 — 채광은 확실, 주차가 관건");
   const scoreRaw = q(req, "score", "81");
   const badgesRaw = q(req, "badges", "채광 상,소음 중,주차 하,교통 상");
 

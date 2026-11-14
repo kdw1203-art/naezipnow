@@ -6,6 +6,7 @@ import { PageHead } from "@/app/components/PageHead";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { EXPERT_TYPES } from "@/lib/experts/taxonomy";
 import { ApplyForm } from "./ApplyForm";
+import { StepStrip } from "@/app/components/StepStrip";
 
 /* [1047] 전문가 등록 — /town/experts/apply. 소유자 지시(2026-10-09) "전문가 등록하기 · 면허증·사업자등록증 첨부 → 관리자 승인만 등록".
    화면은 정적(양식은 클라이언트) — 로그인은 파일을 올리거나 신청할 때 묻는다. 직업군 목록은 분류 체계(lib/experts/taxonomy)에서 읽는다. */
@@ -18,13 +19,9 @@ export const metadata = buildPageMetadata({
   path: "/town/experts/apply",
 });
 
-const STEPS: readonly { title: string; desc: string }[] = [
-  { title: "신청", desc: "직업군 · 사업 형태 · 소개 · 서류 첨부" },
-  { title: "서류 심사", desc: "운영자가 면허·등록증 · 사업자등록증과 협회 조회를 확인" },
-  { title: "승인", desc: "승인된 사람만 전문가로 등록 · 결과는 알림으로" },
-  /* [1144] 승인 뒤 홍보 — 100일 무료, 그 뒤로는 프로 구독 중일 때만(프로필 · 인증 마크는 구독과 무관하게 유지) */
-  { title: "인증 마크 · 홍보 1년 무료", desc: "이름 옆 인증 마크 · 지역 · 단지 화면과 전문가 찾기 상단 · 홈에 홍보" },
-];
+/* [1174] 단계 안내는 한 줄 + 사실 한 줄(StepStrip) — 예전 카드 4장 · 설명 3줄 */
+const STEPS = ["신청", "서류 심사", "승인", "인증 마크 · 홍보 1년 무료"] as const;
+const STEPS_NOTE = "서류는 운영자만 확인 · 승인된 사람만 등록 · 결과는 알림으로";
 
 export default function ExpertApplyPage() {
   return (
@@ -35,15 +32,7 @@ export default function ExpertApplyPage() {
         title="전문가 등록"
         sub="세무·회계·설계·시공·감정평가·중개 · 개인과 법인 모두 · 관리자 승인 뒤 인증 마크"
       />
-      <ol className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-4">
-        {STEPS.map((s, i) => (
-          <li key={s.title} className="card rounded-2xl p-3">
-            <div className="t-caption font-bold text-primary">{i + 1}단계</div>
-            <div className="t-body font-bold text-ink">{s.title}</div>
-            <div className="t-caption text-text-3">{s.desc}</div>
-          </li>
-        ))}
-      </ol>
+      <StepStrip className="mt-3" label="등록 단계" steps={STEPS} note={STEPS_NOTE} />
       <div className="mt-4">
         <ApplyForm />
       </div>

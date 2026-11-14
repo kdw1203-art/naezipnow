@@ -1313,3 +1313,20 @@ test("[1173] 광고 칸 크기 고정 — 좌우 띠 160×600(수직형 단위) 
   assert.match(tail, /width: 336px;\s*height: 280px;/);
   assert.match(tail, /max-width: 379px\)[\s\S]*width: 300px;\s*height: 250px;/);
 });
+
+test("[1174] 단계 안내 한 줄 — 전문가 등록 · 크리에이터(카드 대신 StepStrip)", () => {
+  const a = read("app/town/experts/apply/page.tsx");
+  assert.match(a, /<StepStrip className="mt-3" label="등록 단계" steps=\{STEPS\} note=\{STEPS_NOTE\} \/>/);
+  assert.ok(!/\{i \+ 1\}단계/.test(a));
+  const s = read("app/components/StepStrip.tsx");
+  assert.match(s, /flex-wrap/);
+  assert.ok(!/"use client"/.test(s));
+});
+
+test("[1175] 사업장 주소는 도로명까지만 — 동·호수 · 건물명 없음(코드 · 예시 글 포함)", async () => {
+  const m = await import("../../lib/brand/business-info.ts");
+  assert.equal(m.getBusinessInfo().address, "경기도 안양시 동안구 관평로212번길 21");
+  for (const f of ["lib/brand/business-info.ts", "scripts/check-toss-review-freeze.mjs", "app/api/og/note/route.tsx", "app/my/creator/creator-client.tsx"]) {
+    assert.ok(!/1010호|302동/.test(read(f)), f);
+  }
+});

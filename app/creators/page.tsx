@@ -1,3 +1,4 @@
+import { StepStrip } from "@/app/components/StepStrip";
 import Link from "@/app/components/IntentLink";
 import { PageShell } from "../components/PageShell";
 import { Icon } from "@/app/components/Icon";
@@ -43,23 +44,10 @@ const WHY = [
   /* [1077] "요율은 한 곳에서" 칸을 걷었다 — 아래 "고지사항" 셋째 줄과 같은 말(한 화면에 같은 사실 두 번 금지) */
 ];
 
-const STEPS = [
-  {
-    no: "1",
-    title: "임장노트 작성 · 자격",
-    desc: "크리에이터 센터 열람·등록 조건은 전문가 인증 또는 공개 임장노트 1건 이상. 공개 노트는 단지·지역 페이지와 검색에 연결됩니다.",
-  },
-  {
-    no: "2",
-    title: "비공개 노트를 유료 리포트로 등록",
-    desc: "판매 대상은 비공개 노트만(공개 노트는 무료 열람이라 판매 불가). 크리에이터 센터에서 노트를 고르고 가격(100P~100,000P)을 직접 정합니다.",
-  },
-  {
-    no: "3",
-    title: "구매는 리포트 상세 직접 링크",
-    desc: "구매자는 리포트 상세 링크에서 포인트로 구매하고 연결된 노트 열람권을 얻습니다. 자료실 목록은 보관 상태라 노출 없음 · 판매 실적은 크리에이터 센터에서 확인.",
-  },
-];
+/* [1174] 단계 안내는 한 줄 + 사실 한 줄(StepStrip) — 예전 카드 3장 · 설명 2~3줄 */
+const STEPS = ["임장노트 작성", "비공개 노트를 유료 리포트로 등록", "구매는 리포트 상세 직접 링크"] as const;
+const STEPS_NOTE =
+  "자격: 전문가 인증 또는 공개 임장노트 1건 이상 · 판매는 비공개 노트만 · 가격 100P~100,000P · 판매 실적은 크리에이터 센터";
 
 const FAQ = [
   {
@@ -106,21 +94,7 @@ export default function CreatorsPage() {
 
       {/* 등록까지 3단계 */}
       <h2 className="mb-3 t-section text-ink">등록까지 3단계</h2>
-      <ol className="mb-8 grid gap-3 sm:grid-cols-3">
-        {STEPS.map((s) => (
-          <li key={s.no} className="card flex gap-3 rounded-2xl px-4 py-4">
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary-soft t-sub font-bold text-primary">
-              {s.no}
-            </span>
-            {/* [1073] 폰 한 줄 규칙(li 안 t-sub → 말줄임)에 설명 문장까지 걸려 칸이 539px 밖으로 밀렸다(390px 실측 가로 넘침).
-                설명은 끝까지 읽혀야 하는 글이라 nz-wrap · 묶음에 min-w-0 */}
-            <div className="min-w-0">
-              <div className="t-sub font-bold text-ink">{s.title}</div>
-              <p className="nz-wrap mt-0.5 t-sub leading-[1.6] text-text-2">{s.desc}</p>
-            </div>
-          </li>
-        ))}
-      </ol>
+      <StepStrip className="mb-8" label="등록 단계" steps={STEPS} note={STEPS_NOTE} />
 
       {/* 사실 고지 — 이 정직함이 브랜드다 */}
       <div className="mb-8 max-w-[720px] rounded-2xl border border-line bg-bg px-4 py-3.5">

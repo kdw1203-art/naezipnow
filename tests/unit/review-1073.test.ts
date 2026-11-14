@@ -107,7 +107,8 @@ test("C5 푸터 — 묶음 4개 · 링크·목적지 그대로 · 사업자 고�
 
 test("C6 넘침 — /creators 단계 설명은 접히고 · /auctions 날짜는 칸 안에서 접힌다", () => {
   const c = read("app/creators/page.tsx");
-  assert.match(c, /<div className="min-w-0">\s*<div className="t-sub font-bold text-ink">\{s\.title\}<\/div>\s*<p className="nz-wrap mt-0\.5 t-sub/);
+  /* [1174] 단계 카드 → 한 줄(StepStrip · 칩 단위로 줄바꿈 · 글자 잘림 없음) */
+  assert.match(c, /<StepStrip className="mb-8" label="등록 단계" steps=\{STEPS\} note=\{STEPS_NOTE\} \/>/);
   const a = read("app/auctions/AuctionsClient.tsx");
   assert.match(a, /<dd className="m-0 t-num t-section text-ink \[overflow-wrap:anywhere\]">\{f\.v\}<\/dd>/);
 });
