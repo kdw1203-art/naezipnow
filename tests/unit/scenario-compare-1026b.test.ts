@@ -108,7 +108,7 @@ test("[1026b] 시나리오 절차 — 조건 · {대상} · 대출 N% → 시나
   const c = computeScenario(BEFORE);
   const plan = scenarioSteps({ target: "예시 8.4억", ltvPct: 40, rateOffset: 0, pricePct: 0, period: "5년", pay: c.pay });
   assert.equal(plan.current, 2);
-  assert.deepEqual(plan.steps.map((s) => s.label), ["조건 · 예시 8.4억 · 대출 40%", "시나리오 · 금리 기준 · 보합 · 5년", "결과", "다음 행동"]);
+  assert.deepEqual(plan.steps.map((s) => s.label), ["조건 · 예시 8.4억 · 대출 40%", "시나리오 · 금리 기준 · 보합 · 5년", "결과", "추천 기능"]);
   assert.equal(plan.steps[2].note, "월 164만원");
   assert.equal(rateOffsetText(1), "금리 +1.0%p");
   assert.equal(rateOffsetText(-0.5), "금리 -0.5%p");
@@ -179,7 +179,7 @@ test("[1026b] 비교 결론 — 동점은 둘 다 · 평당가 없으면 평균�
 
 test("[1026b] 비교 절차 — 단지 담기(현재 · N곳) → 비교 → 결론 → 다음 행동 · 두 곳 미만은 담기 단계", () => {
   assert.deepEqual(compareSteps(0, "pick"), {
-    steps: [{ label: "단지 담기", note: undefined }, { label: "비교" }, { label: "결론" }, { label: "다음 행동" }],
+    steps: [{ label: "단지 담기", note: undefined }, { label: "비교" }, { label: "결론" }, { label: "추천 기능" }],
     current: 0,
   });
   assert.equal(compareSteps(1, "pick").steps[0].note, "1곳");

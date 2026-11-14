@@ -63,7 +63,7 @@ export function RegionActionCard({
 }) {
   return (
     <section className="card flex flex-col gap-2 rounded-2xl p-4 max-md:p-3.5">
-      <h2 className="t-section text-ink">다음 행동</h2>
+      <h2 className="t-section text-ink">추천 기능</h2>
       <p className="m-0 t-sub text-text-2">
         {regionLabel ? `${regionLabel} · ` : ""}
         {REGION_ALERT_KINDS}

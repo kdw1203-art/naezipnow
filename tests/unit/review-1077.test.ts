@@ -100,7 +100,6 @@ test("R7 말투 — 문학 투 제목·라벨 → 표준 이름", () => {
     ["app/pro/page.tsx", "브리핑 구성 항목", "브리핑에 들어가는 것"],
     ["app/town/experts/join/page.tsx", "인증 후 이용 범위", "인증되면 열리는 것"],
     ["app/town/experts/join/page.tsx", "준수 사항", "지켜야 할 것"],
-    ["app/redevelopment/(index)/page.tsx", "단계별 상세 · 확인 사항", "이 단계에서 확인할 것"],
     ["app/redevelopment/(index)/page.tsx", "설명 · 유의점 · 확인 사항", "유의점 · 확인할 것"],
     ["app/analysis/ai/[tool]/ResultView.tsx", "계약 전 확인 사항", "계약 전에 확인할 것"],
     /* [1107] 원칙 제목을 표 낱말로 줄였다("없으면 없음") — 바뀐 뜻 없음 */

@@ -30,7 +30,6 @@ import {
 import nextDynamic from "next/dynamic";
 import { filterNotesByQuery } from "@/lib/notes/feed-search";
 import { groupNoteRounds } from "@/lib/notes/round-groups";
-import { noteScoreBarClass } from "@/lib/notes/score-band";
 
 /* 공개 임장노트 — 인스타그램형(스토리 줄 + 3열 그리드 ⇄ 피드 전환) */
 
@@ -62,9 +61,10 @@ const MineFilterBar = nextDynamic(() => import("./mine-filter-bar").then((m) => 
   ssr: false,
   loading: () => <div aria-hidden className="h-10" />,
 });
-const DESK_VIEW_KEY = "nz_notes_desk_view";
+/* [1182] 기본 보기 = 피드. 예전 열쇠에 남은 "표"가 새 기본을 가리지 않게 열쇠를 바꾼다 */
+const DESK_VIEW_KEY = "nz_notes_desk_view_v2";
 /* [1052] 폰 보기(격자 · 피드 · 목록)도 이 브라우저에 기억 — 목록을 고른 사람이 다시 올 때마다 격자로 돌아가던 것 */
-const PHONE_VIEW_KEY = "nz_notes_phone_view";
+const PHONE_VIEW_KEY = "nz_notes_phone_view_v2";
 
 /** 예시 카드는 존재하지 않는 id로 상세를 열지 않는다 — 작성 CTA로 보낸다 */
 function noteHref(n: FeedNote): string {
@@ -516,8 +516,7 @@ function NotesTable({
   scoreSorted?: boolean;
   onScoreSort?: () => void;
 }) {
-  const router = useRouter();
-  /* 판단 칸은 판단을 남긴 노트가 하나라도 있을 때만 — 전부 "—" 인 칸은 소음이다 */
+    /* 판단 칸은 판단을 남긴 노트가 하나라도 있을 때만 — 전부 "—" 인 칸은 소음이다 */
   const hasDecision = notes.some((n) => n.decision);
   const [openId, setOpenId] = useState<string | null>(null);
   /* [1052] 필터·정렬·검색으로 목록이 바뀌면 펼침을 닫는다 — 펼친 줄이 다른 자리로 튀거나 사라진 줄이 열린 채 남지 않게 */
@@ -537,155 +536,65 @@ function NotesTable({
       window.requestAnimationFrame(() => document.getElementById(`note-row-${id}`)?.focus({ preventScroll: true }));
     }
   }, [openId]);
-  /* 펼친 칸은 머리의 칸 수만큼(숨은 칸 포함) 가로지른다 */
-  const span = hasDecision ? 4 : 3;
+  /* [1182] 소유자(2026-11-15): "목록은 다른 형식으로 … 너무 많아 보여서 헷갈려 보여".
+     표(머리 줄 · 썸네일 · 점수 막대 · 판단 · 사진 칸) → 한 줄 목록: 점수 · 제목 · 지역·시각. 정렬은 위 "점수순" 칩이 그대로 한다.
+     펼침 순서(첫 누름 = 피드 카드 · 다시 누르면 노트)는 그대로. */
+  void scoreSorted;
+  void onScoreSort;
   return (
-    <div className="card overflow-hidden rounded-2xl">
-      <table className="w-full table-fixed border-collapse">
-        <thead>
-          <tr className="border-b border-line bg-bg text-left t-caption text-text-3">
-            <th scope="col" className="px-3 py-2 font-bold">노트</th>
-            <th scope="col" aria-sort={onScoreSort ? (scoreSorted ? "descending" : "none") : undefined} className="w-[132px] px-2 py-2 font-bold max-md:w-[64px]">
-              {onScoreSort ? (
-                <button
-                  type="button"
-                  onClick={onScoreSort}
-                  aria-label={scoreSorted ? "최신 순으로" : "기록 점수 높은 순으로"}
-                  className={`-my-1 inline-flex min-h-[40px] items-center gap-0.5 md:min-h-6 ${scoreSorted ? "text-primary" : "hover:text-ink"}`}
-                >
-                  <span className="max-md:hidden">기록 </span>점수{scoreSorted ? " ↓" : ""}
-                </button>
-              ) : (
-                <>
-                  <span className="max-md:hidden">기록 </span>점수
-                </>
+    <ul className="card m-0 flex list-none flex-col overflow-hidden rounded-2xl p-0">
+      {notes.map((n) => {
+        const href = noteHref(n);
+        const isOpen = openId === n.id;
+        const panelId = `note-open-${n.id}`;
+        return (
+          <li key={n.id} className="border-b border-line last:border-b-0">
+            <Link
+              id={`note-row-${n.id}`}
+              href={href}
+              aria-expanded={isOpen}
+              aria-controls={isOpen ? panelId : undefined}
+              onClick={(e) => firstTapExpands(e, isOpen, () => setOpenId(n.id))}
+              className={`press flex min-h-[44px] min-w-0 items-center gap-3 px-3 py-1.5 no-underline ${isOpen ? "bg-primary-soft" : "hover:bg-bg"}`}
+            >
+              <span className={`w-11 shrink-0 text-right t-sub font-bold tabular-nums ${n.score > 0 ? "text-primary" : "text-text-3"}`}>
+                {n.score > 0 ? `${n.score}점` : "—"}
+              </span>
+              <span className="flex min-w-0 flex-1 items-center gap-1">
+                <span className="truncate t-body font-bold text-ink">{n.headline || n.title}</span>
+                {n.isExample && <ExampleBadge />}
+                <ExpertBadge badge={n.authorBadge} />
+              </span>
+              {hasDecision && n.decision && (
+                <span className="shrink-0 max-md:hidden">
+                  <NoteBadges n={n} only="decision" />
+                </span>
               )}
-            </th>
-            {/* [1050 · 펼침] 좁은 화면에서 감추는 칸은 display:none 이 아니라 폭 0 — 펼친 줄(colSpan)이 칸 수를 늘려
-                고정 표(table-fixed)가 남은 폭을 빈 칸에 나눠 주던 것(폰 목록에서 제목이 "까치…"로 눌림)을 막는다 */}
-            {hasDecision && (
-              <th scope="col" className="w-[84px] overflow-hidden px-2 py-2 font-bold max-xl:w-0 max-xl:p-0">
-                <span className="max-xl:hidden">판단</span>
-              </th>
-            )}
-            <th scope="col" className="w-[56px] overflow-hidden px-3 py-2 text-right font-bold max-md:w-0 max-md:p-0">
-              <span className="max-md:hidden">사진</span>
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {notes.map((n) => {
-            const href = noteHref(n);
-            const isOpen = openId === n.id;
-            const panelId = `note-open-${n.id}`;
-            return (
-              <Fragment key={n.id}>
-              <tr
-                className={`cursor-pointer border-b border-line last:border-b-0 ${isOpen ? "bg-primary-soft" : "hover:bg-bg"}`}
-                onClick={(e) => {
-                  /* 링크 밖(점수 · 판단 · 사진 칸)을 눌러도 같은 순서 — 링크 안은 링크가 처리한다 */
-                  if ((e.target as HTMLElement).closest("a,button")) return;
-                  if (isOpen) router.push(href);
-                  else setOpenId(n.id);
+              <span className="max-w-[40%] shrink-0 truncate t-caption text-text-3">{n.meta || n.author}</span>
+              {isOpen && <span className="shrink-0 t-caption font-bold text-primary">노트 열기 ›</span>}
+            </Link>
+            {isOpen && (
+              <div
+                id={panelId}
+                className="border-t border-line bg-bg p-2 md:p-3"
+                role="region"
+                aria-label={`${n.title} 펼침`}
+                onKeyDown={(e) => {
+                  /* [1052] Esc 로 접기 */
+                  if (e.key === "Escape") {
+                    e.stopPropagation();
+                    setOpenId(null);
+                  }
                 }}
               >
-                <td className="px-3 py-2">
-                  <Link
-                    id={`note-row-${n.id}`}
-                    href={href}
-                    aria-expanded={isOpen}
-                    aria-controls={isOpen ? panelId : undefined}
-                    onClick={(e) => firstTapExpands(e, isOpen, () => setOpenId(n.id))}
-                    className="press flex min-h-[48px] min-w-0 items-center gap-2.5 no-underline"
-                  >
-                    <span className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-bg">
-                      <CoverImage
-                        src={n.coverUrl}
-                        /* [1066 · 이미지 설명] 운영 실측: /notes 의 <img> 142장 중 38장이 alt="" 였다.
-                           206행과 같은 문장 꼴("<제목> 노트 커버")로 맞춘다 — 커버는 정말 그 노트의 표지다. */
-                        alt={`${n.title} 노트 커버`}
-                        sizes="44px"
-                        imgClassName="absolute inset-0 h-full w-full object-cover"
-                        fallback={<span className="absolute inset-0" style={{ background: seedGradient(n.id) }} />}
-                      />
-                    </span>
-                    {/* [1078] 표 줄의 굵은 글자 = 노트 제목(한 줄 총평). 예전엔 단지 이름만 보여 무엇을 말하는 노트인지
-                        펼쳐야 알 수 있었다(운영 실측). 단지 이름은 아랫줄 맨 앞. */}
-                    <span className="min-w-0 flex-1">
-                      <span className="flex min-w-0 items-center gap-1">
-                        <span className="truncate t-body font-bold text-ink">{n.headline || n.title}</span>
-                        {n.isExample && <ExampleBadge />}
-                      </span>
-                      <span className="flex min-w-0 items-center gap-1 t-caption text-text-3">
-                        <span className="truncate">
-                          {n.aptName && n.headline && n.headline !== n.title ? `${n.title} · ` : ""}
-                          {n.author}
-                          {n.meta ? ` · ${n.meta}` : ""}
-                        </span>
-                        <ExpertBadge badge={n.authorBadge} />
-                      </span>
-                    </span>
-                    {isOpen ? (
-                      <span className="shrink-0 t-caption font-bold text-primary">노트 열기 ›</span>
-                    ) : (
-                      <span className="shrink-0 rotate-90 text-text-3" aria-hidden="true">
-                        <Chevron dir="right" />
-                      </span>
-                    )}
-                  </Link>
-                </td>
-                <td className="px-2 py-2 align-middle">
-                  {n.score > 0 ? (
-                    <span className="flex items-center gap-2">
-                      <span className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-bg max-md:hidden" aria-hidden="true">
-                        <span
-                          className={`absolute inset-y-0 left-0 rounded-full ${noteScoreBarClass(n.score)}`}
-                          style={{ width: `${Math.min(100, n.score)}%` }}
-                        />
-                      </span>
-                      <span className="shrink-0 t-sub font-bold tabular-nums text-ink">{n.score}점</span>
-                    </span>
-                  ) : (
-                    <span className="t-caption text-text-3">점수 없음</span>
-                  )}
-                </td>
-                {hasDecision && (
-                  <td className="overflow-hidden px-2 py-2 max-xl:p-0">
-                    <span className="max-xl:hidden">
-                      {n.decision ? <NoteBadges n={n} only="decision" /> : <span className="t-caption text-text-3">—</span>}
-                    </span>
-                  </td>
-                )}
-                <td className="overflow-hidden px-3 py-2 text-right t-sub tabular-nums text-text-2 max-md:p-0">
-                  <span className="max-md:hidden">{(n.photoCount ?? 0) > 0 ? `${n.photoCount}장` : "—"}</span>
-                </td>
-              </tr>
-              {isOpen && (
-                <tr id={panelId} className="border-b border-line last:border-b-0">
-                  <td
-                    colSpan={span}
-                    className="bg-bg p-2 md:p-3"
-                    role="region"
-                    aria-label={`${n.title} 펼침`}
-                    onKeyDown={(e) => {
-                      /* [1052] Esc 로 접기 */
-                      if (e.key === "Escape") {
-                        e.stopPropagation();
-                        setOpenId(null);
-                      }
-                    }}
-                  >
-                    <PostCard n={n} />
-                    <FoldButton onClose={() => setOpenId(null)} label={n.title} />
-                  </td>
-                </tr>
-              )}
-              </Fragment>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+                <PostCard n={n} />
+                <FoldButton onClose={() => setOpenId(null)} label={n.title} />
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
@@ -896,11 +805,11 @@ export function NotesFeedClient({
   /* [1101 · 첫 화면] 폰 기본 보기 = 목록(표). 격자는 Lab 커버(글자 많은 포스터)를 2열 190px 로 줄여 제목·숫자가 읽히지 않았고
      커버 없는 칸은 빈 색면으로 남았다(운영 캡처 2026-11-02). 목록은 썸네일 44px · 제목 · 지역 · 점수가 한 줄씩 읽힌다.
      격자 · 피드는 전환 단추 그대로 — 고른 보기는 이 브라우저에 기억된다(PHONE_VIEW_KEY). */
-  const [view, setView] = useState<ViewMode>("table");
+  const [view, setView] = useState<ViewMode>("feed");
   /* [1050 · 펼침] 폰 격자에서 펼친 노트(한 번에 하나) */
   const [gridOpen, setGridOpen] = useState<string | null>(null);
   /* [1049] 데스크톱 보기(표 기본) — 고른 보기는 이 브라우저에만 기억(저장소가 막혀도 표로 그린다) */
-  const [deskView, setDeskViewState] = useState<DeskView>("table");
+  const [deskView, setDeskViewState] = useState<DeskView>("feed");
   useEffect(() => {
     try {
       const v = window.localStorage.getItem(DESK_VIEW_KEY);
@@ -1329,7 +1238,7 @@ export function NotesFeedClient({
           </div>
           {/* [1049] 데스크톱 보기 전환 — 표(기본) · 피드(사진 카드) */}
           <div className="hidden shrink-0 items-center gap-1 rounded-full bg-bg p-0.5 md:flex" role="group" aria-label="보기">
-            {(["table", "feed"] as const).map((v) => (
+            {(["feed", "table"] as const).map((v) => (
               <button
                 key={v}
                 type="button"
@@ -1340,7 +1249,7 @@ export function NotesFeedClient({
                 }`}
               >
                 {v === "table" ? <ListGlyph active={deskView === v} /> : <FeedGlyph active={deskView === v} />}
-                {v === "table" ? "표" : "피드"}
+                {v === "table" ? "목록" : "피드"}
               </button>
             ))}
           </div>

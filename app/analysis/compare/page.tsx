@@ -254,9 +254,9 @@ export default function ComparePage() {
   /* 다음 행동 카드 + 이어서 분석 — 데스크톱 레일 · 폰 본문 끝(채움 파랑은 하단 바가 맡아 카드 안에서는 lg 에서만) */
   const railNodes = (
     <>
-      <section className={CARD} aria-label="다음 행동">
+      <section className={CARD} aria-label="추천 기능">
         <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-          <h2 className="t-section text-ink">다음 행동</h2>
+          <h2 className="t-section text-ink">추천 기능</h2>
           <span className="t-caption tabular-nums text-text-3">후보 {count}곳</span>
         </div>
         <div className="hidden lg:block">{primary}</div>

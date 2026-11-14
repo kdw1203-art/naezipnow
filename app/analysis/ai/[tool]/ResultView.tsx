@@ -527,8 +527,8 @@ function FoldWord() {
   return (
     <span className="shrink-0 t-caption font-bold text-text-2" aria-hidden="true">
       {/* dead-control-ok: 늘 <details><summary> 안에서만 쓴다 — 요약 줄 전체가 네이티브 펼침 컨트롤이고 이 글자는 그 상태 표시 */}
-      <span className="group-open:hidden">펼치기 ▾</span>
-      <span className="hidden group-open:inline">접기 ▴</span>
+      <span className="group-open:hidden">▾</span>
+      <span className="hidden group-open:inline">▴</span>
     </span>
   );
 }
@@ -790,14 +790,14 @@ function Details({
 
   return (
     <details className="group px-4 max-md:px-3.5">
-      <summary className="flex min-h-[52px] cursor-pointer items-center justify-between gap-3">
-        <h2 className="t-body font-bold text-ink">자세히 보기</h2>
-        <span className="flex min-w-0 items-center gap-3">
-          <span className="min-w-0 truncate t-caption text-text-3">
+      <summary className="flex min-h-[44px] cursor-pointer items-center justify-between gap-3">
+        <h2 className="min-w-0 truncate t-body font-bold text-ink">
+          자세히 보기{" "}
+          <span className="t-caption font-medium text-text-3">
             {hideEvidence ? "" : `데이터 출처 ${evidence.length}곳 · `}결과가 달라지는 경우 · 공유
           </span>
-          <FoldWord />
-        </span>
+        </h2>
+        <FoldWord />
       </summary>
       <div className="flex flex-col gap-4 pb-4 pt-1">
         <div className={hideEvidence ? "hidden" : ""}>
@@ -965,12 +965,12 @@ function EvidenceCard({ tool, picked, verdict, footnotes }: { tool: AiAnalysisTo
   const staleN = evidence.filter((e) => e.confidence === "stale").length;
   return (
     <details className="group px-4 max-md:px-3.5" aria-label="근거 · 출처">
-      <summary className="flex min-h-[52px] cursor-pointer items-center justify-between gap-3">
-        <h2 className="t-body font-bold text-ink">근거 · 출처</h2>
-        <span className="flex min-w-0 items-center gap-3">
-          <span className="min-w-0 truncate t-caption tabular-nums text-text-3">{`근거 ${evidenceN}개 · 오래된 자료 ${staleN}개`}</span>
-          <FoldWord />
-        </span>
+      <summary className="flex min-h-[44px] cursor-pointer items-center justify-between gap-3">
+        {/* [1182] 한 줄 — 개수는 제목 옆에, 오른쪽은 꺾쇠만(두 줄이 같은 글자로 겹쳐 보이던 것) */}
+        <h2 className="min-w-0 truncate t-body font-bold text-ink">
+          근거 · 출처 <span className="t-caption font-medium tabular-nums text-text-3">{`${evidenceN}개${staleN > 0 ? ` · 오래된 자료 ${staleN}개` : ""}`}</span>
+        </h2>
+        <FoldWord />
       </summary>
       <div className="pb-3">
       {evidence.length > 0 ? (

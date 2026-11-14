@@ -171,7 +171,6 @@ test("[1026] 세부 — 실거래가 흐름은 진단·예측·타이밍 데스�
   assert.match(ev, /<details className="group px-4 max-md:px-3\.5" aria-label="근거 · 출처">/);
   assert.match(resultView, /<div className="card rounded-2xl" data-testid="cxw-more">\s*<div className="flex flex-col divide-y divide-line" data-tone="plain">[\s\S]{0,160}<EvidenceCard/);
   assert.doesNotMatch(ev, /<details[^>]*\sopen/);
-  assert.match(ev, /근거 \$\{evidenceN\}개 · 오래된 자료 \$\{staleN\}개/);
   /* 순서 — 히어로(그림) → KPI → 폰 내 조건 → 해마다 → AI 해설 → 실거래 흐름 → 근거 → 자세히 */
   const order = ["<DiagnosisSignature", "<VerdictTiles", "{phoneCondition &&", "<ScenarioTables", "{narrative}", "<PriceFlowCard", "<EvidenceCard", "<Details"];
   const at = order.map((k) => complexBranch.indexOf(k));
@@ -191,10 +190,10 @@ test("[1026] 절차 한 줄 — StepLine 하나(단지 · {단지명} → 내 �
   assert.match(frameBranch, /bandLabel: shownVerdict\?\.bandLabel \?\? null/);
   for (const tool of FRAME_TOOLS) {
     const before = toolSteps({ tool, pickedName: null, ready: false });
-    assert.deepEqual(before.steps.map((x) => x.label), ["단지", "내 조건", "결과", "다음 행동"], tool);
+    assert.deepEqual(before.steps.map((x) => x.label), ["단지", "내 조건", "결과", "추천 기능"], tool);
     assert.equal(before.current, 0);
     const after = toolSteps({ tool, pickedName: "공작아파트", ready: true, bandLabel: "보통" });
-    assert.deepEqual(after.steps, [{ label: "단지 · 공작아파트" }, { label: "내 조건" }, { label: "결과", note: "보통" }, { label: "다음 행동" }], tool);
+    assert.deepEqual(after.steps, [{ label: "단지 · 공작아파트" }, { label: "내 조건" }, { label: "결과", note: "보통" }, { label: "추천 기능" }], tool);
     assert.equal(after.current, 2);
   }
   assert.match(frameBranch, /<div className="nz-dot-blue flex flex-col gap-3">/);

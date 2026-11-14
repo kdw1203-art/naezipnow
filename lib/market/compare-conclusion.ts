@@ -102,7 +102,7 @@ export function compareSteps(count: number, phase: ComparePhase): StepPlan {
       phase === "pick" ? { label: "단지 담기", note: n > 0 ? `${n}곳` : undefined } : { label: `단지 담기 · ${n}곳` },
       { label: "비교" },
       { label: "결론" },
-      { label: "다음 행동" },
+      { label: "추천 기능" },
     ],
     current: phase === "pick" ? 0 : phase === "compare" ? 1 : 2,
   };

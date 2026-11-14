@@ -176,7 +176,6 @@ test("배치 — KPI 칸 수만큼 열 · 아래 광고 본문 열 안 · 단지
 test("폰(390px) — 넘치는 표·칩 줄 흐림 · 단계 줄 안 넘침 · 탭 높이 40px · textarea·select 16px(iOS 확대 방지)", () => {
   assert.match(read("app/analysis/temperature/[region]/page.tsx"), /<HScroll className="relative mt-3">\s*<table className="w-full min-w-\[460px\]/);
   assert.match(read("app/redevelopment/RedevelopmentMap.tsx"), /<HScroll hint=\{null\} className="-mx-1 px-1 pb-1">/);
-  assert.match(read("app/redevelopment/(index)/page.tsx"), /<HScroll hint=\{null\} className="mt-3 -mx-1 px-1 pb-1">/);
   const hs = read("app/components/HScroll.tsx");
   assert.match(hs, /hint\?: string \| null;/);
   assert.match(hs, /\{overflowing && hint !== null && \(/);

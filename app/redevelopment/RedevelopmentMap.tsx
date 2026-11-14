@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { scrollIntoViewSafely } from "@/lib/ui/scroll";
+import { useEffect, useMemo, useState } from "react";
 import { NaverMap } from "@/components/map/NaverMapLazy";
 import type { MapMarkerData, MapPolygonData } from "@/components/map/NaverMap";
 import { ZONE_SHAPES_CREDIT, ZONE_SHAPES_URL, matchZoneShape, type ZoneShape, type ZoneShapeFile } from "@/lib/redevelopment/zone-shapes";
@@ -9,7 +8,6 @@ import {
   STAGES,
   colorForType,
   labelForType,
-  locationLabel,
   stageLabel,
   type ProjectTypeKey,
   type RedevelopmentProject,
@@ -26,18 +24,14 @@ import { ProjectDetailPanel } from "./ProjectDetailPanel";
 const SEOUL_CENTER = { lat: 37.5665, lng: 126.978 };
 const MARKER_PREFIX = "redev:";
 
-/** 같은 데이터를 보는 세 가지 방식 — 지도 / 목록 / 내용(집계). */
-type ViewKey = "map" | "list" | "content";
+/** 같은 데이터를 보는 두 가지 방식 — 지도 / 내용(집계). [1182] 목록 탭은 걷었다 — 내용의 분포 줄을 누르면 그 구역 목록이 창으로 뜬다 */
+type ViewKey = "map" | "content";
 
 const VIEWS: { key: ViewKey; label: string; icon: string }[] = [
   { key: "map", label: "지도", icon: "map" },
-  { key: "list", label: "목록", icon: "clipboard" },
   { key: "content", label: "내용", icon: "file-text" },
 ];
 
-function householdsLabel(n: number | null): string {
-  return n != null ? `${n.toLocaleString("ko-KR")}세대` : "";
-}
 
 export function RedevelopmentMap({
   initialProjects,
@@ -63,7 +57,15 @@ export function RedevelopmentMap({
   /* [1158] 색 기준 — 사업종류(기본) · 진행단계. 지도 마커 · 목록 점 · 범례가 같이 바뀐다 */
   const [colorMode, setColorMode] = useState<RedevColorMode>("type");
 
-  const cardRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  /* [1182] 내용 뷰에서 누른 분포 줄 — 그 묶음의 구역 목록을 창으로 */
+  const [drill, setDrill] = useState<{ kind: "type" | "stage" | "region"; key: string; label: string } | null>(null);
+
+  /* [1182] 단계별 구역 수(전체 기준) — 진행단계 칩 옆 숫자 */
+  const stageTotals = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const p of initialProjects) m.set(p.stageKey, (m.get(p.stageKey) ?? 0) + 1);
+    return m;
+  }, [initialProjects]);
 
   const toggleType = (key: ProjectTypeKey) =>
     setTypes((prev) => {
@@ -222,9 +224,6 @@ export function RedevelopmentMap({
     setSelectedId(id);
   };
 
-  const handleCardClick = (id: string) => {
-    setSelectedId((prev) => (prev === id ? null : id));
-  };
 
   /* 지역을 바꾸면 이전 선택은 화면에서 사라진 구역일 수 있다 —
      보이지도 않는 구역의 상세가 남아 있으면 지금 보는 지역의 자료로 오해된다. */
@@ -233,13 +232,20 @@ export function RedevelopmentMap({
     setSelectedId(null);
   };
 
-  // 선택 변경 시 해당 목록 카드로 스크롤(마커 클릭 → 목록 하이라이트).
-  // 목록 뷰가 아닐 때는 카드가 DOM 에 없으므로 아무 일도 하지 않는다.
+  const drillRows = useMemo(() => {
+    if (!drill) return [];
+    return filtered.filter((p) =>
+      drill.kind === "type" ? p.typeKey === drill.key : drill.kind === "stage" ? p.stageKey === drill.key : p.sigungu === drill.key,
+    );
+  }, [drill, filtered]);
   useEffect(() => {
-    if (!selectedId || view !== "list") return;
-    const el = cardRefs.current.get(selectedId);
-    scrollIntoViewSafely(el, { block: "nearest" });
-  }, [selectedId, view]);
+    if (!drill) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setDrill(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drill]);
 
   const total = initialProjects.length;
   const topSigungu = regionCounts.slice(0, 12);
@@ -318,6 +324,8 @@ export function RedevelopmentMap({
                 }`}
               >
                 {s.label}
+                {/* [1182] 단계별 구역 수 — 요약 판의 막대 7줄 대신 칩 옆 숫자 하나 */}
+                <span className="ml-1 t-num font-medium opacity-70">{(stageTotals.get(s.key) ?? 0).toLocaleString("ko-KR")}</span>
               </button>
             );
           })}
@@ -496,73 +504,6 @@ export function RedevelopmentMap({
         </>
       ) : null}
 
-      {/* ===== 목록 뷰 ===== */}
-      {view === "list" ? (
-        filtered.length === 0 ? (
-          <div className="card rounded-2xl px-5 py-8 text-center t-sub text-text-3">
-선택한 조건에 해당하는 정비사업장 없음
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {filtered.map((p) => {
-              const color = redevMarkerColor(p, colorMode);
-              const active = selectedId === p.id;
-              const households = householdsLabel(p.households);
-              const loc = locationLabel({ sigungu: p.sigungu, address: p.address });
-              return (
-                <div
-                  key={p.id}
-                  ref={(el) => {
-                    if (el) cardRefs.current.set(p.id, el);
-                    else cardRefs.current.delete(p.id);
-                  }}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleCardClick(p.id)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      handleCardClick(p.id);
-                    }
-                  }}
-                  className={`tile press cursor-pointer rounded-xl border p-3 text-left ${
-                    active ? "border-primary ring-1 ring-primary" : "border-line"
-                  }`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
-                      style={{ background: color }}
-                    />
-                    <span className="truncate t-body font-bold text-ink">{p.name}</span>
-                  </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    <span
-                      className="rounded-full chip-pad t-sub font-semibold"
-                      style={{ background: `${color}1a`, color }}
-                    >
-                      {labelForType(p.typeKey)}
-                    </span>
-                    <span className="rounded-full bg-primary-soft chip-pad t-sub font-semibold text-primary">
-                      {stageLabel(p.stageKey)}
-                    </span>
-                  </div>
-                  {loc ? <div className="mt-1.5 t-sub text-text-2">{loc}</div> : null}
-                  {households ? (
-                    <div className="mt-0.5 t-sub text-text-3">예정 {households}</div>
-                  ) : null}
-                  {p.asOf ? (
-                    <div className="mt-0.5 t-caption text-text-3">
-                      {p.asOf} 공개자료 기준 · 최신 단계와 다를 수 있음
-                    </div>
-                  ) : null}
-                </div>
-              );
-            })}
-          </div>
-        )
-      ) : null}
-
       {/* ===== 내용 뷰 — 지금 조건에 맞는 구역들의 집계 =====
            집계는 전부 화면에 올라온 행에서만 낸다. 표본 밖 값을 추정해 채우지 않는다. */}
       {view === "content" ? (
@@ -614,7 +555,12 @@ export function RedevelopmentMap({
                   const color = colorForType(key);
                   const pct = filtered.length > 0 ? (count / filtered.length) * 100 : 0;
                   return (
-                    <li key={key} className="flex items-center gap-2">
+                    <li key={key}>
+                      <button
+                        type="button"
+                        onClick={() => setDrill({ kind: "type", key, label: labelForType(key) })}
+                        className="press flex min-h-10 w-full items-center gap-2 rounded-lg text-left hover:bg-bg md:min-h-8"
+                      >
                       <span
                         className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
                         style={{ background: color }}
@@ -631,6 +577,7 @@ export function RedevelopmentMap({
                       <span className="w-[54px] shrink-0 text-right t-sub text-text-2">
                         {count.toLocaleString("ko-KR")}곳
                       </span>
+                      </button>
                     </li>
                   );
                 })}
@@ -641,7 +588,7 @@ export function RedevelopmentMap({
           <section className="card rounded-2xl px-5 py-4">
             <div className="flex items-baseline justify-between">
               <h3 className="t-body font-bold text-ink">진행단계 분포</h3>
-              <span className="t-caption text-text-3">도시정비법 일반 절차 기준 7단계</span>
+              <span className="t-caption text-text-3">줄을 누르면 구역 목록</span>
             </div>
             <ol className="mt-2 flex flex-col gap-1.5">
               {summary.stages.map(({ stage, count }) => {
@@ -653,11 +600,8 @@ export function RedevelopmentMap({
                     </span>
                     <button
                       type="button"
-                      onClick={() => toggleStage(stage.key)}
-                      aria-pressed={stages.has(stage.key)}
-                      className={`w-[92px] shrink-0 truncate text-left t-sub font-semibold ${
-                        stages.has(stage.key) ? "text-primary" : "text-text-1"
-                      }`}
+                      onClick={() => setDrill({ kind: "stage", key: stage.key, label: stage.label })}
+                      className="press min-h-10 w-[92px] shrink-0 truncate text-left t-sub font-bold text-primary md:min-h-8"
                     >
                       {stage.label}
                     </button>
@@ -687,13 +631,8 @@ export function RedevelopmentMap({
                   <li key={r.name}>
                     <button
                       type="button"
-                      onClick={() => handleSigunguClick(r.name)}
-                      aria-pressed={sigungu === r.name}
-                      className={`press flex w-full items-center justify-between rounded-lg border px-3 py-2 text-left ${
-                        sigungu === r.name
-                          ? "border-primary bg-primary-soft"
-                          : "border-line bg-surface"
-                      }`}
+                      onClick={() => setDrill({ kind: "region", key: r.name, label: r.name })}
+                      className="press flex w-full items-center justify-between rounded-lg border border-line bg-surface px-3 py-2 text-left"
                     >
                       <span className="truncate t-sub font-semibold text-ink">
                         {r.name}
@@ -707,19 +646,54 @@ export function RedevelopmentMap({
               </ul>
             </section>
           ) : null}
+          {/* [1182] 누른 분포의 구역 목록 — 창. 예전 "목록" 탭(카드 442장)을 대신한다 */}
+          {drill && (
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label={`${drill.label} 구역 목록`}
+              className="fixed inset-0 z-[70] flex items-end justify-center bg-[rgba(11,37,69,.55)] md:items-center md:p-6"
+              onClick={(e) => {
+                if (e.target === e.currentTarget) setDrill(null);
+              }}
+            >
+              <div className="flex max-h-[82vh] w-full max-w-[560px] flex-col overflow-hidden rounded-t-2xl bg-surface md:rounded-2xl">
+                <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5">
+                  <p className="m-0 min-w-0 truncate t-body font-bold text-ink">
+                    {drill.label} <span className="t-sub font-medium tabular-nums text-text-3">{drillRows.length.toLocaleString("ko-KR")}곳</span>
+                  </p>
+                  <button type="button" onClick={() => setDrill(null)} className="press flex h-10 shrink-0 items-center rounded-lg px-2 t-sub font-bold text-text-2">
+                    닫기
+                  </button>
+                </div>
+                {drillRows.length === 0 ? (
+                  <p className="m-0 px-4 py-6 text-center t-sub text-text-3">구역 없음</p>
+                ) : (
+                  <ul className="m-0 flex list-none flex-col divide-y divide-line overflow-y-auto p-0" data-tone="plain">
+                    {drillRows.map((p) => (
+                      <li key={p.id}>
+                        <a href={redevDetailHref(p.id)} className="flex min-h-11 items-center gap-2 px-4 py-1.5 no-underline hover:bg-bg">
+                          <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: redevMarkerColor(p, colorMode) }} />
+                          <span className="min-w-0 flex-1 truncate t-body font-bold text-ink">{p.name}</span>
+                          <span className="shrink-0 truncate t-caption text-text-3">
+                            {[drill.kind === "stage" ? labelForType(p.typeKey) : stageLabel(p.stageKey), drill.kind === "region" ? null : p.sigungu].filter(Boolean).join(" · ")}
+                          </span>
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       ) : null}
 
-      {/* ===== 데이터 출처 ===== */}
-      <DataSourceCard sources={sources} />
-
-      {/* ===== 면책 ===== */}
-      <p className="flex gap-1.5 rounded-lg bg-primary-soft px-3 py-2 t-caption text-primary">
-        <Icon name="landmark" size={13} className="mt-px shrink-0" />
-        <span>
-          구역·진행단계는 {asOfLabel ? `${asOfLabel} ` : ""}공개자료 기준 참고값 · 좌표는 구역 대표점 근사값
-        </span>
-      </p>
+      {/* [1182] 데이터 출처 표 + 면책 띠 → 한 줄(누르면 창) */}
+      <DataSourceCard
+        sources={sources}
+        line={`구역·진행단계는 ${asOfLabel ? `${asOfLabel} ` : ""}공개자료 기준 참고값 · 좌표는 구역 대표점 근사값`}
+      />
     </div>
   );
 }

@@ -57,7 +57,7 @@ export function scenarioSteps(i: {
       { label: `조건 · ${i.target} · 대출 ${i.ltvPct}%` },
       { label: `시나리오 · ${[rateOffsetText(i.rateOffset), priceScenarioText(i.pricePct), i.period].join(" · ")}` },
       { label: "결과", note: `월 ${scenarioWon(i.pay)}` },
-      { label: "다음 행동" },
+      { label: "추천 기능" },
     ],
     current: 2,
   };

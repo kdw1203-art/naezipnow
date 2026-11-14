@@ -294,7 +294,7 @@ function FilterChipGroup({
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="t-sub font-bold text-text-3">{label}</div>
+      <div className="t-body font-bold text-ink">{label}</div>
       <div className="flex flex-wrap gap-1.5">
         {options.map((o) => {
           const active = o.key === valueKey;
@@ -308,8 +308,8 @@ function FilterChipGroup({
                  맨 아래 "보기" 단추(btn-primary)와 무게를 다퉜다 */
               className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
                 active
-                  ? "bg-primary-soft font-bold text-primary"
-                  : "bg-[var(--glass-bg)] text-text-2"
+                  ? "border border-primary bg-primary-soft font-bold text-primary"
+                  : "border border-line bg-surface text-text-2"
               }`}
             >
               {o.label}
@@ -1138,7 +1138,8 @@ export function MapClient({
   const [showPriceOverlay, setShowPriceOverlay] = useState(true);
 
   /* ===== 정비사업 레이어 — 재개발·재건축 사업장 (공개 자료). 토글 ON 시 1회 로드 ===== */
-  const [showRedevelopment, setShowRedevelopment] = useState(false);
+  /* [1182] 기본 켬 — 소유자(2026-11-15): "기본적으로 정비사업 레이어가 덮어져서 같이 보이도록". 끈 사람은 주소(noredev) · 저장값(redevV 2)으로 기억 */
+  const [showRedevelopment, setShowRedevelopment] = useState(true);
   /* [1027] 정비사업 걸러 보기 — 사업종류 묶음(민간·공공·소규모·기타) · 진행단계 7 · 이름표 값.
      빈 집합 = 그 축은 걸지 않음. 뷰포트로 받아 온 목록(redevItems)에서만 거른다 — 새 조회 없음. */
   const [redevGroups, setRedevGroups] = useState<Set<ProjectGroupKey>>(() => new Set());
@@ -1274,7 +1275,8 @@ export function MapClient({
         const on = new Set(layersRaw.split(",").map((s) => s.trim()).filter(Boolean));
         setShowPriceOverlay(on.has("price"));
         if (!initialListingType) setShowListings(on.has("listings"));
-        setShowRedevelopment(on.has("redev"));
+        /* [1182] 예전 주소(redev 토큰 없음)도 켠다 — 끈 것은 noredev 로 적는다 */
+        setShowRedevelopment(!on.has("noredev"));
         setShowSupply(on.has("supply"));
         setShowMyNotes(on.has("mynotes"));
         setShowWatchlist(on.has("watchlist"));
@@ -1319,11 +1321,13 @@ export function MapClient({
         base?: string;
         cadastral?: boolean;
         redevLabel?: string;
+        redevV?: number;
       };
       if (typeof p.overlay === "boolean") setShowPriceOverlay(p.overlay);
       // URL 로 매물이 켜진 진입(?type=)은 사용자의 명시 의도 — 저장값이 끄지 않는다
       if (typeof p.listings === "boolean" && !initialListingType) setShowListings(p.listings);
-      if (typeof p.redev === "boolean") setShowRedevelopment(p.redev);
+      /* [1182] 기본이 켬으로 바뀌기 전에 저장된 false 는 버린다(redevV 2 부터 읽는다) */
+      if (typeof p.redev === "boolean" && p.redevV === 2) setShowRedevelopment(p.redev);
       if (typeof p.supply === "boolean") setShowSupply(p.supply);
       if (typeof p.myNotes === "boolean") setShowMyNotes(p.myNotes);
       if (typeof p.watchlist === "boolean") setShowWatchlist(p.watchlist);
@@ -1355,6 +1359,7 @@ export function MapClient({
           overlay: showPriceOverlay,
           listings: showListings,
           redev: showRedevelopment,
+          redevV: 2,
           supply: showSupply,
           myNotes: showMyNotes,
           watchlist: showWatchlist,
@@ -1380,7 +1385,7 @@ export function MapClient({
       const tokens = [
         showPriceOverlay ? "price" : null,
         showListings ? "listings" : null,
-        showRedevelopment ? "redev" : null,
+        showRedevelopment ? "redev" : "noredev",
         showSupply ? "supply" : null,
         showMyNotes ? "mynotes" : null,
         showWatchlist ? "watchlist" : null,
@@ -2274,13 +2279,13 @@ export function MapClient({
       {/* [1104] 절 구분선 rgba(남색 8%) → border-line — 다크 패널에서 선이 사라져 위 "등록 매물 조건"과 붙어 보였다(위 두 절은 이미 border-line) */}
       <div
         id="map-layer-section"
-        className="flex flex-col gap-1.5 border-t border-line pt-2.5"
+        className="flex flex-col gap-2 border-t-2 border-line pt-3"
       >
-        <div className="t-sub font-bold text-text-3">지도 레이어</div>
+        <div className="t-body font-bold text-ink">지도 레이어</div>
         {/* [1027] 바탕 지도 — 일반/위성은 둘 중 하나, 지적편집도는 그 위에 얹는 선(따로 켜고 끈다).
             지도를 못 그린 폴백 화면에서는 바꿀 바탕이 없어 비활성. */}
         <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="바탕 지도">
-          <span className="t-caption font-bold text-text-3">바탕 지도</span>
+          <span className="basis-full t-caption font-bold text-text-2">바탕 지도</span>
           {(
             [
               ["normal", "일반"],
@@ -2295,8 +2300,8 @@ export function MapClient({
               onClick={() => setBaseMap(key)}
               className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors disabled:opacity-40 ${
                 baseMap === key
-                  ? "bg-primary-soft font-bold text-primary"
-                  : "bg-[var(--glass-bg)] text-text-2"
+                  ? "border border-primary bg-primary-soft font-bold text-primary"
+                  : "border border-line bg-surface text-text-2"
               }`}
             >
               {label}
@@ -2309,8 +2314,8 @@ export function MapClient({
             onClick={() => setShowCadastral((v) => !v)}
             className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors disabled:opacity-40 ${
               showCadastral
-                ? "bg-primary-soft font-bold text-primary"
-                : "bg-[var(--glass-bg)] text-text-2"
+                ? "border border-primary bg-primary-soft font-bold text-primary"
+                : "border border-line bg-surface text-text-2"
             }`}
           >
             지적편집도
@@ -2324,8 +2329,8 @@ export function MapClient({
             onClick={() => setShowPriceOverlay((v) => !v)}
             className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
               showPriceOverlay
-                ? "bg-primary-soft font-bold text-primary"
-                : "bg-[var(--glass-bg)] text-text-2"
+                ? "border border-primary bg-primary-soft font-bold text-primary"
+                : "border border-line bg-surface text-text-2"
             }`}
           >
             <Icon name="tag" size={14} className="inline align-middle" /> 실거래가 색상
@@ -2341,8 +2346,8 @@ export function MapClient({
             }}
             className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
               showRedevelopment
-                ? "bg-primary-soft font-bold text-primary"
-                : "bg-[var(--glass-bg)] text-text-2"
+                ? "border border-primary bg-primary-soft font-bold text-primary"
+                : "border border-line bg-surface text-text-2"
             }`}
           >
             <Icon name="landmark" size={14} className="inline align-middle" /> 정비사업
@@ -2354,8 +2359,8 @@ export function MapClient({
             onClick={() => setShowSupply((v) => !v)}
             className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
               showSupply
-                ? "bg-primary-soft font-bold text-primary"
-                : "bg-[var(--glass-bg)] text-text-2"
+                ? "border border-primary bg-primary-soft font-bold text-primary"
+                : "border border-line bg-surface text-text-2"
             }`}
           >
             <Icon name="construction" size={14} className="inline align-middle" /> 입주 예정
@@ -2370,8 +2375,8 @@ export function MapClient({
             }}
             className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
               showMyNotes
-                ? "bg-primary-soft font-bold text-primary"
-                : "bg-[var(--glass-bg)] text-text-2"
+                ? "border border-primary bg-primary-soft font-bold text-primary"
+                : "border border-line bg-surface text-text-2"
             }`}
           >
             <Icon name="notebook-pen" size={14} className="inline align-middle" /> 내 노트
@@ -2386,8 +2391,8 @@ export function MapClient({
             }}
             className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
               showWatchlist
-                ? "bg-primary-soft font-bold text-primary"
-                : "bg-[var(--glass-bg)] text-text-2"
+                ? "border border-primary bg-primary-soft font-bold text-primary"
+                : "border border-line bg-surface text-text-2"
             }`}
           >
             <Icon name="bookmark" size={14} className="inline align-middle" /> 관심 단지
@@ -2399,8 +2404,8 @@ export function MapClient({
             onClick={() => setShowRentShare((v) => !v)}
             className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
               showRentShare
-                ? "bg-primary-soft font-bold text-primary"
-                : "bg-[var(--glass-bg)] text-text-2"
+                ? "border border-primary bg-primary-soft font-bold text-primary"
+                : "border border-line bg-surface text-text-2"
             }`}
           >
             <Icon name="coin" size={14} className="inline align-middle" /> 월세 비중
@@ -2422,8 +2427,8 @@ export function MapClient({
             }}
             className={`chip whitespace-nowrap px-2.5 py-1.5 t-body transition-colors ${
               showAuctions
-                ? "bg-primary-soft font-bold text-primary"
-                : "bg-[var(--glass-bg)] text-text-2"
+                ? "border border-primary bg-primary-soft font-bold text-primary"
+                : "border border-line bg-surface text-text-2"
             }`}
           >
             <Icon name="gavel" size={14} className="inline align-middle" /> 공매
@@ -2443,8 +2448,8 @@ export function MapClient({
             onClick={() => setShowSchools((v) => !v)}
             className={`chip whitespace-nowrap px-2.5 py-1.5 t-body transition-colors ${
               showSchools
-                ? "bg-primary-soft font-bold text-primary"
-                : "bg-[var(--glass-bg)] text-text-2"
+                ? "border border-primary bg-primary-soft font-bold text-primary"
+                : "border border-line bg-surface text-text-2"
             }`}
           >
             <Icon name="school" size={14} className="inline align-middle" /> 학교
@@ -2455,8 +2460,8 @@ export function MapClient({
             onClick={() => setShowStations((v) => !v)}
             className={`chip whitespace-nowrap px-2.5 py-1.5 t-body transition-colors ${
               showStations
-                ? "bg-primary-soft font-bold text-primary"
-                : "bg-[var(--glass-bg)] text-text-2"
+                ? "border border-primary bg-primary-soft font-bold text-primary"
+                : "border border-line bg-surface text-text-2"
             }`}
           >
             <Icon name="train" size={14} className="inline align-middle" /> 지하철
@@ -2481,15 +2486,15 @@ export function MapClient({
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="사업종류">
-              <span className="t-caption font-bold text-text-3">사업종류</span>
+              <span className="basis-full t-caption font-bold text-text-2">사업종류</span>
               <button
                 type="button"
                 aria-pressed={redevGroups.size === 0}
                 onClick={() => setRedevGroups(new Set())}
                 className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors ${
                   redevGroups.size === 0
-                    ? "bg-primary-soft font-bold text-primary"
-                    : "bg-[var(--glass-bg)] text-text-2"
+                    ? "border border-primary bg-primary-soft font-bold text-primary"
+                    : "border border-line bg-surface text-text-2"
                 }`}
               >
                 전체
@@ -2505,7 +2510,7 @@ export function MapClient({
                     disabled={redevCountsReady && n === 0 && !on}
                     onClick={() => toggleRedevGroup(g.key)}
                     className={`chip whitespace-nowrap px-2 py-1 t-caption tabular-nums transition-colors disabled:opacity-40 ${
-                      on ? "bg-primary-soft font-bold text-primary" : "bg-[var(--glass-bg)] text-text-2"
+                      on ? "border border-primary bg-primary-soft font-bold text-primary" : "border border-line bg-surface text-text-2"
                     }`}
                   >
                     {g.label}
@@ -2515,15 +2520,15 @@ export function MapClient({
               })}
             </div>
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="진행단계">
-              <span className="t-caption font-bold text-text-3">진행단계</span>
+              <span className="basis-full t-caption font-bold text-text-2">진행단계</span>
               <button
                 type="button"
                 aria-pressed={redevStages.size === 0}
                 onClick={() => setRedevStages(new Set())}
                 className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors ${
                   redevStages.size === 0
-                    ? "bg-primary-soft font-bold text-primary"
-                    : "bg-[var(--glass-bg)] text-text-2"
+                    ? "border border-primary bg-primary-soft font-bold text-primary"
+                    : "border border-line bg-surface text-text-2"
                 }`}
               >
                 전체
@@ -2539,7 +2544,7 @@ export function MapClient({
                     disabled={redevCountsReady && n === 0 && !on}
                     onClick={() => toggleRedevStage(st.key)}
                     className={`chip whitespace-nowrap px-2 py-1 t-caption tabular-nums transition-colors disabled:opacity-40 ${
-                      on ? "bg-primary-soft font-bold text-primary" : "bg-[var(--glass-bg)] text-text-2"
+                      on ? "border border-primary bg-primary-soft font-bold text-primary" : "border border-line bg-surface text-text-2"
                     }`}
                   >
                     {st.label}
@@ -2549,7 +2554,7 @@ export function MapClient({
               })}
             </div>
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="이름표">
-              <span className="t-caption font-bold text-text-3">이름표</span>
+              <span className="basis-full t-caption font-bold text-text-2">이름표</span>
               {REDEV_LABEL_MODES.map((m) => (
                 <button
                   key={m.key}
@@ -2558,8 +2563,8 @@ export function MapClient({
                   onClick={() => setRedevLabelMode(m.key)}
                   className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors ${
                     redevLabelMode === m.key
-                      ? "bg-primary-soft font-bold text-primary"
-                      : "bg-[var(--glass-bg)] text-text-2"
+                      ? "border border-primary bg-primary-soft font-bold text-primary"
+                      : "border border-line bg-surface text-text-2"
                   }`}
                 >
                   {m.label}
@@ -2567,12 +2572,12 @@ export function MapClient({
               ))}
             </div>
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="구역 경계">
-              <span className="t-caption font-bold text-text-3">경계</span>
+              <span className="basis-full t-caption font-bold text-text-2">경계</span>
               <button
                 type="button"
                 aria-pressed={showZoneShapes}
                 onClick={() => setShowZoneShapes((v) => !v)}
-                className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors ${showZoneShapes ? "bg-primary-soft font-bold text-primary" : "bg-[var(--glass-bg)] text-text-2"}`}
+                className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors ${showZoneShapes ? "border border-primary bg-primary-soft font-bold text-primary" : "border border-line bg-surface text-text-2"}`}
               >
                 구역 경계
               </button>
@@ -2581,14 +2586,14 @@ export function MapClient({
                 aria-pressed={onlyWithShape}
                 disabled={!zoneShapes}
                 onClick={() => setOnlyWithShape((v) => !v)}
-                className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors disabled:opacity-40 ${onlyWithShape ? "bg-primary-soft font-bold text-primary" : "bg-[var(--glass-bg)] text-text-2"}`}
+                className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors disabled:opacity-40 ${onlyWithShape ? "border border-primary bg-primary-soft font-bold text-primary" : "border border-line bg-surface text-text-2"}`}
               >
                 경계 있는 구역만
               </button>
             </div>
             {zoneShapes && showZoneShapes && <p className="m-0 t-caption text-text-3">{ZONE_SHAPES_CREDIT}</p>}
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="마커 색">
-              <span className="t-caption font-bold text-text-3">색</span>
+              <span className="basis-full t-caption font-bold text-text-2">색</span>
               {REDEV_COLOR_MODES.map((m) => (
                 <button
                   key={m.key}
@@ -2597,8 +2602,8 @@ export function MapClient({
                   onClick={() => setRedevColorMode(m.key)}
                   className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors ${
                     redevColorMode === m.key
-                      ? "bg-primary-soft font-bold text-primary"
-                      : "bg-[var(--glass-bg)] text-text-2"
+                      ? "border border-primary bg-primary-soft font-bold text-primary"
+                      : "border border-line bg-surface text-text-2"
                   }`}
                 >
                   {m.label}
@@ -2610,7 +2615,7 @@ export function MapClient({
         {/* [940] 구 버블 지표 전환 — 넓은 줌의 구 단위 버블에 어떤 숫자를 띄울지.
             단지 줌·전세 모드에서는 구 버블 자체가 숨으므로 비활성으로 보여 준다. */}
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="t-caption font-bold text-text-3">구 표시</span>
+          <span className="basis-full t-caption font-bold text-text-2">구 표시</span>
           {(
             [
               ["avg", "평균가"],
@@ -2627,8 +2632,8 @@ export function MapClient({
               onClick={() => setRegionMetric(key)}
               className={`chip whitespace-nowrap px-2 py-1 t-caption transition-colors disabled:opacity-40 ${
                 regionMetric === key
-                  ? "bg-primary-soft font-bold text-primary"
-                  : "bg-[var(--glass-bg)] text-text-2"
+                  ? "border border-primary bg-primary-soft font-bold text-primary"
+                  : "border border-line bg-surface text-text-2"
               }`}
             >
               {label}
@@ -2667,7 +2672,7 @@ export function MapClient({
       {/* ===== 출퇴근 필터 (#10) — 회사 주소 + 임계 소요시간 ===== */}
       {/* [1104] 구분선 border-line(다크에서 보이게 · 위 절과 같은 값) */}
       <div className="flex flex-col gap-1.5 border-t border-line pt-2.5">
-        <div className="t-sub font-bold text-text-3">출퇴근 (회사 위치)</div>
+        <div className="t-body font-bold text-ink">출퇴근 (회사 위치)</div>
         <div className="flex items-center gap-1.5">
         <input
           type="text"
@@ -2703,8 +2708,8 @@ export function MapClient({
                 onClick={() => setCommuteKey(o.key)}
                 className={`chip whitespace-nowrap px-2.5 py-1.5 t-sub transition-colors ${
                   active
-                    ? "bg-primary-soft font-bold text-primary"
-                    : "bg-[var(--glass-bg)] text-text-2"
+                    ? "border border-primary bg-primary-soft font-bold text-primary"
+                    : "border border-line bg-surface text-text-2"
                 }`}
               >
                 {o.label}

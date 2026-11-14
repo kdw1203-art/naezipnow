@@ -55,7 +55,7 @@ test("지도 패널 — 단지 조건 0곳 접기 · 등록 매물 조건 묶음
   const layer = m.indexOf('id="map-layer-section"');
   assert.ok(m.indexOf('label="마커에 표시"') > layer, "마커 표시는 레이어 절");
   const chip = m.slice(m.indexOf("function FilterChipGroup"), m.indexOf("export type RegionMarker"));
-  assert.match(chip, /\? "bg-primary-soft font-bold text-primary"/);
+  assert.match(chip, /\? "border border-primary bg-primary-soft font-bold text-primary"/);
   assert.doesNotMatch(chip, /bg-primary text-white/);
   assert.match(m, /\{filteredDanji\.length > 0 \? `단지 \$\{filteredDanji\.length\.toLocaleString\("ko-KR"\)\}곳 보기` : "지도 보기"\}/);
   assert.match(m, /<p className="-mt-1 t-caption text-text-3">단지 = 국토교통부 실거래 · 값 없는 단지는 조건을 걸면 제외<\/p>/);

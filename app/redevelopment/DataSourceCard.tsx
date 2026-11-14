@@ -1,58 +1,42 @@
 import { Icon } from "@/app/components/Icon";
+import { PopupSheet } from "@/app/components/PopupSheet";
 
 /**
- * 데이터 출처 카드 — jaegebal 벤치마크의 "데이터 출처" 표를 재현.
- * 데이터 종류 / 출처 / 업데이트 주기 3열 표. (RedevelopmentMap에서만 사용)
+ * 데이터 출처 — [1182] 표 한 장 + 면책 띠 → 한 줄. 누르면 창에 종류 · 출처 · 갱신 주기.
+ * 글자는 예전 표와 같다(RedevelopmentMap 에서만 사용).
  */
 export function DataSourceCard({
   sources,
+  line,
 }: {
   sources: { kind: string; source: string; cycle: string }[];
+  /** 한 줄에 같이 적는 기준 문장(면책) */
+  line?: string;
 }) {
   return (
-    <section className="card rounded-2xl px-5 py-4">
-      <div className="flex items-center gap-1.5">
-        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-primary-soft text-primary">
-          <Icon name="file-text" size={14} />
-        </span>
-        <h2 className="t-body font-bold text-ink">데이터 출처</h2>
-      </div>
-
-      {/* [1030 · G6] 폰(md 미만)은 3열 표가 낱말마다 줄바꿈되고 주기 칸이 "…"로 잘렸다(2026-10-04 운영 실측) →
-          폰은 종류별 묶음(종류 제목 + 출처 + 주기 두 줄), 데스크톱은 예전 3열 표 그대로. 글자는 둘이 같다. */}
-      <dl className="mt-3 flex flex-col divide-y divide-line rounded-xl border border-line md:hidden">
+    <PopupSheet
+      title="데이터 출처"
+      className="press flex min-h-10 w-full items-center gap-1.5 rounded-lg bg-primary-soft px-3 py-2 text-left t-caption text-primary"
+      trigger={
+        <>
+          <Icon name="file-text" size={13} className="shrink-0" />
+          <span className="min-w-0 flex-1 truncate">{line ? `${line} · ` : ""}공개 자료 취합 · 참고용</span>
+          <span className="shrink-0 font-bold">데이터 출처 ›</span>
+        </>
+      }
+    >
+      <dl className="m-0 flex flex-col divide-y divide-line" data-tone="plain">
         {sources.map((s) => (
-          <div key={s.kind} className="flex flex-col gap-0.5 px-3 py-2.5">
-            <dt className="t-sub font-semibold text-ink">{s.kind}</dt>
+          <div key={s.kind} className="flex flex-col gap-0.5 py-2.5">
+            <dt className="t-sub font-bold text-ink">{s.kind}</dt>
             <dd className="m-0 t-sub text-text-2">{s.source}</dd>
             <dd className="m-0 t-caption text-text-3">갱신 · {s.cycle}</dd>
           </div>
         ))}
       </dl>
-      <div className="mt-3 hidden overflow-hidden rounded-xl border border-line md:block">
-        <table className="w-full border-collapse text-left">
-          <thead>
-            <tr className="bg-primary-soft t-sub font-bold text-primary">
-              <th className="px-3 py-2 whitespace-nowrap">데이터 종류</th>
-              <th className="px-3 py-2">출처</th>
-              <th className="px-3 py-2 whitespace-nowrap">업데이트 주기</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sources.map((s, i) => (
-              <tr key={s.kind} className={i > 0 ? "border-t border-line" : ""}>
-                <td className="whitespace-nowrap px-3 py-2 t-sub font-semibold text-ink">
-                  {s.kind}
-                </td>
-                <td className="px-3 py-2 t-sub text-text-2">{s.source}</td>
-                <td className="whitespace-nowrap px-3 py-2 t-sub text-text-2">{s.cycle}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      <p className="mt-2 t-caption text-text-3">공개 자료 취합 · 참고용 · 원문·최신 고시 우선</p>
-    </section>
+      <p className="mt-2 t-caption text-text-3">
+        {line ? `${line} · ` : ""}공개 자료 취합 · 참고용 · 원문·최신 고시 우선
+      </p>
+    </PopupSheet>
   );
 }

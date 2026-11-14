@@ -252,6 +252,7 @@ export function MapPickDrawer({
             label=""
             /* 이미 지도 안이다 — 피커 옆 "지도로 찾기" 단추는 그리지 않는다 */
             onMapClick={null}
+            size="lg"
             /* [1008 · M] 딥링크를 다시 읽지 않는다. 초기값이 undefined 면 피커는 URL 의 ?complexId=/?apt= 로
                자동 선택하는데, 서랍 안에서 그러면 onPick + onClose 가 돌아 **서랍이 열리자마자 스스로 닫히고**
                화면의 선택을 딥링크 단지로 덮어썼다(리뷰 B 재현: ?complexId=abc123 화면에서 '지도로 찾기' →
@@ -264,15 +265,6 @@ export function MapPickDrawer({
               onClose();
             }}
           />
-          {skipHref && (
-            <Link
-              href={skipHref}
-              prefetch={false}
-              className="self-start t-caption font-bold text-text-2 no-underline underline-offset-2 hover:underline"
-            >
-              단지 없이 {purpose ?? "도구"} 먼저 보기 ›
-            </Link>
-          )}
         </div>
 
         <div className="relative min-h-0 flex-1">
@@ -303,13 +295,10 @@ export function MapPickDrawer({
                 ③ 작은 마커를 정확히 누르는 일이 폰에서 특히 어렵다.
               한 줄 목록은 셋 다 비껴간다 — 보이는 것을 그대로 누르면 그 도구로 넘어간다.
               값은 마커와 **같은 뷰포트 응답**이라 지도와 목록이 어긋날 수 없다. */}
-          {view.mode === "points" && view.points.length > 0 && (
-            <div
-              /* 지도가 안 뜬 상태에서는 빈 회색 칸을 크게 둘 이유가 없다 — 목록에 자리를 더 준다 */
-              className={`pointer-events-auto absolute inset-x-0 bottom-0 overflow-y-auto border-t border-line bg-surface/95 backdrop-blur ${
-                mapDown ? "max-h-[78%]" : "max-h-[46%]"
-              }`}
-            >
+          {/* [1182] 소유자(2026-11-15): "지도만 나오게". 지도가 뜨면 목록을 그리지 않는다(마커 · 검색으로 고른다).
+              지도가 안 뜬 때(OSM 대체 · 마커 없음)만 목록 — 그때는 고를 길이 이것과 검색뿐이다. */}
+          {mapDown && view.mode === "points" && view.points.length > 0 && (
+            <div className="pointer-events-auto absolute inset-x-0 bottom-0 max-h-[78%] overflow-y-auto border-t border-line bg-surface/95 backdrop-blur">
               <p className="sticky top-0 m-0 border-b border-divider bg-surface/95 px-4 py-1.5 t-caption text-text-3">
                 이 화면의 단지 {view.points.length.toLocaleString("ko-KR")}곳 · 눌러서 고르기
               </p>
@@ -338,9 +327,7 @@ export function MapPickDrawer({
               지도가 대체(OSM)로 내려가면 아래쪽이 그쪽 안내로 차므로 위로 올린다. */}
           <div
             /* [1070] 아래쪽은 이제 단지 목록이 차지한다 — 상태 줄은 위로 올린다(목록이 없을 때만 아래). */
-            className={`pointer-events-none absolute inset-x-3 flex justify-center ${
-              mapDown || (view.mode === "points" && view.points.length > 0) ? "top-3" : "bottom-3"
-            }`}
+            className="pointer-events-none absolute inset-x-3 top-3 flex justify-center"
           >
             <span className="pointer-events-auto rounded-full bg-[rgba(11,37,69,.86)] px-3.5 py-1.5 t-sub text-on-dark">
               {resolving
@@ -357,11 +344,23 @@ export function MapPickDrawer({
                       : view.mode === "clusters"
                         ? "묶음 누르면 확대"
                         : view.points.length > 0
-                          ? "마커를 누르거나 아래 목록에서 고르세요"
+                          ? "마커 눌러서 고르기"
                           : "이 화면에는 실거래가 있는 단지 없음 · 지도를 옮기거나 위에서 검색"}
             </span>
           </div>
         </div>
+        {/* [1182] 단지 없이 보기 — 서랍 맨 아래(검색 아래에 있던 것) */}
+        {skipHref && (
+          <div className="border-t border-line px-4 py-2">
+            <Link
+              href={skipHref}
+              prefetch={false}
+              className="flex min-h-10 items-center justify-center t-sub font-bold text-text-2 no-underline underline-offset-2 hover:underline"
+            >
+              단지 없이 {purpose ?? "도구"} 먼저 보기 ›
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );

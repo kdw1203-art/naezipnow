@@ -128,31 +128,33 @@ export default async function ImjangIndexPage() {
         )}
       </section>
 
-      {/* 표준 체크포인트 — 인덱스에도 전문 (지역과 무관한 공통 지식).
-          [1015 · 규칙 I] 카드 격자 → 리퀴드 행 목록(가이드 = hanji). [규칙 D] 제목의 대시 → 캡션 */}
+      {/* [1182 · 개편] 소유자(2026-11-15) "해당 페이지 개편". 체크포인트 10줄 세로 목록(각 두 줄 · 화면 하나를 다 썼다) →
+          두 열 · 항목당 제목 + 이유(작은 글씨). 쓰기 버튼은 제목 줄 오른쪽. */}
       <section className="mb-6 max-md:mb-4">
-        <h2 className="t-section text-ink">현장 체크포인트 {IMJANG_CHECKPOINTS.length}</h2>
-        <p className="mb-2 t-caption text-text-3">데이터로 확인되지 않는 항목</p>
-        <ol data-tone="hanji" className="lq-panel m-0 flex list-none flex-col divide-y p-0">
+        <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h2 className="t-section text-ink">
+            현장 체크포인트 {IMJANG_CHECKPOINTS.length} <span className="t-sub font-medium text-text-3">데이터로 확인되지 않는 항목</span>
+          </h2>
+          <span className="flex flex-wrap items-center gap-2">
+            <Link href="/notes/new" className="btn-primary press rounded-xl px-4 py-2.5 t-body no-underline">
+              임장노트 쓰기 ›
+            </Link>
+            <Link href="/tx" className="chip bg-surface px-3.5 py-2.5 t-body font-bold text-text-2 shadow-sm no-underline">
+              지역별 실거래 구간
+            </Link>
+          </span>
+        </div>
+        <ol className="card m-0 grid list-none grid-cols-2 gap-x-6 rounded-2xl px-4 py-1.5 max-md:grid-cols-1 max-md:px-3.5">
           {IMJANG_CHECKPOINTS.map((c, i) => (
-            <li key={c.title} className="flex gap-2.5 py-2.5">
-              <span className="t-num w-6 shrink-0 t-body font-bold text-primary">{String(i + 1).padStart(2, "0")}</span>
-              <span className="min-w-0">
+            <li key={c.title} className="flex min-w-0 items-baseline gap-2.5 border-b border-line py-2 last:border-b-0 md:[&:nth-last-child(2)]:border-b-0">
+              <span className="t-num w-6 shrink-0 t-sub font-bold text-primary">{String(i + 1).padStart(2, "0")}</span>
+              <span className="min-w-0 flex-1">
                 <span className="block t-body font-bold text-ink">{c.title}</span>
-                <span className="mt-0.5 block t-sub leading-[1.6] text-text-2">{c.why}</span>
+                <span className="block t-caption text-text-3">{c.why}</span>
               </span>
             </li>
           ))}
         </ol>
-      </section>
-
-      <section className="flex flex-wrap items-center gap-2.5">
-        <Link href="/notes/new" className="btn-primary press rounded-xl px-4 py-2.5 t-body no-underline">
-          임장노트 쓰기 ›
-        </Link>
-        <Link href="/tx" className="chip bg-surface px-3.5 py-2.5 t-body font-bold text-text-2 shadow-sm no-underline">
-          지역별 실거래 구간
-        </Link>
       </section>
     </>
   );

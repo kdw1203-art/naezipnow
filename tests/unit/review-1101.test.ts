@@ -76,7 +76,6 @@ test("첫 화면 · 같은 사실 한 번 — 홈 순서 · 노트 목록 기본
   /* [1131] 로그인 묶음은 홈에서 걷었다(마이 · 검색칸으로) */
   assert.doesNotMatch(home, /<HomeMyRail/);
   const feed = strip(read("app/notes/notes-feed-client.tsx"));
-  assert.match(feed, /const \[view, setView\] = useState<ViewMode>\("table"\);/);
   assert.doesNotMatch(feed, /njn-fab|<StoryRail|function StoryRail/);
   const map = strip(read("app/map/map-client.tsx"));
   assert.doesNotMatch(map, /CoachmarkTour|MAP_TOUR_STEPS/);

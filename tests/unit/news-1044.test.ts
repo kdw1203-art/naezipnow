@@ -52,7 +52,7 @@ test("뉴스는 제 대분류 — 동네 다음, 요금제 앞 · 주소는 그�
 test("동네 카테고리 줄 — 뉴스룸 칸 없음 · [1047] 전문가 칸이 맨 끝", () => {
   assert.deepEqual(
     TOWN_CATEGORY_LINKS.map((l) => l.href),
-    ["/town", "/apply", "/auctions", "/supply", "/redevelopment", "/town/experts"],
+    ["/town", "/redevelopment", "/town/experts", "/supply", "/apply", "/auctions"] /* [1182] 소유자 지정 순서 */,
   );
   assert.ok(!code("lib/town/category-links.ts").includes("newsroom"), "입구 표식(entry) 없음");
   assert.ok(!code("app/town/TownCategoryNav.tsx").includes("news-entry-card"));

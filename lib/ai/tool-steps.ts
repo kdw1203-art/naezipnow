@@ -23,7 +23,7 @@ export function toolSteps(p: {
   bandLabel?: string | null;
 }): { steps: ToolStep[]; current: number } {
   const result: ToolStep = { label: "결과", ...(p.ready && p.bandLabel ? { note: p.bandLabel } : {}) };
-  const next: ToolStep = { label: "다음 행동" };
+  const next: ToolStep = { label: "추천 기능" };
   if (p.tool === "ai-economy") {
     const region = (p.regionName ?? "").trim();
     return { steps: [{ label: region ? `지역 · ${region}` : "지역" }, { label: "내 조건" }, result, next], current: p.ready ? 2 : 0 };

@@ -36,6 +36,11 @@ export function SeoulPlanBrowser({ initialItems, summary }: Props) {
   const [touched, setTouched] = useState(false);
   const [draft, setDraft] = useState("");
   const [query, setQuery] = useState<string | null>(null);
+  /* [1182] 최근 5건만 — 소유자(2026-11-15): "최근 5개만 보이고 나머지는 더보기". 조건을 바꾸면 다시 접는다 */
+  const [showAll, setShowAll] = useState(false);
+  useEffect(() => {
+    setShowAll(false);
+  }, [gu, service, query]);
 
   /* 주소의 ?gu= — 지역 화면에서 온 경우 */
   useEffect(() => {
@@ -203,7 +208,7 @@ export function SeoulPlanBrowser({ initialItems, summary }: Props) {
               </tr>
             </thead>
             <tbody>
-              {state.items.map((r) => (
+              {(showAll ? state.items : state.items.slice(0, 5)).map((r) => (
                 <tr key={r.rptMngCd} className="border-b border-divider last:border-0 align-top">
                   <td className="whitespace-nowrap py-2 pr-2 tabular-nums text-text-2">{upisDateLabel(r.codeDate)}</td>
                   <td className="py-2 pr-2 text-text-2">
@@ -218,6 +223,16 @@ export function SeoulPlanBrowser({ initialItems, summary }: Props) {
               ))}
             </tbody>
           </table>
+          {state.items.length > 5 && (
+            <button
+              type="button"
+              aria-expanded={showAll}
+              onClick={() => setShowAll((v) => !v)}
+              className="press mt-1 flex min-h-10 w-full items-center justify-center rounded-lg bg-bg t-sub font-bold text-text-2"
+            >
+              {showAll ? "접기" : `더 보기 · ${(state.items.length - 5).toLocaleString("ko-KR")}건`}
+            </button>
+          )}
         </div>
       )}
     </div>

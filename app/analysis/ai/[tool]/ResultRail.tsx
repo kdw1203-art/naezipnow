@@ -166,9 +166,9 @@ export function ResultRail({
         </RailCard>
       )}
       {/* 폰에서 링크가 하나도 없으면(경제지표 · AI 해설 없음) 카드를 비워 두지 않는다 — 주 행동은 하단 바가 든다 */}
-      <section className={`card flex flex-col gap-2 rounded-2xl p-4 max-md:p-3.5 ${hasLinks ? "" : "max-lg:hidden"}`} aria-label="다음 행동">
+      <section className={`card flex flex-col gap-2 rounded-2xl p-4 max-md:p-3.5 ${hasLinks ? "" : "max-lg:hidden"}`} aria-label="추천 기능">
         <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-          <h2 className="t-section font-bold text-ink">다음 행동</h2>
+          <h2 className="t-section font-bold text-ink">추천 기능</h2>
           {summary && <span className="min-w-0 t-caption tabular-nums text-text-3 break-words">{summary}</span>}
         </div>
         {/* 채움 파랑 — 데스크톱은 여기, 폰은 하단 바(같은 요소) */}

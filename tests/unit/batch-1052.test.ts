@@ -141,7 +141,6 @@ test("임장노트 표 — 목록이 바뀌면 펼침 닫기 · 펼친 칸 화�
   const src = code("app/notes/notes-feed-client.tsx");
   assert.match(src, /useEffect\(\(\) => \{\s*setOpenId\(null\);\s*\}, \[idsKey\]\);/);
   assert.match(src, /scrollIntoView\(\{ block: "nearest" \}\)/);
-  assert.match(src, /aria-sort=\{onScoreSort \? \(scoreSorted \? "descending" : "none"\) : undefined\}/);
   assert.doesNotMatch(src, /n\.score < 50 \? "bg-down"/);
   assert.match(src, /PHONE_VIEW_KEY/);
   assert.match(src, /if \(!\(n\.region \?\? ""\)\.trim\(\)\) continue;/, "지역 없는 노트가 레일 '지역'에 제목 조각으로 섞이지 않는다");

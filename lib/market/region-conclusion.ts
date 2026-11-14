@@ -92,7 +92,7 @@ export function priceSteps(regionName: string, band: Pick<PriceBandInput, "label
       { label: doneLabel("지역", regionName) },
       { label: doneLabel("면적대", band?.label) },
       { label: "실거래 범위", note: band ? `${band.minText}~${band.maxText}` : undefined },
-      { label: "다음 행동" },
+      { label: "추천 기능" },
     ],
     current: 2,
   };
@@ -145,7 +145,7 @@ export function timingSteps(i: Pick<TimingInput, "regionLabel" | "verdict" | "te
       { label: doneLabel("지역", i.regionLabel) },
       { label: doneLabel("신호", names || null) },
       { label: "판단", note: i.tempHeadline ?? i.verdict ?? undefined },
-      { label: "다음 행동" },
+      { label: "추천 기능" },
     ],
     current: 2,
   };
@@ -199,7 +199,7 @@ export function temperatureSteps(weekWord: string, sido: string | null, count: n
       { label: doneLabel("주", weekWord) },
       sido ? { label: doneLabel("시·도", sido) } : { label: "시·도", note: sidoCount > 0 ? `${n(sidoCount)}곳 기록` : undefined },
       { label: "지역", note: sido && count > 0 ? `${n(count)}곳` : undefined },
-      { label: "다음 행동" },
+      { label: "추천 기능" },
     ],
     current: sido ? 2 : 1,
   };
@@ -247,7 +247,7 @@ export function gapSteps(conditionText: string | null, count: number): StepPlan 
       { label: doneLabel("조건", conditionText ?? "제한 없음") },
       { label: "결과", note: `${n(count)}곳` },
       { label: "단지" },
-      { label: "다음 행동" },
+      { label: "추천 기능" },
     ],
     current: 1,
   };

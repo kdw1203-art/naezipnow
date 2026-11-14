@@ -147,10 +147,10 @@ export default async function AiToolPage({
         />
 
         {/* 면책 — check-ai-compliance.mjs 가 이 마커의 존재를 검사한다
-            [1072] 회색 면(bg-bg · 화면 폭 한 줄 150자) → 위 가는 선 + t-caption + 읽는 폭(72자). 문장은 한 글자도 바꾸지 않았다 */}
+            [1072] 회색 면 → t-caption. [1182] 읽는 폭 72자(4줄) → 화면 폭(2줄 안팎) · 위 카드 글자와 왼쪽 맞춤. 문장은 한 글자도 바꾸지 않았다 */}
         <p
           data-ai-compliance="notice"
-          className="max-w-[72ch] border-t border-line pt-3 t-caption text-text-3"
+          className="px-4 t-caption text-text-3 max-md:px-3.5"
         >
           {/* [1015 · 규칙 D] 어미만 다듬었다 — "투자 권유"·"책임" 등 면책 낱말은 그대로(check:ai-compliance) */}
           이 화면의 숫자는 공공데이터(국토교통부 실거래·전월세 신고, 한국부동산원, 청약홈 등)를 정해진

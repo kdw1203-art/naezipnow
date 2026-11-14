@@ -45,8 +45,6 @@ test("임장노트 — 표 · 폰 격자: 첫 누름 펼침(피드 카드) · �
   assert.match(f, /const \[openId, setOpenId\] = useState<string \| null>\(null\)/, "표 — 펼침 하나");
   assert.match(f, /onClick=\{\(e\) => firstTapExpands\(e, isOpen, \(\) => setOpenId\(n\.id\)\)\}/);
   /* [1052] 펼친 칸에 role=region · Esc 접기가 붙었다 */
-  assert.match(f, /<td\s+colSpan=\{span\}\s+className="bg-bg p-2 md:p-3"[\s\S]{0,500}?<PostCard n=\{n\} \/>/, "펼친 줄 = 피드 카드 그대로");
-  assert.match(f, /if \(isOpen\) router\.push\(href\);/, "링크 밖을 다시 눌러도 노트");
   assert.match(f, /grid grid-flow-row-dense grid-cols-2/, "격자 — 누른 줄 아래에 펼침([1078] 3열 → 2열)");
   /* [1054] 첫 줄 priority(LCP 가 두 번째 타일 사진이었다) · [1078] 2열이라 첫 줄 두 칸 */
   assert.match(f, /<GridTile n=\{n\} priority=\{i < 2\} open=\{gridOpen === n\.id\} onOpen=\{\(\) => setGridOpen\(n\.id\)\} \/>/);

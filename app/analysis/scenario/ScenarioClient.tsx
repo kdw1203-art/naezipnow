@@ -257,9 +257,9 @@ export default function ScenarioClient({ rates }: { rates: RateContext }) {
 
   /* 다음 행동 카드 — 데스크톱 레일 · 폰 본문 끝(채움 파랑은 하단 바가 맡아 카드 안에서는 lg 에서만) */
   const actionCard = (
-    <section className="card flex flex-col gap-2 rounded-2xl p-4 max-md:p-3.5" aria-label="다음 행동">
+    <section className="card flex flex-col gap-2 rounded-2xl p-4 max-md:p-3.5" aria-label="추천 기능">
       <div className="flex flex-wrap items-baseline justify-between gap-x-2">
-        <h2 className="t-section text-ink">다음 행동</h2>
+        <h2 className="t-section text-ink">추천 기능</h2>
         <span className="min-w-0 t-caption tabular-nums text-text-3">
           월 {scenarioWon(calc.pay)} · 필요 현금 {scenarioWon(cashWon)}
         </span>

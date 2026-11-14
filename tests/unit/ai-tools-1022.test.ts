@@ -156,7 +156,6 @@ test("[1022] 이전 실행 기록 — 같은 날 같은 값은 다시 저장하�
   assert.match(resultView, /buildGroupKey\(tool, \[picked\.id\]\)/);
   assert.match(resultView, /buildGroupKey\(tool, \[ctx\.region\.name\]\)/);
   assert.match(resultView, /createdAt: verdict\?\.computedAt \?\? null/);
-  assert.match(resultView, /근거 \$\{evidenceN\}개 · 오래된 자료 \$\{staleN\}개/);
   assert.match(resultView, /e\.confidence === "stale"/);
 });
 

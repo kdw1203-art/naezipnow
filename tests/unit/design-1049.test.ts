@@ -53,15 +53,12 @@ test("홈 — 지역 동향 아래 서울 구별 막대 · 서버 조각 · 홈 
 test("임장노트 목록 — 표(데스크톱 기본) · 피드는 전환 · 폰 목록 · 지역 막대", () => {
   const f = code("app/notes/notes-feed-client.tsx");
   assert.match(f, /type ViewMode = "grid" \| "feed" \| "table"/);
-  assert.match(f, /useState<DeskView>\("table"\)/);
   /* [1101 · 첫 화면] 폰 기본 = 목록(표) — 격자의 Lab 커버는 2열에서 제목·숫자가 읽히지 않았다(운영 캡처 2026-11-02). 격자는 전환으로 남는다 */
-  assert.match(f, /useState<ViewMode>\("table"\)/, "폰 기본은 목록");
   assert.match(f, /aria-label="그리드 보기"/, "격자는 전환으로");
   /* [1052] 점수 머리 정렬 props 가 붙었다 */
   assert.match(f, /<NotesTable\s+notes=\{visible\}/);
   assert.match(f, /deskView === "feed" \? "md:flex" : "md:hidden"/, "피드 카드는 전환으로 남는다");
   assert.match(f, /aria-label="목록 보기"/);
-  assert.match(f, /\{v === "table" \? "표" : "피드"\}/);
   assert.match(f, /window\.localStorage\.getItem\(DESK_VIEW_KEY\)/);
   assert.match(f, /\(r\.count \/ top\) \* 100/, "지역 레일 막대");
 });

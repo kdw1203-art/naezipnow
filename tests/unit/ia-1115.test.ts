@@ -1427,3 +1427,33 @@ test("[1181] SMTP 연결 실패 → 짝 포트로 한 번 더", async () => {
   assert.equal(m.isSmtpConnectFailure({ code: "EDNS" }), false);
   assert.match(m.smtpBothPortsReason(587, 465, "SMTP 서버 연결 실패(ETIMEDOUT) · 호스트·포트 확인"), /포트 587·465 모두 실패$/);
 });
+
+test("[1182] 피드 기본 · 한 줄 목록 · 지도 서랍 · 추천 기능 · 정비사업 통폐합", () => {
+  const feed = readFileSync("app/notes/notes-feed-client.tsx", "utf8");
+  assert.match(feed, /useState<ViewMode>\("feed"\)/);
+  assert.match(feed, /useState<DeskView>\("feed"\)/);
+  assert.match(feed, /nz_notes_desk_view_v2/);
+  assert.doesNotMatch(feed, /<table className="w-full table-fixed/);
+  const drawer = readFileSync("app/analysis/MapPickDrawer.tsx", "utf8");
+  assert.match(drawer, /\{mapDown && view\.mode === "points"/);
+  assert.match(drawer, /size="lg"/);
+  assert.ok(drawer.indexOf("먼저 보기 ›") > drawer.indexOf("<NaverMap"), "단지 없이 보기는 지도 아래");
+  const rail = readFileSync("app/analysis/ai/[tool]/ResultRail.tsx", "utf8");
+  assert.match(rail, />추천 기능</);
+  assert.doesNotMatch(rail, />다음 행동</);
+  const redev = readFileSync("app/redevelopment/(index)/page.tsx", "utf8");
+  assert.doesNotMatch(redev, /MiniBar|단계별 상세 · 확인 사항/);
+  assert.equal((redev.match(/id="stage-guide"/g) ?? []).length, 1);
+  assert.match(redev, /<PopupSheet/);
+  const map = readFileSync("app/redevelopment/RedevelopmentMap.tsx", "utf8");
+  assert.doesNotMatch(map, /label: "목록"/);
+  assert.match(map, /setDrill\(\{ kind: "type"/);
+  const plan = readFileSync("app/redevelopment/SeoulPlanBrowser.tsx", "utf8");
+  assert.match(plan, /state\.items\.slice\(0, 5\)/);
+  const links = readFileSync("lib/town/category-links.ts", "utf8");
+  const order = ["/town\"", "/redevelopment\"", "/town/experts\"", "/supply\"", "/apply\"", "/auctions\""].map((h) => links.indexOf(`{ href: "${h}`));
+  assert.deepEqual([...order].sort((a, b) => a - b), order);
+  const m = readFileSync("app/map/map-client.tsx", "utf8");
+  assert.match(m, /const \[showRedevelopment, setShowRedevelopment\] = useState\(true\);/);
+  assert.match(m, /"noredev"/);
+});

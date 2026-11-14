@@ -136,7 +136,10 @@ export function ComplexPicker({
   label = "단지 선택",
   labelClassName = "text-text-3",
   onMapClick,
+  size = "md",
 }: {
+  /** [1182] 검색칸 크기 — lg 는 지도 서랍처럼 검색이 그 화면의 주 입력일 때(크고 진하게) */
+  size?: "md" | "lg";
   onSelect: (c: PickedComplex) => void;
   /** ?complexId= 딥링크 값 (undefined면 URL에서 자동 인식) */
   initialComplexId?: string | null;
@@ -439,7 +442,11 @@ export function ComplexPicker({
              밀렸다(폰 배율 1). 폭 0 + flex-1 로 남는 칸을 다 쓴다 — 보이는 크기는 같다. */
           placeholder={placeholder}
           aria-label={label || "단지 검색"}
-          className="w-0 min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink outline-none focus:border-primary"
+          className={
+            size === "lg"
+              ? "h-12 w-0 min-w-0 flex-1 rounded-xl border-2 border-ink bg-surface px-4 t-body font-bold text-ink outline-none placeholder:text-text-2 focus:border-primary"
+              : "w-0 min-w-0 flex-1 rounded-lg border border-line bg-surface px-3 py-2 text-xs font-bold text-ink outline-none focus:border-primary"
+          }
         />
         {/* [975] 지도 단추 — 부르는 쪽이 서랍을 갖고 있으면 화면을 떠나지 않는다.
             (예전엔 무조건 /map 으로 나갔다가 다시 ?complexId= 로 돌아와야 했다.) */}

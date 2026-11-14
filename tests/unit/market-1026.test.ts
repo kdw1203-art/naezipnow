@@ -59,7 +59,7 @@ test("[1026] 면적대별 — 결론 '남양주시 60~85㎡ 거래 최다 3,852�
   assert.equal(plan.current, 2);
   assert.deepEqual(
     plan.steps.map((s) => s.label),
-    ["지역 · 남양주시", "면적대 · 60~85㎡", "실거래 범위", "다음 행동"],
+    ["지역 · 남양주시", "면적대 · 60~85㎡", "실거래 범위", "추천 기능"],
   );
   assert.equal(plan.steps[2].note, "1.2억~14억");
 });
@@ -92,7 +92,7 @@ test("[1026] 시세·타이밍 — 결론 '서울 강남구 지수 -0.42% · 온
   assert.equal(temperatureTone(34), "caution");
   assert.equal(temperatureTone(null), "neutral");
   const plan = timingSteps(input, { index: true, volume: true, temp: true });
-  assert.deepEqual(plan.steps.map((s) => s.label), ["지역 · 서울 강남구", "신호 · 지수·거래량·온도", "판단", "다음 행동"]);
+  assert.deepEqual(plan.steps.map((s) => s.label), ["지역 · 서울 강남구", "신호 · 지수·거래량·온도", "판단", "추천 기능"]);
   assert.equal(plan.current, 2);
   assert.equal(plan.steps[2].note, "서늘함");
   assert.equal(timingSteps(input, { index: false, volume: false, temp: false }).steps[1].label, "신호");
@@ -125,11 +125,11 @@ test("[1026] 시장 온도 — 결론 '이번 주 가장 뜨거운 곳 경기 �
   assert.equal(temperatureConclusion({ ...base, hottest: null }), null);
   const nation = temperatureSteps("이번 주", null, 69, 3);
   assert.equal(nation.current, 1);
-  assert.deepEqual(nation.steps.map((s) => s.label), ["주 · 이번 주", "시·도", "지역", "다음 행동"]);
+  assert.deepEqual(nation.steps.map((s) => s.label), ["주 · 이번 주", "시·도", "지역", "추천 기능"]);
   assert.equal(nation.steps[1].note, "3곳 기록");
   const inSido = temperatureSteps("지난주", "서울", 25, 3);
   assert.equal(inSido.current, 2);
-  assert.deepEqual(inSido.steps.map((s) => s.label), ["주 · 지난주", "시·도 · 서울", "지역", "다음 행동"]);
+  assert.deepEqual(inSido.steps.map((s) => s.label), ["주 · 지난주", "시·도 · 서울", "지역", "추천 기능"]);
   assert.equal(inSido.steps[2].note, "25곳");
 });
 
@@ -155,7 +155,7 @@ test("[1026] 전세가율·갭 — 결론 '조건에 맞는 107곳 · 전세가�
   assert.equal(JEONSE_RATIO_CAUTION, 80, "앱의 계약 위험 규칙(80% 이상 주의)과 같은 경계");
   const plan = gapSteps(null, 107);
   assert.equal(plan.current, 1);
-  assert.deepEqual(plan.steps.map((s) => s.label), ["조건 · 제한 없음", "결과", "단지", "다음 행동"]);
+  assert.deepEqual(plan.steps.map((s) => s.label), ["조건 · 제한 없음", "결과", "단지", "추천 기능"]);
   assert.equal(plan.steps[1].note, "107곳");
   assert.equal(gapSteps("전세가율 70%+ · 경기", 12).steps[0].label, "조건 · 전세가율 70%+ · 경기");
   assert.equal(GAP_CARD_PAGE, 20);

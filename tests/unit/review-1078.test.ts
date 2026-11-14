@@ -79,7 +79,6 @@ test("S4 노트 목록 표 — 제목이 굵게 · 단지 이름은 아랫줄", 
   assert.match(read("lib/notes/feed-note.ts"), /headline: n\.title,/);
   const c = read("app/notes/notes-feed-client.tsx");
   assert.match(c, /<span className="truncate t-body font-bold text-ink">\{n\.headline \|\| n\.title\}<\/span>/);
-  assert.match(c, /\{n\.aptName && n\.headline && n\.headline !== n\.title \? `\$\{n\.title\} · ` : ""\}/);
 });
 
 test("S5 빈 블록 순서 — 동네 홈 · 동네 허브 · 홈", () => {

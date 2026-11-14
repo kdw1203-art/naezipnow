@@ -108,8 +108,8 @@ test("D5 접힘 — 근거·출처 + 자세히 보기는 카드 하나 · 접힘
   assert.doesNotMatch(det + ev, /<details className="card/);
   /* 펼치기/접기 표시 — 접힘 셋 모두(실거래 흐름 · 근거 · 자세히) · 글자는 summary 안 */
   const word = between(result, "function FoldWord(", "function FoldCard(");
-  assert.match(word, /group-open:hidden">펼치기 ▾</);
-  assert.match(word, /hidden group-open:inline">접기 ▴</);
+  assert.match(word, /group-open:hidden">▾</);
+  assert.match(word, /hidden group-open:inline">▴</);
   assert.match(word, /dead-control-ok: 늘 <details><summary> 안에서만/);
   for (const [name, seg] of [
     ["FoldCard", between(result, "function FoldCard(", "function PriceFlowCard(")],
@@ -130,7 +130,7 @@ test("D5 접힘 — 근거·출처 + 자세히 보기는 카드 하나 · 접힘
 
 test("D6 면책 — 문장·마커 그대로 · 선 + 작은 글씨 + 72자 폭", () => {
   assert.equal((page.match(/data-ai-compliance="notice"/g) ?? []).length, 1);
-  assert.match(page, /data-ai-compliance="notice"\s+className="max-w-\[72ch\] border-t border-line pt-3 t-caption text-text-3"/);
+  assert.match(page, /data-ai-compliance="notice"\s+className="px-4 t-caption text-text-3 max-md:px-3.5"/);
   for (const w of ["투자 권유·수익 보장·법률·세무", "최종 판단과 책임은 이용자 본인에게 있습니다", "[AI 서술]"]) assert.ok(page.includes(w), w);
   assert.doesNotMatch(page, /rounded-lg bg-bg px-4 py-3 t-sub text-text-3/);
 });

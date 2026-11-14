@@ -33,11 +33,11 @@ const EIGHT = ["ai-risk", "ai-compare", "ai-simulator", "ai-gap", "ai-economy", 
 test("[1026b] 절차 한 줄 — 단지 도구는 '단지 · {단지명} → 내 조건 → 결과 · {판정} → 다음 행동' · 비교는 담은 수 · 경제지표는 '지역' · 자산 구성은 '관심 단지'", () => {
   for (const tool of ["ai-risk", "ai-simulator", "ai-gap", "my-checklist", "contract-risk"] as const) {
     assert.deepEqual(toolSteps({ tool, pickedName: null, ready: false }), {
-      steps: [{ label: "단지" }, { label: "내 조건" }, { label: "결과" }, { label: "다음 행동" }],
+      steps: [{ label: "단지" }, { label: "내 조건" }, { label: "결과" }, { label: "추천 기능" }],
       current: 0,
     }, tool);
     assert.deepEqual(toolSteps({ tool, pickedName: "공작아파트", ready: true, bandLabel: "주의" }), {
-      steps: [{ label: "단지 · 공작아파트" }, { label: "내 조건" }, { label: "결과", note: "주의" }, { label: "다음 행동" }],
+      steps: [{ label: "단지 · 공작아파트" }, { label: "내 조건" }, { label: "결과", note: "주의" }, { label: "추천 기능" }],
       current: 2,
     }, tool);
   }
@@ -48,14 +48,14 @@ test("[1026b] 절차 한 줄 — 단지 도구는 '단지 · {단지명} → 내
   assert.equal(toolSteps({ tool: "ai-compare", pickedName: "공작아파트", compareCount: 3, ready: true }).steps[0].label, "단지 · 3곳");
   /* 경제지표 — 단지 없이 지역 */
   assert.deepEqual(toolSteps({ tool: "ai-economy", pickedName: null, regionName: "강남구", ready: true, bandLabel: "보통" }), {
-    steps: [{ label: "지역 · 강남구" }, { label: "내 조건" }, { label: "결과", note: "보통" }, { label: "다음 행동" }],
+    steps: [{ label: "지역 · 강남구" }, { label: "내 조건" }, { label: "결과", note: "보통" }, { label: "추천 기능" }],
     current: 2,
   });
   assert.deepEqual(toolSteps({ tool: "ai-economy", pickedName: null, ready: false }).steps[0], { label: "지역" });
   assert.equal(toolSteps({ tool: "ai-economy", pickedName: null, ready: false }).current, 0);
   /* 자산 구성 — 관심 단지 불러오기 → 단지 → 결과(넣을 조건이 없는 도구) */
   assert.deepEqual(toolSteps({ tool: "ai-portfolio", pickedName: null, portfolioCount: null, ready: false }), {
-    steps: [{ label: "관심 단지" }, { label: "단지" }, { label: "결과" }, { label: "다음 행동" }],
+    steps: [{ label: "관심 단지" }, { label: "단지" }, { label: "결과" }, { label: "추천 기능" }],
     current: 0,
   });
   assert.equal(toolSteps({ tool: "ai-portfolio", pickedName: null, portfolioCount: 5, ready: false }).current, 1);
@@ -63,7 +63,7 @@ test("[1026b] 절차 한 줄 — 단지 도구는 '단지 · {단지명} → 내
     "관심 단지 · 5곳",
     "단지 · 은마",
     "결과",
-    "다음 행동",
+    "추천 기능",
   ]);
   /* 라벨은 줄 안에서 겹치지 않는다(StepLine 의 key) */
   for (const tool of AI_TOOL_IDS) {
