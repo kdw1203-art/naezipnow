@@ -1508,3 +1508,16 @@ test("[1184] 운영 경보 — ops.cron_job 의 서명 없는 ok 가 그 검사 
   const other = out.find((a) => a.checkName === "other.check");
   assert.ok(other && other.recoveredAt === null, "다른 검사의 서명 없는 ok 는 닫지 않는다");
 });
+
+test("[1185] 공매 물건 이름 — 용도 칸과 같은 말은 이름에서 뗀다", async () => {
+  const { auctionDisplayName } = await import("@/lib/onbid/display-name");
+  assert.equal(auctionDisplayName("대전광역시 서구 탄방동 707 B102호 외 7개호 [근린생활시설]", "근린생활시설"), "대전광역시 서구 탄방동 707 B102호 외 7개호");
+  assert.equal(auctionDisplayName("대전광역시 유성구 봉명동 545-1 외 토지 및 건물 [근린생활시설 등]", "근린생활시설"), "대전광역시 유성구 봉명동 545-1 외 토지 및 건물");
+  assert.equal(auctionDisplayName("대전광역시 서구 도안동 1774 308-1호 근린생활시설", "근린생활시설"), "대전광역시 서구 도안동 1774 308-1호");
+  assert.equal(auctionDisplayName("대전광역시 동구 대성동 140 대지", "대지"), "대전광역시 동구 대성동 140");
+  assert.equal(auctionDisplayName("복수동 192-1 외 토지 및 건물", "잡종지"), "복수동 192-1 외 토지 및 건물");
+  assert.equal(auctionDisplayName("대지", "대지"), "대지");
+  assert.equal(auctionDisplayName(null, "대지"), "");
+  const redev = readFileSync("app/redevelopment/(index)/page.tsx", "utf8");
+  assert.equal((redev.match(/일반 절차 기준의 개념 안내입니다/g) ?? []).length, 1);
+});

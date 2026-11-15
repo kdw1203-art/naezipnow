@@ -249,15 +249,6 @@ export default async function RedevelopmentPage() {
                       </li>
                     ))}
                   </ul>
-                  {/* 면책 — 문장 그대로 */}
-                  <p className="mt-3 flex gap-1.5 border-t border-line pt-2 t-caption text-text-3">
-                    <Icon name="shield" size={13} className="mt-px shrink-0" />
-                    <span>
-                      일반 절차 기준의 개념 안내입니다. 실제 사업 단계·조합원 자격·분담금은 구역·조합마다
-                      다르므로 조합·구청·전문가 확인이 필요합니다. 구역별 실제 단계·일정은 지자체
-                      고시(정비사업 정보몽땅 등 공공 공개자료) 기준입니다.
-                    </span>
-                  </p>
                 </PopupSheet>
                 {i < STAGE_GUIDES.length - 1 && (
                   <span className="shrink-0 t-sub text-text-3" aria-hidden="true">
@@ -267,6 +258,15 @@ export default async function RedevelopmentPage() {
               </li>
             ))}
           </ol>
+          {/* [1185] 면책은 한 번만 — 단계 창 7개에 같은 문장이 7번 실렸다(1182) */}
+          <p className="mt-3 flex gap-1.5 border-t border-line pt-2 t-caption text-text-3">
+            <Icon name="shield" size={13} className="mt-px shrink-0" />
+            <span>
+              일반 절차 기준의 개념 안내입니다. 실제 사업 단계·조합원 자격·분담금은 구역·조합마다
+              다르므로 조합·구청·전문가 확인이 필요합니다. 구역별 실제 단계·일정은 지자체
+              고시(정비사업 정보몽땅 등 공공 공개자료) 기준입니다.
+            </span>
+          </p>
         </section>
         </div>
 

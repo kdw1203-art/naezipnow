@@ -19,6 +19,7 @@
  * 마운트 후 location.search + popstate, 칩은 얕은 pushState.
  */
 
+import { auctionDisplayName } from "@/lib/onbid/display-name";
 import Link from "@/app/components/IntentLink";
 import { HScroll } from "@/app/components/HScroll";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
@@ -179,7 +180,7 @@ function onbidToCard(a: AuctionApiItem, now: Date): AuctionCardData {
   return {
     key: a.externalKey,
     href: onbidSearchHref(a),
-    name: a.name ?? "물건",
+    name: auctionDisplayName(a.name, a.usage) || "물건",
     region: [a.sido, a.sigungu, a.emd].filter(Boolean).join(" "),
     usage: a.usage,
     status: a.status,
@@ -568,7 +569,7 @@ export function AuctionsClient({
               {/* 요약 한 줄 — 사실만(숫자·출처). [1015] 아래에 있던 안내 띠("…기준이며 매일 자동 갱신됩니다. …반드시
                   확인하세요")는 걷고 ⓘ 하나로 접었다(브리프 규칙 B). 갱신 주기·원문 우선 원칙은 시트 안에 그대로.
                   [1063] 그 한 줄도 접기 뒤로 — 같은 건수를 위 숫자 칸이 먼저 말한다(문장은 그대로 둔다). */}
-              <Fineprint className="mt-3" label="기준 · 출처">
+              <Fineprint className="mt-3" label="기준 · 출처 · 면책">
                 <span className="flex flex-wrap items-center gap-x-1">
                   <span>
                     온비드 입찰 중·예정 물건{" "}
@@ -586,6 +587,11 @@ export function AuctionsClient({
                     ]}
                     source="한국자산관리공사 온비드(공공데이터포털) · 매일 갱신"
                   />
+                </span>
+                {/* [1185] 아래에 따로 있던 "출처 · 면책" 접기를 여기로 합쳤다 — 문장은 그대로 */}
+                <span className="mt-1 block">
+                  출처 · 한국자산관리공사 온비드(공공데이터포털) · 참고용 정보이며 권리분석·명도·정확한
+                  입찰조건은 온비드 공고 원문과 전문가 확인이 필요합니다.
                 </span>
               </Fineprint>
             </section>
@@ -782,11 +788,6 @@ export function AuctionsClient({
               </details>
             )}
 
-            {/* [1063] 출처·면책 문장은 한 자도 바꾸지 않고 접기 뒤로 */}
-            <Fineprint className="rise-in-4 mt-1 px-1" label="출처 · 면책">
-              출처 · 한국자산관리공사 온비드(공공데이터포털) · 참고용 정보이며 권리분석·명도·정확한
-              입찰조건은 온비드 공고 원문과 전문가 확인이 필요합니다.
-            </Fineprint>
           </div>
 
           {/* 우측 사이드 */}
