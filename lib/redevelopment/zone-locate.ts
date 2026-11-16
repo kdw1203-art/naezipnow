@@ -134,8 +134,9 @@ export function pickComplexPoint(zoneName: string, complexes: readonly ComplexPo
 }
 
 /** 요약의 위치 기준 글 — 지번 · 단지 */
-export function locateSummaryBy(z: { stage: string | null; operator: string | null }, by: "lot" | "complex" | "shape"): string {
+export function locateSummaryBy(z: { stage: string | null; operator: string | null }, by: "lot" | "complex" | "shape" | "dong"): string {
   const base = locateSummary(z);
+  if (by === "dong") return base.replace("위치는 대표 지번 기준 · 구역 경계 아님", "근사 위치 · 법정동 중심 · 구역 경계 아님");
   if (by === "shape") return base.replace("위치는 대표 지번 기준 · 구역 경계 아님", "위치는 구역 경계 중심 기준");
   return by === "lot" ? base : base.replace("위치는 대표 지번 기준", "위치는 같은 이름 단지 기준");
 }
@@ -147,4 +148,29 @@ export function hitInSigungu(hitAddress: string | null | undefined, sigungu: str
   /* [1183] "성남중원구" ↔ "경기도 성남시 중원구" — 시 이름과 구 이름이 둘 다 있으면 같은 곳 */
   const parts = sigunguParts(sigungu);
   return parts.length === 2 && a.includes(`${parts[0]}시${parts[1]}`);
+}
+
+
+/* [1191] 소유자(2026-11-16) "번호 구역 근사 위치" 승인 — 지번 · 단지 · 경계 도형이 모두 없는 구역("평리2" · "좌천2" · "수색3")은
+   이름 앞 한글 동 이름의 법정동 중심에 "근사 위치"로 찍는다. 동 이름으로 읽히지 않으면 null(찍지 않는다). */
+const DONG_STRIP = /(주택)?(재개발|재건축|재정비촉진|도시환경|도시정비|정비사업|정비구역|주거환경개선|촉진|구역|지구|사업)/g;
+const NOT_DONG = new Set(["시민공원", "신도시", "역세권", "주변", "일원", "일대", "통합", "아파트", "연립", "주공", "시영", "도심"]);
+export function dongCandidates(zoneName: string, sigungu: string): string[] {
+  const raw = String(zoneName ?? "").replace(/\(.*?\)/g, "").replace(DONG_STRIP, " ").trim();
+  /* 앞쪽 한글 덩어리 — 뒤에 숫자 · "제" · 하이픈 · 공백이 오거나 이름 끝 */
+  const m = /^([가-힣]{2,6}?)(?:제?\d|-|\s|$)/.exec(raw) ?? /^([가-힣]{2,6}?(?:동|리|가))(?:\d|\s|$)/.exec(raw);
+  if (!m) return [];
+  let t = m[1];
+  if (t.endsWith("제") && t.length > 2) t = t.slice(0, -1);
+  if (NOT_DONG.has(t)) return [];
+  const gu = String(sigungu ?? "").replace(/(특별자치)?(시|군|구)$/g, "");
+  if (t === gu || sigungu.includes(t)) return [];
+  if (t.length >= 3 && /(동|리|가)$/.test(t)) return [t];
+  return [`${t}동`, `${t}리`];
+}
+
+/** 지오코더 답이 그 동인가 — 주소 안에 동 이름이 한 단어로 있어야 한다("좌천동" ⊂ "부산광역시 동구 좌천동") */
+export function hitIsDong(hitAddress: string | null | undefined, dong: string): boolean {
+  const words = String(hitAddress ?? "").split(/\s+/);
+  return words.includes(dong);
 }

@@ -100,8 +100,8 @@ test("정비사업 걸러 보기 — 빈 집합은 전체, 두 축은 AND", () =
 });
 
 test("칩의 수 = 눌렀을 때 보이는 수 — 다른 축 조건을 건 뒤 센다", () => {
-  assert.deepEqual(redevGroupCounts(ZONES, S()), { private: 2, public: 1, small: 2, etc: 0 });
-  assert.deepEqual(redevGroupCounts(ZONES, S("designated")), { private: 0, public: 1, small: 1, etc: 0 });
+  assert.deepEqual(redevGroupCounts(ZONES, S()), { private: 2, public: 1, small: 2, newtown: 0, etc: 0 });
+  assert.deepEqual(redevGroupCounts(ZONES, S("designated")), { private: 0, public: 1, small: 1, newtown: 0, etc: 0 });
   const st = redevStageCounts(ZONES, G("small"));
   assert.equal(st.designated, 1);
   assert.equal(st.plan_approved, 1);

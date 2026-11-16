@@ -4,10 +4,16 @@ import { getServiceSupabase } from "@/lib/supabase/service";
 import { isNaverMapsRestConfigured, naverGeocode, naverReverseGeocode } from "@/lib/map/naver-maps-rest";
 import { uniqueShapeCenter, type ZoneShapeFile } from "./zone-shapes";
 import { NATIONAL_DATASET_URL } from "./national";
+import { SEOUL_SMALL_SERVICE, SEOUL_SMALL_SOURCE, SEOUL_SMALL_URL, parseSeoulSmall, seoulGu, seoulSmallQuery, seoulSmallStage, seoulSmallType } from "./seoul-small";
+import { fetchSeoulOpenApi, isSeoulApiConfigured } from "@/lib/seoul/openapi-client";
+import { SPECIAL_ZONES, complexCentroid, pickPlace, specialAddress } from "./special-zones";
+import { kakaoLocalKeywordSearch } from "@/lib/kakao/rest-client";
 import { BUSAN_REDEV_URL, findBusanItems, findBusanTotal, parseBusanItem, type BusanZone } from "./busan";
 import {
   LOCATE_SOURCE,
   complexRegionKey,
+  dongCandidates,
+  hitIsDong,
   firstLot,
   hitInSigungu,
   locateSummary,
@@ -51,6 +57,15 @@ export type ZoneLocateResult = {
   busanRows: number;
   /** [1188] 부산 자료가 0건일 때의 사유 한 줄(HTTP · 응답 머리) — 키는 싣지 않는다 */
   busanNote?: string;
+  /** [1191] 1기 신도시 선도지구 · 후보 · 도심복합 — 찍은 수 / 못 찍은 이름 */
+  special?: number;
+  specialMissed?: string[];
+  /** [1191] 법정동 중심 근사 위치로 찍은 수 */
+  byDong?: number;
+  /** [1191] 서울 소규모정비(가로주택 · 모아 · 소규모) — 받은 수 / 찍은 수 / 사유 */
+  smallRows?: number;
+  smallLocated?: number;
+  smallNote?: string;
   budgetExhausted: boolean;
 };
 
@@ -126,6 +141,7 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
   } catch {
     shapes = null;
   }
+  const dongTodo: { id: string; base: Record<string, unknown>; sido: string; sigungu: string; guLabel: string; cands: string[] }[] = [];
   const shapeTodo: { id: string; base: Record<string, unknown>; lat: number; lng: number; sigungu: string }[] = [];
 
   const r: ZoneLocateResult = { ok: true, ...empty, zones: zones.length, busanRows: busan.length, ...(busan.length === 0 && busanLoad.note ? { busanNote: busanLoad.note } : {}) };
@@ -156,6 +172,9 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
         /* [1166] 지번도 단지도 없으면 구역 경계 도형(이름이 꼭 같은 것 하나)의 중심 — 자치구는 아래에서 역지오코딩으로 확인 */
         const sc = seoul && shapes ? uniqueShapeCenter(z.name, shapes) : null;
         if (sc) { shapeTodo.push({ id, base: { ...base, summary: locateSummaryBy(z, "shape"), address: `${guLabel} ${z.name} 구역 중심` }, lat: sc.lat, lng: sc.lng, sigungu: z.sigungu }); continue; }
+        /* [1191] 이름 앞 동 이름 → 법정동 중심(근사 위치) — 아래에서 지오코딩 · 그 구 · 그 동일 때만 */
+        const cands = dongCandidates(z.name, z.sigungu);
+        if (cands.length) { dongTodo.push({ id, base: { ...base, summary: locateSummaryBy(z, "dong") }, sido: z.sido, sigungu: z.sigungu, guLabel, cands }); continue; }
         r.noAddress += 1;
         continue;
       }
@@ -196,6 +215,105 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
       r.notFound += 1;
     }
   }
+
+  /* [1191] 1기 신도시 선도지구 · 2차 후보 · 도심복합 — 단지 좌표 평균 또는 이름이 맞는 장소(그 자치구 안)만. 못 찾으면 싣지 않는다 */
+  r.special = 0;
+  r.specialMissed = [];
+  for (const z of SPECIAL_ZONES) {
+    const list = complexByGu.get(z.regionKey) ?? [];
+    const base = { id: z.id, name: z.name, type_key: z.typeKey, stage_key: z.stageKey, sido: z.sido, sigungu: z.sigungu, households: z.households, summary: z.summary, source: z.source, source_url: z.sourceUrl, is_sample: false, updated_at: now };
+    if (z.complexes) {
+      const c = complexCentroid(z.complexes, list);
+      if (c) { out.push({ ...base, address: specialAddress(z, { matched: c.matched }), lat: c.lat, lng: c.lng }); r.special += 1; }
+      else r.specialMissed.push(z.name);
+      continue;
+    }
+    if (z.lot) {
+      const have = byId.get(z.id);
+      if (have) { out.push({ ...base, address: have.address, lat: have.lat, lng: have.lng }); r.special += 1; continue; }
+      if (Date.now() > deadline) { r.specialMissed.push(z.name); continue; }
+      const hit = await geocodeLot(z.lot, z.sigungu).catch(() => null);
+      if (hit) { out.push({ ...base, address: specialAddress(z, {}), lat: hit.lat, lng: hit.lng }); r.special += 1; }
+      else r.specialMissed.push(z.name);
+      continue;
+    }
+    if (z.place) {
+      const have = byId.get(z.id);
+      if (have) { out.push({ ...base, address: have.address, lat: have.lat, lng: have.lng }); r.special += 1; continue; }
+      if (Date.now() > deadline || list.length === 0) { r.specialMissed.push(z.name); continue; }
+      const cLat = list.reduce((a, b) => a + b.lat, 0) / list.length;
+      const cLng = list.reduce((a, b) => a + b.lng, 0) / list.length;
+      const res = await kakaoLocalKeywordSearch({ query: z.place.query, lat: cLat, lng: cLng, radiusM: 20_000, size: 15 }).catch(() => ({ items: [] }));
+      const hit = pickPlace(res.items, z.place.mustContain, (a) => hitInSigungu(a, z.sigungu));
+      if (hit) { out.push({ ...base, address: specialAddress(z, { placeName: z.place.note ?? hit.name }), lat: hit.lat, lng: hit.lng }); r.special += 1; }
+      else r.specialMissed.push(z.name);
+    }
+  }
+
+  /* [1191] 법정동 중심 근사 위치 — 같은 동에 여럿이면 원 위에 조금씩 벌려 겹치지 않게(근사 위치라고 적는다) */
+  r.byDong = 0;
+  const dongSeen = new Map<string, number>();
+  const dongQueue = [...dongTodo];
+  const dongWorker = async () => {
+    for (;;) {
+      const t = dongQueue.shift();
+      if (!t) return;
+      if (Date.now() > deadline) { r.budgetExhausted = true; r.noAddress += 1; continue; }
+      let placed = false;
+      for (const dong of t.cands) {
+        const hits = await naverGeocode(`${t.sido} ${t.sigungu} ${dong}`, 3, { fresh: true }).catch(() => []);
+        const hit = hits.find((h) => (hitInSigungu(h.jibunAddress ?? h.address, t.sigungu) || hitInSigungu(h.address, t.sigungu)) && (hitIsDong(h.jibunAddress, dong) || hitIsDong(h.address, dong)));
+        if (!hit) continue;
+        const k = `${t.sigungu}|${dong}`;
+        const n = dongSeen.get(k) ?? 0;
+        dongSeen.set(k, n + 1);
+        const ang = n * 2.399963;
+        const rad = n === 0 ? 0 : 0.0004 * Math.sqrt(n);
+        out.push({ ...t.base, address: `${t.guLabel} ${dong} 중심(근사 위치)`, lat: hit.lat + rad * Math.sin(ang), lng: hit.lng + rad * Math.cos(ang) });
+        r.byDong = (r.byDong ?? 0) + 1;
+        placed = true;
+        break;
+      }
+      if (!placed) r.noAddress += 1;
+    }
+  };
+  await Promise.all([dongWorker(), dongWorker(), dongWorker(), dongWorker()]);
+
+  /* [1191] 서울 소규모정비(가로주택 · 모아타운 · 소규모재건축 등) — 사업위치 지오코딩 · 그 구 안일 때만 */
+  r.smallRows = 0;
+  r.smallLocated = 0;
+  if (isSeoulApiConfigured()) {
+    try {
+      const small: ReturnType<typeof parseSeoulSmall>[] = [];
+      for (let start = 1; start <= 5000; start += 1000) {
+        const page = await fetchSeoulOpenApi(SEOUL_SMALL_SERVICE, start, start + 999, [], "json", { timeoutMs: 20_000 });
+        small.push(...page.rows.map(parseSeoulSmall));
+        if (page.rows.length < 1000) break;
+      }
+      const list = small.filter((x): x is NonNullable<typeof x> => x !== null);
+      r.smallRows = list.length;
+      if (list.length === 0) r.smallNote = "0건";
+      const sq = [...list];
+      const smallWorker = async () => {
+        for (;;) {
+          const x = sq.shift();
+          if (!x) return;
+          const gu = seoulGu(x.gu, x.addr);
+          if (!gu) continue;
+          const id = `ss-${createHash("sha1").update(x.seq).digest("hex").slice(0, 14)}`;
+          const base = { id, name: x.name, type_key: seoulSmallType(x.kind), stage_key: seoulSmallStage(x.stage), sido: "서울", sigungu: gu, households: x.households, summary: [x.kind, x.stage ? `추진 ${x.stage}` : null, "위치는 사업위치 기준 · 구역 경계 아님"].filter(Boolean).join(" · "), source: SEOUL_SMALL_SOURCE, source_url: SEOUL_SMALL_URL, is_sample: false, updated_at: now };
+          const have = byId.get(id);
+          if (have) { out.push({ ...base, address: have.address, lat: have.lat, lng: have.lng }); r.smallLocated = (r.smallLocated ?? 0) + 1; continue; }
+          if (Date.now() > deadline) { r.budgetExhausted = true; continue; }
+          const hit = await geocodeLot(seoulSmallQuery(x.addr, gu), gu).catch(() => null);
+          if (hit) { out.push({ ...base, address: `${gu} ${x.addr}`.slice(0, 120), lat: hit.lat, lng: hit.lng }); r.smallLocated = (r.smallLocated ?? 0) + 1; }
+        }
+      };
+      await Promise.all([smallWorker(), smallWorker(), smallWorker(), smallWorker()]);
+    } catch (e) {
+      r.smallNote = e instanceof Error ? e.message.replace(/[A-Za-z0-9]{20,}/g, "***").slice(0, 80) : "조회 오류";
+    }
+  } else r.smallNote = "키 미설정";
 
   const rows = out
     .map((o) => (o.lat === null ? (coords.has(String(o.id)) ? { ...o, ...coords.get(String(o.id)) } : null) : o))

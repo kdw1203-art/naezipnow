@@ -127,10 +127,17 @@ export function Footer() {
 
         {/* 1행: 사업자 고지 — [1073] 링크 묶음 아래 한 칸(가는 선 위) · 보조 글자. 문장·값은 그대로 */}
         <div className="flex flex-col gap-1 border-t border-divider pt-4 t-caption">
-          <div>
-            내집나우 · 상호: {biz.legalName}({biz.domain}) · 대표:{" "}
-            {biz.representative || "—"} · 사업자등록번호:{" "}
-            {biz.registrationNumber || "—"}
+          {/* [1191] 소유자(2026-11-16): "대표자 이름을 숨기고 싶어" — 한 줄에서는 빼고 "사업자 정보 ▾" 접기 안에 둔다(DOM 에는 그대로) */}
+          <div className="flex flex-wrap items-baseline gap-x-1">
+            <span>
+              내집나우 · 상호: {biz.legalName}({biz.domain}) · 사업자등록번호:{" "}
+              {biz.registrationNumber || "—"} ·
+            </span>
+            <details className="inline-block">
+              {/* dead-control-ok: summary 가 눌리는 자리 — 꺾쇠는 열림 표시 */}
+              <summary className="inline-block cursor-pointer list-none py-[5px] text-text-3 underline-offset-2 hover:underline">사업자 정보 ▾</summary>
+              <span>대표: {biz.representative || "—"}</span>
+            </details>
           </div>
           <div>
             주소: {biz.address || "—"}

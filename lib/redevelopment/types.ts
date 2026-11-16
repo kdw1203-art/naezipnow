@@ -8,12 +8,14 @@
  */
 
 /** 사업종류 대분류 */
-export type ProjectGroupKey = "private" | "public" | "small" | "etc";
+export type ProjectGroupKey = "private" | "public" | "small" | "newtown" | "etc";
 
 export const PROJECT_GROUPS: { key: ProjectGroupKey; label: string }[] = [
   { key: "private", label: "민간주도" },
   { key: "public", label: "공공주도" },
   { key: "small", label: "소규모" },
+  /* [1191] 1기 신도시 선도지구(노후계획도시 특별법) — 분당 · 일산 · 평촌 · 중동 · 산본 */
+  { key: "newtown", label: "1기 신도시" },
   { key: "etc", label: "기타" },
 ];
 
@@ -33,6 +35,8 @@ export type ProjectTypeKey =
   | "moa" // 모아타운
   | "garo" // 가로주택정비
   | "small_scale" // 소규모재건축·재개발
+  | "newtown_lead" // 1기 신도시 선도지구(선정 · 특별정비구역)
+  | "newtown_cand" // 1기 신도시 2차 후보(주민제안 · 초안 접수)
   | "virtual"; // 가상구역
 
 export type ProjectTypeMeta = {
@@ -63,6 +67,9 @@ export const PROJECT_TYPES: ProjectTypeMeta[] = [
   { key: "moa", label: "모아타운", group: "small", color: "#22c55e" },
   { key: "garo", label: "가로주택", group: "small", color: "#15803d" },
   { key: "small_scale", label: "소규모", group: "small", color: "#38bdf8" },
+  // 1기 신도시
+  { key: "newtown_lead", label: "선도지구", group: "newtown", color: "#c2410c" },
+  { key: "newtown_cand", label: "선도지구 후보", group: "newtown", color: "#0891b2" },
   // 기타
   { key: "virtual", label: "가상구역", group: "etc", color: "#6b7280" },
 ];

@@ -6,7 +6,7 @@ import { ingestErrorMessage, logIngest } from "@/lib/market/store";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 120;
+export const maxDuration = 300;
 
 const DATASET = "정비구역 지도 위치(대표 지번 · 같은 이름 단지)";
 
@@ -14,14 +14,14 @@ const DATASET = "정비구역 지도 위치(대표 지번 · 같은 이름 단�
 export async function GET(req: Request) {
   if (!(await authorizeCron(req))) return NextResponse.json({ error: "권한이 필요합니다." }, { status: 403 });
   try {
-    const r = await locateSeoulZones({ budgetMs: 90_000 });
+    const r = await locateSeoulZones({ budgetMs: 240_000 });
     await logIngest({
       source: "redevelopment",
       dataset: DATASET,
       origin: "cron-fetch",
       rows: r.located + r.kept,
       status: r.ok ? "ok" : r.skipped ? "skipped" : "error",
-      message: r.reason ?? `구역 ${r.zones} · 새로 찍음 ${r.located} · 유지 ${r.kept} · 못 찾음 ${r.notFound} · 단지 기준 ${r.byComplex} · 경계 중심 ${r.byShape} · 위치 없음 ${r.noAddress} · 정리본과 겹침 ${r.duplicate} · 부산 자료 ${r.busanRows}${r.busanNote ? `(${r.busanNote})` : ""}${r.budgetExhausted ? " · 예산 소진(다음 실행이 이어서)" : ""}`,
+      message: r.reason ?? `구역 ${r.zones} · 새로 찍음 ${r.located} · 유지 ${r.kept} · 못 찾음 ${r.notFound} · 단지 기준 ${r.byComplex} · 경계 중심 ${r.byShape} · 위치 없음 ${r.noAddress} · 정리본과 겹침 ${r.duplicate} · 부산 자료 ${r.busanRows}${r.busanNote ? `(${r.busanNote})` : ""} · 동 중심 근사 ${r.byDong ?? 0} · 서울 소규모 ${r.smallLocated ?? 0}/${r.smallRows ?? 0}${r.smallNote ? `(${r.smallNote})` : ""} · 신도시·도심복합 ${r.special ?? 0}${r.specialMissed?.length ? `(위치 없음 ${r.specialMissed.length})` : ""}${r.budgetExhausted ? " · 예산 소진(다음 실행이 이어서)" : ""}`,
     });
     if (r.ok) {
       revalidatePath("/redevelopment");

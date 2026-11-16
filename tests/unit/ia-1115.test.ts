@@ -1549,3 +1549,52 @@ test("[1190] 동네이야기 공매 · 입주 물량 — 요약은 한 줄 + 창
   assert.ok(a.includes("한국자산관리공사") && s.includes("청약홈"), "출처 문장은 창 안에 그대로");
   assert.doesNotMatch(s, /btn-primary/);
 });
+
+test("[1191] 1기 신도시 선도지구 · 후보 · 도심복합 — 단지 좌표 평균 · 이름 맞는 장소만", async () => {
+  const { SPECIAL_ZONES, complexCentroid, pickPlace, specialAddress } = await import("@/lib/redevelopment/special-zones");
+  const { PROJECT_GROUPS, typeMeta } = await import("@/lib/redevelopment/types");
+  assert.ok(PROJECT_GROUPS.some((g) => g.key === "newtown"));
+  assert.equal(typeMeta("newtown_lead").group, "newtown");
+  assert.equal(SPECIAL_ZONES.filter((z) => z.typeKey === "newtown_lead").length, 13, "1차 선도지구 13구역");
+  assert.equal(new Set(SPECIAL_ZONES.map((z) => z.id)).size, SPECIAL_ZONES.length, "id 겹침 없음");
+  for (const z of SPECIAL_ZONES) assert.equal([z.complexes?.length, z.place, z.lot].filter(Boolean).length, 1, `${z.id} 기준 하나`);
+  assert.equal(SPECIAL_ZONES.filter((z) => z.typeKey === "garo").length, 21, "부천 가로주택 착공 21곳");
+  const list = [
+    { name: "A", lat: 37.0, lng: 127.0 },
+    { name: "B", lat: 37.2, lng: 127.2 },
+    { name: "C", lat: 37.2, lng: 127.2 },
+  ];
+  const c = complexCentroid(["A", "B", "C"], list);
+  assert.deepEqual(c && [c.lat, c.lng, c.matched.length], [37.1, 127.1, 3], "같은 좌표는 한 번만 센다");
+  assert.equal(complexCentroid(["Z"], list), null, "단지가 안 잡히면 싣지 않는다");
+  const items = [
+    { name: "신길2구역 주민센터", address: "서울 동작구 대방동", roadAddress: "" },
+    { name: "신길2구역 재개발", address: "서울 영등포구 신길동", roadAddress: "" },
+  ];
+  assert.equal(pickPlace(items, "신길2", (a) => a.includes("영등포구"))?.address, "서울 영등포구 신길동");
+  assert.equal(pickPlace(items, "신길4", () => true), null);
+  assert.match(specialAddress(SPECIAL_ZONES[0], { matched: ["a", "b"] }), /단지 2곳 좌표 평균$/);
+  assert.match(specialAddress(SPECIAL_ZONES[0], { placeName: "방학역" }), /방학역 기준점\(구역 경계 아님\)/);
+});
+
+test("[1191] 번호 구역 근사 위치 · 서울 소규모정비 · 하단 대표자 접기", async () => {
+  const { dongCandidates, hitIsDong, locateSummaryBy } = await import("@/lib/redevelopment/zone-locate");
+  assert.deepEqual(dongCandidates("좌천2", "동구"), ["좌천동", "좌천리"]);
+  assert.deepEqual(dongCandidates("신당제10", "중구"), ["신당동", "신당리"]);
+  assert.deepEqual(dongCandidates("문래동1가A", "영등포구"), ["문래동"]);
+  assert.deepEqual(dongCandidates("군포2구역", "군포시"), [], "시 이름은 동이 아니다");
+  assert.ok(hitIsDong("부산광역시 동구 좌천동", "좌천동"));
+  assert.ok(!hitIsDong("부산광역시 동구 좌천동 123", "천동"));
+  assert.match(locateSummaryBy({ stage: null, operator: null }, "dong"), /근사 위치 · 법정동 중심/);
+  const ss = await import("@/lib/redevelopment/seoul-small");
+  assert.equal(ss.seoulSmallType("소규모주택정비 가로주택정비사업"), "garo");
+  assert.equal(ss.seoulSmallType("모아타운"), "moa");
+  assert.equal(ss.seoulSmallStage("사업시행계획인가"), "plan_approved");
+  assert.equal(ss.seoulSmallStage("착공"), "moving");
+  assert.equal(ss.seoulGu("강동구", ""), "강동구");
+  assert.equal(ss.seoulSmallQuery("천호동 123-4 외 5필지", "강동구"), "서울특별시 강동구 천호동 123-4");
+  assert.equal(ss.parseSeoulSmall({ BASIC_INFO_SEQ: "1", BSNS_NAME: "A", BSNS_ADDR: "" }), null);
+  const f = readFileSync("app/components/Footer.tsx", "utf8");
+  assert.match(f, /사업자 정보 ▾<\/summary>\s*<span>대표: \{biz\.representative/);
+  assert.doesNotMatch(f, /\(\{biz\.domain\}\) · 대표:/);
+});
