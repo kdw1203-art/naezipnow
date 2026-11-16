@@ -15,11 +15,23 @@ import type { KosisTable } from "./stat-tables";
 export const KOSIS_PARAM_URL = "https://kosis.kr/openapi/Param/statisticsParameterData.do";
 
 /** 통계자료(Param) 요청 주소. apiKey 가 들어가므로 이 문자열은 로그·오류 메시지에 싣지 않는다. */
-export function buildKosisUrl(table: KosisTable, opts: { apiKey: string; recentCount?: number }): string {
+/** [1188] 붙여 넣은 키가 이미 주소용으로 바뀐 꼴("…%3D")이면 원래 글자로 되돌린다 — 그대로 쓰면 한 번 더 바뀌어 "유효하지 않은 인증KEY"(err 11) */
+export function normalizeKosisKey(raw: string): string {
+  const k = raw.trim();
+  if (!/%[0-9A-Fa-f]{2}/.test(k)) return k;
+  try {
+    return decodeURIComponent(k);
+  } catch {
+    return k;
+  }
+}
+
+/** rawKey — 키를 주소용으로 바꾸지 않고 그대로 붙인다(끝의 "=" · "+" · "/" 를 그대로 받는 서버 대비 · err 11 뒤 한 번만) */
+export function buildKosisUrl(table: KosisTable, opts: { apiKey: string; recentCount?: number; rawKey?: boolean }): string {
   const n = Math.floor(Number(opts.recentCount ?? (table.prdSe === "M" ? 2 : 1)));
   const qs = new URLSearchParams({
     method: "getList",
-    apiKey: opts.apiKey,
+    ...(opts.rawKey ? {} : { apiKey: opts.apiKey }),
     itmId: table.itmId ?? "ALL",
     format: "json",
     // [1104] 없으면 따옴표 없는 JS 객체가 온다(JSON.parse 실패) — 1104 이전 115회 0건의 원인
@@ -31,7 +43,7 @@ export function buildKosisUrl(table: KosisTable, opts: { apiKey: string; recentC
   });
   // [1104] 분류축은 표의 축 수만큼 — 모자라면 err 20(필수요청변수 누락)
   table.objL.forEach((v, i) => qs.set(`objL${i + 1}`, v));
-  return `${KOSIS_PARAM_URL}?${qs.toString()}`;
+  return `${KOSIS_PARAM_URL}?${qs.toString()}${opts.rawKey ? `&apiKey=${opts.apiKey}` : ""}`;
 }
 
 /** 통계자료 응답 한 행(jsonVD=Y · 값은 모두 문자열) */

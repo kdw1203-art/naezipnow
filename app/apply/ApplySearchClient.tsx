@@ -469,14 +469,15 @@ export function ApplySearchClient({ initial }: Props) {
 
           {/* [1015] 표 껍데기는 리퀴드 판(sand — 청약 톤). 가로 스크롤은 globals.css 가 lq-panel 에서도 auto 로 둔다(규칙 I). */}
           <div data-tone="sand"><HScroll className="rise-in-2 lq-panel py-1">
-            <div className="min-w-[540px]">
+            {/* [1186] 폰 경쟁률 표 — 공급 · 접수 칸에 밀려 경쟁률이 화면 밖에 있었다(운영 실측 2026-11-15). 폰은 단지 · 타입 · 경쟁률 세 칸, 공급 · 접수는 펼침 안 */}
+            <div className={state.tab === "competition" ? "md:min-w-[540px]" : "min-w-[540px]"}>
               {state.tab === "competition" ? (
                 <>
-                  <div className="grid grid-cols-[1.6fr_.9fr_.8fr_.9fr_1fr] gap-2 border-b border-divider py-2 t-caption text-text-3">
+                  <div className="grid grid-cols-[1.8fr_.8fr_1fr] gap-2 border-b border-divider py-2 t-caption text-text-3 md:grid-cols-[1.6fr_.9fr_.8fr_.9fr_1fr]">
                     <span>단지 · 지역</span>
                     <span className="text-center">타입</span>
-                    <span className="text-center">공급</span>
-                    <span className="text-center">접수</span>
+                    <span className="text-center max-md:hidden">공급</span>
+                    <span className="text-center max-md:hidden">접수</span>
                     <span className="text-center">경쟁률</span>
                   </div>
                   {displayItems.map((item, i, arr) => {
@@ -501,7 +502,7 @@ export function ApplySearchClient({ initial }: Props) {
                           type="button"
                           onClick={() => hasDetail && toggleExpand(item.id)}
                           aria-expanded={open}
-                          className={`grid w-full grid-cols-[1.6fr_.9fr_.8fr_.9fr_1fr] items-center gap-2 py-2.5 text-left text-xs ${
+                          className={`grid w-full grid-cols-[1.8fr_.8fr_1fr] items-center gap-2 py-2.5 text-left text-xs md:grid-cols-[1.6fr_.9fr_.8fr_.9fr_1fr] ${
                             hasDetail ? "press" : "cursor-default"
                           }`}
                         >
@@ -537,10 +538,10 @@ export function ApplySearchClient({ initial }: Props) {
                           <span className="text-center font-bold text-text-1" title={item.houseType}>
                             {houseTypeLabel(item.houseType)}
                           </span>
-                          <span className="text-center font-bold text-text-1">
+                          <span className="text-center font-bold text-text-1 max-md:hidden">
                             {item.supplyCount.toLocaleString()}
                           </span>
-                          <span className="text-center font-bold text-text-1">
+                          <span className="text-center font-bold text-text-1 max-md:hidden">
                             {item.requestCount ?? "—"}
                           </span>
                           <span className="text-center font-bold text-danger" title={item.competitionRate ?? undefined}>
@@ -549,6 +550,9 @@ export function ApplySearchClient({ initial }: Props) {
                         </button>
                         {open && hasDetail && (
                           <div className="mb-2 grid grid-cols-2 gap-x-4 gap-y-1.5 rounded-xl bg-bg px-3.5 py-3 t-sub sm:grid-cols-3">
+                            <span className="md:hidden">
+                              <DetailField label="공급 · 접수" value={`${item.supplyCount.toLocaleString()} · ${item.requestCount ?? "—"}`} />
+                            </span>
                             {item.rankCode ? (
                               <DetailField label="순위" value={`${item.rankCode}순위`} />
                             ) : null}

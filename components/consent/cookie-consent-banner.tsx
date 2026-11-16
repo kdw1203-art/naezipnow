@@ -71,10 +71,10 @@ export function CookieConsentBanner() {
           40px 높이 한 줄. 탭바와 같이 서도 하단 1/3 을 넘지 않는다. 블러(backdrop-blur)는
           걷었다 — 탭바 글래스 위에 블러 층을 하나 더 얹을 이유가 없고(항목 13), 블러
           없이 80% 유리면 밑 글자가 비치므로 면은 불투명 surface 토큰(양 테마)으로. */}
-      <div className="mx-auto flex max-w-[560px] flex-col gap-2 rounded-2xl border border-line bg-surface p-3 shadow-[var(--shadow-md)] md:max-w-[360px] md:p-3.5">
+      <div className="mx-auto flex max-w-[560px] flex-col gap-1.5 rounded-2xl border border-line bg-surface p-2.5 shadow-[var(--shadow-md)] md:max-w-[360px] md:gap-2 md:p-3.5">
         <p className="text-[12px] leading-[1.5] text-text-1">
-          내집나우는 서비스 운영에 필요한 필수 쿠키를 사용해요. 이용 통계 분석 쿠키는{" "}
-          <b>동의하신 경우에만</b> 사용해요.{" "}
+          {/* [1187] 두 문장(폰 두 줄) → 한 줄. 운영 실측(2026-11-15 · 390px): 배너가 화면 아래 110px 를 덮었다 */}
+          통계 분석 쿠키는 <b>동의한 경우에만</b> 사용 ·{" "}
           {/* [970 · A-19] 셸 링크 — 프리페치 없음 */}
           {/* [989] 문단 속 단독 링크 — 인라인 세로 패딩은 줄 높이를 바꾸지 않으면서
               히트만 24px 로 넓힌다(이 문단에 다른 링크가 없어 겹칠 상대가 없다) */}
@@ -90,14 +90,14 @@ export function CookieConsentBanner() {
           <button
             type="button"
             onClick={() => decide(false)}
-            className="min-h-[44px] flex-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-[12px] font-bold text-text-1"
+            className="min-h-[40px] flex-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-[12px] font-bold text-text-1"
           >
             필수만 허용
           </button>
           <button
             type="button"
             onClick={() => decide(true)}
-            className="btn-primary min-h-[44px] flex-1 rounded-[10px] px-3 py-2 text-[12px]"
+            className="btn-primary min-h-[40px] flex-1 rounded-[10px] px-3 py-2 text-[12px]"
           >
             모두 허용
           </button>

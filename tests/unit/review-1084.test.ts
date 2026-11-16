@@ -78,7 +78,7 @@ test("긴 표 — 월간 리포트 30행 + 접힌 나머지 · 입주 물량 앞
   assert.match(rep, /report\.rows\.slice\(0, REPORT_TABLE_HEAD\)\.map\(\(r\) => regionRow\(r\)\)/);
   assert.match(rep, /나머지 \{[^}]+\}개 지역 보기/);
   const sup = strip(read("app/supply/SupplyClient.tsx"));
-  assert.match(sup, /const TABLE_INITIAL_ROWS = 40;/);
+  assert.match(sup, /const TABLE_INITIAL_ROWS = 12;/);
   assert.match(sup, /String\(s\.moveInYm\) >= nowYmKey\),\s*\.\.\.list\.filter\(\(s\) => validYm\(s\.moveInYm\) && String\(s\.moveInYm\) < nowYmKey\)\.reverse\(\)/, "앞으로 올 입주(가까운 순) → 지난 입주(최근 순)");
   assert.match(sup, /tableOrdered\.slice\(0, TABLE_INITIAL_ROWS\)/);
 });

@@ -49,6 +49,8 @@ export type ZoneLocateResult = {
   byShape: number;
   /** [1183] 부산 정비사업 정보에서 읽은 구역 수(0 = 키 없음 · 활용신청 전 · 조회 실패) */
   busanRows: number;
+  /** [1188] 부산 자료가 0건일 때의 사유 한 줄(HTTP · 응답 머리) — 키는 싣지 않는다 */
+  busanNote?: string;
   budgetExhausted: boolean;
 };
 
@@ -114,7 +116,8 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
   }
 
   /* [1183] 부산 정비사업 정보 — 구역 이름 → 대표 지번. 키가 없거나 활용신청 전이면 0건(부산은 이름 · 단지 경로만) */
-  const busan: BusanZone[] = await loadBusanZones().catch(() => []);
+  const busanLoad = await loadBusanZones().catch(() => ({ zones: [] as BusanZone[], note: "조회 오류" }));
+  const busan = busanLoad.zones;
 
   /* [1166] 구역 경계 도형(서울시 의제처리구역 위치정보) — 서버 묶음에 싣는다. 못 읽으면 도형 경로만 쉰다 */
   let shapes: ZoneShapeFile["zones"] | null = null;
@@ -125,7 +128,7 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
   }
   const shapeTodo: { id: string; base: Record<string, unknown>; lat: number; lng: number; sigungu: string }[] = [];
 
-  const r: ZoneLocateResult = { ok: true, ...empty, zones: zones.length, busanRows: busan.length };
+  const r: ZoneLocateResult = { ok: true, ...empty, zones: zones.length, busanRows: busan.length, ...(busan.length === 0 && busanLoad.note ? { busanNote: busanLoad.note } : {}) };
   const now = new Date().toISOString();
   const out: Record<string, unknown>[] = [];
   const todo: { z: ZoneRow; id: string; query: string; address: string; typeKey: string; stageKey: string }[] = [];
@@ -205,10 +208,11 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
 }
 
 /** [1183] 부산 정비사업 정보 전 건 — 100건씩 최대 10쪽. 실패는 빈 목록(다른 경로는 그대로 간다) */
-async function loadBusanZones(): Promise<BusanZone[]> {
+async function loadBusanZones(): Promise<{ zones: BusanZone[]; note: string | null }> {
   const key = process.env.DATA_GO_KR_SERVICE_KEY?.trim();
-  if (!key) return [];
+  if (!key) return { zones: [], note: "키 미설정" };
   const out: BusanZone[] = [];
+  let note: string | null = null;
   for (let page = 1; page <= 10; page++) {
     const url = new URL(BUSAN_REDEV_URL);
     url.searchParams.set("serviceKey", key);
@@ -216,17 +220,30 @@ async function loadBusanZones(): Promise<BusanZone[]> {
     url.searchParams.set("numOfRows", "100");
     url.searchParams.set("resultType", "json");
     const res = await fetch(url.toString(), { headers: { Accept: "application/json" }, cache: "no-store", signal: AbortSignal.timeout(15_000) });
-    if (!res.ok) break;
-    const json = (await res.json().catch(() => null)) as unknown;
+    const text = await res.text().catch(() => "");
+    if (!res.ok) {
+      note = `HTTP ${res.status}`;
+      break;
+    }
+    let json: unknown = null;
+    try {
+      json = JSON.parse(text);
+    } catch {
+      /* 활용신청 전이면 공공데이터포털이 XML 오류문을 준다 — 꼬리표를 뗀 앞 80자만 사유로(키는 응답에 없다) */
+      note = text.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 80) || "빈 응답";
+      break;
+    }
     const items = findBusanItems(json);
     for (const it of items) {
       const z = parseBusanItem(it);
       if (z) out.push(z);
     }
+    if (items.length === 0 && page === 1) note = JSON.stringify(json).slice(0, 80);
     const total = findBusanTotal(json);
     if (items.length < 100 || (total != null && out.length >= total)) break;
   }
-  return out;
+  /* 사유 글에 키가 섞여 나오는 일이 없게 — 혹시 있으면 지운다 */
+  return { zones: out, note: note ? note.split(key).join("***").split(encodeURIComponent(key)).join("***") : null };
 }
 
 /** 같은 이름(꼭 같은 것 하나)의 부산 구역 지번 — 둘 이상이면 고르지 않는다. 자치구는 지오코딩 답으로 확인한다(hitInSigungu) */

@@ -1,12 +1,12 @@
 /** KOSIS 국가통계포털 Open API 클라이언트 (서버 전용). 요청 주소 · 응답 해석 · 지역 매핑은 ./parse (순수). */
 import { logger } from "@/lib/log";
 import type { KosisTable } from "./stat-tables";
-import { buildKosisUrl, mapKosisRows, parseKosisResponse, type KosisDataRow } from "./parse";
+import { buildKosisUrl, mapKosisRows, normalizeKosisKey, parseKosisResponse, type KosisDataRow } from "./parse";
 
 export type { KosisDataRow } from "./parse";
 
 export function kosisKey(): string {
-  return process.env.KOSIS_API_KEY?.trim() ?? "";
+  return normalizeKosisKey(process.env.KOSIS_API_KEY ?? "");
 }
 
 export function isKosisConfigured(): boolean {
@@ -35,22 +35,34 @@ export async function fetchKosisTable(
   const empty = (error: KosisFetchResult["error"]): KosisFetchResult => ({ rows: [], received: 0, unmatched: 0, error });
   if (!isKosisConfigured()) return empty({ code: "10", message: "KOSIS_API_KEY 미설정" });
 
-  let text: string;
-  try {
-    const res = await fetch(buildKosisUrl(table, { apiKey: kosisKey(), recentCount: opts.recentCount }), {
-      headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(20_000),
-      cache: "no-store",
-    });
-    text = await res.text();
-    if (!res.ok) {
-      logger.warn(`[kosis] ${table.label} HTTP ${res.status}`);
-      return empty({ code: `HTTP ${res.status}`, message: "" });
+  const load = async (rawKey: boolean): Promise<{ text: string } | { error: KosisFetchResult["error"] }> => {
+    try {
+      const res = await fetch(buildKosisUrl(table, { apiKey: kosisKey(), recentCount: opts.recentCount, rawKey }), {
+        headers: { Accept: "application/json" },
+        signal: AbortSignal.timeout(20_000),
+        cache: "no-store",
+      });
+      const body = await res.text();
+      if (!res.ok) {
+        logger.warn(`[kosis] ${table.label} HTTP ${res.status}`);
+        return { error: { code: `HTTP ${res.status}`, message: "" } };
+      }
+      return { text: body };
+    } catch (err) {
+      const timeout = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
+      logger.warn(`[kosis] ${table.label} fetch failed`, err instanceof Error ? err.name : String(err));
+      return { error: { code: timeout ? "timeout" : "network", message: "" } };
     }
-  } catch (err) {
-    const timeout = err instanceof Error && (err.name === "TimeoutError" || err.name === "AbortError");
-    logger.warn(`[kosis] ${table.label} fetch failed`, err instanceof Error ? err.name : String(err));
-    return empty({ code: timeout ? "timeout" : "network", message: "" });
+  };
+
+  const first = await load(false);
+  if ("error" in first) return empty(first.error);
+  let text = first.text;
+  /* [1188] err 11(유효하지 않은 인증KEY) — 키를 주소용으로 바꾼 것이 원인일 수 있어 그대로 붙여 한 번 더(운영 실측: 2026-11-10~15 여섯 번 모두 err 11) */
+  const firstParsed = parseKosisResponse(text);
+  if (!firstParsed.ok && firstParsed.code === "11") {
+    const second = await load(true);
+    if (!("error" in second)) text = second.text;
   }
 
   const parsed = parseKosisResponse(text);

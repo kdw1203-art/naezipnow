@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { HubBreadcrumbLd } from "@/app/components/seo/HubBreadcrumbLd";
-import Link from "@/app/components/IntentLink";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { getSupplyAll, getSupplyDataAsOf, toSupplyWire } from "@/lib/market/supply";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
@@ -10,6 +9,7 @@ import { validYm } from "@/lib/supply/window";
 import { MiniBar } from "@/app/components/compact/MiniBar";
 import { FactTable } from "@/app/components/compact/FactTable";
 import { Fineprint } from "@/app/components/Fineprint";
+import { PopupSheet } from "@/app/components/PopupSheet";
 import { SupplyClient } from "./SupplyClient";
 
 /* ── ISR 전환 (사용량 절감 9차, 2026-08-10) ─────────────────────────────────
@@ -116,35 +116,26 @@ export default async function SupplyPage() {
             머리카락 선(sm:border-l)만으로 칸을 나눈다 — 숫자가 내용이고 상자는 내용이 아니다(1062 선례).
             폰은 2열 × 2줄(390px 에서 라벨이 접히고 숫자는 제자리), 데스크톱은 한 줄 넉 칸. */}
         {all.ok && (
-          <section className="rise-in card mb-4 p-[var(--pad-card)] max-md:mb-3" aria-label="입주 물량 요약">
-            {/* [1063 고침] 폰은 숫자 줄 아래 액션 — 한 줄에 두면 단추가 줄어들지 않아 숫자 칸을 덮는다(390px 실측) */}
-            <div className="flex flex-col items-stretch gap-3 md:flex-row md:items-start md:justify-between md:gap-x-4">
-              <dl className="m-0 grid min-w-0 flex-1 grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-4">
-                {facts.map((f) => (
-                  <div
-                    key={f.k}
-                    className="flex min-w-0 flex-col-reverse gap-0.5 sm:border-l sm:border-line sm:pl-3 sm:first:border-l-0 sm:first:pl-0"
-                  >
-                    <dt className="t-caption text-text-3">{f.k}</dt>
-                    <dd className="m-0 t-num t-section text-ink">{f.v}</dd>
-                  </div>
-                ))}
-              </dl>
-              {/* [1063] 이 화면의 단 하나뿐인 주 액션 — 입주(완성 공급) 다음 칸인 청약(앞단)으로 잇는다.
-                  "지도에서 보기"(→/map)는 제거(2026-08-22) — 지도에 입주 물량 레이어가 없어서, 누르면 목적과
-                  무관한 화면이 나오는 링크였다. 지도에 공급 레이어가 생기면 그때 되살린다. */}
-              <Link
-                href="/apply"
-                className="btn-primary inline-flex min-h-[40px] shrink-0 items-center justify-center rounded-xl px-4 t-body no-underline md:min-h-9"
-              >
-                청약 경쟁률 보기
-              </Link>
-            </div>
-
+          /* [1190] 숫자 넉 칸 + 단추 + 연도 막대 7줄 + 접기 한 판 → 한 줄. 소유자(2026-11-16): "다른 페이지들(동네이야기)도 같은 개선".
+             연도 막대 · 기준 · 출처는 문장 그대로 창 안으로. "청약 경쟁률 보기" 단추는 걷었다 — 바로 위 카테고리 줄의 "청약 센터"와 같은 곳이다. */
+          <section className="rise-in mb-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1" aria-label="입주 물량 요약">
+            <p className="m-0 t-sub text-text-2">
+              {facts.map((f, i) => (
+                <span key={f.k}>
+                  {i > 0 ? " · " : ""}
+                  {f.k} <strong className="tabular-nums text-ink">{f.v}</strong>
+                </span>
+              ))}
+            </p>
+            <PopupSheet
+              title="연도별 입주 세대수 · 기준 · 출처"
+              className="tap-line inline-flex min-h-10 items-center t-sub font-bold text-primary md:min-h-8"
+              trigger="연도별 입주 세대수 · 출처 ›"
+            >
             {/* 연도별 세대수 막대 — 월별(아래 24개월)보다 넓게, 자료 전체가 어느 해에 몰려 있는지 한눈에.
                 값은 실집계 세대수 하나뿐이라 단위가 섞이지 않는다(곳수는 줄 끝 보조 표기). */}
             {yearly.length > 1 && (
-              <div className="mt-4">
+              <div>
                 <div className="flex items-baseline justify-between gap-2">
                   <h2 className="t-section font-bold text-ink">연도별 입주 세대수</h2>
                   <span className="t-caption text-text-3">자료 전체 · 세대수 기준</span>
@@ -153,7 +144,7 @@ export default async function SupplyPage() {
               </div>
             )}
 
-            <Fineprint className="mt-3" label="기준 · 출처">
+            <div className="mt-3">
               <FactTable
                 dense
                 rows={[
@@ -189,7 +180,8 @@ export default async function SupplyPage() {
                   },
                 ]}
               />
-            </Fineprint>
+            </div>
+            </PopupSheet>
           </section>
         )}
 

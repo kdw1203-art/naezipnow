@@ -28,7 +28,7 @@ import { Explain } from "@/app/components/explain/Explain";
  */
 
 /* [1084] 200 → 40 — 200행을 한 번에 그려 쪽이 11,239px 였다(운영 실측). 나머지는 "더 보기"(행 수를 숨기지 않는다) */
-const TABLE_INITIAL_ROWS = 40;
+const TABLE_INITIAL_ROWS = 12;
 
 type MonthBucket = { ym: string; count: number; households: number };
 
@@ -46,11 +46,6 @@ function fmtYm(ym: string): string {
   if (!ym) return "월 미정";
   if (!validYm(ym)) return ym;
   return `${ym.slice(0, 4)}.${ym.slice(4, 6)}`;
-}
-
-function monthLabel(ym: string): string {
-  if (!validYm(ym)) return "미정";
-  return `${Number(ym.slice(4, 6))}월`;
 }
 
 /** 지역 묶음 키 — 예전 getSupplyRegions 의 String(row.region ?? "기타") 와 동일 규칙 */
@@ -203,20 +198,11 @@ export function SupplyClient({
   const thisQuarterIsNow = currentIdx >= 0;
   if (currentIdx < 0) currentIdx = groups.findIndex((g) => g.key !== "unknown" && g.key > nowKey);
   const thisQuarter = currentIdx >= 0 ? groups[currentIdx] : null;
-  const upcomingItems =
-    currentIdx >= 0
-      ? groups
-          .slice(currentIdx + 1)
-          .filter((g) => g.key !== "unknown")
-          .flatMap((g) => g.items)
-      : [];
 
   const featured = thisQuarter ? thisQuarter.items.slice(0, 6) : [];
   const featuredMore = thisQuarter
     ? Math.max(0, thisQuarter.items.length - featured.length)
     : 0;
-  const upcomingShown = upcomingItems.slice(0, 6);
-  const upcomingMore = Math.max(0, upcomingItems.length - upcomingShown.length);
 
   /* [1028] 그래프·합계는 **이번 달부터 24개월**(달력 기준 · lib/supply/window.ts). 예전에는 입주월 순 "마지막 24개월"(slice(-24))이라,
      자료가 2032년까지 늘어난 뒤로는 2029.04~2032.03 만 그려졌다(오늘 기준 3년 뒤부터). 합계·가장 많은 달은 전체 달로 세어,
@@ -447,56 +433,8 @@ export function SupplyClient({
           </>
         )}
 
-        {/* 다가오는 입주 (예정)
-            [1063 · 표·그래프] 테두리 카드 6장(장마다 3줄) → 한 판 안 머리카락 선 6줄.
-            왼쪽은 월 칩 + 단지 이름(굵게) + 사업유형, 오른쪽은 숫자(세대수) 한 칸.
-            입주월은 보조 줄에 "입주 YYYY.MM" 으로 그대로 남는다 — 한 줄도 지우지 않고 자리만 옮겼다.
-            폰 390px: 이름 열이 접히고(min-w-0 truncate) 숫자는 오른쪽에 붙어 있는다(shrink-0). */}
-        {upcomingShown.length > 0 && (
-          <section className="rise-in-3 card p-[var(--pad-card)]">
-            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-              <h2 className="m-0 t-section font-bold text-ink">다가오는 입주 (예정)</h2>
-              <span className="t-caption text-text-3">{upcomingItems.length.toLocaleString()}곳</span>
-            </div>
-            <div data-tone="plain" className="mt-1.5 flex flex-col divide-y divide-line">
-              {upcomingShown.map((s, i) => (
-                <div
-                  key={`next-${s.aptName ?? "미정"}-${i}`}
-                  className="flex min-h-[40px] items-center justify-between gap-3 py-2"
-                >
-                  <div className="flex min-w-0 items-center gap-2.5">
-                    <span className="shrink-0 rounded-md bg-bg chip-pad t-caption font-bold text-text-2">
-                      {monthLabel(s.moveInYm)}
-                    </span>
-                    <div className="min-w-0">
-                      <div className="flex min-w-0 items-center gap-1.5 t-body font-bold text-ink">
-                        <span className="truncate">{s.aptName ?? "미정"}</span>
-                        {s.bizType && (
-                          <span className="shrink-0 rounded bg-primary-soft px-[7px] py-0.5 t-caption font-bold text-primary">
-                            {s.bizType}
-                          </span>
-                        )}
-                      </div>
-                      <div className="truncate t-caption text-text-3">
-                        {s.address ?? s.region} · 입주 {fmtYm(s.moveInYm)}
-                      </div>
-                    </div>
-                  </div>
-                  <span className="shrink-0 whitespace-nowrap t-num t-sub text-primary">
-                    {s.households ? `${s.households.toLocaleString()}세대` : "—"}
-                  </span>
-                </div>
-              ))}
-            </div>
-            {/* [1015] 설명문("…추려 보여드려요 — …확인하세요") → 숫자 한 줄(브리프 규칙 D) */}
-            <p className="mt-1.5 t-caption text-text-3">
-              {upcomingMore > 0
-                ? `대표 ${upcomingShown.length}곳 · 나머지 ${upcomingMore.toLocaleString()}곳 아래 표`
-                : `대표 ${upcomingShown.length}곳 · 전체 목록 아래 표`}
-            </p>
-          </section>
-        )}
-
+        {/* [1186 · 통폐합] "다가오는 입주(예정)" 6줄은 걷었다 — 바로 아래 전체 표의 첫 줄들(이번 달 이후 · 가까운 순)과 같은 단지였다.
+            전체 표는 처음 12곳만 펼치고 나머지는 "더 보기"(운영 실측 2026-11-15: 폰 화면 5,808px). */}
         {/* 지난·전체 입주 예정 단지 — 곳수는 전량 기준(조용한 200 상한 정정),
             표는 200행에서 시작하고 "더 보기"로 펼친다 (상한을 가리지 않는다). */}
         <h2 className="rise-in-4 px-1 pt-1.5 t-section font-bold text-text-2">

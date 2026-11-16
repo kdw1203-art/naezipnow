@@ -25,7 +25,7 @@ import { HScroll } from "@/app/components/HScroll";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Explain } from "@/app/components/explain/Explain";
 import { MiniBar } from "@/app/components/compact/MiniBar";
-import { Fineprint } from "@/app/components/Fineprint";
+import { PopupSheet } from "@/app/components/PopupSheet";
 import type { AuctionApiItem } from "@/app/api/auctions/route";
 import { sigunguDistribution } from "@/lib/onbid/region-summary";
 
@@ -528,27 +528,21 @@ export function AuctionsClient({
                 예전에 이 자리는 42칸 달력이었고, 건수 문장은 그 위 한 줄, 용도 막대는 오른쪽 레일 맨 아래였다 —
                 폰 첫 화면이 날짜 격자로 덮여 "지금 몇 건이 어떤 용도로 떠 있나"를 스크롤해야 알았다.
                 달력은 표 아래로 내렸고(날짜 표시는 그대로), 숫자는 전부 받은 목록에서 센 값이다. */}
-            <section className="rise-in-1 card p-[var(--pad-card)]" aria-label="공매 물건 요약">
-              <dl className="m-0 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
-                {[
-                  /* [1102] "표시 중 N건" 칸은 뺐다 — 바로 아래 용도별 요약 머리("표시 중 N건 기준")와 표 머리("현재 조건 N건")가 같은 수를 말한다 */
-                  { k: "입찰 중·예정", v: `${activeTotal.toLocaleString()}건` },
-                  { k: "마감 임박 · D-3 이내", v: `${urgentCount.toLocaleString()}건` },
-                  ...(endRange ? [{ k: "입찰마감", v: endRange }] : []),
-                ].map((f) => (
-                  <div
-                    key={f.k}
-                    className="flex min-w-0 flex-col-reverse gap-0.5 sm:border-l sm:border-line sm:pl-3 sm:first:border-l-0 sm:first:pl-0"
-                  >
-                    <dt className="t-caption text-text-3">{f.k}</dt>
-                    {/* [1073] "2026.10.19~2026.10.31" 은 띄어쓰기가 없어 칸(폰 2열 · 태블릿 4열) 밖으로 37~80px 삐져나왔다 — 칸 안에서 접는다 */}
-                    <dd className="m-0 t-num t-section text-ink [overflow-wrap:anywhere]">{f.v}</dd>
-                  </div>
-                ))}
-              </dl>
-
+            {/* [1190] 숫자 석 칸 + 용도 막대 + 접기 한 판 → 한 줄. 소유자(2026-11-16): "다른 페이지들(동네이야기)도 같은 개선".
+                입찰 중·예정 건수는 바로 아래 목록 머리("진행·예정 물건 N건")가 말한다 — 여기는 그 줄에 없는 둘(임박 · 마감 기간)만.
+                용도 막대 · 기준 · 출처 · 면책은 문장 그대로 창 안으로. */}
+            <section className="rise-in-1 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-1" aria-label="공매 물건 요약">
+              <p className="m-0 t-sub text-text-2 [overflow-wrap:anywhere]">
+                마감 임박 · D-3 이내 <strong className="tabular-nums text-ink">{urgentCount.toLocaleString()}건</strong>
+                {endRange ? <> · 입찰마감 <span className="tabular-nums">{endRange}</span></> : null}
+              </p>
+              <PopupSheet
+                title="용도별 요약 · 기준 · 출처"
+                className="tap-line inline-flex min-h-10 items-center t-sub font-bold text-primary md:min-h-8"
+                trigger="용도별 요약 · 출처 ›"
+              >
               {/* 용도별 요약 — 한 그래프에 한 단위(건)만. 값은 지금 받은 목록에서 센 수다 */}
-              <div className="mt-4">
+              <div>
                 <div className="flex flex-wrap items-baseline justify-between gap-x-2 gap-y-1">
                   <h2 className="m-0 t-section font-bold text-ink">용도별 요약</h2>
                   {/* [1028] 이 건수는 지금 받은 목록(마감 임박순 최대 200건)에서 센 값이다 — 전체 건수로 읽히지 않게 기준을 적는다 */}
@@ -566,10 +560,7 @@ export function AuctionsClient({
                 )}
               </div>
 
-              {/* 요약 한 줄 — 사실만(숫자·출처). [1015] 아래에 있던 안내 띠("…기준이며 매일 자동 갱신됩니다. …반드시
-                  확인하세요")는 걷고 ⓘ 하나로 접었다(브리프 규칙 B). 갱신 주기·원문 우선 원칙은 시트 안에 그대로.
-                  [1063] 그 한 줄도 접기 뒤로 — 같은 건수를 위 숫자 칸이 먼저 말한다(문장은 그대로 둔다). */}
-              <Fineprint className="mt-3" label="기준 · 출처 · 면책">
+              <div className="mt-3 t-caption text-text-3">
                 <span className="flex flex-wrap items-center gap-x-1">
                   <span>
                     온비드 입찰 중·예정 물건{" "}
@@ -593,7 +584,8 @@ export function AuctionsClient({
                   출처 · 한국자산관리공사 온비드(공공데이터포털) · 참고용 정보이며 권리분석·명도·정확한
                   입찰조건은 온비드 공고 원문과 전문가 확인이 필요합니다.
                 </span>
-              </Fineprint>
+              </div>
+              </PopupSheet>
             </section>
 
             {/* [1102 → 1103 · 같은 사실 한 번] "진행 중 물건" 6줄 · "마감 임박" 4줄 묶음을 걷었다 — 둘 다 바로 아래 목록(마감 임박순)의

@@ -1521,3 +1521,31 @@ test("[1185] 공매 물건 이름 — 용도 칸과 같은 말은 이름에서 �
   const redev = readFileSync("app/redevelopment/(index)/page.tsx", "utf8");
   assert.equal((redev.match(/일반 절차 기준의 개념 안내입니다/g) ?? []).length, 1);
 });
+
+test("[1188] KOSIS 키 — 주소용으로 바뀐 꼴은 되돌리고, err 11 이면 키를 그대로 붙여 한 번 더", async () => {
+  const m = await import("@/lib/kosis/parse");
+  assert.equal(m.normalizeKosisKey(" abc%3D "), "abc=");
+  assert.equal(m.normalizeKosisKey("abc+/="), "abc+/=");
+  assert.equal(m.normalizeKosisKey("bad%zz"), "bad%zz");
+  const t = { prdSe: "M", orgId: "101", tblId: "T1", objL: ["ALL"], label: "x" } as never;
+  const enc = m.buildKosisUrl(t, { apiKey: "ab+c=" });
+  assert.match(enc, /apiKey=ab%2Bc%3D/);
+  const raw = m.buildKosisUrl(t, { apiKey: "ab+c=", rawKey: true });
+  assert.match(raw, /&apiKey=ab\+c=$/);
+  assert.doesNotMatch(raw, /apiKey=ab%2B/);
+  const c = readFileSync("lib/kosis/client.ts", "utf8");
+  assert.match(c, /firstParsed\.code === "11"/);
+});
+
+test("[1190] 동네이야기 공매 · 입주 물량 — 요약은 한 줄 + 창", () => {
+  const a = readFileSync("app/auctions/AuctionsClient.tsx", "utf8");
+  const s = readFileSync("app/supply/page.tsx", "utf8");
+  for (const src of [a, s]) {
+    assert.match(src, /<PopupSheet/);
+    assert.doesNotMatch(src, /sm:grid-cols-[34]">\s*\{/);
+  }
+  assert.match(a, /trigger="용도별 요약 · 출처 ›"/);
+  assert.match(s, /trigger="연도별 입주 세대수 · 출처 ›"/);
+  assert.ok(a.includes("한국자산관리공사") && s.includes("청약홈"), "출처 문장은 창 안에 그대로");
+  assert.doesNotMatch(s, /btn-primary/);
+});

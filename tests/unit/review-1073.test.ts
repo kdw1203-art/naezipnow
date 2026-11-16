@@ -110,5 +110,6 @@ test("C6 넘침 — /creators 단계 설명은 접히고 · /auctions 날짜는 
   /* [1174] 단계 카드 → 한 줄(StepStrip · 칩 단위로 줄바꿈 · 글자 잘림 없음) */
   assert.match(c, /<StepStrip className="mb-8" label="등록 단계" steps=\{STEPS\} note=\{STEPS_NOTE\} \/>/);
   const a = read("app/auctions/AuctionsClient.tsx");
-  assert.match(a, /<dd className="m-0 t-num t-section text-ink \[overflow-wrap:anywhere\]">\{f\.v\}<\/dd>/);
+  /* [1190] 숫자 칸 → 한 줄 문장 — 날짜는 그 줄 안에서 접힌다 */
+  assert.match(a, /<p className="m-0 t-sub text-text-2 \[overflow-wrap:anywhere\]">/);
 });

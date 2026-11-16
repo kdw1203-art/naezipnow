@@ -60,7 +60,7 @@ test("V1 글자 크기 — 사용자 화면의 임의 px 는 램프 유틸로(�
 
 test("V3 액션 — 주 단추 하나 · 폰 40px", () => {
   const ONE: Array<[string, number]> = [
-    ["app/supply/page.tsx", 1],
+    /* [1190] /supply 요약은 한 줄 + 창 — 주 단추 없음(청약 센터는 카테고리 줄) */
     ["app/auctions/AuctionsClient.tsx", 1],
     ["app/redevelopment/(index)/page.tsx", 1],
     ["app/reports/[ym]/page.tsx", 1],

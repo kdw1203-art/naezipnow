@@ -128,27 +128,55 @@ function Row({ r }: { r: RegionSiseRow }) {
   );
 }
 
+/* [1186] 지역 표는 처음 8곳 — 서울 25개 구가 한 번에 펼쳐져 폰 화면이 길었다(운영 실측 2026-11-15). 나머지는 접힘(글 · 링크는 그대로 HTML 에 있다) */
+const PANEL_FIRST_ROWS = 8;
+
+function PanelHead({ ghost = false }: { ghost?: boolean }) {
+  /* ghost — 접힌 둘째 표의 칸 폭을 첫 표와 맞추는 높이 0 머리(읽기 프로그램에는 숨김) */
+  const th = ghost ? "h-0 overflow-hidden p-0" : "py-2 font-bold";
+  return (
+    <thead className="max-md:hidden" aria-hidden={ghost || undefined}>
+      <tr className={ghost ? "" : "border-b border-line bg-bg text-left t-caption text-text-3"}>
+        <th scope="col" className={`px-3 ${th} ${TOOL_COL_NAME}`}>{ghost ? "" : "지역"}</th>
+        <th scope="col" className={`px-2 ${th}`}>{ghost ? "" : "평균 매매가"}</th>
+        <th scope="col" className={`px-2 ${th}`}>{ghost ? "" : "전세가율"}</th>
+        <th scope="col" className={`px-2 ${th}`}>{ghost ? "" : "시장 온도"}</th>
+        <th scope="col" className={`px-3 ${th} ${TOOL_COL_GO}`}>{ghost ? "" : <span className="sr-only">열기</span>}</th>
+      </tr>
+    </thead>
+  );
+}
+
 function Panel({ g }: { g: RegionSiseGroup }) {
+  const first = g.rows.slice(0, PANEL_FIRST_ROWS);
+  const rest = g.rows.slice(PANEL_FIRST_ROWS);
   return (
     <div className="card overflow-hidden rounded-2xl">
       <table className="w-full border-collapse md:table-fixed">
-        <thead className="max-md:hidden">
-          <tr className="border-b border-line bg-bg text-left t-caption text-text-3">
-            <th scope="col" className={`px-3 py-2 font-bold ${TOOL_COL_NAME}`}>지역</th>
-            <th scope="col" className="px-2 py-2 font-bold">평균 매매가</th>
-            <th scope="col" className="px-2 py-2 font-bold">전세가율</th>
-            <th scope="col" className="px-2 py-2 font-bold">시장 온도</th>
-            <th scope="col" className={`px-3 py-2 ${TOOL_COL_GO}`}>
-              <span className="sr-only">열기</span>
-            </th>
-          </tr>
-        </thead>
+        <PanelHead />
         <tbody>
-          {g.rows.map((r) => (
+          {first.map((r) => (
             <Row key={r.id} r={r} />
           ))}
         </tbody>
       </table>
+      {rest.length > 0 && (
+        <details className="group border-t border-line">
+          <summary className="flex min-h-11 cursor-pointer list-none items-center justify-center gap-1 t-sub font-bold text-text-2">
+            {/* dead-control-ok: summary 가 눌리는 자리 */}
+            <span className="group-open:hidden">나머지 {rest.length.toLocaleString("ko-KR")}곳 ▾</span>
+            <span className="hidden group-open:inline">접기 ▴</span>
+          </summary>
+          <table className="w-full border-collapse border-t border-line md:table-fixed">
+            <PanelHead ghost />
+            <tbody>
+              {rest.map((r) => (
+                <Row key={r.id} r={r} />
+              ))}
+            </tbody>
+          </table>
+        </details>
+      )}
     </div>
   );
 }

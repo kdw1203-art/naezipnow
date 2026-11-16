@@ -63,6 +63,7 @@ const MineFilterBar = nextDynamic(() => import("./mine-filter-bar").then((m) => 
 });
 /* [1182] 기본 보기 = 피드. 예전 열쇠에 남은 "표"가 새 기본을 가리지 않게 열쇠를 바꾼다 */
 const DESK_VIEW_KEY = "nz_notes_desk_view_v2";
+const FEED_STEP = 10;
 /* [1052] 폰 보기(격자 · 피드 · 목록)도 이 브라우저에 기억 — 목록을 고른 사람이 다시 올 때마다 격자로 돌아가던 것 */
 const PHONE_VIEW_KEY = "nz_notes_phone_view_v2";
 
@@ -362,78 +363,35 @@ function PostCard({ n, priority = false }: { n: FeedNote; priority?: boolean }) 
   const detailHref = noteHref(n);
   return (
     <article className="mx-auto w-full max-w-[468px] overflow-hidden rounded-2xl border border-line bg-surface shadow-[0_1px_2px_rgba(16,28,54,.04),0_10px_26px_rgba(16,28,54,.05)] md:max-w-none">
-      {/* ① 머리 */}
-      <div className="flex items-center gap-2.5 px-3.5 pt-3 pb-2 md:px-4">
-        <span
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full t-sub font-bold text-ink md:h-10 md:w-10"
-          style={{ background: seedGradient(n.author) }}
-          aria-hidden="true"
-        >
-          {n.author.slice(0, 1)}
-        </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-1 t-body font-bold text-ink">
-            <span className="truncate">{n.author}</span>
-            <ExpertBadge badge={n.authorBadge} />
-            {n.isExample && <ExampleBadge />}
-          </div>
-          <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 t-caption text-text-3">
-            <span className="truncate">{n.meta}</span>
-            <NoteBadges n={n} />
-          </div>
+      {/* [1189 · 단순하게] 소유자(2026-11-16): "임장노트 화면을 더 단순하게". 카드 = 제목 + 점수 · 한 줄(작성자 · 시각 · 지역 · 단지 보기) · 발췌 두 줄 · 사진.
+          걷은 것: 아바타 원 · #태그 줄 · 사실 줄(방문 · 체크 · 장수 — 장수는 사진 위 쪽수가 말한다) · 아래 단추 줄(제목과 사진이 노트로 간다). */}
+      <div className="px-3.5 pb-2.5 pt-3 md:px-4">
+        <div className="flex items-start justify-between gap-2">
+          <Link href={detailHref} className="block min-w-0 t-section font-bold text-ink no-underline">
+            <span className="line-clamp-2">{n.title}</span>
+          </Link>
+          {n.score > 0 && (
+            <span className="shrink-0 rounded-full bg-brand-hanji px-2.5 py-1 t-sub font-bold text-brand-hanji-ink">{n.score}점</span>
+          )}
         </div>
-        <span
-          className={`shrink-0 rounded-full px-2.5 py-1 t-sub font-bold ${
-            n.scoreTone === "primary"
-              ? "bg-brand-hanji text-brand-hanji-ink" /* [962] 점수 = 한지 + 남색(홈 시안) */
-              : "bg-[rgba(127,140,158,.12)] text-text-3"
-          }`}
-        >
-          {n.score > 0 ? `기록 ${n.score}점` : "점수 없음"}
-        </span>
-      </div>
-      {/* ② 글 — 제목은 링크, 발췌는 작성자 이름 없이(머리에 이미 있다) */}
-      <div className="px-3.5 pb-2.5 md:px-4">
-        <Link href={detailHref} className="block t-section font-bold text-ink no-underline">
-          <span className="line-clamp-2">{n.title}</span>
-        </Link>
-        <p className="mt-1 line-clamp-3 t-body text-text-2">{n.excerpt}</p>
-        {n.tags.length > 0 && (
-          <p className="mt-1.5 flex flex-wrap gap-x-1.5 gap-y-0.5 t-sub font-semibold text-primary">
-            {n.tags.map((t) => (
-              <span key={t.label}>#{t.label.replace(/\s/g, "")}</span>
-            ))}
-          </p>
-        )}
+        <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 t-caption text-text-3">
+          <span className="truncate">
+            {n.author}
+            {n.meta ? ` · ${n.meta}` : ""}
+          </span>
+          <ExpertBadge badge={n.authorBadge} />
+          {n.isExample && <ExampleBadge />}
+          <NoteBadges n={n} />
+          {n.complexHref && (
+            <Link href={n.complexHref} className="tap-line font-bold text-primary no-underline">
+              단지 보기 ›
+            </Link>
+          )}
+        </div>
+        <p className="mt-1.5 line-clamp-2 t-body text-text-2">{n.excerpt}</p>
       </div>
       {/* ③ 사진 — [1017] 정사각 두 장을 펼친 책처럼 나란히, 좌우 버튼으로 두 장씩 넘긴다 */}
       <PostMedia n={n} priority={priority} href={detailHref} />
-      {/* ④ 사실 줄 */}
-      <div className="flex flex-wrap items-center gap-x-2 px-3.5 py-2 t-caption text-text-3 md:px-4">
-        {n.footer.map((f, i) => (
-          <span key={f}>{i > 0 ? `· ${f}` : f}</span>
-        ))}
-        {(n.photoCount ?? 0) > 0 && <span>· {n.lab ? "자료" : "사진"} {n.photoCount}장</span>}
-      </div>
-      {/* ⑤ 행동 줄 — 실제 길만 */}
-      <div className="flex border-t border-line">
-        <Link
-          href={detailHref}
-          className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 t-sub font-bold text-text-2 no-underline hover:bg-bg"
-        >
-          <Icon name="file-text" size={15} />
-          노트 보기
-        </Link>
-        {n.complexHref && (
-          <Link
-            href={n.complexHref}
-            className="flex min-h-[40px] flex-1 items-center justify-center gap-1.5 border-l border-line t-sub font-bold text-text-2 no-underline hover:bg-bg"
-          >
-            <Icon name="building" size={15} />
-            단지 보기
-          </Link>
-        )}
-      </div>
     </article>
   );
 }
@@ -615,30 +573,22 @@ function LeftRail({
   regionPick: string | null;
   onRegion: (r: string | null) => void;
 }) {
+  void loggedIn;
+  void mine;
+  void onTab;
   return (
     <aside className="hidden lg:flex lg:flex-col lg:gap-3 lg:sticky lg:top-[76px] lg:self-start" aria-label="임장노트 바로가기">
       <div className="flex flex-col gap-2">
         <Link href="/notes/new" className="btn-primary btn-cta flex min-h-[44px] items-center justify-center rounded-xl t-body no-underline">
           노트 쓰기
         </Link>
-        <Link
-          href="/notes/new?quick=1"
-          className="flex min-h-[40px] items-center justify-center rounded-xl border-[1.5px] border-dashed border-line-strong bg-surface t-sub font-bold text-text-1 no-underline"
-        >
-          현장 퀵 기록
-        </Link>
       </div>
       <nav className="card flex flex-col gap-0.5 rounded-2xl p-2">
-        <button type="button" onClick={() => onTab("public")} aria-current={!mine ? "page" : undefined} className={`${RAIL_LINK} ${!mine ? "bg-primary-soft text-primary" : ""}`}>
-          <Icon name="users" size={17} />
-          공개 노트
-        </button>
-        {loggedIn && (
-          <button type="button" onClick={() => onTab("mine")} aria-current={mine ? "page" : undefined} className={`${RAIL_LINK} ${mine ? "bg-primary-soft text-primary" : ""}`}>
-            <Icon name="notebook-pen" size={17} />
-            내 노트
-          </button>
-        )}
+        {/* [1189] "공개 노트 · 내 노트"는 머리의 전환 단추와 같은 것이라 걷었다 · "현장 퀵 기록"은 이 목록 한 줄로 */}
+        <Link href="/notes/new?quick=1" className={RAIL_LINK}>
+          <Icon name="notebook-pen" size={17} />
+          현장 퀵 기록
+        </Link>
         {hasBestMonth && (
           <Link href="/notes/best" className={RAIL_LINK}>
             <Icon name="trophy" size={17} />
@@ -810,6 +760,8 @@ export function NotesFeedClient({
   const [gridOpen, setGridOpen] = useState<string | null>(null);
   /* [1049] 데스크톱 보기(표 기본) — 고른 보기는 이 브라우저에만 기억(저장소가 막혀도 표로 그린다) */
   const [deskView, setDeskViewState] = useState<DeskView>("feed");
+  /* [1186] 피드에 그리는 카드 수 — 10장씩 늘린다 */
+  const [feedCap, setFeedCap] = useState(FEED_STEP);
   useEffect(() => {
     try {
       const v = window.localStorage.getItem(DESK_VIEW_KEY);
@@ -821,7 +773,7 @@ export function NotesFeedClient({
   useEffect(() => {
     try {
       const v = window.localStorage.getItem(PHONE_VIEW_KEY);
-      if (v === "grid" || v === "feed" || v === "table") setView(v);
+      if (v === "feed" || v === "table") setView(v);
     } catch {
       /* 저장소 차단 — 기본(목록) */
     }
@@ -1201,17 +1153,7 @@ export function NotesFeedClient({
           )}
           {/* [1016] 격자/피드 전환은 폰에서만 — md+ 는 항상 게시물 피드(페이스북 구성) */}
           <div className="flex shrink-0 items-center gap-1 md:hidden">
-            <button
-              type="button"
-              aria-label="그리드 보기"
-              aria-pressed={view === "grid"}
-              onClick={() => pickView("grid")}
-              className={`flex h-10 w-10 items-center justify-center rounded-lg ${
-                view === "grid" ? "bg-primary-soft text-primary" : "text-text-3"
-              }`}
-            >
-              <GridGlyph active={view === "grid"} />
-            </button>
+            {/* [1189] 폰 보기는 피드 · 목록 둘 — 격자 단추는 걷었다(예전에 격자를 고른 브라우저는 피드로) */}
             <button
               type="button"
               aria-label="피드 보기"
@@ -1406,13 +1348,23 @@ export function NotesFeedClient({
                       <RoundGroupCard key={`group-${g.key}`} aptName={g.aptName} notes={g.notes} latestVisit={g.latestVisit} />
                     ),
                   )
-                : visible.map((n, i) => (
+                : visible.slice(0, feedCap).map((n, i) => (
                     <Fragment key={n.id}>
                       <PostCard n={n} priority={view === "feed" && i === 0} />
                       {/* [1145] 목록 사이 전문가 홍보 한 칸 — 공개 목록의 세 번째 글 뒤(내 노트 보기에는 넣지 않는다) */}
                       {promo && !mine && i === PROMO_AFTER_INDEX ? <div>{promo}</div> : null}
                     </Fragment>
                   ))}
+              {/* [1186] 피드는 10장씩 — 피드를 기본으로 한 뒤 폰 화면이 13,573px 였다(운영 실측 2026-11-15 · 카드 30장) */}
+              {!mineGroups && visible.length > feedCap && (
+                <button
+                  type="button"
+                  onClick={() => setFeedCap((c) => c + FEED_STEP)}
+                  className="btn-soft self-center px-5 py-2.5 t-body font-bold"
+                >
+                  더 보기 · {(visible.length - feedCap).toLocaleString("ko-KR")}건
+                </button>
+              )}
             </div>
             )}
           </>
@@ -1421,7 +1373,7 @@ export function NotesFeedClient({
         {/* [967 · 19] 더 보기 — 공개 뷰에서만(내 노트는 listNotes 가 200건까지 한 번에 준다).
             첫 페이지가 꽉 찼을 때만 버튼을 그리고, 짧은 응답이 오면 "마지막이에요" 로 닫는다.
             버튼은 목록 아래 제자리라 스크롤 위치가 그대로 유지된다(위로 튀지 않는다). */}
-        {!mine && !activeLoadError && hasMore && allNotes.length > 0 && (
+        {!mine && !activeLoadError && hasMore && allNotes.length > 0 && !((view === "feed" || deskView === "feed") && visible.length > feedCap) && (
           <div className="flex flex-col items-center gap-2 py-1">
             {reachedEnd ? (
               <p role="status" className="t-sub text-text-3">
