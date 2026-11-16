@@ -31,20 +31,18 @@ export function MapFirstCoach() {
     }
   };
   return (
+    /* [1193] 석 줄 카드 → 한 줄. 소유자(2026-11-16): "지도에 띄워 있는 창이 너무 많아 보여" */
     <aside
       aria-label="지도 처음 안내"
-      className="card fixed left-1/2 z-30 flex w-[min(92vw,360px)] -translate-x-1/2 flex-col gap-1.5 rounded-2xl px-4 py-3 top-[calc(196px+env(safe-area-inset-top,0px))] md:top-[148px]"
+      className="glass fixed left-1/2 z-30 flex w-max max-w-[92vw] -translate-x-1/2 items-center gap-2 rounded-full py-1 pl-4 pr-1 top-[calc(196px+env(safe-area-inset-top,0px))] md:top-[96px]"
     >
-      <div className="flex items-start justify-between gap-2">
-        <p className="m-0 t-body font-bold text-ink">단지를 누르면 실거래 · 단지 정보가 열립니다</p>
-        <button type="button" onClick={close} aria-label="안내 닫기" className="-mr-2 -mt-1.5 inline-flex size-10 shrink-0 items-center justify-center t-body text-text-3">
-          ✕
-        </button>
-      </div>
-      <p className="m-0 t-sub text-text-2">직접 본 집은 임장노트에 사진 · 체크로 남깁니다 · 가입 무료</p>
-      <Link href="/notes/new" onClick={close} className="tap-line inline-block w-fit py-[5px] t-sub font-bold text-primary no-underline">
+      <p className="m-0 truncate t-sub text-text-1">단지를 누르면 실거래 · 단지 정보</p>
+      <Link href="/notes/new" onClick={close} className="tap-line inline-flex min-h-10 shrink-0 items-center t-sub font-bold text-primary no-underline md:min-h-8">
         임장노트 쓰기 ›
       </Link>
+      <button type="button" onClick={close} aria-label="안내 닫기" className="inline-flex size-10 shrink-0 items-center justify-center t-sub text-text-3 md:size-8">
+        ✕
+      </button>
     </aside>
   );
 }

@@ -225,9 +225,9 @@ test("map-client — 정비사업 마커·범례·패널이 걸러 본 목록 �
   assert.ok(mapClient.indexOf("const redevGroupCount = useMemo(") < mapClient.indexOf("const filterPanel = filtersExpanded ? ("));
 });
 
-test("map-client — 우하단 범례 열은 매물 등록 버튼(아래끝 220px) 밑에 머문다", () => {
-  assert.ok(mapClient.includes("max-h-[calc(212px_-_var(--nz-map-bottom-lane))]"));
-  assert.ok(!mapClient.includes("z-30 hidden w-[200px] max-h-[180px]"));
+test("map-client — [1193] 우하단 범례 열은 좌하단 범례 한 장으로 합쳤다(매물 등록 버튼과 겹칠 자리가 없다)", () => {
+  assert.ok(!mapClient.includes("max-h-[calc(212px_-_var(--nz-map-bottom-lane))]"));
+  assert.ok(mapClient.includes("aria-expanded={deskLegendOpen}"));
 });
 
 test("/redevelopment 지도도 같은 안내창을 쓴다(자기 사본 없음) · 펼친 패널에서 구역 상세로", () => {

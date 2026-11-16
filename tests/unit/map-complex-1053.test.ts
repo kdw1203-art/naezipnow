@@ -133,7 +133,7 @@ test("③ 지도 조작 폰 40px — 줌 ＋/－ · 매물 고지 버튼 · 거�
   /* 줌 열이 86px 로 길어져 매물 등록 버튼을 232 로 올렸다(134+86=220 에 붙지 않게) */
   assert.ok(mapClient.includes('style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 232px)" }}'));
   assert.ok(!mapClient.includes('"calc(env(safe-area-inset-bottom, 0px) + 220px)"'));
-  assert.ok(mapClient.includes("max-h-[calc(212px_-_var(--nz-map-bottom-lane))]"), "범례 상한은 그대로(겹침 쪽으로 안 움직인다)");
+  /* [1193] 우하단 범례 열은 없어졌다(좌하단 한 장) */
   const buttonClassFor = (label: string): string => {
     const m = new RegExp(`>\\s*\\n\\s*${label}\\s*\\n\\s*</(?:button|Link)>`).exec(mapClient);
     assert.ok(m, `${label} 버튼이 없다`);
@@ -141,7 +141,7 @@ test("③ 지도 조작 폰 40px — 줌 ＋/－ · 매물 고지 버튼 · 거�
   };
   for (const label of [
     "중심 삭제", "화면 중앙으로", "수정", "삭제", "되돌리기", "전체 삭제", "거리 복사", "차량 길찾기",
-    "도보 길찾기", "시작점 수정", "끝내기", "필터 초기화", "매물 등록하기", "초기화",
+    "도보 길찾기", "시작점 수정", "끝내기", "필터 초기화", "초기화",
   ]) {
     const cls = buttonClassFor(label);
     assert.ok(cls.includes("min-h-[40px]") && cls.includes("md:min-h-6"), `${label} 40px`);

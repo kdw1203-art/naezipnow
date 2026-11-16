@@ -1060,6 +1060,8 @@ export function MapClient({
   );
   /** 모바일 접이식 범례 (item7) — 기본 접힘 */
   const [mobileLegendOpen, setMobileLegendOpen] = useState(false);
+  /* [1193] 데스크톱 범례 — 좌하단 둘 · 우하단 둘(넷)을 한 장으로 접는다. 소유자(2026-11-16): "지도에 띄워 있는 창이 너무 많아 보여" */
+  const [deskLegendOpen, setDeskLegendOpen] = useState(false);
 
   /* ===== [968 · 24] 모바일 지도 크롬 접기 =====
      640px 폰에서 헤더+검색+줌 탭+필터 칩(≈210px)과 하단 목록 토글·범례·매물 등록이
@@ -4678,33 +4680,18 @@ export function MapClient({
           )}
 
           {listingNoticeKind === "empty" && (
-            <div className="glass pointer-events-auto max-w-full rounded-xl px-3.5 py-2.5">
-              <div className="t-sub font-bold text-ink">
-                {listingFilterNarrowed
-                  ? "조건에 맞는 등록 매물 없음"
-                  : "이 화면에 등록 매물 없음"}
-              </div>
-              <div className="mt-0.5 t-sub text-text-3">
-                {/* [1015 · 규칙 D] 빈 화면 한 줄 */}
-                {listingFilterNarrowed ? "승인된 등록 매물만 표시 · 필터·예산을 넓히면 더 보임" : "승인된 등록 매물만 표시 · 단지 실거래 마커는 그대로"}
-              </div>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {listingFilterNarrowed && (
-                  <button
-                    type="button"
-                    onClick={resetFilters}
-                    className="inline-flex min-h-[40px] items-center rounded-full border border-line bg-surface px-2.5 py-1 t-sub font-bold text-text-2 md:min-h-6"
-                  >
-                    필터 초기화
-                  </button>
-                )}
-                <Link
-                  href="/listings/new"
-                  className="inline-flex min-h-[40px] items-center rounded-full bg-primary px-2.5 py-1 t-sub font-bold text-white md:min-h-6"
+            /* [1193] 카드(제목 · 설명 · 단추 둘) → 한 줄. "매물 등록하기"는 우측 "매물 등록" 단추와 같은 곳이라 뺐다 */
+            <div className="glass pointer-events-auto flex max-w-full items-center gap-2 rounded-xl px-3.5 py-2 t-sub text-text-2">
+              <span>{listingFilterNarrowed ? "조건에 맞는 등록 매물 없음" : "이 화면에 등록 매물 없음"}</span>
+              {listingFilterNarrowed && (
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="map-notice-retry inline-flex min-h-[40px] items-center t-sub font-bold md:min-h-6"
                 >
-                  매물 등록하기
-                </Link>
-              </div>
+                  필터 초기화
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -5543,57 +5530,7 @@ export function MapClient({
         </button>
       </div>
 
-      {/* ===== 우하단 범례 열 (md+) — 기본 범례 + 정비사업 종류 =====
-           예전에는 둘을 각각 bottom 오프셋(20 / 60)으로 따로 놓아, 정비사업
-           범례가 길어지면 줌 컨트롤 위로 올라타 서로 겹쳤다. 한 열 안에 쌓으면
-           오프셋을 손으로 맞출 일이 없다. right-[70px] 는 줌 열(right-5 · [1053] 40px →
-           20~60)을 피한 값이고, 높이 상한은 매물 등록 버튼(220~) 아래에 머물게 잡았다.
-           bottom 은 --nz-map-bottom-lane — bottom-5 였을 때 가운데 카테고리 바가
-           이 열의 아래 36px 를 덮었다(834폭 실측 54×36px).
-           md 에서 상세 필터 패널(364~664)과 이 열(564~764)은 가로로 겹칠 수밖에
-           없어, 패널이 열려 있는 동안은 lg 에서만 보인다. 덮인 채로 두면 읽을 수
-           없고, 읽을 수 없는 범례는 없는 것과 같다.
-           [1027] 높이 상한 180px 는 "매물 등록 버튼(220~) 아래에 머문다"는 위 가정과 맞지 않았다 —
-           이 열의 바닥은 20 이 아니라 --nz-map-bottom-lane(1440폭 실측 80px)이라 위끝이 260 까지 올라가
-           정비사업 종류가 5개만 돼도 매물 등록 버튼의 왼쪽 42×40px 을 덮었다(운영 2026-10-03 캡처).
-           상한을 버튼 아래끝(220) − 여백 8 − 레인 으로 계산해 넘기고, 종류는 한 줄에 여럿 흐르게 접는다.
-           [1053] 버튼이 232 로 올라가 여백이 20 이 됐다 — 상한은 그대로 둔다(겹침 쪽으로는 안 움직인다). */}
-      <div
-        className={`absolute bottom-[var(--nz-map-bottom-lane)] right-[70px] z-30 hidden w-[200px] max-h-[calc(212px_-_var(--nz-map-bottom-lane))] flex-col items-stretch gap-2 ${
-          filtersExpanded ? "lg:flex" : "md:flex"
-        }`}
-      >
-        {showRedevelopment && redevLegend.length > 0 && (
-          <div className="glass flex min-h-0 flex-col gap-1 overflow-y-auto rounded-xl px-3 py-2.5">
-            <div className="t-caption font-bold text-ink">정비사업 종류</div>
-            <div className="flex flex-wrap gap-x-2 gap-y-1">
-              {redevLegend.map((it) => (
-                <div
-                  key={it.label}
-                  className="flex items-center gap-1 t-caption text-text-1"
-                >
-                  <span
-                    className="h-[8px] w-[8px] shrink-0 rounded-full"
-                    style={{ background: it.color }}
-                  />
-                  <span className="whitespace-nowrap">{it.label}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <div className="glass flex shrink-0 gap-3.5 rounded-xl px-3.5 py-[9px]">
-          <div className="flex items-center gap-1.5 t-sub text-text-1">
-            <span className="h-[9px] w-[9px] rounded-sm bg-primary" />
-            임장한 단지
-          </div>
-          <div className="flex items-center gap-1.5 t-sub text-text-1">
-            <span className="h-[9px] w-[9px] rounded-sm border border-line-strong bg-surface" />
-            미방문
-          </div>
-        </div>
-      </div>
-
+      {/* [1193] 우하단 범례 열(정비사업 종류 · 임장한 단지)은 좌하단 범례 한 장으로 합쳤다 */}
       {/* ===== item7 — 모바일 접이식 범례 (기본 접힘). md 전용이던 범례·줌 캡션을 노출 =====
            상세 필터 패널이 열려 있으면 접는다. 패널(16~316 × 218~786)이 이 열을
            통째로 덮어(실측 57×30px) 범례 토글이 보이지도 눌리지도 않는다. */}
@@ -5683,97 +5620,147 @@ export function MapClient({
           두 범례 모두 상세 필터 패널이 열리면 접는다. 패널은 md 364~664 를
           차지해 이 자리를 통째로 덮는데(실측 216×128px 완전 포함), 덮인 범례는
           읽을 수 없으면서 "지도에 안내가 있다"는 인상만 남긴다. */}
-      {!filtersExpanded && (showPriceOverlay || showListings) && (
+      {/* [1193] 범례 한 장 — 접힌 때는 색 막대 한 줄 + "범례 ▾". 펼치면 눈금 · 출처 · 가격 표기 · 정비사업 종류 · 임장한 단지.
+          예전에는 좌하단 둘(평단가 · 가격 표기 안내) + 우하단 둘(정비사업 종류 · 임장한 단지) 네 장이 늘 떠 있었다. */}
+      {!filtersExpanded && (
         <div
-          className={`absolute bottom-[var(--nz-map-bottom-lane)] z-30 hidden w-[216px] flex-col gap-[9px] md:flex ${mdLeftLegendX}`}
+          className={`absolute bottom-[var(--nz-map-bottom-lane)] z-30 hidden w-[216px] flex-col md:flex ${mdLeftLegendX}`}
         >
-        {showPriceOverlay && (
-        <div className="glass flex flex-col gap-1.5 rounded-xl px-3 py-2.5">
-          {txType === "rent" ? (
+          <div className="glass flex max-h-[calc(100vh_-_260px)] flex-col gap-1.5 overflow-y-auto rounded-xl px-3 py-2">
+            {deskLegendOpen && (
+              <div className="flex flex-col gap-1.5 border-b border-line pb-2">
+            {showPriceOverlay && (
             <>
-              {/* item2 — 전세 모드 범례: 매매 평단가 색표를 보증금에 갖다 붙이지 않는다 */}
-              <div className="t-sub font-bold text-ink">전세 평균 보증금</div>
-              <div className="flex items-center gap-1.5 t-sub text-text-1">
-                <span
-                  className="h-[9px] w-[9px] shrink-0 rounded-full"
-                  style={{ background: JEONSE_MARKER_COLOR }}
-                />
-                <span>확대하면 단지별 보증금 표시</span>
-              </div>
-              <div className="t-caption text-text-3">
-                국토교통부 전월세 실거래 중 전세 계약 기준 · 월세 계약 제외
-                {ymLabel(priceMeta.latestYm) ? ` · ~${ymLabel(priceMeta.latestYm)} 신고분` : ""}
-                {priceMeta.txCount > 0
-                  ? ` · 화면 내 ${priceMeta.txCount.toLocaleString("ko-KR")}건`
-                  : ""}
-              </div>
+            {txType === "rent" ? (
+              <>
+                {/* item2 — 전세 모드 범례: 매매 평단가 색표를 보증금에 갖다 붙이지 않는다 */}
+                <div className="t-sub font-bold text-ink">전세 평균 보증금</div>
+                <div className="flex items-center gap-1.5 t-sub text-text-1">
+                  <span
+                    className="h-[9px] w-[9px] shrink-0 rounded-full"
+                    style={{ background: JEONSE_MARKER_COLOR }}
+                  />
+                  <span>확대하면 단지별 보증금 표시</span>
+                </div>
+                <div className="t-caption text-text-3">
+                  국토교통부 전월세 실거래 중 전세 계약 기준 · 월세 계약 제외
+                  {ymLabel(priceMeta.latestYm) ? ` · ~${ymLabel(priceMeta.latestYm)} 신고분` : ""}
+                  {priceMeta.txCount > 0
+                    ? ` · 화면 내 ${priceMeta.txCount.toLocaleString("ko-KR")}건`
+                    : ""}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="t-sub font-bold text-ink">실거래 평단가 (만원/평)</div>
+                <div>
+                  <div className="flex overflow-hidden rounded-sm">
+                    {PRICE_TIERS.map((t) => (
+                      <span
+                        key={t.slug}
+                        className="h-[10px] flex-1"
+                        style={{ background: t.color }}
+                        title={t.label}
+                      />
+                    ))}
+                  </div>
+                  {/* 눈금 — 색이 갈리는 지점을 정확한 값으로 표시 */}
+                  <div className="relative mt-[3px] h-[12px]">
+                    {PRICE_TIERS.slice(1).map((t, i) => (
+                      <span
+                        key={t.slug}
+                        className="absolute top-0 -translate-x-1/2 t-caption text-text-3"
+                        style={{ left: `${((i + 1) / PRICE_TIERS.length) * 100}%` }}
+                      >
+                        {t.minManwon.toLocaleString("ko-KR")}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 t-sub text-text-1">
+                  <span
+                    className="h-[9px] w-[9px] shrink-0 rounded-sm"
+                    style={{ background: NO_DATA_COLOR }}
+                  />
+                  <span>{NO_PRICE_LABEL}</span>
+                </div>
+                {/* [1053] 마커에 평당가 말고 다른 값을 적는 중이면 범례가 그 사실을 말한다(색 단계는 단지 묶음 · 평균가에만) */}
+                {markerMetric !== "pyeong" && (
+                  <div className="t-caption font-bold text-text-2">
+                    단지 마커 숫자 = {MARKER_METRIC_OPTIONS.find((o) => o.key === markerMetric)?.label ?? ""}
+                    {markerMetric === "price" ? "" : " · 가격 색 없음"}
+                  </div>
+                )}
+                <div className="t-caption text-text-3">
+                  국토교통부 실거래가(매매) 기준 · 매물 호가 아님
+                  {ymLabel(priceMeta.latestYm) ? ` · ~${ymLabel(priceMeta.latestYm)} 신고분` : ""}
+                  {priceMeta.txCount > 0
+                    ? ` · 화면 내 ${priceMeta.txCount.toLocaleString("ko-KR")}건`
+                    : ""}
+                </div>
+              </>
+            )}
             </>
-          ) : (
-            <>
-              <div className="t-sub font-bold text-ink">실거래 평단가 (만원/평)</div>
-              <div>
-                <div className="flex overflow-hidden rounded-sm">
+            )}
+                {showListings && (
+                  <div className="flex flex-col gap-1">
+                    <div className="t-caption font-bold text-ink">가격 표기</div>
+                    <div className="flex items-center gap-1.5 t-caption text-text-1">
+                      <span className="h-[8px] w-[8px] shrink-0 rounded-full bg-primary" />
+                      <span>매물 = 호가(등록가)</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 t-caption text-text-1">
+                      <span className="h-[8px] w-[8px] shrink-0 rounded-full" style={{ background: JEONSE_MARKER_COLOR }} />
+                      <span>실거래 = 국토부 확정가</span>
+                    </div>
+                  </div>
+                )}
+                {showRedevelopment && redevLegend.length > 0 && (
+                  <div className="flex flex-col gap-1">
+                    <div className="t-caption font-bold text-ink">정비사업 종류</div>
+                    <div className="flex flex-wrap gap-x-2 gap-y-1">
+                      {redevLegend.map((it) => (
+                        <div key={it.label} className="flex items-center gap-1 t-caption text-text-1">
+                          <span className="h-[8px] w-[8px] shrink-0 rounded-full" style={{ background: it.color }} />
+                          <span className="whitespace-nowrap">{it.label}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="flex gap-3 t-caption text-text-1">
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-[8px] w-[8px] rounded-sm bg-primary" />
+                    임장한 단지
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="h-[8px] w-[8px] rounded-sm border border-line-strong bg-surface" />
+                    미방문
+                  </span>
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              aria-expanded={deskLegendOpen}
+              onClick={() => setDeskLegendOpen((v) => !v)}
+              className="flex min-h-8 w-full items-center gap-2 text-left t-caption font-bold text-text-1"
+            >
+              {deskLegendOpen ? (
+                <span className="flex-1" />
+              ) : txType !== "rent" && showPriceOverlay ? (
+                <span className="flex h-[8px] flex-1 overflow-hidden rounded-sm" aria-hidden="true">
                   {PRICE_TIERS.map((t) => (
-                    <span
-                      key={t.slug}
-                      className="h-[10px] flex-1"
-                      style={{ background: t.color }}
-                      title={t.label}
-                    />
+                    <span key={t.slug} className="h-full flex-1" style={{ background: t.color }} />
                   ))}
-                </div>
-                {/* 눈금 — 색이 갈리는 지점을 정확한 값으로 표시 */}
-                <div className="relative mt-[3px] h-[12px]">
-                  {PRICE_TIERS.slice(1).map((t, i) => (
-                    <span
-                      key={t.slug}
-                      className="absolute top-0 -translate-x-1/2 t-caption text-text-3"
-                      style={{ left: `${((i + 1) / PRICE_TIERS.length) * 100}%` }}
-                    >
-                      {t.minManwon.toLocaleString("ko-KR")}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div className="flex items-center gap-1.5 t-sub text-text-1">
-                <span
-                  className="h-[9px] w-[9px] shrink-0 rounded-sm"
-                  style={{ background: NO_DATA_COLOR }}
-                />
-                <span>{NO_PRICE_LABEL}</span>
-              </div>
-              {/* [1053] 마커에 평당가 말고 다른 값을 적는 중이면 범례가 그 사실을 말한다(색 단계는 단지 묶음 · 평균가에만) */}
-              {markerMetric !== "pyeong" && (
-                <div className="t-caption font-bold text-text-2">
-                  단지 마커 숫자 = {MARKER_METRIC_OPTIONS.find((o) => o.key === markerMetric)?.label ?? ""}
-                  {markerMetric === "price" ? "" : " · 가격 색 없음"}
-                </div>
+                </span>
+              ) : (
+                <span className="flex-1">{txType === "rent" ? "전세 평균 보증금" : "지도 표시"}</span>
               )}
-              <div className="t-caption text-text-3">
-                국토교통부 실거래가(매매) 기준 · 매물 호가 아님
-                {ymLabel(priceMeta.latestYm) ? ` · ~${ymLabel(priceMeta.latestYm)} 신고분` : ""}
-                {priceMeta.txCount > 0
-                  ? ` · 화면 내 ${priceMeta.txCount.toLocaleString("ko-KR")}건`
-                  : ""}
-              </div>
-            </>
-          )}
-        </div>
-        )}
-        {/* C8 가격 표기 범례 — 매물(호가) vs 실거래(국토부 확정가) 구분 명시 */}
-        {showListings && (
-        <div className="glass flex flex-col gap-1 rounded-xl px-3 py-2.5">
-          <div className="t-sub font-bold text-ink">가격 표기 안내</div>
-          <div className="flex items-center gap-1.5 t-sub text-text-1">
-            <span className="h-[9px] w-[9px] shrink-0 rounded-full bg-primary" />
-            <span>매물 = 호가(등록가)</span>
+              {/* dead-control-ok: 이 줄 전체가 범례를 여닫는 button — 꺾쇠는 열림 표시 */}
+              <span className="shrink-0">범례 {deskLegendOpen ? "▾" : "▴"}</span>
+            </button>
           </div>
-          <div className="flex items-center gap-1.5 t-sub text-text-1">
-            <span className="h-[9px] w-[9px] shrink-0 rounded-full" style={{ background: JEONSE_MARKER_COLOR }} />
-            <span>실거래 = 국토부 확정가</span>
-          </div>
-        </div>
-        )}
         </div>
       )}
 

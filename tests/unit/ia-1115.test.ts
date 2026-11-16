@@ -1598,3 +1598,11 @@ test("[1191] 번호 구역 근사 위치 · 서울 소규모정비 · 하단 대
   assert.match(f, /사업자 정보 ▾<\/summary>\s*<span>대표: \{biz\.representative/);
   assert.doesNotMatch(f, /\(\{biz\.domain\}\) · 대표:/);
 });
+
+test("[1193] 지도 창 정리 — 범례 네 장 → 한 장(접힘) · 빈 매물 안내 한 줄", () => {
+  const m = readFileSync("app/map/map-client.tsx", "utf8");
+  assert.match(m, /const \[deskLegendOpen, setDeskLegendOpen\] = useState\(false\);/);
+  assert.equal((m.match(/>가격 표기 안내</g) ?? []).length, 0);
+  assert.doesNotMatch(m, />\s*매물 등록하기\s*</);
+  assert.match(m, /범례 \{deskLegendOpen \? "▾" : "▴"\}/);
+});
