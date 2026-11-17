@@ -57,7 +57,7 @@ export function emailLayout(bodyHtml: string): string {
       에서 할 수 있습니다.
     </p>
     <p style="color:#a8b0bf;font-size:11px;line-height:1.6;margin:8px 4px 0;">
-      ${escapeHtml(biz.legalName)} · 대표 ${escapeHtml(biz.representative)} · 사업자등록번호 ${escapeHtml(biz.registrationNumber)}
+      ${escapeHtml(biz.legalName)} · 사업자등록번호 ${escapeHtml(biz.registrationNumber)}
     </p>
   </div>
 </body>
@@ -210,6 +210,10 @@ export function weeklyDigestEmail(params: {
     sourceUrl?: string | null;
   }>;
   communityCount: number;
+  /** [1194] 다음 7일 청약 접수 시작 — 주간에만 */
+  apply?: Array<{ houseNm: string; region: string | null; totSupply: number | null; rceptBgnde: string; rceptEndde: string | null }>;
+  /** [1194] 이번 주 공개 임장노트 수 — 노트 자체는 일일 다이제스트가 싣는다 */
+  noteCount?: number;
 }) {
   /* [995] 마케팅 동의(email_marketing)한 사람에게만 나가는 메일이 됐다 — 개인 요약과 같은
      규칙으로 (광고) 표기(정보통신망법 광고성 정보 표기). */
@@ -236,7 +240,32 @@ export function weeklyDigestEmail(params: {
   }).join("");
   const absolute = (href: string) => (href.startsWith("/") ? `https://naezipnow.com${href}` : href);
   const safeHttp = (u: string | null | undefined) => (u && /^https?:\/\//i.test(u) ? u : null);
-  const newsRows = params.news
+  /* [1194] 우리가 만든 소식(신고가 · 주간 실거래 — 사진이 /api/og 카드거나 원문이 없다)은 "이번 주 숫자" 줄로, 언론 기사만 사진과 함께.
+     메일 프록시가 /api/og 카드를 못 받아 대체 글자가 깨져 보였다(소유자 캡처 2026-11-17). */
+  const isOwn = (n: (typeof params.news)[number]) => !n.sourceUrl || /\/api\/og\//.test(n.imageUrl ?? "");
+  const ownNews = params.news.filter(isOwn).slice(0, 3);
+  const pressNews = params.news.filter((n) => !isOwn(n));
+  const ownRows = ownNews
+    .map((n) => {
+      const href = n.href ? absolute(n.href) : null;
+      const t = href
+        ? `<a href="${escapeHtml(href)}" style="color:#191f28;text-decoration:none;font-weight:700;">${escapeHtml(n.title)}</a>`
+        : `<span style="font-weight:700;">${escapeHtml(n.title)}</span>`;
+      return `<tr><td style="padding:8px 12px;font-size:14px;line-height:1.5;color:#191f28;border-top:1px solid #eef1f6;">${t}${n.sourceName ? `<br /><span style="color:#8a94a6;font-size:12px;">${escapeHtml(n.sourceName)}</span>` : ""}</td></tr>`;
+    })
+    .join("");
+  const md = (ymd: string) => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd);
+    return m ? `${Number(m[2])}/${Number(m[3])}` : ymd;
+  };
+  const applyRows = (params.apply ?? [])
+    .slice(0, 5)
+    .map(
+      (a) => `<tr><td style="padding:7px 0;font-size:14px;line-height:1.5;color:#191f28;border-top:1px solid #eef1f6;"><strong>${escapeHtml(a.houseNm)}</strong>${a.region ? ` <span style="color:#8a94a6;">${escapeHtml(a.region)}</span>` : ""}</td>
+        <td style="padding:7px 0;font-size:13px;color:#4e5661;text-align:right;white-space:nowrap;border-top:1px solid #eef1f6;">${a.totSupply ? `${a.totSupply.toLocaleString("ko-KR")}세대 · ` : ""}${escapeHtml(md(a.rceptBgnde))}${a.rceptEndde ? `~${escapeHtml(md(a.rceptEndde))}` : ""}</td></tr>`,
+    )
+    .join("");
+  const newsRows = pressNews
     .slice(0, 5)
     .map((n, idx) => {
       const href = n.href ? absolute(n.href) : null;
@@ -278,6 +307,19 @@ export function weeklyDigestEmail(params: {
         : ""
     }
     ${
+      ownRows
+        ? `${sectionHead("이번 주 숫자")}
+           <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 20px;background-color:#f7f9fc;border-radius:12px;">${ownRows}</table>`
+        : ""
+    }
+    ${
+      applyRows
+        ? `${sectionHead(`다음 주 청약 접수 ${(params.apply ?? []).length}건`)}
+           <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 6px;">${applyRows}</table>
+           <p style="margin:0 0 20px;font-size:13px;"><a href="https://naezipnow.com/apply" style="color:#1b4b91;font-weight:700;text-decoration:none;">청약 일정 전체 ›</a></p>`
+        : ""
+    }
+    ${
       newsRows
         ? `${sectionHead("이번 주 뉴스")}
            <table style="width:100%;border-collapse:collapse;margin:0 0 10px;">${newsRows}</table>`
@@ -288,6 +330,14 @@ export function weeklyDigestEmail(params: {
         ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 20px;background-color:#f7f9fc;border-radius:12px;"><tr>
              <td style="padding:12px 14px;font-size:13px;color:#4e5661;">이웃 글 <strong style="color:#191f28;">${params.communityCount}건</strong> 새로 올라옴</td>
              <td style="padding:12px 14px;text-align:right;"><a href="https://naezipnow.com/town" style="font-size:13px;font-weight:700;color:#1b4b91;text-decoration:none;">동네이야기 ›</a></td>
+           </tr></table>`
+        : ""
+    }
+    ${
+      params.noteCount && params.noteCount > 0
+        ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 20px;background-color:#f7f9fc;border-radius:12px;"><tr>
+             <td style="padding:12px 14px;font-size:13px;color:#4e5661;">이번 주 공개 임장노트 <strong style="color:#191f28;">${params.noteCount}편</strong> · 매일 아침 일일 다이제스트로</td>
+             <td style="padding:12px 14px;text-align:right;"><a href="https://naezipnow.com/notes" style="font-size:13px;font-weight:700;color:#1b4b91;text-decoration:none;">임장노트 ›</a></td>
            </tr></table>`
         : ""
     }
@@ -302,10 +352,83 @@ export function weeklyDigestEmail(params: {
   const text = [
     `${params.weekLabel} 주간 다이제스트`,
     ...params.market.slice(0, 6).map((m) => `${m.name} ${m.price} ${m.delta}`),
-    ...params.news.slice(0, 5).map((n) => `- ${n.title}${n.href ? ` ${absolute(n.href)}` : ""}`),
+    ...params.news.slice(0, 8).map((n) => `- ${n.title}${n.href ? ` ${absolute(n.href)}` : ""}`),
+    ...(params.apply ?? []).slice(0, 5).map((a) => `청약 ${a.houseNm} ${a.rceptBgnde}`),
     "전체 보기: https://naezipnow.com/digest",
   ].join("\n");
 
+  return { subject, html, text };
+}
+
+/** [1194] 일일 다이제스트 — 지난 하루 공개 임장노트가 중심 + 내 소식(관심 단지 새 실거래 · 오늘 청약 · 모임) 몇 줄.
+ *  주간과 겹치지 않게: 주간 = 시장 요약 · 숫자 · 청약 일정 · 뉴스, 일간 = 노트 · 내 소식. */
+export function dailyDigestEmail(params: {
+  dayLabel: string;
+  notes: Array<{ id: string; title: string; complex: string | null; region: string | null; score: number | null; summary: string | null; imageUrl: string | null }>;
+  noteTotal: number;
+  /** 내 소식 줄(lib/digest/personal-format personalDigestLines) — 없으면 섹션 생략 */
+  personalLines?: string[];
+  personalHref?: string | null;
+}) {
+  const site = "https://naezipnow.com";
+  const safeHttp = (u: string | null | undefined) => (u && /^https?:\/\//i.test(u) ? u : null);
+  const n = params.noteTotal;
+  const subject = `(광고) [내집나우] ${params.dayLabel} 일일 다이제스트${n > 0 ? ` — 새 임장노트 ${n}편` : ""}`;
+  const sectionHead = (t: string) =>
+    `<h2 style="margin:0 0 8px;font-size:13px;font-weight:700;color:#4e5661;"><span style="display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background-color:${ACCENT};vertical-align:middle;"></span>${t}</h2>`;
+  const noteRows = params.notes
+    .slice(0, 5)
+    .map((x) => {
+      const href = `${site}/notes/${encodeURIComponent(x.id)}`;
+      const img = safeHttp(x.imageUrl);
+      const meta = [x.complex, x.region, x.score != null ? `점수 ${x.score.toFixed(1)}` : null].filter(Boolean).join(" · ");
+      const thumb = img
+        ? `<td style="width:84px;padding:12px 12px 12px 0;vertical-align:top;border-top:1px solid #eef1f6;"><a href="${escapeHtml(href)}"><img src="${escapeHtml(img)}" alt="" width="84" height="84" style="display:block;width:84px;height:84px;object-fit:cover;border-radius:10px;border:0;" /></a></td>`
+        : "";
+      return `<tr>${thumb}<td style="padding:12px 0;vertical-align:top;border-top:1px solid #eef1f6;"${img ? "" : ' colspan="2"'}>
+          <a href="${escapeHtml(href)}" style="font-size:15px;font-weight:700;line-height:1.45;color:#191f28;text-decoration:none;">${escapeHtml(x.title)}</a>
+          ${meta ? `<div style="margin-top:3px;font-size:12px;font-weight:700;color:${ACCENT};">${escapeHtml(meta)}</div>` : ""}
+          ${x.summary ? `<div style="margin-top:4px;font-size:13px;line-height:1.55;color:#4e5661;">${escapeHtml(x.summary)}</div>` : ""}
+        </td></tr>`;
+    })
+    .join("");
+  const personal = (params.personalLines ?? []).filter(Boolean).slice(0, 6);
+  const html = emailLayout(`
+    <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:${ACCENT};">일일 다이제스트</p>
+    <h1 style="margin:0 0 6px;font-size:22px;color:#191f28;letter-spacing:-0.5px;">${escapeHtml(params.dayLabel)} 오늘의 임장노트</h1>
+    <p style="margin:0 0 18px;font-size:13px;color:#8a94a6;">지난 24시간 공개된 노트${n > 0 ? ` ${n}편` : ""} · 수치는 국토교통부 실거래 신고 기준</p>
+    ${
+      noteRows
+        ? `<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border-collapse:collapse;margin:0 0 6px;">${noteRows}</table>
+           ${n > 5 ? `<p style="margin:0 0 20px;font-size:13px;"><a href="${site}/notes" style="color:${ACCENT};font-weight:700;text-decoration:none;">노트 ${n - 5}편 더 보기 ›</a></p>` : '<div style="height:14px;"></div>'}`
+        : ""
+    }
+    ${
+      personal.length
+        ? `${sectionHead("내 소식")}
+           <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 20px;background-color:#f7f9fc;border-radius:12px;">${personal
+             .map((l) => `<tr><td style="padding:8px 14px;font-size:13px;line-height:1.5;color:#191f28;">${escapeHtml(l)}</td></tr>`)
+             .join("")}${
+             params.personalHref
+               ? `<tr><td style="padding:4px 14px 12px;"><a href="${escapeHtml(params.personalHref.startsWith("/") ? site + params.personalHref : params.personalHref)}" style="font-size:13px;font-weight:700;color:${ACCENT};text-decoration:none;">자세히 보기 ›</a></td></tr>`
+               : ""
+           }</table>`
+        : ""
+    }
+    <a href="${site}/notes" style="display:block;background:${ACCENT};color:#ffffff;font-size:15px;font-weight:700;padding:13px 20px;border-radius:12px;text-decoration:none;text-align:center;">임장노트 전체 보기</a>
+    <p style="margin:14px 0 0;text-align:center;font-size:13px;">
+      <a href="${site}/notes/new" style="color:#4e5661;font-weight:700;text-decoration:none;">내 임장노트 쓰기 ›</a>
+      <span style="color:#d5dbe5;">&nbsp;|&nbsp;</span>
+      <a href="${site}/digest" style="color:#4e5661;font-weight:700;text-decoration:none;">주간 다이제스트 ›</a>
+    </p>
+  `);
+  const text = [
+    `${params.dayLabel} 오늘의 임장노트`,
+    ...params.notes.slice(0, 5).map((x) => `- ${x.title}${x.complex ? ` (${x.complex})` : ""} ${site}/notes/${x.id}`),
+    ...(personal.length ? ["", "내 소식", ...personal] : []),
+    "",
+    `임장노트: ${site}/notes`,
+  ].join("\n");
   return { subject, html, text };
 }
 

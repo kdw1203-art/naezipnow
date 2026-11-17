@@ -200,6 +200,18 @@ async function readUsersPage(sb: Sb, page: number): Promise<Recipient[]> {
   return out;
 }
 
+/** [1194] 지난 7일 공개 임장노트 수 — 못 세면 0(줄을 그리지 않는다) */
+async function countWeekNotes(): Promise<number> {
+  const sb = getServiceSupabase();
+  if (!sb) return 0;
+  const { count, error } = await sb
+    .from("inspection_notes")
+    .select("id", { count: "exact", head: true })
+    .eq("is_public", true)
+    .gte("created_at", new Date(Date.now() - 7 * 86_400_000).toISOString());
+  return error ? 0 : (count ?? 0);
+}
+
 /* ── 사이트 공통 폴백 ───────────────────────────────────────────────────── */
 
 type SiteFallback = {
@@ -209,7 +221,7 @@ type SiteFallback = {
   emailContent: { subject: string; html: string; text: string } | null;
 } | null;
 
-async function loadSiteFallback(emailReady: boolean): Promise<{ fallback: SiteFallback; failed: boolean }> {
+async function loadSiteFallback(emailReady: boolean, shared: PersonalDigestShared | null): Promise<{ fallback: SiteFallback; failed: boolean }> {
   let digest: Awaited<ReturnType<typeof getWeeklyDigest>>;
   try {
     digest = await getWeeklyDigest();
@@ -250,6 +262,15 @@ async function loadSiteFallback(emailReady: boolean): Promise<{ fallback: SiteFa
               sourceUrl: n.sourceUrl,
             })),
             communityCount: digest.community.count,
+            /* [1194] 주간에만 — 다음 7일 청약 접수 시작 · 이번 주 공개 임장노트 수(노트 자체는 일일 다이제스트) */
+            apply: (shared?.upcomingApply ?? []).map((a) => ({
+              houseNm: a.house_nm,
+              region: a.region,
+              totSupply: a.tot_supply,
+              rceptBgnde: String(a.rcept_bgnde ?? ""),
+              rceptEndde: a.rcept_endde,
+            })),
+            noteCount: await countWeekNotes(),
           })
         : null,
     },
@@ -291,10 +312,8 @@ async function run(dryRun: boolean): Promise<RunSummary> {
   }
 
   /* 공통 재료는 한 번만: 사이트 폴백 요약 · 지역 스냅샷 · 청약 공고 창 */
-  const [{ fallback: site, failed: siteFailed }, shared] = await Promise.all([
-    loadSiteFallback(emailReady),
-    loadPersonalDigestShared(now, 7),
-  ]);
+  const shared = await loadPersonalDigestShared(now, 7);
+  const { fallback: site, failed: siteFailed } = await loadSiteFallback(emailReady, shared);
 
   const previews: NonNullable<RunSummary["previews"]> = [];
   let wouldNotify = 0;

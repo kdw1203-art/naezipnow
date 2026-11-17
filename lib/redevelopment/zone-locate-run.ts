@@ -60,6 +60,8 @@ export type ZoneLocateResult = {
   /** [1191] 1기 신도시 선도지구 · 후보 · 도심복합 — 찍은 수 / 못 찍은 이름 */
   special?: number;
   specialMissed?: string[];
+  /** [1194] 장소 검색 오류(키 없음 · HTTP) — 도심복합이 0곳일 때 사유 */
+  specialNote?: string;
   /** [1191] 법정동 중심 근사 위치로 찍은 수 */
   byDong?: number;
   /** [1191] 서울 소규모정비(가로주택 · 모아 · 소규모) — 받은 수 / 찍은 수 / 사유 */
@@ -232,7 +234,14 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
       const have = byId.get(z.id);
       if (have) { out.push({ ...base, address: have.address, lat: have.lat, lng: have.lng }); r.special += 1; continue; }
       if (Date.now() > deadline) { r.specialMissed.push(z.name); continue; }
-      const hit = await geocodeLot(z.lot, z.sigungu).catch(() => null);
+      /* [1194] 부천은 2024 년에 구가 다시 생겨 지오코더가 "부천시 ○○동"(구 없음)으로 답하기도 한다 — 시 이름 + 같은 동이면 받는다 */
+      const city = z.sigungu.split(" ")[0];
+      const dong = /\s([가-힣0-9]+(?:동|가))\s/.exec(`${z.lot} `)?.[1] ?? "";
+      const hits = await naverGeocode(z.lot, 3, { fresh: true }).catch(() => []);
+      const hit = hits.find((h) => {
+        const a = `${h.jibunAddress ?? ""} ${h.address ?? ""}`;
+        return hitInSigungu(a, z.sigungu) || (city.length > 1 && a.includes(city) && dong !== "" && a.includes(dong));
+      });
       if (hit) { out.push({ ...base, address: specialAddress(z, {}), lat: hit.lat, lng: hit.lng }); r.special += 1; }
       else r.specialMissed.push(z.name);
       continue;
@@ -243,7 +252,8 @@ export async function locateSeoulZones(opts: { budgetMs?: number } = {}): Promis
       if (Date.now() > deadline || list.length === 0) { r.specialMissed.push(z.name); continue; }
       const cLat = list.reduce((a, b) => a + b.lat, 0) / list.length;
       const cLng = list.reduce((a, b) => a + b.lng, 0) / list.length;
-      const res = await kakaoLocalKeywordSearch({ query: z.place.query, lat: cLat, lng: cLng, radiusM: 20_000, size: 15 }).catch(() => ({ items: [] }));
+      const res: { items: Awaited<ReturnType<typeof kakaoLocalKeywordSearch>>["items"]; errorCode?: string } = await kakaoLocalKeywordSearch({ query: z.place.query, lat: cLat, lng: cLng, radiusM: 20_000, size: 15 }).catch(() => ({ items: [], errorCode: "network_error" }));
+      if (res.errorCode) r.specialNote = `장소 검색 ${res.errorCode}`;
       const hit = pickPlace(res.items, z.place.mustContain, (a) => hitInSigungu(a, z.sigungu));
       if (hit) { out.push({ ...base, address: specialAddress(z, { placeName: z.place.note ?? hit.name }), lat: hit.lat, lng: hit.lng }); r.special += 1; }
       else r.specialMissed.push(z.name);

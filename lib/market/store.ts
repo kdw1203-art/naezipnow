@@ -208,6 +208,8 @@ export type IngestSource =
   | "geocode"
   /** 구독 만료 스윕(app/api/cron/plan-expiry-sweep) — 시장 데이터는 아니지만 크론 실행 기록은 같은 로그로 남긴다 */
   | "plan-expiry"
+  /** [1194] 일일 · 주간 다이제스트 발송 기록(app/api/cron/daily-digest · weekly-digest) — 같은 날 두 번 보내지 않게 */
+  | "digest"
   /** 포인트 만료 스윕(app/api/cron/points-expiry-sweep) — 위와 같은 이유로 같은 로그를 쓴다 */
   | "points-expiry"
   /** 이메일 outbox 드레인(app/api/cron/notification-outbox-drain) — 위와 같은 이유 */

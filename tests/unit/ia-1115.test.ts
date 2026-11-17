@@ -1606,3 +1606,38 @@ test("[1193] 지도 창 정리 — 범례 네 장 → 한 장(접힘) · 빈 매
   assert.doesNotMatch(m, />\s*매물 등록하기\s*</);
   assert.match(m, /범례 \{deskLegendOpen \? "▾" : "▴"\}/);
 });
+
+test("[1194] 일일 다이제스트(임장노트 중심) · 주간과 다르게 · 깨진 /api/og 사진 빼기", async () => {
+  const { dailyDigestEmail, weeklyDigestEmail } = await import("@/lib/email/templates");
+  const d = dailyDigestEmail({
+    dayLabel: "11/17(화)",
+    notes: [{ id: "n1", title: "마포그랑자이 전세", complex: "마포그랑자이", region: "마포구", score: 4.2, summary: "요약", imageUrl: "https://x.test/a.jpg" }],
+    noteTotal: 7,
+    personalLines: ["관심 단지 새 실거래 2건"],
+    personalHref: "/my/watchlist",
+  });
+  assert.match(d.subject, /^\(광고\) \[내집나우\] 11\/17\(화\) 일일 다이제스트 — 새 임장노트 7편$/);
+  assert.match(d.html, /오늘의 임장노트/);
+  assert.match(d.html, /노트 2편 더 보기/);
+  assert.match(d.html, /점수 4\.2/);
+  assert.match(d.html, /내 소식/);
+  const w = weeklyDigestEmail({
+    weekLabel: "11월 3주차",
+    market: [],
+    news: [
+      { title: "오늘의 신고가 — A", sourceName: "국토교통부 실거래가", href: "/town/news/1", imageUrl: "https://naezipnow.com/api/og/complex-trend?x=1", sourceUrl: null },
+      { title: "언론 기사", sourceName: "한국경제", href: "/town/news/2", imageUrl: "https://img.test/b.jpg", sourceUrl: "https://hankyung.com/a" },
+    ],
+    communityCount: 0,
+    apply: [{ houseNm: "어느 단지", region: "경기", totSupply: 500, rceptBgnde: "2026-11-20", rceptEndde: "2026-11-22" }],
+    noteCount: 55,
+  });
+  assert.doesNotMatch(w.html, /api\/og\//, "우리 카드 사진은 메일에 싣지 않는다");
+  assert.match(w.html, /이번 주 숫자/);
+  assert.match(w.html, /다음 주 청약 접수 1건/);
+  assert.match(w.html, /11\/20~11\/22/);
+  assert.match(w.html, /공개 임장노트 <strong[^>]*>55편/);
+  assert.doesNotMatch(w.html, /대표 /, "메일 바닥글에 대표자 이름 없음");
+  const etl = readFileSync(".github/workflows/etl.yml", "utf8");
+  assert.doesNotMatch(etl, /if \[ "\$\(date -u \+%u\)" != "1" \]; then\n\s*call daily-digest/);
+});

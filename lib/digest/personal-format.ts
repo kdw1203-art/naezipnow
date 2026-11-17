@@ -411,16 +411,9 @@ export function formatPersonalDigestEmail(
       );
     }
   }
+  /* [1194] 새 임장노트는 일일 다이제스트가 싣는다 — 주간 메일에서는 한 줄로만 */
   if (d.pickNotes && d.pickNotes.length > 0) {
-    blocks.push(h2("이번 주 새 임장노트"));
-    for (const n of d.pickNotes) {
-      blocks.push(
-        p(
-          link(abs(`/notes/${encodeURIComponent(n.id)}`), n.title) +
-            (n.region ? ` <span style="color:${MUTED};font-size:12px;">${escapeHtml(n.region)}</span>` : ""),
-        ),
-      );
-    }
+    blocks.push(p(`이번 주 새 임장노트는 매일 아침 일일 다이제스트로 · ${link(abs("/notes"), "임장노트 보기 ›")}`));
   }
   if (d.pickRegions && d.pickRegions.length > 0) {
     blocks.push(h2("거래가 많았던 지역"));
