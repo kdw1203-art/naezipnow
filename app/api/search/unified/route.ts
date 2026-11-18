@@ -57,6 +57,39 @@ export interface UnifiedComplex extends ComplexPreview {
   id: string;
   name: string;
   region: string;
+  /** [1196] 단지 좌표(complex_geocode · 실거래 주소 지오코딩) — 검색 결과 지도용. 모르면 없음 */
+  lat?: number | null;
+  lng?: number | null;
+}
+
+/** [1196] 검색 결과 단지에 좌표를 붙인다 — 한 번의 조회(이름 in · 지역 일치). 실패하면 좌표 없이 그대로 */
+async function withCoords(
+  sb: ReturnType<typeof getServiceSupabase>,
+  rows: UnifiedComplex[],
+): Promise<UnifiedComplex[]> {
+  if (!sb || rows.length === 0) return rows;
+  try {
+    const names = [...new Set(rows.map((r) => r.name))].slice(0, 40);
+    const { data, error } = await sb
+      .from("complex_geocode")
+      .select("region_name,complex_name,lat,lng")
+      .eq("status", "ok")
+      .in("complex_name", names)
+      .in("region_name", [...new Set(rows.map((r) => r.region))].slice(0, 20))
+      .limit(400);
+    if (error || !data) return rows;
+    const key = (region: string, name: string) => `${region.replace(/\s/g, "")}|${name}`;
+    const m = new Map<string, { lat: number; lng: number }>();
+    for (const d of data as Array<{ region_name: string; complex_name: string; lat: number | null; lng: number | null }>) {
+      if (d.lat != null && d.lng != null) m.set(key(d.region_name, d.complex_name), { lat: Number(d.lat), lng: Number(d.lng) });
+    }
+    return rows.map((r) => {
+      const c = m.get(key(r.region, r.name));
+      return c ? { ...r, lat: c.lat, lng: c.lng } : r;
+    });
+  } catch {
+    return rows;
+  }
 }
 
 /** 단지 행 → 통합 검색 단지 항목("사천시 사천시" 처럼 시군구가 한 낱말일 때 두 번 적지 않는다) */
@@ -457,9 +490,10 @@ export async function GET(req: Request) {
   /* [1081 · #29] 검색어 집계(KV · 월별) — 응답을 막지 않는다. CDN 적중분은 세지 못한다(추세용) */
   void recordSearchQuery(q);
 
+  const complexesWithCoords = await withCoords(sb, complexes.rows);
   return NextResponse.json(
     {
-      complexes: complexes.rows,
+      complexes: complexesWithCoords,
       listings: listings.rows,
       notes: notes.rows,
       stories: stories.rows,

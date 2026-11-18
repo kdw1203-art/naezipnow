@@ -20,7 +20,9 @@ import { relativeTimeLabel } from "@/lib/format/relative-time";
 /* [1015 · 규칙 H] 임장노트 행 40px 정사각 썸네일 — 커버가 없으면 단색 칸(값은 단색 토큰) */
 import { seedGradient } from "@/lib/town/shared";
 import { FuzzyBadge, Hl, complexMetaLine } from "./complex-hit";
-import { ComplexShade, RelatedChips, ScopeBar, areaDetail, hasScope, nameHighlightQuery } from "./SearchScope";
+import { NaverMap } from "@/components/map/NaverMapLazy";
+import type { MapMarkerData } from "@/components/map/NaverMap";
+import { RelatedChips, ScopeBar, areaDetail, hasScope, nameHighlightQuery } from "./SearchScope";
 import type { AreaJson, IntentJson, NextWordJson, RelatedJson } from "./unified-suggest";
 import { ghostRest, keywordPhrases } from "@/lib/search/ghost";
 import GhostText from "./GhostText";
@@ -172,6 +174,49 @@ interface Group {
   label: string;
   more: string;
   rows: Row[];
+}
+
+/** [1196] 단지 줄 둘째 줄 — "양덕동 · 2009년 · 거래 15건"(있는 값만) */
+function compactComplexLine(c: ComplexPreview): string {
+  return [
+    (c.area ?? "").trim() || c.region,
+    c.buildYear ? `${c.buildYear}년` : "",
+    c.households ? `${c.households.toLocaleString("ko-KR")}세대` : "",
+    c.recentTradeCount ? `거래 ${c.recentTradeCount}건` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
+}
+
+/** [1196] 검색 결과 지도 — 좌표가 있는 단지가 둘 이상이면 목록 위에. 핀을 누르면 그 단지로 */
+function SearchResultMap({ rows, onPick }: { rows: ComplexPreview[]; onPick: (id: string) => void }) {
+  const markers: MapMarkerData[] = rows
+    .filter((c) => typeof c.lat === "number" && typeof c.lng === "number")
+    .map((c) => {
+      const v = c.bandPriceManwon ?? c.avgPriceManwon;
+      return {
+        id: c.id,
+        lat: c.lat as number,
+        lng: c.lng as number,
+        label: c.name,
+        ...(v != null && v > 0 ? { priceLabel: formatKrwManwon(v, { style: "eok1" }) } : {}),
+      };
+    });
+  if (markers.length < 2) return null;
+  return (
+    <div className="rise-in card h-[240px] overflow-hidden rounded-2xl p-0 md:h-[320px]" aria-label="검색 결과 지도">
+      <NaverMap
+        markers={markers}
+        fitToMarkers
+        showControls={false}
+        rounded={false}
+        declutter
+        className="h-full w-full"
+        onMarkerClick={(m) => onPick(m.id)}
+        fallback={<div className="flex h-[240px] items-center justify-center t-sub text-text-3 md:h-[320px]">지도 불러오기 실패 · 목록은 아래</div>}
+      />
+    </div>
+  );
 }
 
 export function SearchClient() {
@@ -1011,6 +1056,16 @@ export function SearchClient() {
               ))}
             </div>
           )}
+          {/* [1196] 지역·조건 검색이면 지도도 — 소유자 2026-11-18 "이런 건 지도도 나오고 목록도 나오게" */}
+          {(filter === "all" || filter === "complexes") && results.complexes.length > 1 && (
+            <SearchResultMap
+              rows={results.complexes}
+              onPick={(id) => {
+                saveRecent(q);
+                router.push(hrefFor("complexes", id));
+              }}
+            />
+          )}
           {visibleGroups
             .map((g) => (
               <section key={g.key} className="rise-in card rounded-2xl p-[18px] max-md:p-3.5">
@@ -1139,11 +1194,8 @@ export function SearchClient() {
                               ) : null;
                             })()}
                           </span>
-                          {r.complex.address || r.complex.roadAddress ? (
-                            <ComplexShade p={r.complex} />
-                          ) : (
-                            <span className="truncate t-sub text-text-3">{complexMetaLine(r.complex)}</span>
-                          )}
+                          {/* [1196] 둘째 줄 하나로 — 동 · 준공 · 6개월 거래(소유자 2026-11-18 "목록은 간결하고 심플하게") */}
+                          <span className="truncate t-caption text-text-3">{compactComplexLine(r.complex)}</span>
                         </Link>
                       );
                     }

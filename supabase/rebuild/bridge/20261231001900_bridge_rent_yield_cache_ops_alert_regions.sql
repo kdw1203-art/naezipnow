@@ -89,8 +89,9 @@ revoke all on function public.report_ops_alert(text, text, text, integer) from p
 grant execute on function public.report_ops_alert(text, text, text, integer) to service_role;
 
 -- ③ 관심 지역 표 --------------------------------------------------------------------
+-- 실거래 원표(market_transactions)를 세면 SQL Editor 시간 제한에 걸린다(2026-11-18 실측) — 월별 집계표(market_region_monthly)로 센다.
 with t as (
-  select region_code, count(*) n from public.market_transactions where contract_ym >= '202507' group by 1)
+  select region_code, sum(transaction_count) n from public.market_region_monthly where month::text >= '202507' group by 1)
 update public.legal_regions r
    set enabled = (
          r.lawd_cd not in ('41110','41130','41170','41190','41270','41280','41460','43110','44130','47110','48120','52110','41590',
@@ -101,8 +102,8 @@ update public.legal_regions r
        updated_at = now();
 
 with t as (
-  select region_code, count(*) n from public.market_transactions
-   where contract_ym >= to_char((now() at time zone 'Asia/Seoul') - interval '6 month','YYYYMM') group by 1),
+  select region_code, sum(transaction_count) n from public.market_region_monthly
+   where month::text >= to_char((now() at time zone 'Asia/Seoul') - interval '6 month','YYYYMM') group by 1),
 y as (
   select r.lawd_cd, r.sido in ('서울','경기','인천') cap,
          row_number() over (partition by r.sido in ('서울','경기','인천') order by t.n desc) rk

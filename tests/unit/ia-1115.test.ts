@@ -1664,3 +1664,15 @@ test("[1195] 10가지 — KV 차단기 · 빈 검색 짧은 캐시 · 가입/메
   for (const s of ["ops.rent_yield_cache", "rent-yield-cache-refresh", "public.report_ops_alert", "grant execute on function public.report_ops_alert(text, text, text, integer) to service_role", "update public.legal_regions r"]) assert.ok(sql.includes(s), s);
   assert.doesNotMatch(readFileSync("auth.ts", "utf8"), /if \(rl\.degraded\) \{\n\s*logger\.warn/, "장애 경고는 10분에 한 번");
 });
+
+test("[1196] 통합 검색 — 단지 좌표 붙이기 · 결과 지도 · 두 줄 목록", () => {
+  const api = readFileSync("app/api/search/unified/route.ts", "utf8");
+  assert.match(api, /async function withCoords\(/);
+  assert.match(api, /\.from\("complex_geocode"\)[\s\S]{0,200}\.in\("complex_name", names\)[\s\S]{0,120}\.in\("region_name"/);
+  assert.match(api, /complexes: complexesWithCoords,/);
+  const c = readFileSync("app/search/search-client.tsx", "utf8");
+  assert.match(c, /function SearchResultMap\(/);
+  assert.match(c, /if \(markers\.length < 2\) return null;/, "좌표가 둘 이상일 때만 지도");
+  assert.match(c, /<span className="truncate t-caption text-text-3">\{compactComplexLine\(r\.complex\)\}<\/span>/);
+  assert.doesNotMatch(c, /<ComplexShade p=\{r\.complex\} \/>/);
+});

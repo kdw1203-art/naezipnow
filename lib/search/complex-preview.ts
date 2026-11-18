@@ -28,6 +28,9 @@ export interface ComplexPreview {
   roadAddress?: string | null;
   /** [1026d] 면적 조건 검색일 때 그 면적 거래의 평균 매매가(만원) */
   bandPriceManwon?: number | null;
+  /** [1196] 단지 좌표 — 통합 검색이 붙이면 결과 지도에 찍는다 */
+  lat?: number | null;
+  lng?: number | null;
 }
 
 /** "안양 동안구 관양동" — 읍면동을 알면 붙인다 */
