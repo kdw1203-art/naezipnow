@@ -96,8 +96,13 @@ export async function GET(req: NextRequest) {
     { query: q, items },
     {
       headers: {
-        // 시군구 목록은 거의 안 바뀐다. 프리픽스별로 오래 재활용해도 안전하다.
-        "Cache-Control": "public, s-maxage=86400, stale-while-revalidate=604800",
+        /* 시군구 목록은 거의 안 바뀐다. 프리픽스별로 오래 재활용해도 안전하다.
+           [1195] 단 **빈 결과는 5분만** — 2026-11-18 지역 표가 35곳만 켜진 채로 "분당 0건"이 하루짜리 CDN 캐시에 굳었다.
+           표를 고친 뒤에도 같은 검색어가 하루 동안 빈 목록을 돌려줄 뻔했다 */
+        "Cache-Control":
+          items.length > 0
+            ? "public, s-maxage=86400, stale-while-revalidate=604800"
+            : "public, s-maxage=300, stale-while-revalidate=60",
       },
     },
   );

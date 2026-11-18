@@ -164,13 +164,14 @@ export function WelcomeClient() {
       ),
     ]);
 
+    /* [1195] 처음 가입한 사람도 저장 결과를 본다 — 예전엔 실패해도 조용히 노트 쓰기로 넘어가, 관심 지역이 빈 채로 남았다
+       (2026-11-18 가입자 실측). 실패면 머물러 다시 누르게 한다. 알림 구독은 알림함에서 따로 관리한다 */
+    if (!prefRes || !prefRes.ok) {
+      setSaveError("관심 지역 저장 실패 · 잠시 후 다시");
+      setBusy(false);
+      return;
+    }
     if (reentry) {
-      /* 재진입 — POST 결과(503 = 저장 실패)를 본다. 알림 구독은 알림함에서 따로 관리한다 */
-      if (!prefRes || !prefRes.ok) {
-        setSaveError("관심 지역 저장 실패 · 잠시 후 다시");
-        setBusy(false);
-        return;
-      }
       router.push(returnTo);
       return;
     }

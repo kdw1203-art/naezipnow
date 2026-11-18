@@ -26,10 +26,25 @@ export function kvAvailable(): boolean {
   return kvConfig() !== null;
 }
 
+/* [1195] 끊김 차단기 — 백엔드가 죽은 동안 요청마다 다시 두드리지 않는다(운영 2026-11-11~ kv network 실패 · 로그인마다 왕복).
+   한 번 실패하면 이 인스턴스는 60초 동안 바로 null(호출자는 종전 메모리 경로). 상태 확인(kvPingDetail)은 차단기를 거치지 않는다. */
+const KV_COOLDOWN_MS = 60_000;
+let kvDownUntil = 0;
+export function kvCircuitOpen(now = Date.now()): boolean {
+  return now < kvDownUntil;
+}
+export function kvTrip(now = Date.now()): void {
+  kvDownUntil = now + KV_COOLDOWN_MS;
+}
+export function kvReset(): void {
+  kvDownUntil = 0;
+}
+
 /** 파이프라인 한 번 — 결과 배열(명령 순서대로). 백엔드 실패·미설정이면 null */
 export async function kvPipeline(commands: KvCommand[], timeoutMs = DEFAULT_TIMEOUT_MS): Promise<unknown[] | null> {
   const cfg = kvConfig();
   if (!cfg || commands.length === 0) return null;
+  if (kvCircuitOpen()) return null;
   try {
     const res = await fetch(`${cfg.url}/pipeline`, {
       method: "POST",
@@ -38,12 +53,16 @@ export async function kvPipeline(commands: KvCommand[], timeoutMs = DEFAULT_TIME
       signal: AbortSignal.timeout(timeoutMs),
       cache: "no-store",
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      if (res.status >= 500 || res.status === 401 || res.status === 403) kvTrip();
+      return null;
+    }
     const json = (await res.json()) as Array<{ result?: unknown; error?: string }>;
     if (!Array.isArray(json) || json.length !== commands.length) return null;
     if (json.some((r) => typeof r?.error === "string")) return null;
     return json.map((r) => r.result ?? null);
   } catch {
+    kvTrip();
     return null;
   }
 }

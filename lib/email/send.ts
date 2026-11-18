@@ -80,7 +80,12 @@ export async function sendEmail(input: SendEmailInput): Promise<SendEmailResult>
     const smtp = smtpConfig();
     if (smtp) {
       const { sendViaSmtp } = await import("@/lib/email/smtp-send");
-      return sendViaSmtp(smtp, { from: resolveFrom(), ...input });
+      const r = await sendViaSmtp(smtp, { from: resolveFrom(), ...input });
+      /* [1195] SMTP 인증 실패(535 등)는 운영 경보로 — 2026-11-18 네이버 비밀번호가 바뀐 뒤 환영 메일이 조용히 실패했다. 성공하면 경보를 닫는다 */
+      const { reportOpsAlert } = await import("@/lib/ops/report-alert");
+      if (!r.sent && /SMTP 인증 실패/.test(r.reason ?? "")) await reportOpsAlert("ops.email:smtp", "critical", `사이트 메일 SMTP 인증 실패 — Vercel 환경변수의 SMTP 비밀번호(네이버 애플리케이션 비밀번호) 확인 · ${r.reason}`);
+      else if (r.sent) await reportOpsAlert("ops.email:smtp", "ok", "사이트 메일 발송 회복");
+      return r;
     }
     if (!warnedUnconfigured) {
       warnedUnconfigured = true;

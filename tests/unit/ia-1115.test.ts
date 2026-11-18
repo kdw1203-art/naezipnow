@@ -508,7 +508,7 @@ test("[1138] 가입 · API · 게이트 · 방침 · DB 열이 같은 규칙을 
 
 test("[1138] 로그인 — 공용 카운터(KV) 장애면 메모리 카운터로(전부 막지 않는다 · 무제한도 아니다)", () => {
   const auth = read("auth.ts");
-  assert.match(auth, /if \(rl\.degraded\) \{[\s\S]{0,200}rl = memoryKeyRateLimit\(key, \{ max, windowMs \}\);/);
+  assert.match(auth, /if \(rl\.degraded\) \{[\s\S]{0,500}rl = memoryKeyRateLimit\(key, \{ max, windowMs \}\);/);
   assert.match(auth, /if \(!rl\.ok\) \{\s*logger\.warn\(`\[auth\] 로그인 시도 제한/);
   assert.doesNotMatch(auth, /!rl\.ok \|\| rl\.degraded/);
   const rl = read("lib/rate-limit.ts");
@@ -1640,4 +1640,27 @@ test("[1194] 일일 다이제스트(임장노트 중심) · 주간과 다르게 
   assert.doesNotMatch(w.html, /대표 /, "메일 바닥글에 대표자 이름 없음");
   const etl = readFileSync(".github/workflows/etl.yml", "utf8");
   assert.doesNotMatch(etl, /if \[ "\$\(date -u \+%u\)" != "1" \]; then\n\s*call daily-digest/);
+});
+
+test("[1195] 10가지 — KV 차단기 · 빈 검색 짧은 캐시 · 가입/메일/KV 운영 경보 · 관심 지역 저장 실패 · 지역 표", async () => {
+  const kv = await import("@/lib/kv/rest");
+  kv.kvReset();
+  assert.equal(kv.kvCircuitOpen(1000), false);
+  kv.kvTrip(1000);
+  assert.equal(kv.kvCircuitOpen(1000 + 59_000), true, "60초 동안 다시 두드리지 않는다");
+  assert.equal(kv.kvCircuitOpen(1000 + 61_000), false);
+  kv.kvReset();
+  const search = readFileSync("app/api/regions/search/route.ts", "utf8");
+  assert.match(search, /items\.length > 0\s*\?\s*"public, s-maxage=86400[^"]*"\s*:\s*"public, s-maxage=300/);
+  assert.match(readFileSync("lib/email/send.ts", "utf8"), /reportOpsAlert\("ops\.email:smtp", "critical"/);
+  const reg = readFileSync("app/api/auth/register/route.ts", "utf8");
+  assert.match(reg, /reportOpsAlert\(\s*"ops\.auth:signup",\s*"critical"/);
+  assert.match(reg, /인증 메일을 보내지 못해 가입을 마치지 못했습니다/);
+  assert.match(readFileSync("app/api/health/route.ts", "utf8"), /reportOpsAlert\("ops\.kv", "warn"/);
+  const w = readFileSync("app/welcome/WelcomeClient.tsx", "utf8");
+  assert.ok(w.indexOf('if (!prefRes || !prefRes.ok)') < w.indexOf("if (reentry) {\n      router.push(returnTo);"), "처음 가입자도 저장 실패면 머문다");
+  assert.match(readFileSync("app/components/RegionPicker.tsx", "utf8"), /예: 분당, 청주, 해운대/);
+  const sql = readFileSync("supabase/rebuild/bridge/20261231001900_bridge_rent_yield_cache_ops_alert_regions.sql", "utf8");
+  for (const s of ["ops.rent_yield_cache", "rent-yield-cache-refresh", "public.report_ops_alert", "grant execute on function public.report_ops_alert(text, text, text, integer) to service_role", "update public.legal_regions r"]) assert.ok(sql.includes(s), s);
+  assert.doesNotMatch(readFileSync("auth.ts", "utf8"), /if \(rl\.degraded\) \{\n\s*logger\.warn/, "장애 경고는 10분에 한 번");
 });

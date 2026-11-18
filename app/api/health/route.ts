@@ -13,7 +13,7 @@ import {
   readOnlyClientHasServiceRole,
 } from "@/lib/newui/supabase-read";
 import { getSupabaseUrl } from "@/lib/supabase/env";
-import { kvAvailable, kvPingDetail } from "@/lib/kv/rest";
+import { kvAvailable, kvPingDetail, kvReset } from "@/lib/kv/rest";
 import { classifyIngestRun, type IngestOutcome } from "@/lib/market/ingest-outcome";
 /* [968 · T5] 토스 구성 진단 — 접두사 판정(boolean·enum)만, 키 값은 어디에도 싣지 않는다 */
 import { checkTossKeyPair } from "@/lib/payments/toss-keys";
@@ -195,6 +195,14 @@ async function getOpsChecks(): Promise<OpsChecks> {
     const r = await kvPingDetail();
     kvOk = r.ok;
     kvReason = r.reason;
+    /* [1195] 공용 KV 장애를 운영 경보로 — 2026-11-11 부터 network 실패가 이어졌는데 /api/health 응답에만 있었다(하루 한 번 · 회복하면 닫는다) */
+    const { reportOpsAlert } = await import("@/lib/ops/report-alert");
+    if (r.ok) {
+      kvReset();
+      await reportOpsAlert("ops.kv", "ok", "공용 KV 회복");
+    } else {
+      await reportOpsAlert("ops.kv", "warn", `공용 KV(Redis) 연결 실패 · ${r.reason ?? "?"} — 속도 제한 · 캐시가 인스턴스 메모리로 돌아가는 중. Vercel › Storage 의 KV/Upstash 연결과 KV_REST_API_URL · TOKEN 확인`, 24);
+    }
   }
 
   return {

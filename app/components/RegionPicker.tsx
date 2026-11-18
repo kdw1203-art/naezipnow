@@ -213,7 +213,7 @@ export function RegionPicker({
           {...compositionProps}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="지역 검색 (예: 마포, 분당, 해운대)"
+          placeholder="시·군·구 검색 (예: 분당, 청주, 해운대)"
           autoComplete="off"
           role="combobox"
           aria-expanded={open && list.length > 0}
@@ -236,7 +236,7 @@ export function RegionPicker({
             )}
             {!busy && !failed && list.length === 0 && (
               <div role="status" className="px-4 py-3 t-sub text-text-3">
-일치하는 시·군·구 없음 · 구 이름(예: 마포구)으로 다시 찾기
+일치하는 시·군·구 없음 · 시·구 이름(예: 마포구 · 청주 · 창원)으로 다시 찾기
               </div>
             )}
             <div id={`${inputId}-listbox`} role="listbox" aria-label="지역 선택지">

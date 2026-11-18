@@ -120,6 +120,7 @@ function secretEquals(provided: string, expected: string): boolean {
  * 막혔는지(true/false)만 돌려준다. 호출부가 응답을 정한다 —
  * [1040] 비밀번호 로그인은 `rate_limited_<초>` 코드로 알리고(LoginRateLimitedError), 비상 토큰은 예전처럼 null.
  */
+let lastDegradedWarnAt = 0;
 async function credentialThrottleBlocked(
   scope: string,
   identity: string,
@@ -143,7 +144,11 @@ async function credentialThrottleBlocked(
        /api/health kv ok:false reason:network · 가입 직후 첫 로그인부터 "시도 한도 초과").
        그래서 인스턴스 메모리 카운터로 내려 같은 상한을 건다 — 막지도 풀지도 않는다. */
     if (rl.degraded) {
-      logger.warn(`[auth] 공용 카운터 장애 — 메모리 카운터로 · ${scope}`);
+      /* [1195] 장애 동안 로그인마다 두 줄씩 찍혀 로그를 덮었다 — 인스턴스당 10분에 한 번 */
+      if (Date.now() - lastDegradedWarnAt > 600_000) {
+        lastDegradedWarnAt = Date.now();
+        logger.warn(`[auth] 공용 카운터 장애 — 메모리 카운터로 · ${scope}`);
+      }
       rl = memoryKeyRateLimit(key, { max, windowMs });
     }
     if (!rl.ok) {

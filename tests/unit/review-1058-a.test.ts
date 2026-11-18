@@ -218,7 +218,7 @@ test("A4 WelcomeClient — 지금 지역으로 채움 · 지역만 POST · 재�
   assert.doesNotMatch(code, /budget: null, purpose: null, persona: null/, "null 키를 보내던 본문 삭제");
   assert.match(code, /\{!reentry && <SignupSteps current=\{2\} className="rise-in" \/>\}/);
   assert.match(code, /const returnTo = next \?\? "\/my";/);
-  assert.match(code, /if \(reentry\) \{\s*if \(!prefRes \|\| !prefRes\.ok\) \{\s*setSaveError\("관심 지역 저장 실패 · 잠시 후 다시"\);/);
+  /* [1195] 처음 가입자도 저장 실패면 머문다 — 실패 검사가 재진입 분기 앞으로 */ assert.match(code, /if \(!prefRes \|\| !prefRes\.ok\) \{\s*setSaveError\("관심 지역 저장 실패 · 잠시 후 다시"\);\s*setBusy\(false\);\s*return;\s*\}\s*if \(reentry\) \{/);
   assert.match(code, /router\.push\(returnTo\);/);
   assert.match(code, /변경 없이 돌아가기/);
   /* 가입 흐름은 그대로 — 첫 노트로 */

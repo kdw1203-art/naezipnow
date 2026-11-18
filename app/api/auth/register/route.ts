@@ -266,6 +266,7 @@ async function signUpWithSupabaseAuth(
   }
 
   if (!error && data.user?.email) {
+    void import("@/lib/ops/report-alert").then(({ reportOpsAlert }) => reportOpsAlert("ops.auth:signup", "ok", "가입 회복")).catch(() => undefined);
     if (onNewAccount) await onNewAccount().catch(() => undefined);
     try {
       const { ensureAppUserRow } = await import("@/lib/auth/ensure-app-user");
@@ -299,6 +300,17 @@ async function signUpWithSupabaseAuth(
        분기가 일괄 "(서버 오류 — 잠시 후 다시 시도해 주세요.)" 를 보여줬다.
        재시도로는 절대 성공할 수 없는 오류를 재시도하라고 안내한 것이다.
        매핑은 lib/auth/signup-error.ts (단위검증 가능하게 분리). */
+    /* [1195] 인증 서버 5xx — 대개 Supabase Auth 의 인증 메일 SMTP 로그인 거절(535)이다(2026-11-17 실측: 응답 본문은 '{}' 뿐).
+       가입이 통째로 막히는 장애라 운영 경보에 critical 로 남긴다 */
+    if (typeof status === "number" && status >= 500) {
+      const { reportOpsAlert } = await import("@/lib/ops/report-alert");
+      await reportOpsAlert(
+        "ops.auth:signup",
+        "critical",
+        `가입 실패 — 인증 서버 ${status}${code ? ` ${code}` : ""} · Supabase › Authentication › SMTP 설정(비밀번호)과 Auth 로그 확인`,
+        1,
+      );
+    }
     const mapped = mapSignUpRejection({ status, code, message: upstreamMsg });
     if (mapped) {
       return NextResponse.json(mapped.body, {
@@ -307,7 +319,13 @@ async function signUpWithSupabaseAuth(
       });
     }
     return NextResponse.json(
-      { error: "일시적으로 가입 처리를 할 수 없습니다. 잠시 후 다시 시도해 주세요." },
+      {
+        /* [1195] 인증 서버 5xx 는 대개 인증 메일 발송 실패다 — 무엇이 막혔는지 한 줄로 · 운영 경보는 위에서 남겼다 */
+        error:
+          typeof status === "number" && status >= 500
+            ? "인증 메일을 보내지 못해 가입을 마치지 못했습니다. 운영자에게 알림이 갔습니다 · 잠시 후 다시 시도해 주세요."
+            : "일시적으로 가입 처리를 할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+      },
       { status: 503 },
     );
   }
