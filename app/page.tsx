@@ -126,6 +126,8 @@ export default async function Home() {
   }
   /* [1114] 지역 동향 표 — 대표 지역은 위 "시장 한눈에"가 말한다(같은 숫자 두 곳 금지) */
   const tableRegions = dealsRegion ? regions.filter((r) => r.id !== dealsRegion.id) : regions;
+  /* [1204 · 리뷰] 지도는 찍을 값(평균 매매가)이 하나라도 있을 때만 — 이름만 있는 표지로는 빈 지도 칸이 남는다 */
+  const hasMapPrices = mapMarkers.some((m) => m.value != null);
   const mapSido = (dealsRegion && REGION_CATALOG.find((r) => r.id === dealsRegion.id)?.city) || "서울";
   const mapHref = dealsRegion ? `/map?region=${encodeURIComponent(dealsRegion.name)}` : "/map";
   const notes = data.notes;
@@ -238,7 +240,7 @@ export default async function Home() {
           {/* ② 첫 줄 — 지도(8) | 숫자 칸 · 오늘의 시장(4) */}
           {/* [1204 · 빈 공간 없이] 지도에 찍을 값이 없으면 지도 칸을 그리지 않고, 숫자 칸 · 오늘의 시장이 한 줄을 나눠 쓴다 */}
           <div className="mt-3 grid grid-cols-1 gap-3 md:mt-4 lg:grid-cols-12 lg:gap-4">
-            {mapMarkers.length > 0 && (
+            {hasMapPrices && (
               <div className="min-w-0 lg:col-span-8">
                 <HomeRegionMap markers={mapMarkers} sido={mapSido} mapHref={mapHref} periodLabel={mapPeriodYm ? formatYm(mapPeriodYm) : null} />
               </div>
@@ -246,7 +248,7 @@ export default async function Home() {
             <aside
               data-autotrim=""
               className={
-                mapMarkers.length > 0
+                hasMapPrices
                   ? "flex min-w-0 flex-col gap-3 lg:col-span-4 lg:gap-4"
                   : "grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2 lg:col-span-12 lg:gap-4"
               }
@@ -275,7 +277,7 @@ export default async function Home() {
           <div data-autotrim="" className="home-flow mt-3 md:mt-4">
             <div className="home-flow-item">
               {/* 지역 동향 — [1114] 표 · [1204] 값이 없거나 조회가 실패하면 홈에서는 칸째 뺀다(빈 카드 없음 · 지도 화면이 그대로 맡는다) */}
-              {regions.length > 0 && (
+              {tableRegions.length > 0 && (
               <section className="card flex flex-col gap-2 rounded-2xl p-[var(--pad-card)]">
                 <div className="flex items-baseline justify-between gap-2">
                   <h2 className="t-section text-ink">지역 동향</h2>
