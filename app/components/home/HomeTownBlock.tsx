@@ -27,6 +27,7 @@ export function HomeTownBlock({
   news,
   failed,
   now = Date.now(),
+  stacked = false,
 }: {
   stories: HomeStoryItem[];
   news: HomeNewsItem[];
@@ -34,13 +35,15 @@ export function HomeTownBlock({
   failed: boolean;
   /** 요청당 한 번 잡은 시각 — 상대 시각 라벨용(hydration 안전) */
   now?: number;
+  /** [1198 · 시안 A] 좁은 열(홈 셋째 칸) — 이야기 · 뉴스를 위아래로, 뉴스도 한 줄씩 */
+  stacked?: boolean;
 }) {
   /* [1030 · G4] 이웃 글 0건이면 동네이야기 칸은 한 줄 띠(제목 · 없음 · 쓰기)로 접고, 뉴스룸이 두 칸을 다 쓴다 —
      데스크톱에서 뉴스룸 옆 절반이 빈 카드였다(2026-10-04 운영 실측). 글이 생기면 예전 2칸 그대로. */
   const storiesEmpty = !failed && stories.length === 0;
   return (
     <section
-      className="grid grid-cols-1 gap-3 md:grid-cols-2"
+      className={stacked ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 gap-3 md:grid-cols-2"}
       aria-label="동네이야기와 뉴스룸"
     >
       {/* ── 동네이야기 — 사람의 기록 ───────────────────────────────── */}
@@ -109,7 +112,7 @@ export function HomeTownBlock({
 
       {/* ── 뉴스룸 — [1015 · 규칙 C·K] 한지 스트립(튀는 색면) → 이웃 글 칸과 같은 흰 카드. 제목 옆 부연("자동 수집 · 최신")
           삭제. 행 = 원문 사진(있을 때만, 없으면 사진 칸 없음) + 제목 두 줄 + 매체·날짜 — 소유자: 뉴스는 원문 사진 유지 */}
-      <div className={storiesEmpty ? "card flex flex-col gap-2 rounded-2xl px-4 py-4 md:col-span-2" : "card flex flex-col gap-2 rounded-2xl px-4 py-4"} aria-label="뉴스룸">
+      <div className={storiesEmpty && !stacked ? "card flex flex-col gap-2 rounded-2xl px-4 py-4 md:col-span-2" : "card flex flex-col gap-2 rounded-2xl px-4 py-4"} aria-label="뉴스룸">
         <div className="flex items-center justify-between gap-2">
           <h2 className="t-section text-ink">뉴스룸</h2>
           <Link
@@ -126,13 +129,13 @@ export function HomeTownBlock({
         ) : (
           <ul
             className={
-              storiesEmpty
+              storiesEmpty && !stacked
                 ? "m-0 flex list-none flex-col divide-y divide-line p-0 md:grid md:grid-cols-3 md:gap-x-5 md:divide-y-0"
                 : "m-0 flex list-none flex-col divide-y divide-line p-0"
             }
             data-tone="plain"
           >
-            {news.map((n) => (
+            {(stacked ? news.slice(0, 2) : news).map((n) => (
               <li key={n.id}>
                 <Link href={newsHref(n.id)} className="flex items-center gap-3 py-2 no-underline">
                   {n.image && (

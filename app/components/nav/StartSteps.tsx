@@ -18,8 +18,10 @@ import {
 /* [1124 · 처음 온 사람의 길] 비회원에게만 보이는 네 단계 줄(가입 → 임장노트 → 지도 → AI 분석) + 전문가 등록 한 줄.
    서버 HTML 에 그대로 실려 나가고(공유 캐시 화면 · 크롤 경로), 로그인 힌트 쿠키가 있으면 마운트 뒤 걷는다 —
    회원에게 "가입" 을 다시 권하지 않는다. 채움 버튼 없음(화면의 주 버튼은 그 화면의 것). */
-export function StartSteps({ from, returnTo, className = "" }: { from: StartFrom; returnTo?: string; className?: string }) {
+/* [1199 · 접기] fold(홈) — 두 단계만 보이고 나머지는 펼치기 단추로(소유자 "처음 이 순서 · 한두 개만 보이게") */
+export function StartSteps({ from, returnTo, className = "", fold = false }: { from: StartFrom; returnTo?: string; className?: string; fold?: boolean }) {
   const [authed, setAuthed] = useState(false);
+  const [open, setOpen] = useState(false);
   /* [1148] 닫기(이 탭) · 일주일간 보지 않기(이 브라우저 7일) — 저장소를 못 쓰면 이번 화면에서만 접힌다 */
   const [hidden, setHidden] = useState(false);
   useEffect(() => {
@@ -60,8 +62,8 @@ export function StartSteps({ from, returnTo, className = "" }: { from: StartFrom
           </button>
         </span>
       </div>
-      <ol className="m-0 mt-2.5 grid list-none grid-cols-2 gap-2 p-0 md:grid-cols-4">
-        {START_STEPS.map((s, i) => {
+      <ol className={`m-0 mt-2.5 grid list-none grid-cols-2 gap-2 p-0 ${fold && !open ? "" : "md:grid-cols-4"}`}>
+        {(fold && !open ? START_STEPS.slice(0, 2) : START_STEPS).map((s, i) => {
           const inner = (
             <>
               <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-primary-soft t-caption font-bold text-primary tabular-nums">
@@ -89,6 +91,19 @@ export function StartSteps({ from, returnTo, className = "" }: { from: StartFrom
           );
         })}
       </ol>
+      {fold && START_STEPS.length > 2 && (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="tap-line mt-1 flex min-h-10 w-full items-center justify-between t-sub font-bold text-text-2"
+        >
+          {open ? "접기" : `다음 ${START_STEPS.length - 2}단계 펼치기`}
+          <span aria-hidden="true" className={`text-text-3 transition-transform ${open ? "rotate-180" : ""}`}>
+            {/* dead-control-ok: 단추가 눌리는 자리 — 꺾쇠는 열림 표시 */}⌄
+          </span>
+        </button>
+      )}
     </section>
   );
 }

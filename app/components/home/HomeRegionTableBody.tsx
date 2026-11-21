@@ -18,8 +18,10 @@ const SORTS: Array<{ key: SortKey; label: string }> = [
   { key: "down", label: "하락 순" },
 ];
 
-export function HomeRegionTable({ regions, limit = 8 }: { regions: HomeRegionCard[]; limit?: number }) {
+/* [1199 · 접기] 소유자 2026-11-18 "접기도 반영해줘(한두개만 보이게) · 지역동향 등" — fold 줄만 보이고 나머지는 펼치기 단추로 */
+export function HomeRegionTable({ regions, limit = 8, fold }: { regions: HomeRegionCard[]; limit?: number; fold?: number }) {
   const [sort, setSort] = useState<SortKey>("up");
+  const [open, setOpen] = useState(false);
   const dir = sort === "up" ? 1 : -1;
   const rows = regions
     .map((r, i) => ({ r, i }))
@@ -35,6 +37,8 @@ export function HomeRegionTable({ regions, limit = 8 }: { regions: HomeRegionCar
     .map(({ r }) => r);
   if (rows.length === 0) return null;
   const max = Math.max(...rows.map((r) => Math.abs(r.changePct ?? 0)), 0.1);
+  const folded = typeof fold === "number" && rows.length > fold;
+  const shown = folded && !open ? rows.slice(0, fold) : rows;
   return (
     <>
       <div role="group" aria-label="순서" className="mb-1 flex gap-1.5">
@@ -61,7 +65,7 @@ export function HomeRegionTable({ regions, limit = 8 }: { regions: HomeRegionCar
         </tr>
       </thead>
       <tbody>
-        {rows.map((r) => {
+        {shown.map((r) => {
           const pct = r.changePct;
           const w = typeof pct === "number" ? Math.max(4, Math.round((Math.abs(pct) / max) * 100)) : 0;
           return (
@@ -86,6 +90,19 @@ export function HomeRegionTable({ regions, limit = 8 }: { regions: HomeRegionCar
         })}
       </tbody>
     </table>
+      {folded && (
+        <button
+          type="button"
+          aria-expanded={open}
+          onClick={() => setOpen((v) => !v)}
+          className="tap-line flex min-h-10 w-full items-center justify-between t-sub font-bold text-text-2"
+        >
+          {open ? "접기" : `나머지 ${rows.length - fold!}곳 펼치기`}
+          <span aria-hidden="true" className={`text-text-3 transition-transform ${open ? "rotate-180" : ""}`}>
+            {/* dead-control-ok: 단추가 눌리는 자리 — 꺾쇠는 열림 표시 */}⌄
+          </span>
+        </button>
+      )}
     </>
   );
 }

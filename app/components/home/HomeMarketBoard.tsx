@@ -22,7 +22,8 @@ function hasValues(s: RegionMarketSnapshot | null): s is RegionMarketSnapshot {
   return [s.avgSale, s.medianSale, s.jeonseRatio, s.saleChangeMonthly].some((v) => typeof v === "number" && Number.isFinite(v));
 }
 
-export async function HomeMarketBoard({ id, name }: { id: string; name: string }) {
+/* [1198 · 시안 A] compact = 지도 옆 오른쪽 열 — 숫자 칸 2열만(시세 흐름 그래프 · 다른 지역 검색칸은 지역 종합 화면과 위 지도가 맡는다) */
+export async function HomeMarketBoard({ id, name, compact = false }: { id: string; name: string; compact?: boolean }) {
   let failed = false;
   const [snapshot, indexSeries, jeonseSeries, volume] = await Promise.all([
     getRegionSnapshot(id).catch((e: unknown) => {
@@ -51,7 +52,7 @@ export async function HomeMarketBoard({ id, name }: { id: string; name: string }
   const regionHref = `/region/${encodeURIComponent(id)}`;
   const searchRegions = listRegionSiseRegions(REGION_CATALOG, REGION_ALIASES);
 
-  if (tiles.length === 0 && datasets.length === 0) {
+  if (tiles.length === 0 && (compact || datasets.length === 0)) {
     return failed ? (
       <p className="card m-0 rounded-2xl px-4 py-3.5 t-sub text-text-3">{name} 시장 숫자 불러오기 실패 · 잠시 후 다시</p>
     ) : null;
@@ -70,16 +71,18 @@ export async function HomeMarketBoard({ id, name }: { id: string; name: string }
             </Link>
           </div>
           {/* [1123 · 다른 지역도] 대표 지역 한 곳만 보이던 칸 — 검색칸(시 · 구 · 동)으로 다른 지역 종합 화면으로 바로 */}
-          <div className="mt-2 md:max-w-[360px]">
-            <RegionSearchBox regions={searchRegions} pickIds={[]} />
-          </div>
-          <div className="mt-2.5 grid grid-cols-2 gap-2 md:grid-cols-4">{tiles}</div>
+          {!compact && (
+            <div className="mt-2 md:max-w-[360px]">
+              <RegionSearchBox regions={searchRegions} pickIds={[]} />
+            </div>
+          )}
+          <div className={compact ? "mt-2.5 grid grid-cols-2 gap-2" : "mt-2.5 grid grid-cols-2 gap-2 md:grid-cols-4"}>{tiles}</div>
           <p className="m-0 mt-2.5 t-caption text-text-3 break-words">
             출처 · {overview.hasReb ? "한국부동산원(R-ONE) 월간 통계 · 국토교통부 실거래 신고" : "국토교통부 실거래 신고"} · 매물 호가 아님
           </p>
         </section>
       )}
-      {datasets.length > 0 && <RegionTrendCard heading={`${name} 시세 흐름`} datasets={datasets} className="" />}
+      {!compact && datasets.length > 0 && <RegionTrendCard heading={`${name} 시세 흐름`} datasets={datasets} className="" />}
     </>
   );
 }

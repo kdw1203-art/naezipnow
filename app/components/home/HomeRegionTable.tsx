@@ -8,7 +8,7 @@ import type { HomeRegionTable as Body } from "./HomeRegionTableBody";
    서버 렌더는 그대로(첫 그림 · 크롤 HTML 에 표가 있다). 홈 첫 번들에서 표 · 등락 표기 코드가 빠진다(예산 495KB).
    클라이언트 이동으로 처음 그릴 때만 같은 높이의 빈 판이 잠깐 보인다. */
 const Table = dynamic(() => import("./HomeRegionTableBody").then((m) => m.HomeRegionTable), {
-  loading: () => <div className="skeleton h-[420px] w-full rounded-lg" aria-hidden="true" />,
+  loading: () => <div className="skeleton h-[220px] w-full rounded-lg" aria-hidden="true" />,
 });
 
 export function HomeRegionTable(props: ComponentProps<typeof Body>) {

@@ -115,7 +115,7 @@ export function HomeAltBoard({ market }: { market: ReactNode }) {
           className={`col-start-1 row-start-1 flex min-w-0 flex-col gap-3 transition-opacity duration-300 ${tab === "mine" ? "opacity-100" : "pointer-events-none opacity-0"}`}
         >
           {/* 늘 보이는 바로 가기 — 관심 지역 · 관심 단지 · 노트가 아직 없는 사람에게도 이 판이 비지 않는다 */}
-          <nav aria-label="내 화면 바로 가기" className="card grid grid-cols-2 gap-2 rounded-2xl p-[var(--pad-card)] md:grid-cols-4">
+          <nav aria-label="내 화면 바로 가기" className="card grid grid-cols-2 gap-2 rounded-2xl p-[var(--pad-card)]">
             {MY_LINKS.map((l) => (
               <Link key={l.href} href={l.href} className="press flex min-h-14 flex-col justify-center rounded-xl border border-line bg-surface px-3 py-2 no-underline hover:border-line-strong">
                 <span className="t-body font-bold text-ink">{l.title}</span>

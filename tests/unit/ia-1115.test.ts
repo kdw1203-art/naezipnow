@@ -1676,3 +1676,57 @@ test("[1196] 통합 검색 — 단지 좌표 붙이기 · 결과 지도 · 두 �
   assert.match(c, /<span className="truncate t-caption text-text-3">\{compactComplexLine\(r\.complex\)\}<\/span>/);
   assert.doesNotMatch(c, /<ComplexShade p=\{r\.complex\} \/>/);
 });
+
+test("[1197] 홈 가운데 빈자리 — 오른쪽 열 세 줄 · 왼쪽 아래로 공개 임장노트 · 거래 많은 단지", () => {
+  const p = readFileSync("app/page.tsx", "utf8");
+  /* [1198] 시안 A 로 바뀌었다 — 둘째 줄 3칸이 각자 위에서부터 쌓인다(items-start · 열 안 flex-col) */
+  assert.match(p, /grid grid-cols-1 items-start gap-3 md:mt-4 md:grid-cols-2 lg:grid-cols-3/);
+  assert.doesNotMatch(p, /lg:row-span-3|lg:self-start/);
+});
+
+test("[1198] 홈 시안 A — 지도 첫 화면 · 말풍선은 스냅샷 값만 · 폰은 지도 덮개 링크", async () => {
+  const { homeMapMarkers, homeMapPeriod } = await import("../../lib/newui/home-map.ts");
+  const cat = [
+    { id: "gangnam", name: "강남구", lat: 37.5, lng: 127.04 },
+    { id: "bundang", name: "성남시 분당구", lat: 37.38, lng: 127.12, city: "경기" },
+    { id: "old", name: "폐지구", lat: 37, lng: 127, retired: "2026-01-01" },
+  ];
+  const snaps = new Map([
+    ["gangnam", { period: "202610", avgSale: 2_720_000_000, saleChangeMonthly: -1.84 }],
+    ["bundang", { period: "202609", avgSale: 0 }],
+  ]);
+  const m = homeMapMarkers(cat, snaps, (k) => `${(k / 1e8).toFixed(1)}억`);
+  assert.equal(m.length, 2, "폐지 지역 제외");
+  assert.equal(m[0].value, "27.2억");
+  assert.equal(m[0].deltaPct, -1.8);
+  assert.equal(m[0].href, "/region/gangnam");
+  assert.equal(m[1].value, null, "0원은 값 없음(이름 알약)");
+  assert.equal(m[1].sido, "경기");
+  assert.equal(homeMapMarkers(cat, null, String)[0].value, null);
+  assert.equal(homeMapPeriod(snaps), "202610");
+  assert.equal(homeMapPeriod(null), null);
+  const page = readFileSync("app/page.tsx", "utf8");
+  assert.match(page, /<HomeRegionMap markers=\{mapMarkers\} sido=\{mapSido\} mapHref=\{mapHref\}/);
+  assert.ok(page.indexOf("<HomeRegionMap") < page.indexOf("<HomeMarketBoard"), "지도가 첫 판");
+  assert.match(page, /<HomeTalkSection \/>/, "실시간 토론 유지");
+  const map = readFileSync("app/components/home/HomeRegionMap.tsx", "utf8");
+  assert.match(map, /from "@\/components\/map\/NaverMapLazy"/, "지도 SDK 지연 로드");
+  assert.match(map, /className="absolute inset-0 z-\[5\] md:hidden"/, "폰 = 덮개 링크");
+  assert.match(map, /지도 불러오기 실패 · 목록으로 보기/);
+});
+
+test("[1199] 홈 접기 — 처음 순서 · 지역 동향 · 거래 많은 단지는 두 개만, 나머지는 펼치기", () => {
+  const page = readFileSync("app/page.tsx", "utf8");
+  assert.match(page, /<StartSteps from="home" fold /);
+  assert.match(page, /<HomeRegionTable regions=\{tableRegions\} fold=\{2\} \/>/);
+  assert.match(page, /chunkPages\(notes, 2\)/);
+  const steps = readFileSync("app/components/nav/StartSteps.tsx", "utf8");
+  assert.match(steps, /fold && !open \? START_STEPS\.slice\(0, 2\) : START_STEPS/);
+  assert.match(steps, /aria-expanded=\{open\}/);
+  const table = readFileSync("app/components/home/HomeRegionTableBody.tsx", "utf8");
+  assert.match(table, /나머지 \$\{rows\.length - fold!\}곳 펼치기/);
+  const hub = readFileSync("app/components/home/HomeHubLinks.tsx", "utf8");
+  assert.match(hub, /const FOLD = 2;/);
+  assert.match(hub, /<details className="group">/, "닫힌 목록 — HTML 에는 전부(크롤 경로)");
+  assert.match(readFileSync("app/components/home/HomeTownBlock.tsx", "utf8"), /stacked \? news\.slice\(0, 2\) : news/);
+});

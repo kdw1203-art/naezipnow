@@ -20,13 +20,13 @@ test("① rankHomeDeals — 금액 높은 순 · 같은 금액은 최근 신고 
 
 test("② 홈 — 12칸 격자 · 왼쪽 8 = 시장 한눈에(지역 화면 숫자 칸 · 시세 흐름 카드 그대로) · 오른쪽 4 = 순위 배너 + 지역 동향 표", () => {
   const home = strip(read("app/page.tsx"));
+  /* [1198 · 시안 A] 첫 줄 12칸(지도 8 | 숫자 칸 4) · 둘째 줄 3칸 */
   assert.match(home, /className="mt-3 grid grid-cols-1 gap-3 md:mt-4 lg:grid-cols-12 lg:gap-4"/);
-  /* [1137] 시세판은 번갈아 보이는 판(HomeAltBoard)의 market 자리로 들어간다 */
-  assert.match(home, /<HomeAltBoard market=\{dealsRegion \? <HomeMarketBoard id=\{dealsRegion\.id\} name=\{dealsRegion\.name\} \/> : null\} \/>/);
-  const aside = home.slice(home.indexOf('<aside data-autotrim=""'), home.indexOf("</aside>"));
-  assert.ok(aside.indexOf("<HomeRecentDeals") >= 0 && aside.indexOf("<HomeRecentDeals") < aside.indexOf("<HomeRegionTable"), "배너 → 표");
+  assert.match(home, /className="mt-3 grid grid-cols-1 items-start gap-3 md:mt-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-4"/);
+  /* [1137] 시세판은 번갈아 보이는 판(HomeAltBoard)의 market 자리 — [1198] 숫자 칸만(compact) */
+  assert.match(home, /<HomeAltBoard market=\{dealsRegion \? <HomeMarketBoard id=\{dealsRegion\.id\} name=\{dealsRegion\.name\} compact \/> : null\} \/>/);
   let last = -1;
-  for (const k of ["<HomeMarketBoard", "<HomeRecentDeals", "<HomeRegionTable", ">공개 임장노트</h2>", "<HomeHubLinks", "<HomeTownBlock", "<HomeTalkSection"]) {
+  for (const k of ["<HomeRegionMap", "<HomeMarketBoard", "<HomeTodayLine", "<HomeRegionTable", "<HomeRecentDeals", "<HomeHubLinks", ">공개 임장노트</h2>", "<HomeTownBlock", "<HomeTalkSection"]) {
     const i = home.indexOf(k);
     assert.ok(i > last, `순서: ${k}`);
     last = i;
@@ -34,7 +34,7 @@ test("② 홈 — 12칸 격자 · 왼쪽 8 = 시장 한눈에(지역 화면 숫�
   assert.doesNotMatch(home, /<RegionPulseCards/, "회전 카드 → 표");
   const board = strip(read("app/components/home/HomeMarketBoard.tsx"));
   assert.match(board, /regionHeroTiles\(overview\)/, "지역 화면 머리와 같은 칸");
-  assert.match(board, /<RegionTrendCard heading=\{`\$\{name\} 시세 흐름`\} datasets=\{datasets\} className="" \/>/);
+  assert.match(board, /\{!compact && datasets\.length > 0 && <RegionTrendCard heading=\{`\$\{name\} 시세 흐름`\} datasets=\{datasets\} className="" \/>\}/);
   assert.match(board, /불러오기 실패 · 잠시 후 다시/);
   const hero = strip(read("app/region/[id]/RegionHero.tsx"));
   assert.match(hero, /export function regionHeroTiles\(overview: RegionOverview\): React\.ReactNode\[\]/);
@@ -43,10 +43,10 @@ test("② 홈 — 12칸 격자 · 왼쪽 8 = 시장 한눈에(지역 화면 숫�
 
 test("③ 같은 숫자 한 곳 — 오늘의 시장 띠의 대표 지역 슬라이드 없음 · 표에서 대표 지역 제외", () => {
   const home = strip(read("app/page.tsx"));
-  assert.match(home, /<HomeTodayLine\s+embedded\s+region=\{null\}/);
+  assert.match(home, /<HomeTodayLine\s+region=\{null\}/);
   assert.doesNotMatch(home, /kpiRegion/);
   assert.match(home, /const tableRegions = dealsRegion \? regions\.filter\(\(r\) => r\.id !== dealsRegion\.id\) : regions;/);
-  assert.match(home, /<HomeRegionTable regions=\{tableRegions\} \/>/);
+  assert.match(home, /<HomeRegionTable regions=\{tableRegions\} fold=\{2\} \/>/);
 });
 
 test("④ 순위 배너 · 표 — 한 줄씩 아래→위 · 멈춤 · 동작 줄이기 · 전체 순위는 닫힌 목록 · 표는 막대 + 숫자 열", () => {

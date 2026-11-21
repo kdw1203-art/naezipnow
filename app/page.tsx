@@ -24,7 +24,12 @@ import { HomeMarketBoard } from "./components/home/HomeMarketBoard";
 import { HomeAltBoard } from "./components/home/HomeAltBoard";
 import { RotatingExpertPromo } from "./components/experts/ExpertPromo";
 import { HomeRegionTable } from "./components/home/HomeRegionTable";
-import { listRegionTransactions } from "@/lib/market/store";
+import { getAllRegionSnapshots, listRegionTransactions } from "@/lib/market/store";
+import { HomeRegionMap } from "./components/home/HomeRegionMap";
+import { homeMapMarkers, homeMapPeriod } from "@/lib/newui/home-map";
+import { REGION_CATALOG } from "@/lib/region/catalog";
+import { formatKrwShort, formatYm } from "@/lib/market/format";
+import { loadWithinPrerenderBudget } from "@/lib/data/prerender-budget";
 import { complexCanonicalPathFromNames } from "@/lib/complex/complex-store";
 import { getActiveComplexes } from "@/lib/ai/popular-complexes";
 import { HomeTalkSection } from "./components/home/HomeTalkSection";
@@ -90,7 +95,7 @@ const LAB_NOTES_CAPTION = "Lab 노트 = 편집부 정리(실거래·통계) · �
 export default async function Home() {
   /* 세 조회는 서로 의존이 없다 — 한 Promise.all 로 임계 경로를 가장 느린 하나로.
      [991] 다이제스트·신선도 라벨 조회는 티커·"더 알아보기"와 함께 내려갔다. */
-  const [data, baseRateData, coverage, activeComplexes] = await Promise.all([
+  const [data, baseRateData, coverage, activeComplexes, mapSnap] = await Promise.all([
     loadNewHomeData(),
     // 기준금리: ECOS(한국은행) 연동 시 실값, 미연동 시 "—" (허위 수치 금지)
     getBaseRate(),
@@ -98,7 +103,12 @@ export default async function Home() {
     loadHomeCoverage(),
     // [1081 · #27] 거래 많은 단지(도시당 1곳 · 1일 데이터 캐시) — 실패·0행이면 빈 배열(그 줄이 빠진다)
     getActiveComplexes(12),
+    // [1198 · 시안 A] 첫 판 지도 — 전 지역 스냅샷(지역 시세 분석과 같은 표 · 프로세스 캐시). 못 읽으면 말풍선 없이 이름 알약
+    loadWithinPrerenderBudget("[home] 지역 지도", () => getAllRegionSnapshots(), 8_000),
   ]);
+  const mapSnapshots = mapSnap.ok && mapSnap.data.size > 0 ? mapSnap.data : null;
+  const mapMarkers = homeMapMarkers(REGION_CATALOG, mapSnapshots, formatKrwShort);
+  const mapPeriodYm = homeMapPeriod(mapSnapshots);
 
   // 실데이터만 사용한다 — 0건이면 빈 상태를 그린다(가짜 카드로 채우지 않는다).
   const regions = data.regions;
@@ -117,6 +127,8 @@ export default async function Home() {
   }
   /* [1114] 지역 동향 표 — 대표 지역은 위 "시장 한눈에"가 말한다(같은 숫자 두 곳 금지) */
   const tableRegions = dealsRegion ? regions.filter((r) => r.id !== dealsRegion.id) : regions;
+  const mapSido = (dealsRegion && REGION_CATALOG.find((r) => r.id === dealsRegion.id)?.city) || "서울";
+  const mapHref = dealsRegion ? `/map?region=${encodeURIComponent(dealsRegion.name)}` : "/map";
   const notes = data.notes;
   const failed = data.failed;
   /* [1007] 상대 시각 라벨의 기준 — 렌더당 한 번(ISR 300s 동안 굳는다 — 분 단위라 무방) */
@@ -192,28 +204,16 @@ export default async function Home() {
           {/* 작성 중 노트 복귀 — 우하단 팝업(소유자 지시 2026-08-16) */}
           <ResumeDraftPopup />
 
-          {/* ① [1108 · 홈 A안] 네이비 검색 띠 — 검색 한 칸 + 바로 보기 칩 + "오늘의 시장" 한 줄이 한 판.
-              예전엔 검색 묶음(흰 바탕) → 띠 배너 → 오늘의 시장(네이비 카드) 세 층이었다. 1012 실측(기준 사이트 4곳: 검색 · 지도 · 목록으로
-              시작)과 1022 "검색 부분을 심플하게"를 한 판으로 잇는다 — 돌아온 사람이 여는 화면이라 첫 줄이 검색, 둘째 줄이 오늘 숫자다.
-              내 동네 숫자 3칸은 따로 두지 않는다: 지역 동향 첫 카드와 같은 숫자가 된다(1050 중복 검토) — 숫자는 "오늘의 시장" 슬라이드
-              (관심 지역이면 그 지역 문장)가 말한다. 첫 화면에는 rise-in·data-reveal 을 쓰지 않는다. */}
-          <section className="brand-navy-card flex flex-col gap-2.5 rounded-2xl px-4 pb-2.5 pt-3.5 md:gap-3 md:px-6 md:pb-3 md:pt-4" aria-label="검색 · 오늘의 시장">
-            <svg className="brand-wm text-on-dark" width="150" height="140" viewBox="0 0 120 120" aria-hidden="true">
-              <path d="M14 46 C 38 64, 82 64, 106 46" fill="none" stroke="currentColor" strokeWidth="7" strokeLinecap="round" />
-              <circle cx="60" cy="86" r="8.5" fill="currentColor" />
-            </svg>
-            {/* [1030 · G1] 질문문 → 낱말. 예시는 검색칸 placeholder 가 든다. */}
-            {/* [1132 · 띠 높이 줄이기] 소유자 2026-11-10 "홈에서 해당 부분이 너무 큰 세로 공간" — 큰 제목 줄을 화면에서 걷고(검색칸 흐린 글자가 같은 말을 한다 · 읽기 프로그램용으로만 남김)
-                위아래 여백 · 칸 사이 간격 · 오늘의 시장 문장 줄 높이를 줄였다. */}
+          {/* ① [1198 · 시안 A — 지도 첫 화면] 소유자 2026-11-18 "홈화면 개편" → 시안 A 선택.
+              순서: 검색(흰 판 · 바로 보기 칩) → 첫 줄 = 지역 시세 지도(8) | 대표 지역 숫자 칸 + 오늘의 시장(4)
+              → 둘째 줄 3칸 = 지역 동향 | 금액 순위 · 거래 많은 단지 | 공개 임장노트 · 동네이야기 · 뉴스 → 실시간 토론(그대로).
+              시세 흐름 그래프 · 다른 지역 검색칸은 지역 종합 화면이 맡는다(지도 말풍선을 누르면 그 화면). 폰은 같은 순서 1열(DOM 순서 = 읽는 순서). */}
+          <section className="card flex flex-col gap-2 rounded-2xl px-4 pb-3 pt-3.5 md:px-6 md:pb-3.5 md:pt-4" aria-label="검색">
             <p className="sr-only">단지 · 동네 검색</p>
-            {/* [1015 · 규칙 B] "예산으로 찾기" 칩 줄과 "어디서부터 시작할까요?" 문 4개는 뺐다(소유자: "필요 없는 부분 —
-                물음표 칸으로 마우스를 올리면 보이는 정도로"). 네 입구는 ⓘ 하나(hover 미리보기·탭 시트)로 접었다.
-                [1024] 소유자(캡처): "이런건 한줄로 바꿔줘" — "처음이라면 ⓘ" 를 칩 행의 coverage 슬롯으로 넘겨 칩과 같은 줄에 둔다. */}
             <HomeHeroSearch
-              onDark
               regionChips={heroRegionChips}
               coverage={
-                <span className="inline-flex min-h-[24px] shrink-0 items-center gap-1 whitespace-nowrap t-caption text-on-dark-muted">
+                <span className="inline-flex min-h-[24px] shrink-0 items-center gap-1 whitespace-nowrap t-caption text-text-3">
                   처음이라면
                   <Explain
                     title="처음 오신 분께"
@@ -229,50 +229,39 @@ export default async function Home() {
                 </span>
               }
             />
-            {/* ② 오늘의 시장 — 한 문장씩(배너형 회전) · 띠 안에 든 모양(embedded). [1108] AI 브리핑도 슬라이드 하나 */}
-            <HomeTodayLine
-              embedded
-              region={null}
-              temp={kpiTemp}
-              saleIndex={saleIndexSeoul}
-              baseRate={baseRate}
-              baseRateAsOf={baseRateAsOf}
-              loanRate={loanRate}
-              loanRateAsOf={loanRateAsOf}
-              publicNotes={data.publicNotesTotal}
-              briefing={data.briefing ? { text: data.briefing.text, asOfLabel: data.briefing.asOfLabel } : null}
-            />
           </section>
 
-          {/* [1098 · 배너] 상단 띠 배너 자리 — 검색 띠와 본문 사이 한 줄(띠 배너가 없으면 관리자에게만 점선 자리) */}
+          {/* [1098 · 배너] 상단 띠 배너 자리(없으면 관리자에게만 점선 자리) · [1124] 비회원 네 단계 */}
           <TopBanner placement="home_feed" plan={null} className="mt-3 md:mt-4" />
-          {/* [1124 · 처음 온 사람의 길] 비회원에게만 — 가입 → 임장노트 → 지도 → AI 분석 네 단계 + 전문가 등록 */}
-          <StartSteps from="home" className="mt-3 md:mt-4" />
+          <StartSteps from="home" fold className="mt-3 md:mt-4" />
 
-          {/* [1131 · 홈 자리 비우기] 소유자 2026-11-10 "이런 부분은 마이페이지에서 보거나 검색창에 음영처리로 · 홈 화면에서는 자리를 차지하지 않도록" —
-              로그인 묶음(출석 · 포인트 · 내 관심단지 브리핑 · 최근 본 단지 · 내 관심 지역)을 홈에서 걷었다. 출석 · 포인트 · 최근 본 단지는 마이에 이미 있고,
-              관심단지 브리핑 · 관심 지역은 마이로 옮겼다(app/my/MyHomeBrief). 최근 본 단지는 위 검색칸의 흐린 글자(placeholder)와 펼침 목록에서. */}
-
-          {/* [1114 · 홈 벤토] 소유자 2026-11-09 시안 A 선택 — 지역 화면 형식(숫자 칸 · 시세 흐름 그래프 · 표)을 홈에 그대로.
-              lg 12칸: 왼쪽 8 = 대표 지역 시장 한눈에(숫자 칸) + 시세 흐름(지표 탭 그래프) · 오른쪽 4 = 실거래 금액 순위 배너 + 지역 동향 표
-              · 아래 = 공개 임장노트(7) | 거래 많은 단지(5) · 동네이야기 · 뉴스룸(전폭). 폰은 같은 순서 1열(DOM 순서 = 읽는 순서). */}
+          {/* ② 첫 줄 — 지도(8) | 숫자 칸 · 오늘의 시장(4) */}
           <div className="mt-3 grid grid-cols-1 gap-3 md:mt-4 lg:grid-cols-12 lg:gap-4">
-            <div data-autotrim="" className="flex min-w-0 flex-col gap-3 lg:col-span-8 lg:gap-4">
-              {/* [1137 · 홈 개편] 시세판(B) ↔ 내 화면(C)을 같은 자리에서 번갈아 — 비회원은 시세판만(서버 HTML 그대로). 로그인하면 탭 둘 + 자동 넘김 */}
-              <HomeAltBoard market={dealsRegion ? <HomeMarketBoard id={dealsRegion.id} name={dealsRegion.name} /> : null} />
+            <div className="min-w-0 lg:col-span-8">
+              <HomeRegionMap markers={mapMarkers} sido={mapSido} mapHref={mapHref} periodLabel={mapPeriodYm ? formatYm(mapPeriodYm) : null} />
             </div>
-
             <aside data-autotrim="" className="flex min-w-0 flex-col gap-3 lg:col-span-4 lg:gap-4">
-              {/* ③ [1114] 실거래 금액 순위 — 옅은 파랑 판이 아래에서 위로 넘어가는 배너(소유자 지시) */}
-              {dealsRegion && (
-                <HomeRecentDeals
-                  regionName={dealsRegion.name}
-                  rows={recentDeals}
-                  failed={recentDealsFailed}
-                  mapHref={`/map?region=${encodeURIComponent(dealsRegion.name)}`}
-                />
-              )}
-              {/* ⑤ 지역 동향 — [1114] 표 */}
+              {/* [1137] 시세판 ↔ 내 화면(로그인) — 시세판은 숫자 칸 2열(compact) */}
+              <HomeAltBoard market={dealsRegion ? <HomeMarketBoard id={dealsRegion.id} name={dealsRegion.name} compact /> : null} />
+              {/* 오늘의 시장 — 한 문장씩 넘기는 네이비 판(띠 밖 · 워터마크 포함) */}
+              <HomeTodayLine
+                region={null}
+                temp={kpiTemp}
+                saleIndex={saleIndexSeoul}
+                baseRate={baseRate}
+                baseRateAsOf={baseRateAsOf}
+                loanRate={loanRate}
+                loanRateAsOf={loanRateAsOf}
+                publicNotes={data.publicNotesTotal}
+                briefing={data.briefing ? { text: data.briefing.text, asOfLabel: data.briefing.asOfLabel } : null}
+              />
+            </aside>
+          </div>
+
+          {/* ③ 둘째 줄 3칸 — 열마다 위에서부터 쌓는다(가운데 빈 칸 없음 · 1197) */}
+          <div className="mt-3 grid grid-cols-1 items-start gap-3 md:mt-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
+            <div data-autotrim="" className="flex min-w-0 flex-col gap-3 lg:gap-4">
+              {/* 지역 동향 — [1114] 표 */}
               <section className="card flex flex-col gap-2 rounded-2xl p-[var(--pad-card)]">
                 <div className="flex items-baseline justify-between gap-2">
                   <h2 className="t-section text-ink">지역 동향</h2>
@@ -300,33 +289,45 @@ export default async function Home() {
                   )
                 ) : (
                   <>
-                    {/* [1114 · 홈 벤토] 회전 카드(4장씩) → 표 하나 — 등락 큰 순 · 이름 아래 막대. 대표 지역(위 시장 한눈에)은 뺀다 */}
-                    <HomeRegionTable regions={tableRegions} />
-                    {/* [1002] 스냅샷 실패 → 월 집계 폴백 카드. 값은 실측이지만 시점이
-                        오래됐다는 사실을 카드 아래 한 줄로 적는다(카드 meta 의 "마지막 집계"
-                        와 같은 말). 실패를 "준비 중"으로도, 오래된 값을 "지금"으로도 위장하지 않는다. */}
+                    {/* 대표 지역(위 숫자 칸)은 뺀다 */}
+                    <HomeRegionTable regions={tableRegions} fold={2} />
+                    {/* [1002] 스냅샷 실패 → 월 집계 폴백 — 시점이 오래됐다는 사실을 한 줄로 */}
                     {data.regionsStale && (
                       <p className="m-0 t-caption text-text-3">
                         실시간 집계 불러오기 실패 · 마지막 월 집계 표시
                       </p>
                     )}
-                    {/* [1113 · 중복 제거] 서울 25개 구 막대(최고 · 최저 · 펼치면 구별)는 뺐다 — 아래 실시간 토론의 지역 순위(지수 전월비 상승 · 하락)가 같은 값이다 */}
-                    {/* [1036 · 밀도] 카드마다 붙던 범례를 섹션 아래 한 번, 접어서 */}
-                    {/* [1052] 거래 건수 원천은 카드마다 다르다 — 카드 끝에 원천을 적으니 여기서 한쪽으로 단정하지 않는다 */}
                     <Fineprint label="기준 · 출처">
                       가격 = 평균 매매가(한국부동산원) 또는 실거래 평균(국토교통부 신고 월 집계 · 줄 아래 표기) · 전월 대비 = 매매가격지수 전월 대비 · 막대 = 등락 크기
                     </Fineprint>
                   </>
                 )}
               </section>
-              {/* [1144] 전문가 홍보 한 칸 — 날마다 차례가 돈다(없으면 안 그린다) */}
+              {/* [1144] 전문가 홍보 한 칸 · 광고(데스크톱) */}
               <RotatingExpertPromo slot={1} compact />
               <AdZone placement="home_feed" seed={0} plan={null} spot="side" className="hidden lg:block" />
               <AdSenseUnit />
-            </aside>
+            </div>
 
-              {/* ④ 공개 임장노트 — 증거. 누가 쓴 노트인지(Lab/이웃)를 숨기지 않는다. */}
-              <section className="card flex flex-col gap-2 rounded-2xl px-4 py-4 lg:col-span-7">
+            <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
+              {/* [1114] 실거래 금액 순위 — 아래에서 위로 넘어가는 배너 */}
+              {dealsRegion && (
+                <HomeRecentDeals
+                  regionName={dealsRegion.name}
+                  rows={recentDeals}
+                  failed={recentDealsFailed}
+                  mapHref={mapHref}
+                />
+              )}
+              {/* [1081 · #27] 거래 많은 단지 — 단지 상세 직행 링크(크롤 경로) */}
+              <HomeHubLinks regions={regions} complexes={activeComplexes} />
+              {/* [1101] 폰 광고 자리 1곳(데스크톱은 첫 칸) */}
+              <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
+            </div>
+
+            <div className="flex min-w-0 flex-col gap-3 md:col-span-2 lg:col-span-1 lg:gap-4">
+              {/* ④ 공개 임장노트 — 누가 쓴 노트인지(Lab/이웃)를 숨기지 않는다 */}
+              <section className="card flex flex-col gap-2 rounded-2xl px-4 py-4">
                 <div className="flex items-center justify-between gap-2">
                   <h2 className="t-section text-ink">공개 임장노트</h2>
                   <span className="flex items-center gap-2">
@@ -372,7 +373,7 @@ export default async function Home() {
                   /* [1022] 3편씩 쪽으로 나눠 아래→위로 넘긴다(공개 임장노트도 지역 동향과 같은 회전판) */
                   <RollingPanel
                     label="공개 임장노트 쪽"
-                    pages={chunkPages(notes, 3).map((page, pi) => (
+                    pages={chunkPages(notes, 2).map((page, pi) => (
                       <div key={pi} className="flex flex-col">
                         {page.map((n, i, arr) => (
                     <Link
@@ -411,17 +412,8 @@ export default async function Home() {
                 )}
                 {allLabNotes && <Fineprint label="표시 기준">{LAB_NOTES_CAPTION}</Fineprint>}
               </section>
-
-            <div className="flex min-w-0 flex-col gap-3 lg:col-span-5">
-              {/* [1081 · #27] 거래 많은 단지 — 단지 상세로 가는 직행 링크(크롤 경로) */}
-              <HomeHubLinks regions={regions} complexes={activeComplexes} />
-              {/* [1015 · 규칙 G → 1101] 폰 광고 자리 1곳(데스크톱은 오른쪽 열) */}
-              <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
-            </div>
-
-            {/* ⑦ [1007 · P2] 동네이야기 · 뉴스룸 — 전폭 */}
-            <div className="min-w-0 lg:col-span-12">
-              <HomeTownBlock stories={data.stories} news={data.news} failed={failed.town} now={renderedAt} />
+              {/* ⑦ [1007] 동네이야기 · 뉴스룸 — 좁은 칸이라 위아래(stacked) */}
+              <HomeTownBlock stories={data.stories} news={data.news} failed={failed.town} now={renderedAt} stacked />
             </div>
           </div>
           {/* [1051] 홈 맨 아래 — 실시간 토론(지역 · 단지 한 줄). 전폭. 판은 화면 가까이 오면 받는다 */}
