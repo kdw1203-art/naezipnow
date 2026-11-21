@@ -84,12 +84,17 @@ export async function syncOnbidSeoul(
   if (rows.length === 0) {
     return { ok: true, inserted: 0, total };
   }
+  /* [1205] 쪽 사이에 같은 물건이 다시 나오면(목록이 조회 중에 밀림) 한 번의 upsert 에 같은 키가 둘 — Postgres 가
+     "ON CONFLICT DO UPDATE command cannot affect row a second time" 로 그 시도 전체를 버린다. 키당 마지막 줄만 남긴다. */
+  const byKey = new Map<string, Record<string, unknown>>();
+  for (const r of rows) byKey.set(String(r.external_key), r);
+  const unique = [...byKey.values()];
   const { error } = await sb
     .from("onbid_auctions")
-    .upsert(rows, { onConflict: "external_key" });
+    .upsert(unique, { onConflict: "external_key" });
   if (error) {
     logger.error("[onbid sync] upsert failed", error);
     return { ok: false, reason: error.message };
   }
-  return { ok: true, inserted: rows.length, total };
+  return { ok: true, inserted: unique.length, total };
 }

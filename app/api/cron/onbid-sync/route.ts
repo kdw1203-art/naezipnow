@@ -58,7 +58,9 @@ export async function GET(req: Request) {
     }
   }
   const sido = url.searchParams.get("sido")?.trim() || undefined;
-  const maxPages = Number(url.searchParams.get("pages") ?? "5") || 5;
+  /* [1205] 5 → 10쪽(시도당 최대 1,000건) — 6개 시도가 매일 정확히 500건(상한)이라 나머지가 안 들어왔다(release-1201 #52).
+     시간은 아래에서 시도를 셋씩 동시에 돌려 maxDuration(120s) 안에 둔다. */
+  const maxPages = Number(url.searchParams.get("pages") ?? "10") || 10;
   /* [941] 수도권 확대 — sido 를 명시하지 않으면 서울·경기·인천을 순서대로 돈다.
      지도 공매 배지(경기·인천 좌표 카탈로그)와 매칭 코드는 937부터 준비돼 있었고
      데이터만 서울뿐이었다. 시도당 최대 pages 페이지 × 100건, 순차 실행이라
@@ -73,7 +75,17 @@ export async function GET(req: Request) {
     const parts: string[] = [];
     let anyOk = false;
     let allSkipped = true;
-    for (const s of sidos) {
+    /* [1205] 시도를 셋씩 동시에 — 순서는 결과 줄(parts)에서 시도 목록 순서 그대로 지킨다 */
+    const results = new Array<string>(sidos.length);
+    let cursor = 0;
+    const worker = async () => {
+      while (cursor < sidos.length) {
+        const idx = cursor++;
+        const s = sidos[idx];
+        results[idx] = await syncOne(s);
+      }
+    };
+    const syncOne = async (s: string): Promise<string> => {
       try {
         const r = await syncOnbidSeoul({ sido: s, maxPages });
         inserted += r.inserted ?? 0;
@@ -82,12 +94,14 @@ export async function GET(req: Request) {
         /* [1201] 상한에 걸린 시도는 "받은/전체" 로 — 6개 시도가 매일 정확히 500(5쪽×100)이라 잘린 양이 안 보였다 */
         const got = r.inserted ?? 0;
         const capped = r.ok && typeof r.total === "number" && r.total > got;
-        parts.push(`${s} ${r.ok ? (capped ? `${got}/${r.total}` : got) : `실패(${r.reason ?? "?"})`}`);
+        return `${s} ${r.ok ? (capped ? `${got}/${r.total}` : got) : `실패(${r.reason ?? "?"})`}`;
       } catch (e) {
         allSkipped = false;
-        parts.push(`${s} 실패(${ingestErrorMessage(e, "동기화 예외")})`);
+        return `${s} 실패(${ingestErrorMessage(e, "동기화 예외")})`;
       }
-    }
+    };
+    await Promise.all(Array.from({ length: Math.min(3, sidos.length) }, () => worker()));
+    parts.push(...results);
     const result = {
       ok: anyOk,
       skipped: allSkipped || undefined,

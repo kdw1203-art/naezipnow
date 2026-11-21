@@ -286,8 +286,30 @@ jobs:
           printf '%s' "$ONBID_KEY" | npx vercel env add ONBID_SERVICE_KEY production --force --token=${{ secrets.VERCEL_TOKEN }} || true
       - name: Pull Vercel environment
         run: npx vercel pull --yes --environment=${{ github.ref_name == 'main' && 'production' || 'preview' }} --token=${{ secrets.VERCEL_TOKEN }}
+      # [1205] vercel pull 은 Sensitive 로 저장된 env 를 빈 값으로 내려준다 — 그래서 이 빌드는 서비스 키 없이 돌았고,
+      # 미리 그리는 화면(지도 · 청약 · 단지 목록 등)이 "서비스 클라이언트 미구성" 빈 데이터로 구워져 첫 재검증까지 남았다
+      # (운영 실측 2026-11-21: 728번 빌드 로그 · /apply "불러오기 실패"). GitHub Secret 의 같은 값을 빌드 직전에 넣는다.
+      # 형식이 서비스 키가 아니면 넣지 않는다(위 동기화 스텝과 같은 규칙). 이 파일은 .vercel/output 에 실리지 않는다.
       - name: Build
-        run: npx vercel build ${{ github.ref_name == 'main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          SRK: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          TARGET: ${{ github.ref_name == 'main' && 'production' || 'preview' }}
+        shell: bash
+        run: |
+          F=".vercel/.env.${TARGET}.local"
+          case "$SRK" in
+            sb_secret_*|eyJ*)
+              if [ -f "$F" ]; then
+                grep -v '^SUPABASE_SERVICE_ROLE_KEY=' "$F" > "$F.tmp" || true
+                printf 'SUPABASE_SERVICE_ROLE_KEY="%s"\n' "$SRK" >> "$F.tmp"
+                mv "$F.tmp" "$F"
+                echo "서비스 키를 빌드 env 에 넣었습니다"
+              fi
+              export SUPABASE_SERVICE_ROLE_KEY="$SRK"
+              ;;
+            *) echo "::warning::SUPABASE_SERVICE_ROLE_KEY 형식이 서비스 키가 아니어서 빌드에 넣지 않았습니다" ;;
+          esac
+          npx vercel build ${{ github.ref_name == 'main' && '--prod' || '' }} --token=${{ secrets.VERCEL_TOKEN }}
       - name: Deploy
         shell: bash
         run: |
