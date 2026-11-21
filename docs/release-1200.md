@@ -8,4 +8,6 @@
 - check-source-views: SUPABASE_SERVICE_ROLE_KEY 가 공개 키(sb_publishable_…)나 anon JWT 면 처음부터 실패
   (anon 권한으로 조회가 통과해 "확인됨"처럼 보이던 구멍).
 
-소유자 할 일: GitHub Secret SUPABASE_SERVICE_ROLE_KEY 에 새 프로젝트의 sb_secret_… 키.
+소유자 할 일: (완료) GitHub Secret SUPABASE_SERVICE_ROLE_KEY 교체.
+
+추가: check-links 시작 목록에서 /notes/mock-1 제거 — uuid 가 아닌 노트 주소는 의도적으로 404(lib/inspection/note-cache.ts).
