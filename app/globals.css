@@ -8948,3 +8948,14 @@ body {
     margin-bottom: 16px;
   }
 }
+
+/* [1206] 소유자 "상하좌우 정렬" — 터치 기기에서 a.chip · button.chip 은 최소 40px([989])인데 display 가 inline 이라
+   글자가 칩 위쪽에 붙었다(홈 검색 칩 캡처). 글자를 세로 가운데로. :where() 로 0 특이도 — hidden · flex 같은
+   유틸리티가 그대로 이긴다. 말줄임(truncate) 칩은 블록 말줄임이 깨지므로 뺀다(그런 칩은 안쪽 span 으로 말줄임). */
+@media (pointer: coarse) {
+  :where(a.chip:not(.truncate), button.chip:not(.truncate), a.chip-active:not(.truncate), button.chip-active:not(.truncate)) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
