@@ -86,6 +86,33 @@ if (!url) {
   process.exit(0);
 }
 
+/* [1200] 서비스 키 자리에 공개 키(sb_publishable_ · anon JWT)가 들어가 있으면 조회는 anon 권한으로
+   통과해 버린다 — 그런데 앱(lib/supabase/flags.ts)은 그 값을 "서비스 키 없음"으로 보고, 동기화 단계는
+   운영 서비스 키를 그 값으로 덮어쓴다. 2026-11-21 실제로 그랬다. 형식부터 본다. */
+function jwtRole(k) {
+  try {
+    const part = k.split(".")[1];
+    return JSON.parse(Buffer.from(part.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8")).role ?? null;
+  } catch {
+    return null;
+  }
+}
+if (serviceKey) {
+  const ok = serviceKey.startsWith("sb_secret_") || (serviceKey.startsWith("eyJ") && jwtRole(serviceKey) === "service_role");
+  if (!ok) {
+    const kind = serviceKey.startsWith("sb_publishable_")
+      ? "공개 키(sb_publishable_…)"
+      : serviceKey.startsWith("eyJ")
+        ? `JWT(role=${jwtRole(serviceKey) ?? "?"})`
+        : "알 수 없는 형식";
+    console.error(
+      `${TAG} FAIL — SUPABASE_SERVICE_ROLE_KEY 가 서비스 키가 아닙니다: ${kind}.\n` +
+        `  Supabase → Settings → API Keys → Secret keys 의 sb_secret_… (또는 Legacy 의 service_role) 를 넣으세요.`,
+    );
+    process.exit(1);
+  }
+}
+
 const keys = [];
 if (anonKey) keys.push({ role: "anon", key: anonKey });
 if (serviceKey) keys.push({ role: "service", key: serviceKey });
