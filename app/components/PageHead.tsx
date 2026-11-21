@@ -83,7 +83,9 @@ export function PageHead({
           </div>
         </div>
         {actions && (
-          <div className="flex flex-wrap items-center justify-end gap-2">{actions}</div>
+          /* [1201] 폰에서 줄이 바뀌면 이 칸이 내용 폭으로 줄어든다 — 안의 w-full 검색칸(지역 시세 분석)이 20px 로 접혔다.
+             폰에서는 한 줄을 다 쓰게 한다(버튼은 justify-end 로 그대로 오른쪽). */
+          <div className="flex flex-wrap items-center justify-end gap-2 max-md:w-full">{actions}</div>
         )}
       </div>
       {facts && (

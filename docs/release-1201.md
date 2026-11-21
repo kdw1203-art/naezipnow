@@ -1,0 +1,66 @@
+# release-1201 · 운영 경보 · 홈 빈 공간 · 개선 50가지 검토
+
+소유자 요청(2026-11-21): "미구현·오류 수정 · 홈 빈 공간 등 오류 개선 · 추가 개선사항 50가지 검토해서 업데이트".
+검토 방법: 운영(naezipnow.com) 35개 화면 × PC·폰 자동 점검(오류·NaN/undefined·가로 넘침·깨진 이미지·h1·메타·탭 크기),
+링크 78개 + 지역·동네·실거래 표본 실조회, Supabase 크론 7일 이력, 보안·성능 어드바이저.
+
+## A. 이번에 고친 것 (17)
+1. 홈 왼쪽 칸·폰 피드의 큰 빈 공간 — 애드센스 칸(336×280)이 안 채워져도(광고 차단기·무광고) 자리를 계속 잡았다. 8초 안에 채워지지 않으면 칸째 접는다(`lib/ads/push-when-visible.ts` watchAdFill).
+2. 같은 처리를 본문 광고 칸(AdZoneUnit)에도 — 하우스 카드만 남는다.
+3. 단독 광고 칸의 "광고" 라벨은 채워졌을 때만 보인다(빈 상자 위 라벨 제거).
+4. 어느 칸이든 `data-ad-status="unfilled"` 인 `<ins>` 는 자리를 차지하지 않는다(globals.css).
+5. 임장 모임(/town/groups) 머리(h1)가 통째로 빠져 있던 것 — 카테고리 목록에 없는 주소라 TownHero 가 아무것도 안 그렸다. PageHead 로 직접.
+6. 폰에서 지역 시세 분석(/analysis/cycle·timing) 지역 검색칸이 20px 로 접혀 못 쓰던 것 — PageHead 버튼 칸이 폰에서 한 줄을 다 쓰게(같은 부품을 쓰는 화면 전체에 적용).
+7. 청약 센터(/apply) "청약 공고 불러오기 실패" — 실시간 조회가 막히면 적재해 둔 최근 경쟁률(몇 시 기준인지 표시)로 대체.
+8. `/guide` → `/guides` 리다이렉트(운영 404).
+9. `/data` → `/data-sources` 리다이렉트(운영 404).
+10. `/region` → `/analysis/timing` 리다이렉트(운영 404).
+11. 요금제 화면 검색 설명문 — 38자 → 실제 기능(관심단지 한도·AI 횟수·광고 제거·CSV)만 적은 문장.
+12. 고객센터 화면 검색 설명문 — 41자 → 구체화.
+13. 운영 경보 `ops.cron_job` — market-agg-smoketest 가 11-19부터 매일 2분에서 끊김. 서버 기본 제한(2분)을 함수 안 SET 이 못 늘린다 → 크론 명령에서 `set local statement_timeout='900s'`(DB 적용 · 수동 실행 2분 33초 성공).
+14. 13번 마이그레이션 파일(`20261121103000_market_agg_cron_statement_timeout.sql`).
+15. `tx_band_landing_source` · `tx_band_complex_source` 뷰 SECURITY DEFINER → security_invoker(어드바이저 ERROR · 결과 동일 확인: anon 1,819행 · 86,229행).
+16. `record_experiment_exposure` search_path 고정(어드바이저 WARN).
+17. 자주 조인하는 외래키 인덱스 7개(임장노트·구독·결제·채팅·댓글·사진·전문가).
+
+## B. 점검했고 이상 없음 (9)
+18. 내부 링크 78개 + 지역·동네·실거래·분석 표본 — 404 없음.
+19. 35개 화면 × PC·폰 — 스크립트 오류·NaN/undefined·가로 넘침·깨진 이미지 0.
+20. h1 — 임장 모임 외 전 화면 1개씩.
+21. 11px 미만 글자 — 등락 화살표(▲▼)뿐(의도).
+22. 푸터 — 정상(앞선 빈 화면은 캡처 도구 착시).
+23. 다른 크론 10종 — 7일 실패 0.
+24. 가입 화면 이름표 없는 입력칸 — 봇 덫(aria-hidden · 화면 밖), 정상.
+25. 통합 검색 noindex — 의도(쿼리마다 다른 결과).
+26. 지도 SDK 실패 시 목록 대체 — 홈·검색·동네·임장노트 작성 모두 정상 동작.
+
+## C. 소유자 할 일 — 키·설정 (9)
+27. KOSIS 인증키 무효(err 11) — kosis.kr/openapi 에서 재발급 → Vercel `KOSIS_API_KEY`.
+28. 청약홈 키 401 "등록되지 않은 인증키" — 공공데이터포털에서 청약홈 API 활용신청·키 확인. 그전까지 7번 대체 화면.
+29. K-apt 관리비(AptCmnuseManageCostServiceV3) 403 — 공공데이터포털 활용신청.
+30. `NAVER_SEARCH_CLIENT_ID` 미설정(동네 화제 수집).
+31. `KRIC_SERVICE_KEY` 미설정(도시철도).
+32. 관리자 2단계 인증 등록(운영 콘솔 상단 경고).
+33. Supabase Auth "유출 비밀번호 차단" 켜기(대시보드 Auth → Password security).
+34. Vercel Preview 환경에 필수 env(AUTH_SECRET·Supabase 주소/키·CRON_SECRET) — 지금은 PR 미리보기가 전부 실패.
+35. Supabase Auth 연결 수 — 절대값 10 → 비율 방식(인스턴스 키울 때 대비).
+
+## D. 제안 — 결정 필요 · 다음 회차 (15)
+36. `map_price_point_source` · `complex_sitemap_source` 도 security_invoker 로 — 아래 MV 가 service 전용이라 anon 조회가 끊긴다. 앱이 서비스 키로만 읽는지 확인 후.
+37. `get_news_collector_script()` — 비밀값 없이 anon 이 실행 가능. 외부 뉴스 수집기가 anon 키로 받아 가는지 확인 후 회수.
+38. `get_automation_script` · `ingest_daily_news` anon 실행 — 비밀값 검사 있음 · 08-05 결정대로 보류(수집기 확인 후 회수).
+39. market-agg 소요 시간 1주 새 40초 → 150초 — `complex_tx_stats_base` 동시 갱신이 커짐. 증분 갱신이나 비동시 갱신 검토.
+40. `pg_net` 확장이 public 스키마에 — extensions 로 이전.
+41. 사용 안 하는 인덱스 34개 정리.
+42. ops 스키마 롤백 임시 표 3개(기본키 없음) 삭제.
+43. RLS 정책 없는 표 172개 — 서버(service) 전용 설계라 의도. 표마다 주석으로 명시.
+44. 홈 "실시간 토론" PC 오른쪽 칸 — 글이 적으면 아래가 빈다. 높이를 내용에 맞추기.
+45. 애드센스가 자주 안 채워진다 — 단독 칸(AdSenseUnit)에도 하우스 카드 대체 넣기.
+46. GitHub Actions Node 20 지원 종료 경고 — actions 버전 올리기(열린 dependabot PR #152·153·154·305).
+47. 열린 dependabot PR 10개 — next 16 · eslint 10 · tailwind-merge 3 은 메이저라 따로 검증.
+48. `ops.cron_job` 경보는 오늘 밤(23:00 UTC) 정기 실행 성공 뒤 자동 해소 — 내일 운영 콘솔 확인.
+49. 배포 워크플로 마지막 빌드의 "서비스 클라이언트 미구성" — `vercel pull` 이 Sensitive env 를 못 받아 빌드 때 지도 등이 빈 데이터로 미리 그려진다. 빌드 스텝에 서비스 키 주입 검토.
+50. 지역 시세 분석 `/analysis/cycle` 은 `/analysis/timing` 과 같은 화면(정식 주소 timing) — 메뉴 링크를 한쪽으로 통일.
+
+검증: tsc · 단위 테스트 2,696 통과 · 배포 린트(시크릿·마이그레이션 권한·아이콘·대비·링크·장식 컨트롤) 통과 · 빌드.
+1200(배포 막힘 정리) 이후.

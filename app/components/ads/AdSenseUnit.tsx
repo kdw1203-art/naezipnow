@@ -7,7 +7,7 @@ import { getAdSenseClient, isAdsExcludedPath } from "@/lib/ads/adsense-policy";
 import { getSessionLite } from "@/lib/client/session-lite";
 import { adSenseAdFree } from "@/lib/ads/ad-free";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
-import { whenBoxVisible } from "@/lib/ads/push-when-visible";
+import { watchAdFill, whenBoxVisible } from "@/lib/ads/push-when-visible";
 
 /**
  * AdSense 수동 디스플레이 유닛 — **데스크탑 전용** (소유자 요청 2026-08-03:
@@ -82,13 +82,21 @@ export function AdSenseUnit({ className }: { className?: string }) {
     }
   }, [show, boxVisible]);
 
-  if (!show) return null;
+  /* [1201] 안 채워지면(차단·무광고) 칸째 접는다 — 라벨만 떠 있는 280px 빈 상자를 남기지 않는다 */
+  const [dead, setDead] = useState(false);
+  useEffect(() => {
+    if (!show || !boxVisible) return;
+    return watchAdFill(boxRef.current, () => setDead(true));
+  }, [show, boxVisible]);
+
+  if (!show || dead) return null;
 
   return (
     /* hidden lg:block — 모바일·태블릿 제외는 CSS 로도 이중 보장.
        라벨을 붙여 광고임을 명시한다(콘텐츠로 위장 금지). */
-    <div ref={boxRef} className={`hidden lg:block ${className ?? ""}`}>
-      <div className="mb-1 t-caption font-semibold tracking-wide text-text-3">광고</div>
+    <div ref={boxRef} className={`ad-zone hidden lg:block ${className ?? ""}`}>
+      {/* [1201] 라벨은 채워졌을 때만(globals.css .ad-zone-label) */}
+      <div className="ad-zone-label mb-1">광고</div>
       {boxVisible && (
       <ins
         /* [1173] 고정 크기 336×280(globals.css .rect-ins) — 형식을 맡기면 넓은 글자 목록형이 들어왔다 */

@@ -28,7 +28,7 @@ import { postHref } from "@/lib/town/post-href";
 export const metadata = buildPageMetadata({
   title: "고객센터",
   description:
-    "공지사항, 자주 묻는 질문, 오류 신고와 제휴 문의를 한곳에서 처리합니다.",
+    "내집나우 고객센터 — 공지사항, 자주 묻는 질문(가입·결제·임장노트·실거래 데이터), 오류 신고와 제휴·광고 문의를 한곳에서 접수하고 답변을 확인합니다.",
   path: "/support",
 });
 
