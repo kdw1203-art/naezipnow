@@ -222,11 +222,17 @@ jobs:
       # 이 워크플로의 cancel-in-progress 가 rm 과 add **사이**에서 실행을 끊었을 때
       # 운영 필수 변수가 지워진 채 남고, 그 뒤 모든 배포가 깨진다. --force 는
       # 삭제 공백 자체가 없다 (Vercel CLI 58 에서 지원 확인, 2026-08-03).
+      # [1200] 2026-11-10 새 프로젝트로 옮긴 뒤에도 여기엔 옛 프로젝트(pbhiskvwpwwhtkmnhkbm) 값이
+      # 박혀 있었다 — 배포가 이 단계까지 가면 운영 주소를 옛 프로젝트로 되돌려 사이트가 깨진다.
+      # 값은 이제 .env.production 한 곳에서만 읽는다(lib/supabase/env.ts 폴백과 같은 값).
       - name: Sync public Supabase env
         run: |
+          SB_URL=$(grep -E '^NEXT_PUBLIC_SUPABASE_URL=' .env.production | cut -d= -f2- | tr -d '\r')
+          SB_KEY=$(grep -E '^NEXT_PUBLIC_SUPABASE_ANON_KEY=' .env.production | cut -d= -f2- | tr -d '\r')
+          if [ -z "$SB_URL" ] || [ -z "$SB_KEY" ]; then echo "::error::.env.production 에 공개 Supabase 값이 없습니다"; exit 1; fi
           for ENVTARGET in production preview; do
-            printf 'https://pbhiskvwpwwhtkmnhkbm.supabase.co' | npx vercel env add NEXT_PUBLIC_SUPABASE_URL $ENVTARGET --force --token=${{ secrets.VERCEL_TOKEN }} || true
-            printf 'sb_publishable_UjkQXcYY6f9oBbjjfZvFAA_jYpui-OX' | npx vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY $ENVTARGET --force --token=${{ secrets.VERCEL_TOKEN }} || true
+            printf '%s' "$SB_URL" | npx vercel env add NEXT_PUBLIC_SUPABASE_URL $ENVTARGET --force --token=${{ secrets.VERCEL_TOKEN }} || true
+            printf '%s' "$SB_KEY" | npx vercel env add NEXT_PUBLIC_SUPABASE_ANON_KEY $ENVTARGET --force --token=${{ secrets.VERCEL_TOKEN }} || true
           done
       # Service Role 키 동기화 — GitHub Secret(SUPABASE_SERVICE_ROLE_KEY)이
       # 설정돼 있을 때만 Vercel env의 마스킹 값("[SENSITIVE]")을 실값으로 교체
@@ -239,6 +245,11 @@ jobs:
           SRK: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           if [ -z "$SRK" ]; then echo "SUPABASE_SERVICE_ROLE_KEY 미설정 — 건너뜀"; exit 0; fi
+          # [1200] 공개 키(sb_publishable_ · anon)가 잘못 들어가 있으면 운영 서비스 키를 덮어쓰지 않는다.
+          case "$SRK" in
+            sb_secret_*|eyJ*) ;;
+            *) echo "::error::SUPABASE_SERVICE_ROLE_KEY 가 서비스(비밀) 키 형식이 아닙니다(sb_secret_… 또는 service_role JWT) — 동기화하지 않음"; exit 1 ;;
+          esac
           printf '%s' "$SRK" | npx vercel env add SUPABASE_SERVICE_ROLE_KEY production --force --token=${{ secrets.VERCEL_TOKEN }} || true
       # CRON_SECRET 동기화 — ETL 스케줄러(etl.yml)가 같은 값으로 크론 엔드포인트 호출
       - name: Sync cron secret env
