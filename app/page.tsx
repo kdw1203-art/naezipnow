@@ -6,7 +6,7 @@ import { TabBar } from "./components/TabBar";
 import { Fineprint } from "./components/Fineprint";
 /* [1103 · 번들] 이어서 쓰기 팝업은 지연 로더로(초안 파서 · 상대 시각이 홈 첫 로드 번들에서 빠진다 — 서버 HTML 은 원래 비어 있다) */
 import { ResumeDraftPopupLazy as ResumeDraftPopup } from "./components/home/ResumeDraftPopupLazy";
-import { EmptyState, ErrorState } from "./components/ui/EmptyState";
+import { EmptyState } from "./components/ui/EmptyState";
 import { AdZone } from "./components/ads/AdZone";
 import { AdSenseUnit } from "./components/ads/AdSenseUnit";
 import { Footer } from "./components/Footer";
@@ -236,11 +236,21 @@ export default async function Home() {
               비회원 네 단계(StartSteps)는 공개 노트 · 뉴스 상세 끝에서 그대로 보인다. */}
 
           {/* ② 첫 줄 — 지도(8) | 숫자 칸 · 오늘의 시장(4) */}
+          {/* [1204 · 빈 공간 없이] 지도에 찍을 값이 없으면 지도 칸을 그리지 않고, 숫자 칸 · 오늘의 시장이 한 줄을 나눠 쓴다 */}
           <div className="mt-3 grid grid-cols-1 gap-3 md:mt-4 lg:grid-cols-12 lg:gap-4">
-            <div className="min-w-0 lg:col-span-8">
-              <HomeRegionMap markers={mapMarkers} sido={mapSido} mapHref={mapHref} periodLabel={mapPeriodYm ? formatYm(mapPeriodYm) : null} />
-            </div>
-            <aside data-autotrim="" className="flex min-w-0 flex-col gap-3 lg:col-span-4 lg:gap-4">
+            {mapMarkers.length > 0 && (
+              <div className="min-w-0 lg:col-span-8">
+                <HomeRegionMap markers={mapMarkers} sido={mapSido} mapHref={mapHref} periodLabel={mapPeriodYm ? formatYm(mapPeriodYm) : null} />
+              </div>
+            )}
+            <aside
+              data-autotrim=""
+              className={
+                mapMarkers.length > 0
+                  ? "flex min-w-0 flex-col gap-3 lg:col-span-4 lg:gap-4"
+                  : "grid min-w-0 grid-cols-1 items-start gap-3 md:grid-cols-2 lg:col-span-12 lg:gap-4"
+              }
+            >
               {/* [1137] 시세판 ↔ 내 화면(로그인) — 시세판은 숫자 칸 2열(compact) */}
               <HomeAltBoard market={dealsRegion ? <HomeMarketBoard id={dealsRegion.id} name={dealsRegion.name} compact /> : null} />
               {/* 오늘의 시장 — 한 문장씩 넘기는 네이비 판(띠 밖 · 워터마크 포함) */}
@@ -258,10 +268,14 @@ export default async function Home() {
             </aside>
           </div>
 
-          {/* ③ 둘째 줄 3칸 — 열마다 위에서부터 쌓는다(가운데 빈 칸 없음 · 1197) */}
-          <div className="mt-3 grid grid-cols-1 items-start gap-3 md:mt-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-4">
-            <div data-autotrim="" className="flex min-w-0 flex-col gap-3 lg:gap-4">
-              {/* 지역 동향 — [1114] 표 */}
+          {/* ③ [1204 · 빈 공간 없이] 둘째 줄 — 소유자 2026-11-21 "빈공간 없도록 · 모바일용, 웹사이트용 구분".
+              예전 세 칸은 열마다 따로 쌓여, 짧은 열 아래가 실시간 토론까지 통째로 비었다. 이제 한 흐름(DOM 순서 = 읽는 순서)으로 두고
+              PC 3열 · 태블릿 2열은 CSS 다단(columns)이 열 높이를 맞춰 채운다(globals.css .home-flow) · 폰은 한 줄로 쌓는다.
+              값이 없는 칸은 그리지 않는다(지역 동향 · 실거래 순위 · 동네/뉴스 각 부품). */}
+          <div data-autotrim="" className="home-flow mt-3 md:mt-4">
+            <div className="home-flow-item">
+              {/* 지역 동향 — [1114] 표 · [1204] 값이 없거나 조회가 실패하면 홈에서는 칸째 뺀다(빈 카드 없음 · 지도 화면이 그대로 맡는다) */}
+              {regions.length > 0 && (
               <section className="card flex flex-col gap-2 rounded-2xl p-[var(--pad-card)]">
                 <div className="flex items-baseline justify-between gap-2">
                   <h2 className="t-section text-ink">지역 동향</h2>
@@ -272,22 +286,6 @@ export default async function Home() {
                     지도에서 전체 보기 ›
                   </Link>
                 </div>
-                {regions.length === 0 ? (
-                  failed.regions ? (
-                    <ErrorState
-                      title="지역 동향 불러오기 실패"
-                      desc="잠시 후 다시"
-                      action={{ label: "지도에서 찾아보기", href: "/map" }}
-                    />
-                  ) : (
-                    <EmptyState
-                      icon="map"
-                      title="지역 동향 없음"
-                      desc="지역 집계 준비 중"
-                      action={{ label: "지도에서 찾아보기", href: "/map" }}
-                    />
-                  )
-                ) : (
                   <>
                     {/* 대표 지역(위 숫자 칸)은 뺀다 */}
                     <HomeRegionTable regions={tableRegions} fold={2} />
@@ -301,16 +299,10 @@ export default async function Home() {
                       가격 = 평균 매매가(한국부동산원) 또는 실거래 평균(국토교통부 신고 월 집계 · 줄 아래 표기) · 전월 대비 = 매매가격지수 전월 대비 · 막대 = 등락 크기
                     </Fineprint>
                   </>
-                )}
               </section>
-              {/* [1144] 전문가 홍보 한 칸 · 광고(데스크톱) */}
-              <RotatingExpertPromo slot={1} compact />
-              <AdZone placement="home_feed" seed={0} plan={null} spot="side" className="hidden lg:block" />
-              <AdSenseUnit />
+              )}
             </div>
-
-            <div className="flex min-w-0 flex-col gap-3 lg:gap-4">
-              {/* [1114] 실거래 금액 순위 — 아래에서 위로 넘어가는 배너 */}
+            <div className="home-flow-item">
               {dealsRegion && (
                 <HomeRecentDeals
                   regionName={dealsRegion.name}
@@ -319,14 +311,14 @@ export default async function Home() {
                   mapHref={mapHref}
                 />
               )}
+            </div>
+            <div className="home-flow-item">
               {/* [1081 · #27] 거래 많은 단지 — 단지 상세 직행 링크(크롤 경로) */}
               <HomeHubLinks regions={regions} complexes={activeComplexes} />
-              {/* [1101] 폰 광고 자리 1곳(데스크톱은 첫 칸) */}
-              <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
             </div>
-
-            <div className="flex min-w-0 flex-col gap-3 md:col-span-2 lg:col-span-1 lg:gap-4">
+            <div className="home-flow-item">
               {/* ④ 공개 임장노트 — 누가 쓴 노트인지(Lab/이웃)를 숨기지 않는다 */}
+              {!(notes.length === 0 && failed.notes) && (
               <section className="card flex flex-col gap-2 rounded-2xl px-4 py-4">
                 <div className="flex items-center justify-between gap-2">
                   <h2 className="t-section text-ink">공개 임장노트</h2>
@@ -412,8 +404,21 @@ export default async function Home() {
                 )}
                 {allLabNotes && <Fineprint label="표시 기준">{LAB_NOTES_CAPTION}</Fineprint>}
               </section>
+              )}
+            </div>
+            <div className="home-flow-item">
               {/* ⑦ [1007] 동네이야기 · 뉴스룸 — 좁은 칸이라 위아래(stacked) */}
               <HomeTownBlock stories={data.stories} news={data.news} failed={failed.town} now={renderedAt} stacked />
+            </div>
+            <div className="home-flow-item">
+              {/* [1144] 전문가 홍보 한 칸 */}
+              <RotatingExpertPromo slot={1} compact />
+            </div>
+            <div className="home-flow-item">
+              {/* 광고 — PC 는 옆 칸 광고 · 폰은 피드 광고 한 곳(안 채워지면 칸째 접힌다) */}
+              <AdZone placement="home_feed" seed={0} plan={null} spot="side" className="hidden lg:block" />
+              <AdZone placement="home_feed" seed={1} plan={null} className="lg:hidden" />
+              <AdSenseUnit />
             </div>
           </div>
           {/* [1051] 홈 맨 아래 — 실시간 토론(지역 · 단지 한 줄). 전폭. 판은 화면 가까이 오면 받는다 */}

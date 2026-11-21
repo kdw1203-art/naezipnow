@@ -8916,3 +8916,35 @@ body {
 .btn-primary:hover {
   filter: brightness(1.06);
 }
+
+/* [1204 · 빈 공간 없이 — 폰 · PC 구분] 홈 둘째 줄 한 흐름(app/page.tsx .home-flow).
+   폰: 한 줄로 쌓는다(카드 사이 12px). 태블릿 2열 · PC 3열: CSS 다단이 열 높이를 맞춰 채운다 — 예전 세 칸은 열마다 따로 쌓여
+   짧은 열 아래가 통째로 비었다. 카드는 열 사이에서 쪼개지지 않는다(break-inside). 빈 칸(값 없어 그리지 않은 부품)은 자리를 남기지 않는다. */
+.home-flow {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.home-flow-item:empty {
+  display: none;
+}
+@media (min-width: 768px) {
+  .home-flow {
+    display: block;
+    column-count: 2;
+    column-gap: 12px;
+  }
+  .home-flow-item {
+    break-inside: avoid;
+    margin-bottom: 12px;
+  }
+}
+@media (min-width: 1024px) {
+  .home-flow {
+    column-count: 3;
+    column-gap: 16px;
+  }
+  .home-flow-item {
+    margin-bottom: 16px;
+  }
+}

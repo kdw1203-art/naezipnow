@@ -1679,8 +1679,11 @@ test("[1196] 통합 검색 — 단지 좌표 붙이기 · 결과 지도 · 두 �
 
 test("[1197] 홈 가운데 빈자리 — 오른쪽 열 세 줄 · 왼쪽 아래로 공개 임장노트 · 거래 많은 단지", () => {
   const p = readFileSync("app/page.tsx", "utf8");
-  /* [1198] 시안 A 로 바뀌었다 — 둘째 줄 3칸이 각자 위에서부터 쌓인다(items-start · 열 안 flex-col) */
-  assert.match(p, /grid grid-cols-1 items-start gap-3 md:mt-4 md:grid-cols-2 lg:grid-cols-3/);
+  /* [1204] 둘째 줄은 한 흐름 — CSS 다단이 열 높이를 맞춰 채운다(열마다 따로 쌓여 짧은 열 아래가 비던 것) · 빈 칸은 자리 없음 */
+  assert.match(p, /className="home-flow mt-3 md:mt-4"/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.home-flow-item:empty \{\s*display: none;/);
+  assert.match(css, /column-count: 3;/);
   assert.doesNotMatch(p, /lg:row-span-3|lg:self-start/);
 });
 

@@ -22,7 +22,8 @@ test("② 홈 — 12칸 격자 · 왼쪽 8 = 시장 한눈에(지역 화면 숫�
   const home = strip(read("app/page.tsx"));
   /* [1198 · 시안 A] 첫 줄 12칸(지도 8 | 숫자 칸 4) · 둘째 줄 3칸 */
   assert.match(home, /className="mt-3 grid grid-cols-1 gap-3 md:mt-4 lg:grid-cols-12 lg:gap-4"/);
-  assert.match(home, /className="mt-3 grid grid-cols-1 items-start gap-3 md:mt-4 md:grid-cols-2 lg:grid-cols-3 lg:gap-4"/);
+  /* [1204] 둘째 줄 = 한 흐름(폰 1열 · 태블릿 2열 · PC 3열 다단 — globals.css .home-flow) */
+  assert.match(home, /className="home-flow mt-3 md:mt-4"/);
   /* [1137] 시세판은 번갈아 보이는 판(HomeAltBoard)의 market 자리 — [1198] 숫자 칸만(compact) */
   assert.match(home, /<HomeAltBoard market=\{dealsRegion \? <HomeMarketBoard id=\{dealsRegion\.id\} name=\{dealsRegion\.name\} compact \/> : null\} \/>/);
   let last = -1;
