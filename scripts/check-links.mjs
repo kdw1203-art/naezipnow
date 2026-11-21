@@ -161,7 +161,7 @@ async function get(path, init) {
   return out.res;
 }
 
-const seeds = ['/', '/notes', '/notes/new', '/notes/mock-1', '/notes/compare', '/map', '/search', '/notifications', '/messages',
+const seeds = ['/', '/notes', '/notes/new', '/notes/compare', '/map', '/search', '/notifications', '/messages',
   '/analysis', '/analysis/compare', '/analysis/cycle', '/analysis/scenario', '/analysis/timing',
   '/town', '/town/news', '/town/market', '/town/experts', '/town/groups', '/town/groups/mock-1',
   '/my', '/my/settings', '/my/subscription', '/my/support', '/my/creator', '/subscription', '/login', '/signup', '/calculator', '/apply', '/support', '/safety', '/digest',
