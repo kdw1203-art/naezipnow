@@ -2,8 +2,9 @@
 
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { NaverMap } from "@/components/map/NaverMapLazy";
-import type { MapIdleInfo, MapMarkerData, MapPolygonData } from "@/components/map/NaverMap";
+import type { MapIdleInfo, MapMarkerData, MapPolygonData, NaverBaseMap } from "@/components/map/NaverMap";
 import { ZONE_HISTORY_COLOR, ZONE_HISTORY_LABEL, ZONE_SHAPES_CREDIT, ZONE_SHAPES_URL, historyShapesIn, matchZoneShape, type ZoneShape, type ZoneShapeFile } from "@/lib/redevelopment/zone-shapes";
+import { NEWTOWN_SHAPES_NOTE, NEWTOWN_SHAPES_URL } from "@/lib/redevelopment/newtown-shapes";
 import {
   STAGES,
   colorForType,
@@ -53,8 +54,11 @@ export function RedevelopmentMap({
   /* 구역명 검색(2026-08-22) — 이름·주소가 전부 메모리에 있는데 40곳을 눈으로
      훑는 것 말고는 특정 구역을 찾을 길이 없었다. 공백 무시 부분일치. */
   const [q, setQ] = useState("");
-  /* [1155] 지적도(필지 경계) — 기본으로 켠다. 구역 경계 자료가 없는 동안 필지 묶음으로 자리를 가늠한다 */
-  const [cadastral, setCadastral] = useState(true);
+  /* [1155] 지적도(필지 경계) · [1204] 기본은 끈다 — 소유자 2026-11-21 "지형도 말고 일반지도도 같이". 구역 경계 도형(1161 · 1203)이 생겨
+     필지 묶음으로 자리를 가늠할 일이 줄었고, 켜 두면 용도지역 색이 지도 전체를 덮어 일반 지도가 안 보였다. 단추로 켠다 */
+  const [cadastral, setCadastral] = useState(false);
+  /* [1204] 바탕 지도 — 일반 · 위성 · 겹쳐보기(위성 + 지명) · 지형. 구역 도형 · 지적도는 어느 바탕 위에도 겹친다 */
+  const [baseMap, setBaseMap] = useState<NaverBaseMap>("normal");
   const nativeLayers = useMemo(() => ({ cadastral }), [cadastral]);
   /* [1158] 색 기준 — 사업종류(기본) · 진행단계. 지도 마커 · 목록 점 · 범례가 같이 바뀐다 */
   const [colorMode, setColorMode] = useState<RedevColorMode>("type");
@@ -186,12 +190,15 @@ export function RedevelopmentMap({
   useEffect(() => {
     if (view !== "map" || zoneShapes) return;
     let alive = true;
-    fetch(ZONE_SHAPES_URL)
-      .then((r) => (r.ok ? (r.json() as Promise<ZoneShapeFile>) : null))
-      .then((j) => {
-        if (alive && j && Array.isArray(j.zones)) setZoneShapes(j.zones);
-      })
-      .catch(() => {});
+    /* [1204] 서울 도형 + 1기 신도시 근사 범위(선도지구 · 2차 후보 — 단지 좌표 볼록 껍질). 한쪽이 실패해도 다른 쪽은 그린다 */
+    const getZones = (url: string) =>
+      fetch(url)
+        .then((r) => (r.ok ? (r.json() as Promise<ZoneShapeFile>) : null))
+        .then((j) => (j && Array.isArray(j.zones) ? j.zones : []))
+        .catch(() => [] as ZoneShape[]);
+    Promise.all([getZones(ZONE_SHAPES_URL), getZones(NEWTOWN_SHAPES_URL)]).then(([seoul, newtown]) => {
+      if (alive && seoul.length + newtown.length > 0) setZoneShapes([...seoul, ...newtown]);
+    });
     return () => {
       alive = false;
     };
@@ -442,7 +449,7 @@ export function RedevelopmentMap({
       {shownView === "map" ? (
         <div className="card overflow-hidden rounded-2xl p-1.5">
           <div className="flex flex-wrap items-center justify-between gap-2 px-1.5 pb-1.5">
-            <span className="t-caption text-text-3">{polygons.length > 0 ? ZONE_SHAPES_CREDIT : "점은 대표 지번 위치 · 구역 경계 아님"}</span>
+            <span className="t-caption text-text-3">{polygons.length > 0 ? `${ZONE_SHAPES_CREDIT} · ${NEWTOWN_SHAPES_NOTE}` : "점은 대표 지번 위치 · 구역 경계 아님"}</span>
             {polygons.some((pg) => pg.faint) && (
               <span className="inline-flex items-center gap-1.5 t-caption text-text-3">
                 <span aria-hidden="true" className="inline-block h-2.5 w-4 rounded-sm border border-dashed" style={{ borderColor: ZONE_HISTORY_COLOR }} />
@@ -481,6 +488,26 @@ export function RedevelopmentMap({
             >
               지적도
             </button>
+            <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="바탕 지도">
+              {(
+                [
+                  ["normal", "일반"],
+                  ["satelliteOnly", "위성"],
+                  ["satellite", "겹쳐보기"],
+                  ["terrain", "지형"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  aria-pressed={baseMap === key}
+                  onClick={() => setBaseMap(key)}
+                  className={`press chip min-h-10 whitespace-nowrap px-3 t-sub ${baseMap === key ? "chip-active font-bold" : "text-text-2"}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
           {/* [1030 · G5] 겹침 정리 — 40곳 이름표가 서울 중심에 포개졌다(한남2·압구정3·반포주공1·잠실주공5 …). 겹치는 구역은
               색 점으로 접히고 확대하면 이름이 돌아온다(/map 과 같은 declutterMarkers). */}
@@ -506,6 +533,7 @@ export function RedevelopmentMap({
               className="h-full w-full"
               onMarkerClick={handleMarkerClick}
               nativeLayers={nativeLayers}
+              mapType={baseMap}
               polygons={polygons}
               onIdle={(info) => setViewBounds(info.bounds)}
             />

@@ -935,10 +935,10 @@ test("[1154] 전국 정비구역 목록 — 단계 걸러 보기 · 세대수 �
   assert.equal(m.nationalHref({ ...p, page: 2 }), `/redev-list?sido=${encodeURIComponent("서울특별시")}&stage=${encodeURIComponent("착공")}&sort=households&page=2`);
 });
 
-test("[1155] 정비사업 지도는 지적도(필지 경계)와 같이 본다 — /map 은 켤 때 함께 · /redevelopment 는 기본 켬", () => {
+test("[1155 → 1204] 정비사업 지도 지적도 — /map 은 켤 때 함께 · /redevelopment 는 기본 끔(구역 도형이 생겨 · 일반 지도가 먼저)", () => {
   assert.match(read("app/map/map-client.tsx"), /if \(!showRedevelopment\) setShowCadastral\(true\);/);
   const r = read("app/redevelopment/RedevelopmentMap.tsx");
-  assert.match(r, /const \[cadastral, setCadastral\] = useState\(true\);/);
+  assert.match(r, /const \[cadastral, setCadastral\] = useState\(false\);/);
   assert.match(r, /nativeLayers=\{nativeLayers\}/);
   assert.match(r, /점은 대표 지번 위치 · 구역 경계 아님/);
 });

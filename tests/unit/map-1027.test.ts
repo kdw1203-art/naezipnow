@@ -189,7 +189,8 @@ test("map-client — 바탕 지도(위성·지적편집도)를 NaverMap 에 넘�
   assert.ok(mapClient.includes('showCadastral ? "cadastral" : null'), "layers= 토큰");
   assert.ok(mapClient.includes('setShowCadastral(on.has("cadastral"))'), "공유 링크 복원");
   assert.ok(mapClient.includes('if (baseMap === "satellite") url.searchParams.set("base", "sat");'));
-  assert.ok(mapClient.includes('setBaseMap(sp.get("base") === "sat" ? "satellite" : "normal")'));
+  /* [1204] 넷(일반 · 위성 · 겹쳐보기 · 지형) — 예전 base=sat(겹쳐보기) 링크는 그대로 열린다 */
+  assert.ok(mapClient.includes('setBaseMap(b === "sat" ? "satellite" : b === "satonly" ? "satelliteOnly" : b === "terrain" ? "terrain" : "normal")'));
   assert.ok(mapClient.includes("base: baseMap,") && mapClient.includes("cadastral: showCadastral,"), "nz_map_prefs");
   assert.ok(mapClient.includes('aria-label="바탕 지도"'));
   assert.ok(mapClient.includes("disabled={mapFallback}"), "지도를 못 그린 화면에서는 비활성");

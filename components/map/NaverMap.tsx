@@ -144,6 +144,8 @@ export interface MapIdleInfo {
 }
 
 /** [1161] 지도 위 다각형(정비구역 경계) — path 는 [경도, 위도] 쌍을 이어 붙인 숫자 배열 */
+export type NaverBaseMap = "normal" | "satellite" | "satelliteOnly" | "terrain";
+
 export type MapPolygonData = {
   id: string;
   path: readonly number[];
@@ -179,7 +181,8 @@ interface NaverMapProps {
   /** bottom-right 는 /map 전용 — 모바일 탭바(하단 플로팅) 위로 띄운다 */
   geolocationButtonPosition?: "top-right" | "bottom-left" | "bottom-right";
   /** 지도 유형 — 일반/위성 */
-  mapType?: "normal" | "satellite";
+  /** [1204] 바탕 지도 — normal 일반 · satelliteOnly 위성 · satellite 겹쳐보기(위성 + 지명 · 예전 "위성" 그대로) · terrain 지형 */
+  mapType?: NaverBaseMap;
   /** 지도 이동/줌이 멈추면 현재 영역·줌을 알린다 */
   onIdle?: (info: MapIdleInfo) => void;
   /** false면 모서리 라운드 없음 (풀스크린 /explore) */
@@ -635,7 +638,9 @@ export function NaverMap({
     const maps = getNaverMapsWindow().naver?.maps;
     const ids = maps?.MapTypeId;
     if (!ids || !mapRef.current.setMapTypeId) return;
-    mapRef.current.setMapTypeId(mapType === "satellite" ? ids.HYBRID : ids.NORMAL);
+    const id =
+      mapType === "satellite" ? ids.HYBRID : mapType === "satelliteOnly" ? ids.SATELLITE ?? ids.HYBRID : mapType === "terrain" ? ids.TERRAIN ?? ids.NORMAL : ids.NORMAL;
+    mapRef.current.setMapTypeId(id);
   }, [loaded, mapType]);
 
   // 지도 이동/줌 종료 → onIdle 콜백 (bounds + zoom + center)
