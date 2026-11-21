@@ -79,7 +79,10 @@ export async function GET(req: Request) {
         inserted += r.inserted ?? 0;
         anyOk = anyOk || r.ok;
         allSkipped = allSkipped && Boolean(r.skipped);
-        parts.push(`${s} ${r.ok ? (r.inserted ?? 0) : `실패(${r.reason ?? "?"})`}`);
+        /* [1201] 상한에 걸린 시도는 "받은/전체" 로 — 6개 시도가 매일 정확히 500(5쪽×100)이라 잘린 양이 안 보였다 */
+        const got = r.inserted ?? 0;
+        const capped = r.ok && typeof r.total === "number" && r.total > got;
+        parts.push(`${s} ${r.ok ? (capped ? `${got}/${r.total}` : got) : `실패(${r.reason ?? "?"})`}`);
       } catch (e) {
         allSkipped = false;
         parts.push(`${s} 실패(${ingestErrorMessage(e, "동기화 예외")})`);

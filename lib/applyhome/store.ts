@@ -3,6 +3,7 @@ import "server-only";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import { logger } from "@/lib/log";
 import type { AptCompetitionRow, AptDetailRow } from "@/lib/applyhome/types";
+import { APPLYHOME_PORTAL_URL, type ApplyhomeSearchPayload } from "@/lib/applyhome/types";
 import { announcementFromDetail, competitionRateNumber, toInt } from "@/lib/applyhome/normalize";
 export { normApplyDate, competitionRateNumber, announcementFromDetail } from "@/lib/applyhome/normalize";
 
@@ -206,4 +207,37 @@ export async function listRecentCompetition(limit = 12): Promise<
     if (out.length >= limit) break;
   }
   return out;
+}
+
+/* [1201] 청약홈 실시간 조회가 실패했을 때의 대체 화면 — 적재해 둔 최근 경쟁률(공고당 한 줄).
+   행이 없으면 null(화면은 원래대로 실패 안내). */
+export async function competitionFallbackPayload(limit = 15): Promise<ApplyhomeSearchPayload | null> {
+  const rows = await listRecentCompetition(limit);
+  if (rows.length === 0) return null;
+  const asOf = rows.reduce((m, r) => (r.updated_at > m ? r.updated_at : m), rows[0].updated_at);
+  const asOfKst = new Date(asOf).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit" });
+  return {
+    mode: "live",
+    tab: "competition",
+    detailAvailable: false,
+    detailNotice: `청약홈 실시간 연결이 잠시 끊겨 저장된 경쟁률(${asOfKst} 기준)을 보여 드려요 · 검색·필터는 연결이 돌아오면 다시 됩니다`,
+    filters: { region: "전체", q: "" },
+    totalCount: rows.length,
+    items: rows.map((r) => ({
+      id: `${r.house_manage_no}-${r.pblanc_no}-${r.house_ty}-${r.rank_code}-${r.reside_secd}`,
+      houseManageNo: r.house_manage_no,
+      pblancNo: r.pblanc_no,
+      houseName: r.house_nm ?? `공고 ${r.house_manage_no}`,
+      region: r.region ?? "",
+      houseType: r.house_ty,
+      supplyCount: r.supply_count ?? 0,
+      competitionRate: r.cmpet_rate ?? undefined,
+      requestCount: r.req_cnt != null ? String(r.req_cnt) : undefined,
+      resideLabel: r.reside_senm ?? undefined,
+      rankCode: r.rank_code,
+      announceDate: r.przwner_de ?? undefined,
+    })),
+    portalUrl: APPLYHOME_PORTAL_URL,
+    fetchedAt: asOf,
+  };
 }

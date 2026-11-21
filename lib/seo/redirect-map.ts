@@ -119,6 +119,10 @@ const REDIRECT_GROUPS: readonly RedirectGroup[] = [
       ["/explore", "/map"],
       ["/calculators", "/calculator"],
       ["/chat", "/town/groups"],
+      /* [1201] 자주 넘겨짚는 주소 — 운영 실측 404(목록 페이지가 다른 이름으로 있다) */
+      ["/guide", "/guides"],
+      ["/data", "/data-sources"],
+      ["/region", "/analysis/timing"],
     ],
   },
   {

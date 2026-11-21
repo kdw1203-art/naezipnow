@@ -91,7 +91,7 @@ function faqKeys(q: string, recurringOpen: boolean): string[] {
 export const metadata = buildPageMetadata({
   title: "요금제",
   description:
-    "무료·플러스·프로 요금제의 기능 차이와 월간/연간 가격을 비교합니다.",
+    "내집나우 무료·플러스·프로 요금제 비교 — 관심단지 한도, AI 분석·임장노트 자동정리 횟수, 광고 제거, CSV 내보내기 등 기능 차이와 월간·연간 가격·결제 수단을 한눈에 봅니다.",
   path: "/subscription",
 });
 

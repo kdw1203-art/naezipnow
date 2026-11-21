@@ -4310,7 +4310,8 @@ a.rank-row:hover {
 /* ── 광고 공간(961) — 라벨 + 애드센스 유닛 + 채워지지 않으면 하우스 광고 ──
    애드센스는 <ins> 에 data-ad-status="filled|unfilled" 를 적는다. 채워지면 대체 카드를
    숨기고, 안 채워지면 빈 <ins> 를 숨긴다 — 어느 쪽이든 빈 상자는 남지 않는다. */
-.ad-zone ins.adsbygoogle[data-ad-status="unfilled"] {
+.ad-zone ins.adsbygoogle[data-ad-status="unfilled"],
+ins.adsbygoogle[data-ad-status="unfilled"] /* [1201] 어느 칸이든 안 채워진 <ins> 는 자리를 차지하지 않는다 */ {
   display: none !important;
 }
 .ad-zone:has(ins.adsbygoogle[data-ad-status="filled"]) .ad-zone-fallback {

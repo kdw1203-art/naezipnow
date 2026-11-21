@@ -12,7 +12,7 @@ import {
 import { getSessionLite } from "@/lib/client/session-lite";
 import { adSenseAdFree } from "@/lib/ads/ad-free";
 import { readAuthedHint } from "@/lib/auth/authed-hint";
-import { whenBoxVisible } from "@/lib/ads/push-when-visible";
+import { watchAdFill, whenBoxVisible } from "@/lib/ads/push-when-visible";
 
 declare global {
   interface Window {
@@ -85,7 +85,14 @@ export function AdZoneUnit({
     }
   }, [show, boxVisible]);
 
-  if (!show) return null;
+  /* [1201] 안 채워지면(차단·무광고) <ins> 칸을 접는다 — 대체 카드만 남긴다 */
+  const [dead, setDead] = useState(false);
+  useEffect(() => {
+    if (!show || !boxVisible) return;
+    return watchAdFill(boxRef.current, () => setDead(true));
+  }, [show, boxVisible]);
+
+  if (!show || dead) return null;
 
   return (
     <div ref={boxRef} className={`ad-zone-unit ${className}`}>

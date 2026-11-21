@@ -7,7 +7,7 @@ import { CreateGroupCta } from "./CreateGroupCta";
 import { GroupsClient, type GroupView } from "./GroupsClient";
 import { Icon } from "@/app/components/Icon";
 import { TownCategoryNav } from "../TownCategoryNav";
-import { TownHero } from "../TownHero";
+import { PageHead } from "@/app/components/PageHead";
 import { buildPageMetadata } from "@/lib/seo/page-metadata";
 import { formatKstMeetingTime } from "@/lib/format/kst";
 
@@ -124,11 +124,15 @@ export default async function TownGroupsPage() {
       <ShellBreadcrumb>동네이야기 › 임장 모임</ShellBreadcrumb>
       {/* 카테고리 줄 고정 — 여기서 바로 다른 카테고리로 넘어갈 수 있게 (뒤로가기 불필요) */}
       {/* ---------- 페이지 헤더 ([978] 홈과 같은 네이비 히어로) ---------- */}
-      <TownHero
-        href="/town/groups"
-        stats={[{ label: "모집 중인 모임", value: views.length, unit: "개" }]}
-        note="이 화면에 실린 모임 기준"
-        action={<CreateGroupCta />}
+      {/* [1201] TownHero 는 카테고리 목록(lib/town/category-links)에 있는 주소만 그린다 — /town/groups 는 목록에 없어
+          머리(h1)가 통째로 빠져 있었다(운영 실측: h1 0개). 같은 머리 부품을 직접 쓴다. */}
+      <PageHead
+        icon="users"
+        title="임장 모임"
+        sub="같이 다녀올 사람 찾기 · 지역·날짜별 모집"
+        actions={<CreateGroupCta />}
+        facts={views.length > 0 ? <span>모집 중인 모임 <b className="t-num text-ink">{views.length}개</b> · 이 화면에 실린 모임 기준</span> : null}
+        className="mb-4"
       />
       <TownCategoryNav stick />
 

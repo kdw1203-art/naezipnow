@@ -6,6 +6,7 @@ import { Icon } from "@/app/components/Icon";
 import { Explain } from "@/app/components/explain/Explain";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { searchApplyhome } from "@/lib/applyhome/applyhome-search";
+import { competitionFallbackPayload } from "@/lib/applyhome/store";
 import { TownCategoryNav } from "@/app/town/TownCategoryNav";
 import { TownHero } from "@/app/town/TownHero";
 import { seoAlternates } from "@/lib/seo/alternates";
@@ -59,6 +60,10 @@ async function getInitialPayload(): Promise<ApplyInitialResult> {
     return { ok: true, payload };
   } catch (err) {
     logger.error("[apply] 청약홈 초기 조회 실패", err);
+    /* [1201] 실시간 조회가 막혀도(키 만료·청약홈 장애) supply-ingest 가 적재해 둔 경쟁률이 있으면 그걸 보인다 —
+       "불러오기 실패" 한 줄보다 낫다. 몇 시 기준인지는 안내 문구로 밝힌다. */
+    const fallback = await competitionFallbackPayload(15).catch(() => null);
+    if (fallback) return { ok: true, payload: fallback };
     return { ok: false, cause: err instanceof Error ? err.message : String(err) };
   }
 }
