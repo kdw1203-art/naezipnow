@@ -49,3 +49,10 @@ test("미리보기 환경 변수가 비면 미리보기 빌드 생략 · 운영�
   assert.equal(shouldSkipBuild({ ref: "claude/x", changedFiles: ["app/page.tsx"], vercelEnv: "preview", previewEnvReady: true }).skip, false);
   assert.equal(shouldSkipBuild({ ref: "main", changedFiles: ["app/page.tsx"], vercelEnv: "production", previewEnvReady: false }).skip, false);
 });
+
+test("단지 상세 수집 — 429 는 쉬고 다시(예산 안에서) · 다른 오류는 바로 miss", () => {
+  const src = readFileSync("lib/national-data/apartment-ingest.ts", "utf8");
+  assert.match(src, /fetchDetailWithBackoff\(r\.external_id\)/);
+  assert.match(src, /if \(!\/HTTP 429\/\.test\(msg\) \|\| i >= DETAIL_429_RETRIES \|\| Date\.now\(\) - startedAt > DETAIL_429_BUDGET_MS\) throw err;/);
+  assert.match(src, /const DETAIL_429_BUDGET_MS = 180_000;/);
+});

@@ -415,6 +415,10 @@ const DETAIL_DELAY_MS = 60;
  */
 const DETAIL_CONCURRENCY = 2;
 
+/** [1206] 429 를 받으면 몇 번 더 부르나(1초 · 2초 쉬고) · 배치 시작 뒤 이 시간이 지나면 더 쉬지 않는다 */
+const DETAIL_429_RETRIES = 2;
+const DETAIL_429_BUDGET_MS = 180_000;
+
 /**
  * 동시 실행 수를 제한한 map. 입력 순서대로 결과를 돌려준다.
  * (외부 의존성을 새로 들이지 않으려고 직접 둔다 — 하는 일이 이게 전부다.)
@@ -617,6 +621,23 @@ async function runDetailBatch(
     return (Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0) + 1;
   };
 
+  /* [1206] 429(호출 한도 초과)는 잠깐 쉬고 다시 — 2026-11-20~21 실측: 매시 200건 중 110~150건이 429 로 miss 가 됐다.
+     시간대와 무관하게 비율이 같아(하루 한도가 아니라 순간 호출률 한도) 1·2초 쉬면 대부분 받는다. 상세 미수집 4,832곳을
+     이번 달 안에 끝내려는 것(소유자 2026-11-22). 배치 예산(270초) 안에서 모아 쓰기까지 마쳐야 하므로 시작 180초가
+     지나면 더 쉬지 않고 miss 로 넘긴다(다음 실행이 다시 본다). */
+  const startedAt = Date.now();
+  const fetchDetailWithBackoff = async (externalId: string) => {
+    for (let i = 0; ; i++) {
+      try {
+        return await fetchAptComplexDetail(externalId, true, { strict: true });
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (!/HTTP 429/.test(msg) || i >= DETAIL_429_RETRIES || Date.now() - startedAt > DETAIL_429_BUDGET_MS) throw err;
+        await new Promise((res) => setTimeout(res, 1000 * (i + 1) + Math.floor(Math.random() * 400)));
+      }
+    }
+  };
+
   /* DETAIL_CONCURRENCY 만큼 동시에 부른다(위 상수 주석에 이유). 각 워커는 자기
      호출 사이에만 짧게 쉬므로, 전체 호출률은 순차일 때의 약 6배로 유지된다. */
   const outcomes = await mapWithConcurrency(rows, DETAIL_CONCURRENCY, async (r) => {
@@ -624,9 +645,7 @@ async function runDetailBatch(
     try {
       /* strict — 실패를 "상세 없음"으로 위장하지 않는다. 사유가 있어야
          "키를 다시 받아야 한다"를 로그만 보고 알 수 있다(982와 같은 이유). */
-      const { detail } = await fetchAptComplexDetail(r.external_id, true, {
-        strict: true,
-      });
+      const { detail } = await fetchDetailWithBackoff(r.external_id);
       await new Promise((res) => setTimeout(res, DETAIL_DELAY_MS));
       if (detail && detail.kaptCode) {
         return { kind: "ok" as const, r, attempts, patch: toDetailPatch(detail) };
