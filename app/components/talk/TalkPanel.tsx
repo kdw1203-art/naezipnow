@@ -508,7 +508,8 @@ export function TalkPanel({
       </div>
       )}
 
-      <div className={`grid grid-cols-1 gap-3 ${scoped ? "" : "md:grid-cols-[minmax(0,300px)_minmax(0,1fr)]"}`}>
+      {/* [1205] 홈(PC): 글 칸이 왼쪽 순위 목록 높이까지 늘어나 글이 적으면 속이 비었다 — 홈에서는 두 칸을 각자 내용 높이로(items-start) */}
+      <div className={`grid grid-cols-1 gap-3 ${scoped ? "" : "md:grid-cols-[minmax(0,300px)_minmax(0,1fr)]"} ${variant === "page" ? "" : "md:items-start"}`}>
         {/* 왼쪽 — 지역 순위(단지 범위엔 없다) */}
         {!scoped && (
         <div className="overflow-hidden rounded-xl border border-line bg-surface">
