@@ -74,7 +74,15 @@ export function alertTargetKey(detail: string | null | undefined): string {
  */
 export function okCovers(okTarget: string, alertTarget: string): boolean {
   if (!okTarget || !alertTarget) return false;
-  return alertTarget === okTarget || alertTarget.startsWith(`${okTarget}|`);
+  if (alertTarget === okTarget || alertTarget.startsWith(`${okTarget}|`)) return true;
+  /* [1204] 수집 점검(ops.ingest_no_success_check)은 서명을 콜론으로 잇는다 — 경보 "ingest:applyhome:error_unrecovered" ·
+     회복 "ingest:applyhome:recovered". 회복 줄이 같은 소스의 모든 경보(콜론 뒤 종류 무관)를 닫는다. 운영 실측(2026-11-21):
+     11-21 00:40 회복이 남았는데도 판에 "critical 진행 중"이 남았다. */
+  if (okTarget.endsWith(":recovered")) {
+    const base = okTarget.slice(0, -":recovered".length);
+    return base.length > 0 && alertTarget.startsWith(`${base}:`);
+  }
+  return false;
 }
 
 const isOk = (sev: string) => sev === "ok";

@@ -72,10 +72,10 @@ export function Footer() {
      슬로건 한 줄이 세리프 글꼴(51KB)을 모든 화면 첫 방문에 받게 했다(운영 Lighthouse: 쪽마다 무거운 자원 3위).
      화면에 가까워질 때 그린다 — DOM·크롤러·찾기(Ctrl+F)에는 그대로 있다. */
   return (
-    <footer className="footer-cv mt-auto border-t border-line bg-surface px-5 pb-[76px] pt-6 md:pb-10 md:pt-10">
+    <footer className="footer-cv mt-auto border-t border-line bg-surface px-5 pb-[76px] pt-4 md:pb-10 md:pt-10">
       <div className="mx-auto flex max-w-[1240px] flex-col gap-2 t-sub text-text-3">
         {/* [962] 0행: 브랜드 잠금 + 슬로건 — 모든 페이지의 마지막 줄이 브랜드로 끝난다 */}
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-3 border-b border-divider pb-4">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-3 border-b border-divider pb-3 md:mb-2 md:pb-4">
           {/* [970 · A-19] 푸터 18개 링크는 뷰포트 프리페치를 끈다 — 페이지마다 RSC 프리페치
               24건의 대부분이 푸터였다(사유·예외는 Header.tsx / TabBar.tsx). */}
           {/* [989] 실측 86×23 — 세로가 손가락 기준의 절반이었다. 위아래 패딩으로 45px 을
@@ -97,10 +97,12 @@ export function Footer() {
         </div>
         {/* [1073] 2행(링크)을 위로 — 묶음 제목 + 세로 목록. 폰은 2열(세로 피치 34px — [989] 링크 18px + 간격 16px 규칙 그대로),
             PC 는 4열. 각 열은 items-start 라 링크가 글자 폭만큼만 눌린다(줄 전체가 눌리지 않게). */}
-        <nav aria-label="사이트 안내" className="grid grid-cols-2 gap-x-4 gap-y-7 pb-5 pt-1 md:grid-cols-4 md:gap-x-8 md:pb-6">
+        {/* [1204 · 폰 컴팩트] 소유자 2026-11-21 "이 부분은 더 작고 컴팩트하게" — 폰은 묶음마다 제목 한 줄 + 링크를 옆으로 흘려 접는다
+            (예전 2열 세로 목록은 폰 한 화면을 다 썼다). 줄 간격 8px — tap-line 히트(약 27px)가 겹치지 않는 최소. PC 4열 세로 목록 그대로. */}
+        <nav aria-label="사이트 안내" className="grid grid-cols-1 gap-y-3 pb-4 pt-1 md:grid-cols-4 md:gap-x-8 md:gap-y-7 md:pb-6">
           {LINK_GROUPS.map((g) => (
-            <div key={g.id} className="flex min-w-0 flex-col items-start gap-y-5 md:gap-y-2.5">
-              <h2 className="t-caption font-bold text-text-2">{g.title}</h2>
+            <div key={g.id} className="flex min-w-0 flex-wrap items-baseline gap-x-3.5 gap-y-2 md:flex-col md:items-start md:gap-y-2.5">
+              <h2 className="basis-full t-caption font-bold text-text-2 md:basis-auto">{g.title}</h2>
               {LEGAL_LINKS.filter((l) => l.group === g.id).map((l) => (
                 <Link
                   key={l.href}

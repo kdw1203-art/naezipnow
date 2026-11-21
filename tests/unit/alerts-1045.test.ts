@@ -265,3 +265,11 @@ test("1045 마이그레이션 — 원장과 같은 글자(md5) · 끝 줄바꿈 
   assert.match(sql, /pg_get_functiondef\(p\.oid\)/);
   assert.match(sql, /if position\('sitemap_lastmod_cadence' in v\) > 0 then\s+return;/);
 });
+
+test("[1204] 수집 점검 콜론 서명 — ':recovered' 회복이 같은 소스의 모든 경보를 닫는다(다른 소스는 아님)", async () => {
+  const { okCovers } = await import("../../lib/admin/health-alerts-fold.ts");
+  assert.equal(okCovers("ingest:applyhome:recovered", "ingest:applyhome:error_unrecovered"), true);
+  assert.equal(okCovers("ingest:kosis:recovered", "ingest:kosis:no_success_error"), true);
+  assert.equal(okCovers("ingest:applyhome:recovered", "ingest:applyhome-alerts:no_success"), false, "접두가 비슷한 다른 소스는 닫지 않는다");
+  assert.equal(okCovers("ingest:applyhome:recovered", "ingest:kosis:no_success_error"), false);
+});

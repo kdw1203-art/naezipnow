@@ -96,14 +96,15 @@ test("C5 푸터 — 묶음 4개 · 링크·목적지 그대로 · 사업자 고�
   /* 개인정보처리방침은 여전히 굵게 */
   assert.match(f, /label: "개인정보처리방침", href: "\/legal\/privacy", bold: true/);
   /* PC 4열 · 폰 2열 · 세로 피치(폰 gap-y-5) · 쿠키 설정은 약관 묶음 끝 */
-  assert.match(f, /className="grid grid-cols-2 gap-x-4 gap-y-7 pb-5 pt-1 md:grid-cols-4 md:gap-x-8 md:pb-6"/);
-  assert.match(f, /flex min-w-0 flex-col items-start gap-y-5 md:gap-y-2\.5/);
+  /* [1204] 폰은 묶음마다 제목 + 옆으로 흐르는 링크(컴팩트) · PC 4열 세로 목록 그대로 */
+  assert.match(f, /className="grid grid-cols-1 gap-y-3 pb-4 pt-1 md:grid-cols-4 md:gap-x-8 md:gap-y-7 md:pb-6"/);
+  assert.match(f, /flex min-w-0 flex-wrap items-baseline gap-x-3\.5 gap-y-2 md:flex-col md:items-start md:gap-y-2\.5/);
   assert.match(f, /g\.id === "policy" && <CookieSettingsLink \/>/);
   /* 사업자 고지 · 수익 보장 미기재 문구 · 출처 접기는 그대로 */
   for (const t of ["상호: {biz.legalName}", "사업자등록번호:", "통신판매업 신고번호", "대표전화: ", "{NO_PROFIT_GUARANTEE_TEXT}"]) assert.ok(f.includes(t), t);
   assert.match(f, /<Fineprint className="pe-\[68px\] md:pe-0" label="출처 · 운영 주체">/);
   /* 탭바 여유(pb-[76px])는 그대로 */
-  assert.match(f, /px-5 pb-\[76px\] pt-6 md:pb-10 md:pt-10/);
+  assert.match(f, /px-5 pb-\[76px\] pt-4 md:pb-10 md:pt-10/);
 });
 
 test("C6 넘침 — /creators 단계 설명은 접히고 · /auctions 날짜는 칸 안에서 접힌다", () => {
