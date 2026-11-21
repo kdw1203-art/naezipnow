@@ -33,6 +33,7 @@ export function watchAdFill(box: HTMLElement | null, onDead: () => void, ms = 80
     done = true;
     mo.disconnect();
     clearTimeout(timer);
+    clearTimeout(blockedTimer);
     if (dead) onDead();
   };
   const check = () => {
@@ -43,6 +44,14 @@ export function watchAdFill(box: HTMLElement | null, onDead: () => void, ms = 80
   const mo = new MutationObserver(check);
   mo.observe(box, { subtree: true, attributes: true, attributeFilter: ["data-ad-status"], childList: true });
   const timer = setTimeout(() => finish(statusOf() !== "filled"), ms);
+  /* [1203] 스크립트 자체가 막혔으면(광고 차단기 — window.adsbygoogle 가 그냥 배열로 남고 loaded 가 없다) 8초를 기다리지 않고 3초에 접는다 */
+  const blockedTimer = setTimeout(() => {
+    const g = (globalThis as { adsbygoogle?: { loaded?: boolean } }).adsbygoogle;
+    if (!done && statusOf() === null && g?.loaded !== true) finish(true);
+  }, Math.min(3000, ms));
   check();
-  return () => finish(false);
+  return () => {
+    clearTimeout(blockedTimer);
+    finish(false);
+  };
 }

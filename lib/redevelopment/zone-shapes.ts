@@ -60,3 +60,31 @@ export function uniqueShapeCenter(zoneName: string, shapes: readonly ZoneShape[]
   }
   return hit ? { lng: hit.c[0], lat: hit.c[1], shapeName: hit.n } : null;
 }
+
+/* [1203] 서울 전역 구역 — 재개발닷컴처럼 지도에 구역이 다 보이게. 도형 자료(2,336곳)에는 끝난 구역도 섞여 있어(지정 이력),
+   진행 중 목록과 짝지어지지 않은 도형은 **옅은 회색 점선**으로만 그린다(진행 여부 미확인이라고 범례에 적는다). */
+export const ZONE_HISTORY_COLOR = "#8e8e93";
+export const ZONE_HISTORY_LABEL = "지정 이력 구역 · 진행 여부 미확인";
+
+/** 짝지어지지 않은 도형 중 화면 안(경계 상자가 겹치는)에 있는 것 — bounds 가 없으면 전부 */
+export function historyShapesIn(
+  shapes: readonly ZoneShape[],
+  used: ReadonlySet<ZoneShape>,
+  bounds: { swLat: number; swLng: number; neLat: number; neLng: number } | null,
+  limit = 1500,
+): ZoneShape[] {
+  const out: ZoneShape[] = [];
+  for (const s of shapes) {
+    if (used.has(s)) continue;
+    if (bounds) {
+      const [lng, lat] = s.c;
+      /* 중심점이 화면 안(작은 여유 포함)일 때만 — 구역은 수백 m 라 중심 기준이면 충분 */
+      const padLat = (bounds.neLat - bounds.swLat) * 0.1;
+      const padLng = (bounds.neLng - bounds.swLng) * 0.1;
+      if (lat < bounds.swLat - padLat || lat > bounds.neLat + padLat || lng < bounds.swLng - padLng || lng > bounds.neLng + padLng) continue;
+    }
+    out.push(s);
+    if (out.length >= limit) break;
+  }
+  return out;
+}
