@@ -27,6 +27,10 @@ export function Header() {
   /* [968 · 12] 스크롤 인지 — 공용 스크롤 상태(리스너 하나·rAF)에서 8px 경계만 받는다.
      예전엔 이 컴포넌트가 scroll 이벤트마다 setState 했다(터치는 프레임당 여러 번). */
   const scrolled = useScrolledPast(8);
+  /* [1206] 소유자 "중복 정리정돈"(폰 캡처: 헤더 "단지 검색" 바로 아래에 홈 큰 검색창) — 홈 첫 화면에서는 헤더 검색을 감추고
+     큰 검색 판을 지나 내려가면(240px) 다시 보인다. 자리(flex-1)는 그대로 두어 로고·아이콘이 움직이지 않는다(CLS 0). */
+  const pastHero = useScrolledPast(240);
+  const hideHeaderSearch = pathname === "/" && !pastHero;
 
   return (
     <header
@@ -188,15 +192,23 @@ export function Header() {
         <Link
           href="/search"
           prefetch={false}
-          className="field-focus press flex h-9 min-w-0 flex-1 items-center gap-1.5 rounded-full bg-[var(--glass-bg)] px-3 t-sub text-text-3 no-underline md:hidden"
+          aria-hidden={hideHeaderSearch || undefined}
+          tabIndex={hideHeaderSearch ? -1 : undefined}
+          className={`field-focus press flex h-9 min-w-0 flex-1 items-center gap-1.5 rounded-full bg-[var(--glass-bg)] px-3 t-sub text-text-3 no-underline transition-opacity duration-200 md:hidden ${hideHeaderSearch ? "pointer-events-none opacity-0" : ""}`}
         >
           <Icon name="search" size={15} className="shrink-0" />
           <span className="truncate">단지 검색</span>
         </Link>
         <div className="hidden flex-1 md:block" />
 
-        {/* 데스크탑 검색 — P2-14 인라인 자동완성 (HeaderSearch) */}
-        <HeaderSearch />
+        {/* 데스크탑 검색 — P2-14 인라인 자동완성 (HeaderSearch) · [1206] 홈 첫 화면은 큰 검색 판과 겹쳐 감춘다(자리는 유지) */}
+        <div
+          aria-hidden={hideHeaderSearch || undefined}
+          inert={hideHeaderSearch || undefined}
+          className={`hidden transition-opacity duration-200 lg:block ${hideHeaderSearch ? "pointer-events-none opacity-0" : ""}`}
+        >
+          <HeaderSearch />
+        </div>
 
         {/* 데스크탑 알림 진입점 (P2-3) — 미읽음 배지 포함(B10) */}
         <NotificationBell variant="desktop" />
