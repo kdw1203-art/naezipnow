@@ -22,6 +22,8 @@ export type OnbidSyncResult = {
   skipped?: boolean;
   reason?: string;
   inserted?: number;
+  /** [1201] 온비드가 알려 준 그 시도 전체 건수(첫 페이지 totalCount) — 수집 상한(maxPages×100)에 걸려 못 받은 양을 드러낸다 */
+  total?: number;
 };
 
 export async function syncOnbidSeoul(
@@ -36,9 +38,17 @@ export async function syncOnbidSeoul(
   const sido = opts.sido ?? "서울특별시";
   const maxPages = opts.maxPages ?? 5;
   const rows: Record<string, unknown>[] = [];
+  let total: number | undefined;
   for (let page = 1; page <= maxPages; page += 1) {
     const res = await fetchOnbidList({ sido, pageNo: page, numOfRows: 100 });
-    if (!res || res.items.length === 0) break;
+    /* [1201] 첫 페이지부터 응답이 없으면(오류·시간 초과·비JSON) "0건 성공"이 아니라 실패다 —
+       광주광역시가 매일 "0" 으로 찍혀 수집이 안 되는 줄 아무도 몰랐다(운영 11-15~11-20). */
+    if (!res) {
+      if (page === 1) return { ok: false, reason: "조회 실패(응답 없음)" };
+      break;
+    }
+    if (page === 1) total = res.totalCount;
+    if (res.items.length === 0) break;
     for (const it of res.items) {
       const key =
         `${it.cltrMngNo ?? ""}-${it.pbctCdtnNo ?? ""}`.trim() || it.onbidCltrno;
@@ -72,7 +82,7 @@ export async function syncOnbidSeoul(
   }
 
   if (rows.length === 0) {
-    return { ok: true, inserted: 0 };
+    return { ok: true, inserted: 0, total };
   }
   const { error } = await sb
     .from("onbid_auctions")
@@ -81,5 +91,5 @@ export async function syncOnbidSeoul(
     logger.error("[onbid sync] upsert failed", error);
     return { ok: false, reason: error.message };
   }
-  return { ok: true, inserted: rows.length };
+  return { ok: true, inserted: rows.length, total };
 }
