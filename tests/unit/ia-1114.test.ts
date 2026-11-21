@@ -61,7 +61,10 @@ test("④ 순위 배너 · 표 — 한 줄씩 아래→위 · 멈춤 · 동작 �
   assert.doesNotMatch(d, /"use client"/);
   assert.match(d, /rankHomeDeals\(rows, 10\)/);
   assert.match(d, /<details className="group">/);
-  assert.match(d, /최근 신고 \{rows\.length\.toLocaleString\("ko-KR"\)\}건 중 한 건 금액 높은 순/);
+  /* [1206] 한 줄로 줄였다(소유자) — 기준 문장 전체는 title 에 */
+  assert.match(d, /최근 신고 \{rows\.length\.toLocaleString\("ko-KR"\)\}건 · 금액순/);
+  assert.match(d, /최근 신고 중 한 건 금액 높은 순/);
+  assert.match(d, /truncate t-caption/);
   const tb = strip(read("app/components/home/HomeRegionTableBody.tsx"));
   assert.match(tb, /<table className="w-full border-collapse">/);
   assert.match(tb, /bg-up" : pct! < 0 \? "bg-down"/);

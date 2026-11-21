@@ -76,6 +76,11 @@ const PLACEHOLDERS = [
 
 const searchHref = (k: string) => `/search?q=${encodeURIComponent(k)}`;
 
+/* [1206] 소유자 "상하좌우 정렬"(폰 캡처: 칩 글자가 위로 붙고 "처음이라면" 이 칩보다 아래) — 터치 기기의 a.chip 최소 높이(40px · globals.css
+   [989])에 글자가 위에 붙었다. 칩은 높이를 정하고(h-10) 글자를 가운데(inline-flex · items-center) — 말줄임은 안쪽 span 이 맡는다. */
+const HERO_CHIP =
+  "chip inline-flex h-10 shrink-0 items-center px-3 t-sub font-bold no-underline transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]";
+
 export function HomeHeroSearch({
   regionChips = [],
   coverage,
@@ -375,7 +380,7 @@ export function HomeHeroSearch({
           보조 정보"라 한 줄에 놓아도 읽는 순서가 흐트러지지 않는다.
           flex-wrap 이라 칩이 여럿이거나 좁은 화면에서는 알아서 접힌다. */}
       {/* [1024] 소유자: "홈 모바일도 처음이라면 부분을 위로 올려서 한 줄로" — 폰은 줄바꿈 대신 한 줄 가로 스크롤(칩 + ⓘ 같은 줄). */}
-      <div className="scroll-x-hidden-bar mt-3 flex items-center gap-x-2.5 gap-y-1.5 max-md:-mx-3.5 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3.5 md:flex-wrap md:justify-center">
+      <div className="scroll-x-hidden-bar mt-3 flex items-center gap-x-2 gap-y-1.5 max-md:-mx-3.5 max-md:mt-2 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3.5 max-md:py-1 md:flex-wrap md:justify-center">
         {hasHistory ? (
           <>
             {recents.slice(0, 3).map((k) => (
@@ -385,10 +390,12 @@ export function HomeHeroSearch({
                 prefetch={chipPrefetch}
                 /* 최근 검색 재사용 기록 — 이동을 막지 않고 곁에서 남긴다 */
                 onClick={() => pushRecentSearch(k)}
-                className="chip max-w-[160px] shrink-0 truncate bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
+                className={`${HERO_CHIP} max-w-[160px] bg-surface text-text-2 shadow-sm`}
               >
-                <span aria-hidden="true">⌕ </span>
-                {k}
+                <span className="truncate">
+                  <span aria-hidden="true">⌕ </span>
+                  {k}
+                </span>
               </Link>
             ))}
             {recentComplexes.slice(0, 3).map((c) => (
@@ -396,9 +403,9 @@ export function HomeHeroSearch({
                 key={`c-${c.id}`}
                 href={complexHrefFromId(c.id)}
                 prefetch={chipPrefetch}
-                className="chip max-w-[180px] shrink-0 truncate bg-primary-soft px-3 py-1.5 t-sub font-bold text-primary no-underline transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
+                className={`${HERO_CHIP} max-w-[180px] bg-primary-soft text-primary`}
               >
-                {c.name}
+                <span className="truncate">{c.name}</span>
               </Link>
             ))}
           </>
@@ -413,7 +420,7 @@ export function HomeHeroSearch({
                   key={r.label}
                   href={r.href}
                   prefetch={chipPrefetch}
-                  className="chip shrink-0 bg-surface px-3 py-1.5 t-sub font-bold text-text-2 no-underline shadow-sm transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)]"
+                  className={`${HERO_CHIP} bg-surface text-text-2 shadow-sm`}
                 >
                   {r.label}
                 </Link>
@@ -424,14 +431,15 @@ export function HomeHeroSearch({
               <Link
                 href="/map"
                 prefetch={chipPrefetch}
-                className="chip shrink-0 bg-primary-soft px-3 py-1.5 t-sub font-bold text-primary no-underline transition-all duration-150 hover:-translate-y-px hover:shadow-[0_6px_16px_rgba(16,28,54,.12)] max-md:order-first"
+                className={`${HERO_CHIP} bg-primary-soft text-primary max-md:order-first`}
               >
                 지도에서 내 동네 찾기
               </Link>
             </>
           )
         )}
-        {coverage && <span className="md:hidden">{coverage}</span>}
+        {/* [1206] 소유자 "상하좌우 정렬" — 칩과 같은 높이 줄에서 세로 가운데 · 오른쪽 끝을 검색 상자 오른쪽 끝에 맞춘다(ml-auto) */}
+        {coverage && <span className="ml-auto inline-flex h-10 shrink-0 items-center md:hidden">{coverage}</span>}
       </div>
     </div>
   );

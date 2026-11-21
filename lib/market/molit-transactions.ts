@@ -16,6 +16,7 @@
 /* [1024] keepRaw:false(이력·비아파트는 raw 미저장) · types 명시 · 유형별 커버 판정 · codes+gapsFirst 조합 ·
    비아파트 그룹(officetel·rowhouse·house) 확장 — 이력 백필(molit-history-backfill)·비아파트(molit-nonapt-ingest)가 쓴다 */
 import { createHash } from "node:crypto";
+import { encodeXmlText } from "@/lib/national-data/xml-entities";
 import { getServiceSupabase } from "@/lib/supabase/service";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { fetchMolitDeals, type MolitDeal, type MolitRtmsType } from "@/lib/national-data/molit-api";
@@ -383,7 +384,9 @@ function toRow(
   // external_key — 플랫폼 ETL(40자리 sha1 hex)과 절대 충돌하지 않도록 접두사를 둔다.
   const digest = createHash("sha1")
     .update(
-      [ctx.type, ctx.info.sigunguCd, ctx.yyyymm, name, umd, jibun, areaM2 ?? "", deal.floor ?? "", day, dealKrw ?? depositKrw ?? "", monthlyKrw ?? ""].join("|"),
+      /* [1206] 이름은 원천 XML 표기("&amp;")로 — 글자 참조를 풀기 전(2026-11-10~21) 적재된 1,839행과 같은 키를 내
+         다시 수집해도 같은 거래가 두 줄로 쌓이지 않는다. 저장하는 complex_name 은 풀린 이름이다. */
+      [ctx.type, ctx.info.sigunguCd, ctx.yyyymm, encodeXmlText(name), umd, jibun, areaM2 ?? "", deal.floor ?? "", day, dealKrw ?? depositKrw ?? "", monthlyKrw ?? ""].join("|"),
     )
     .digest("hex");
 

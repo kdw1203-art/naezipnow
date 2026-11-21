@@ -85,8 +85,12 @@ export function HomeRecentDeals({
               })}
             </ol>
           </details>
-          <p className="m-0 t-caption text-text-3">
-            최근 신고 {rows.length.toLocaleString("ko-KR")}건 중 한 건 금액 높은 순 · 국토교통부 아파트 매매 실거래 신고 · 해제 신고 제외 · 호가 아님
+          {/* [1206] 소유자 "이런건 한줄로" — 폰에서 두 줄이던 기준 글자를 짧게 · 한 줄(넘치면 말줄임 · 전체는 title) */}
+          <p
+            className="m-0 truncate t-caption text-text-3"
+            title="최근 신고 중 한 건 금액 높은 순 · 국토교통부 아파트 매매 실거래 신고 · 해제 신고 제외 · 호가 아님"
+          >
+            최근 신고 {rows.length.toLocaleString("ko-KR")}건 · 금액순 · 국토부 실거래(해제 제외)
           </p>
         </>
       )}

@@ -8,6 +8,7 @@ import { cache } from "react";
 import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { AdZone } from "@/app/components/ads/AdZone";
+import { RegionAlertButton } from "@/app/components/RegionAlertButton";
 import { CitationBlock } from "@/app/components/CitationBlock";
 import { Fineprint } from "@/app/components/Fineprint";
 import { HScroll } from "@/app/components/HScroll";
@@ -188,6 +189,11 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
         단지 <strong className="text-ink">{n(complexes.length)}곳</strong> · 최근 6개월 매매 신고{" "}
         <strong className="text-ink">{n(recent)}건</strong> · 국토교통부 실거래 · 매물 호가 아님
       </p>
+      {/* [1206] 동 화면(30일 착지 1,190 · 사람 유입 1위)에 구독이 하나도 없었다 — 그 구 알림(청약 공고 · 새 등록 매물) 한 번 누르기.
+          구독 대상은 동이 아니라 구/시(알림 크론 규칙 — lib/alerts/region-value). 문구·로그인 안내는 공용 버튼이 한다 */}
+      <div className="rise-in -mt-2 mb-4 max-md:-mt-1 max-md:mb-3">
+        <RegionAlertButton variant="link" region={region} name={region} />
+      </div>
       {/* [1127] 0건이어도 줄은 선다(소유자 "데이터가 없더라도") — "없음"으로 적고 첫 노트 쓰기로 잇는다. 조회 실패만 줄 없음 */}
       {guNotes != null && (
         <p className="rise-in -mt-2 mb-4 t-sub max-md:-mt-1 max-md:mb-3">

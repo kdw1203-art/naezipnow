@@ -2,6 +2,7 @@
    "국토부 API 응답 실패(네트워크·5xx·오류 XML)" 대신 "30 SERVICE_KEY_IS_NOT_REGISTERED_ERROR" 처럼 사유를 적게.
    [1024] 연립다세대 전월세(RTMSDataSvcRHRent) 매핑 추가 · 페이징(maxPages) — 이력 백필·비아파트 수집용 */
 import { encodingKeyForUrl } from "@/lib/public-data/data-go-kr-keys";
+import { decodeXmlEntities } from "@/lib/national-data/xml-entities";
 import { resolveSigunguCd } from "@/lib/national-data/region-codes";
 
 /**
@@ -27,7 +28,8 @@ function parseMolitXmlItems(text: string): Record<string, unknown>[] {
     const block = m[1];
     const row: Record<string, unknown> = {};
     for (const tag of block.matchAll(/<([^/>]+)>([^<]*)<\//g)) {
-      row[tag[1]] = tag[2];
+      /* [1206] 글자 참조 풀기 — "&amp;" 가 단지명에 그대로 저장됐다(lib/national-data/xml-entities) */
+      row[tag[1]] = decodeXmlEntities(tag[2]);
     }
     return row;
   });

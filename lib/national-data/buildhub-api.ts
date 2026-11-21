@@ -14,12 +14,14 @@ function serviceKey(): string | null {
   return encodingKeyForUrl();
 }
 
+import { decodeXmlEntities } from "@/lib/national-data/xml-entities";
+
 /** XML <item> 파싱 (minified XML 포함 처리) */
 function parseXmlItems(text: string): Record<string, string>[] {
   return [...text.matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => {
     const row: Record<string, string> = {};
     for (const tag of m[1].matchAll(/<([^/>]+)>([^<]*)<\//g)) {
-      row[tag[1].trim()] = tag[2].trim();
+      row[tag[1].trim()] = decodeXmlEntities(tag[2].trim());
     }
     return row;
   });

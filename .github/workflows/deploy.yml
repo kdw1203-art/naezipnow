@@ -52,6 +52,18 @@ jobs:
         with:
           # gitleaks 이력 스캔을 위해 전체 히스토리 필요
           fetch-depth: 0
+      # [1206] Vercel 프로젝트가 정지(503 DEPLOYMENT_PAUSED)면 20분 빌드 뒤에야 배포가 막혔다(2026-11-21).
+      # 운영 배포(main)만 먼저 묻고, 정지면 바로 멈추며 이유를 적는다. 점검 자체가 실패하면(네트워크) 그냥 진행.
+      - name: Vercel pause pre-check
+        if: github.ref_name == 'main'
+        shell: bash
+        run: |
+          CODE=$(curl -s -o /tmp/pre-body -w "%{http_code}" --max-time 20 https://naezipnow.com/ || echo 000)
+          if [ "$CODE" = "503" ] && grep -q "DEPLOYMENT_PAUSED" /tmp/pre-body; then
+            echo "::error::Vercel 프로젝트가 정지 상태입니다(503 DEPLOYMENT_PAUSED). 대시보드에서 Resume 후 다시 실행하세요 — 배포로는 풀리지 않습니다."
+            exit 1
+          fi
+          echo "사이트 응답 $CODE — 정지 아님, 계속"
       # ---- 시크릿 스캔 (#94): 유출 감지 시 빌드 중단 ----
       # 커밋 SHA 로 핀한다(= v2.3.9, `git ls-remote` 로 2026-08-01 확인).
       # @v2 같은 움직이는 태그는 저장소가 오염되면 다음 실행부터 임의 코드가

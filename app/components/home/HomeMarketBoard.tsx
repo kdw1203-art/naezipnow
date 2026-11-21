@@ -77,8 +77,12 @@ export async function HomeMarketBoard({ id, name, compact = false }: { id: strin
             </div>
           )}
           <div className={compact ? "mt-2.5 grid grid-cols-2 gap-2" : "mt-2.5 grid grid-cols-2 gap-2 md:grid-cols-4"}>{tiles}</div>
-          <p className="m-0 mt-2.5 t-caption text-text-3 break-words">
-            출처 · {overview.hasReb ? "한국부동산원(R-ONE) 월간 통계 · 국토교통부 실거래 신고" : "국토교통부 실거래 신고"} · 매물 호가 아님
+          {/* [1206] 출처 한 줄(넘치면 말줄임 · 전체는 title) */}
+          <p
+            className="m-0 mt-2.5 truncate t-caption text-text-3"
+            title={`출처 · ${overview.hasReb ? "한국부동산원(R-ONE) 월간 통계 · 국토교통부 실거래 신고" : "국토교통부 실거래 신고"} · 매물 호가 아님`}
+          >
+            출처 · {overview.hasReb ? "부동산원 · 국토부 실거래" : "국토부 실거래"} · 호가 아님
           </p>
         </section>
       )}
