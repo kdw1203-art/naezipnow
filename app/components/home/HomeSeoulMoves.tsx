@@ -54,7 +54,7 @@ export function HomeSeoulMoves({ data }: { data: { period: string; rows: { id: s
           max={peak}
           ariaLabel="상승 폭 큰 순"
         />
-        <p className="m-0 mt-2 t-caption text-text-3">한국부동산원 월간 매매가격지수 · 구별 전월비 · 위 AI 브리핑과 같은 기준</p>
+        <p className="m-0 mt-2 truncate t-caption text-text-3" title="한국부동산원 월간 매매가격지수 · 구별 전월비 · 위 AI 브리핑과 같은 기준">부동산원 매매지수 · 구별 전월비</p>
       </div>
     </details>
   );
