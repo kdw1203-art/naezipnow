@@ -458,7 +458,8 @@ test("[1137] 홈 — 비회원은 시세판만 · 로그인하면 탭 둘 + 자�
   assert.match(a, /prefers-reduced-motion: reduce/);
   assert.match(a, /inert=\{tab !== "market"\}/);
   assert.match(a, /inert=\{tab !== "mine"\}/);
-  assert.equal((a.match(/col-start-1 row-start-1/g) ?? []).length, 2, "두 판이 한 칸에 겹친다");
+  /* [1204] 칸 높이 = 시세판 — 내 화면은 같은 높이 안에서 겹쳐 스크롤(시세판이 비었으면 흐름에 선다) */
+  assert.match(a, /\$\{marketEmpty \? "relative" : "absolute inset-0 overflow-y-auto overscroll-contain"\}/);
   for (const k of ["HomeMyRegions", "HomeWatchlistBrief", "HomeEngagementCard"]) assert.match(a, new RegExp(`const ${k} = dynamic\\(`), `${k} 는 로그인 뒤에만 받는다`);
 });
 
@@ -934,10 +935,10 @@ test("[1154] 전국 정비구역 목록 — 단계 걸러 보기 · 세대수 �
   assert.equal(m.nationalHref({ ...p, page: 2 }), `/redev-list?sido=${encodeURIComponent("서울특별시")}&stage=${encodeURIComponent("착공")}&sort=households&page=2`);
 });
 
-test("[1155] 정비사업 지도는 지적도(필지 경계)와 같이 본다 — /map 은 켤 때 함께 · /redevelopment 는 기본 켬", () => {
+test("[1155 → 1204] 정비사업 지도 지적도 — /map 은 켤 때 함께 · /redevelopment 는 기본 끔(구역 도형이 생겨 · 일반 지도가 먼저)", () => {
   assert.match(read("app/map/map-client.tsx"), /if \(!showRedevelopment\) setShowCadastral\(true\);/);
   const r = read("app/redevelopment/RedevelopmentMap.tsx");
-  assert.match(r, /const \[cadastral, setCadastral\] = useState\(true\);/);
+  assert.match(r, /const \[cadastral, setCadastral\] = useState\(false\);/);
   assert.match(r, /nativeLayers=\{nativeLayers\}/);
   assert.match(r, /점은 대표 지번 위치 · 구역 경계 아님/);
 });
@@ -1679,8 +1680,11 @@ test("[1196] 통합 검색 — 단지 좌표 붙이기 · 결과 지도 · 두 �
 
 test("[1197] 홈 가운데 빈자리 — 오른쪽 열 세 줄 · 왼쪽 아래로 공개 임장노트 · 거래 많은 단지", () => {
   const p = readFileSync("app/page.tsx", "utf8");
-  /* [1198] 시안 A 로 바뀌었다 — 둘째 줄 3칸이 각자 위에서부터 쌓인다(items-start · 열 안 flex-col) */
-  assert.match(p, /grid grid-cols-1 items-start gap-3 md:mt-4 md:grid-cols-2 lg:grid-cols-3/);
+  /* [1204] 둘째 줄은 한 흐름 — CSS 다단이 열 높이를 맞춰 채운다(열마다 따로 쌓여 짧은 열 아래가 비던 것) · 빈 칸은 자리 없음 */
+  assert.match(p, /className="home-flow mt-3 md:mt-4"/);
+  const css = readFileSync("app/globals.css", "utf8");
+  assert.match(css, /\.home-flow-item:empty \{\s*display: none;/);
+  assert.match(css, /column-count: 3;/);
   assert.doesNotMatch(p, /lg:row-span-3|lg:self-start/);
 });
 

@@ -24,6 +24,8 @@ export function HomeRecentDeals({
   mapHref: string;
 }) {
   const ranked = rankHomeDeals(rows, 10);
+  /* [1204 · 빈 공간 없이] 홈에서는 보여 줄 거래가 없으면(0건 · 실패) 칸째 그리지 않는다 — "실거래 없음" 카드가 빈자리처럼 읽혔다 */
+  if (ranked.length === 0) return null;
   return (
     <section className="card flex flex-col gap-2.5 rounded-2xl p-[var(--pad-card)]" aria-labelledby="home-recent-deals-title">
       <div className="flex items-baseline justify-between gap-2">

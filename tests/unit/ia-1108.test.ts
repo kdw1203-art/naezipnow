@@ -142,18 +142,19 @@ test("④ 홈 — 네이비 검색 띠 · 최근 실거래 순위 · AI 입구 �
   const band = home.slice(home.indexOf('aria-label="검색"'), home.indexOf("<TopBanner"));
   assert.match(band, /<HomeHeroSearch\s+regionChips=/);
   assert.doesNotMatch(band, /onDark|<HomeTodayLine/);
-  const asideToday = home.slice(home.indexOf('<aside data-autotrim=""'), home.indexOf("</aside>"));
+  const asideToday = home.slice(home.indexOf("<aside"), home.indexOf("</aside>"));
   assert.match(asideToday, /<HomeTodayLine\s+region=\{null\}/);
   assert.match(asideToday, /briefing=\{data\.briefing \? \{ text: data\.briefing\.text, asOfLabel: data\.briefing\.asOfLabel \} : null\}/);
   assert.equal((home.match(/brand-navy-card/g) ?? []).length, 0, "네이비 판은 오늘의 시장 하나(제 카드)");
   /* [1114 · 벤토] 최근 신고 20건 → 금액 순위 배너 · 배치는 ia-1114 가 잠근다 */
   assert.match(home, /listRegionTransactions\(dealsRegion\.id, dealsRegion\.name, 20\)/);
   assert.match(home, /<HomeRecentDeals\s+regionName=\{dealsRegion\.name\}\s+rows=\{recentDeals\}\s+failed=\{recentDealsFailed\}/);
-  /* [1198] 지역 동향 · 광고는 둘째 줄 첫 칸 */
+  /* [1204] 둘째 줄은 한 흐름(.home-flow) — 지역 동향이 첫 칸, 광고는 흐름 끝 */
   const col1 = home.slice(home.indexOf("</aside>"), home.indexOf("<HomeRecentDeals"));
   assert.match(col1, /지역 동향/);
   assert.doesNotMatch(home, /<HomeSeoulMoves/, "[1113] 중복 제거");
-  assert.match(col1, /<AdSenseUnit \/>/);
+  const flow = home.slice(home.indexOf('className="home-flow'), home.indexOf("<HomeTalkSection"));
+  assert.match(flow, /<AdSenseUnit \/>/);
   /* 오늘의 시장 — embedded 는 제 카드 · 워터마크 없음 · 브리핑 슬라이드 */
   const line = strip(read("app/components/home/HomeTodayLine.tsx"));
   assert.match(line, /embedded\s*\?\s*"relative mt-1 border-t border-on-dark-panel pt-3"/);

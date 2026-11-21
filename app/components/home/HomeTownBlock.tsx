@@ -41,6 +41,9 @@ export function HomeTownBlock({
   /* [1030 · G4] 이웃 글 0건이면 동네이야기 칸은 한 줄 띠(제목 · 없음 · 쓰기)로 접고, 뉴스룸이 두 칸을 다 쓴다 —
      데스크톱에서 뉴스룸 옆 절반이 빈 카드였다(2026-10-04 운영 실측). 글이 생기면 예전 2칸 그대로. */
   const storiesEmpty = !failed && stories.length === 0;
+  /* [1204 · 빈 공간 없이] 실패했거나 이야기 · 뉴스가 둘 다 없으면 홈에서는 칸째 뺀다(뉴스룸 · 동네 화면이 그대로 맡는다) */
+  if (failed || (stories.length === 0 && news.length === 0)) return null;
+  const newsEmpty = news.length === 0;
   return (
     <section
       className={stacked ? "grid grid-cols-1 gap-3" : "grid grid-cols-1 gap-3 md:grid-cols-2"}
@@ -112,6 +115,7 @@ export function HomeTownBlock({
 
       {/* ── 뉴스룸 — [1015 · 규칙 C·K] 한지 스트립(튀는 색면) → 이웃 글 칸과 같은 흰 카드. 제목 옆 부연("자동 수집 · 최신")
           삭제. 행 = 원문 사진(있을 때만, 없으면 사진 칸 없음) + 제목 두 줄 + 매체·날짜 — 소유자: 뉴스는 원문 사진 유지 */}
+      {!newsEmpty && (
       <div className={storiesEmpty && !stacked ? "card flex flex-col gap-2 rounded-2xl px-4 py-4 md:col-span-2" : "card flex flex-col gap-2 rounded-2xl px-4 py-4"} aria-label="뉴스룸">
         <div className="flex items-center justify-between gap-2">
           <h2 className="t-section text-ink">뉴스룸</h2>
@@ -161,6 +165,7 @@ export function HomeTownBlock({
           </ul>
         )}
       </div>
+      )}
     </section>
   );
 }

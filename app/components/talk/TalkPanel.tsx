@@ -441,8 +441,9 @@ export function TalkPanel({
     showToast(j.result === "already" ? "이미 신고한 글" : "신고를 접수했어요");
   }
 
-  const listMax = variant === "page" ? "max-h-[560px]" : "max-h-[230px] md:max-h-[460px]";
-  const feedMax = variant === "page" ? "max-h-[640px]" : "max-h-[460px]";
+  /* [1204 · 폰 · PC 구분] 홈(폰)은 순위 목록 · 글 칸을 낮게 — 폰 한 화면 반 넘게 이 판이 차지했다. PC 는 그대로 */
+  const listMax = variant === "page" ? "max-h-[560px]" : "max-h-[184px] md:max-h-[460px]";
+  const feedMax = variant === "page" ? "max-h-[640px]" : "max-h-[300px] md:max-h-[460px]";
   const posts = feed.status === "ok" && feed.regionId === selectedId ? feed.posts : [];
   const facts = feed.status === "ok" && feed.regionId === selectedId ? feed.facts : [];
   const len = [...text].length;

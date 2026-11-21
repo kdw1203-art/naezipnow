@@ -96,14 +96,17 @@ export function HomeAltBoard({ market }: { market: ReactNode }) {
           {paused || touched.current ? "멈춤" : "9초마다 넘김"}
         </span>
       </div>
-      <div className="grid">
+      {/* [1204 · 빈 공간 없이] 칸 높이 = 시세판 — 예전엔 두 판을 한 칸(grid 1/1)에 겹쳐 더 큰 판(내 화면)을 따랐고, 시세판이 보일 때
+          그 아래 · 오늘의 시장 위가 크게 비었다(운영 캡처). 이제 시세판만 흐름에 두고 내 화면은 같은 높이 안에서 위에 겹쳐 스크롤한다.
+          시세판이 비었으면 내 화면이 흐름에 선다(예전 그대로). */}
+      <div className="relative">
         <div
           id="home-alt-pane-market"
           ref={marketRef}
           role="tabpanel"
           aria-labelledby="home-alt-tab-market"
           inert={tab !== "market"}
-          className={`col-start-1 row-start-1 flex min-w-0 flex-col gap-3 transition-opacity duration-300 lg:gap-4 ${tab === "market" ? "opacity-100" : "pointer-events-none opacity-0"}`}
+          className={`flex min-w-0 flex-col gap-3 transition-opacity duration-300 lg:gap-4 ${tab === "market" ? "opacity-100" : "pointer-events-none opacity-0"}`}
         >
           {market}
         </div>
@@ -112,7 +115,7 @@ export function HomeAltBoard({ market }: { market: ReactNode }) {
           role="tabpanel"
           aria-labelledby="home-alt-tab-mine"
           inert={tab !== "mine"}
-          className={`col-start-1 row-start-1 flex min-w-0 flex-col gap-3 transition-opacity duration-300 ${tab === "mine" ? "opacity-100" : "pointer-events-none opacity-0"}`}
+          className={`${marketEmpty ? "relative" : "absolute inset-0 overflow-y-auto overscroll-contain"} flex min-w-0 flex-col gap-3 transition-opacity duration-300 ${tab === "mine" ? "opacity-100" : "pointer-events-none opacity-0"}`}
         >
           {/* 늘 보이는 바로 가기 — 관심 지역 · 관심 단지 · 노트가 아직 없는 사람에게도 이 판이 비지 않는다 */}
           <nav aria-label="내 화면 바로 가기" className="card grid grid-cols-2 gap-2 rounded-2xl p-[var(--pad-card)]">

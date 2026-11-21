@@ -43,7 +43,7 @@ import {
   type MapChromeEvent,
   type MapChromeState,
 } from "@/lib/map/chrome-state";
-import { NaverMap, type MapIdleInfo, type MapMarkerData, type MapPolygonData } from "@/components/map/NaverMap";
+import { NaverMap, type MapIdleInfo, type MapMarkerData, type MapPolygonData, type NaverBaseMap } from "@/components/map/NaverMap";
 /* [1009 · C] 호버 말풍선 등락 표기 — 사이트 공통 규칙(상승 ▲ 빨강 · 하락 ▼ 파랑 · 보합) */
 import { DELTA_CLASS, deltaDir, deltaText } from "@/lib/format/delta";
 import { stepLevel, syncCenterState, syncLevelState } from "@/lib/map/viewport-sync";
@@ -101,6 +101,7 @@ import {
   type RedevLabelMode,
 } from "@/lib/redevelopment/map-layer";
 import { ZONE_HISTORY_COLOR, ZONE_HISTORY_LABEL, ZONE_SHAPES_CREDIT, ZONE_SHAPES_URL, historyShapesIn, matchZoneShape, type ZoneShape, type ZoneShapeFile } from "@/lib/redevelopment/zone-shapes";
+import { NEWTOWN_SHAPES_NOTE, NEWTOWN_SHAPES_URL } from "@/lib/redevelopment/newtown-shapes";
 import { Icon } from "@/app/components/Icon";
 import { TabBar } from "@/app/components/TabBar";
 import {
@@ -1157,7 +1158,8 @@ export function MapClient({
 
   /* ===== [1027] 바탕 지도 — 일반/위성 + 지적편집도. NaverMap 이 이미 받던 props(mapType ·
      nativeLayers.cadastral)인데 /map 만 넘기지 않았다. 지적편집도는 일반·위성 어느 쪽 위에도 얹힌다. */
-  const [baseMap, setBaseMap] = useState<"normal" | "satellite">("normal");
+  /* [1204] 일반 · 위성 · 겹쳐보기(위성 + 지명 — 예전 "위성") · 지형 */
+  const [baseMap, setBaseMap] = useState<NaverBaseMap>("normal");
   const [showCadastral, setShowCadastral] = useState(false);
 
   /* ===== [#74] 입주 예정 레이어 — 자동 수집 입주물량(좌표 캐시분) ===== */
@@ -1288,7 +1290,7 @@ export function MapClient({
         setShowStations(on.has("stations"));
         /* [1027] 지적편집도는 layers 토큰, 위성은 base=sat — 받은 사람이 같은 바탕으로 본다 */
         setShowCadastral(on.has("cadastral"));
-        setBaseMap(sp.get("base") === "sat" ? "satellite" : "normal");
+        { const b = sp.get("base"); setBaseMap(b === "sat" ? "satellite" : b === "satonly" ? "satelliteOnly" : b === "terrain" ? "terrain" : "normal"); }
         const m = sp.get("metric");
         if (m === "avg" || m === "perM2" || m === "jeonse" || m === "temp") setRegionMetric(m);
         /* [1027] 주소에 싣지 않는 값(정비사업 이름표)은 저장값에서 — 이 화면은 늘 layers= 를 주소에 써 두므로,
@@ -1337,7 +1339,7 @@ export function MapClient({
       if (typeof p.auctions === "boolean") setShowAuctions(p.auctions);
       if (typeof p.schools === "boolean") setShowSchools(p.schools);
       if (typeof p.stations === "boolean") setShowStations(p.stations);
-      if (p.base === "satellite" || p.base === "normal") setBaseMap(p.base);
+      if (p.base === "satellite" || p.base === "normal" || p.base === "satelliteOnly" || p.base === "terrain") setBaseMap(p.base);
       if (typeof p.cadastral === "boolean") setShowCadastral(p.cadastral);
       if (isRedevLabelMode(p.redevLabel)) setRedevLabelMode(p.redevLabel);
       if (
@@ -1401,6 +1403,8 @@ export function MapClient({
       if (regionMetric !== "avg") url.searchParams.set("metric", regionMetric);
       else url.searchParams.delete("metric");
       if (baseMap === "satellite") url.searchParams.set("base", "sat");
+      else if (baseMap === "satelliteOnly") url.searchParams.set("base", "satonly");
+      else if (baseMap === "terrain") url.searchParams.set("base", "terrain");
       else url.searchParams.delete("base");
       window.history.replaceState(null, "", url.toString());
     } catch {
@@ -2291,7 +2295,9 @@ export function MapClient({
           {(
             [
               ["normal", "일반"],
-              ["satellite", "위성"],
+              ["satelliteOnly", "위성"],
+              ["satellite", "겹쳐보기"],
+              ["terrain", "지형"],
             ] as const
           ).map(([key, label]) => (
             <button
@@ -2601,6 +2607,7 @@ export function MapClient({
                   {ZONE_HISTORY_LABEL} · 구 단위로 확대하면 표시
                 </p>
                 <p className="m-0 t-caption text-text-3">{ZONE_SHAPES_CREDIT}</p>
+                <p className="m-0 t-caption text-text-3">{NEWTOWN_SHAPES_NOTE}</p>
               </>
             )}
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="마커 색">
@@ -3685,12 +3692,15 @@ export function MapClient({
   useEffect(() => {
     if (!showRedevelopment || zoneShapes) return;
     let alive = true;
-    fetch(ZONE_SHAPES_URL)
-      .then((r) => (r.ok ? (r.json() as Promise<ZoneShapeFile>) : null))
-      .then((j) => {
-        if (alive && j && Array.isArray(j.zones)) setZoneShapes(j.zones);
-      })
-      .catch(() => {});
+    /* [1204] 서울 도형 + 1기 신도시 근사 범위(선도지구 · 2차 후보 — 단지 좌표 볼록 껍질). 한쪽이 실패해도 다른 쪽은 그린다 */
+    const getZones = (url: string) =>
+      fetch(url)
+        .then((r) => (r.ok ? (r.json() as Promise<ZoneShapeFile>) : null))
+        .then((j) => (j && Array.isArray(j.zones) ? j.zones : []))
+        .catch(() => [] as ZoneShape[]);
+    Promise.all([getZones(ZONE_SHAPES_URL), getZones(NEWTOWN_SHAPES_URL)]).then(([seoul, newtown]) => {
+      if (alive && seoul.length + newtown.length > 0) setZoneShapes([...seoul, ...newtown]);
+    });
     return () => {
       alive = false;
     };

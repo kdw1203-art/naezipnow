@@ -49,7 +49,8 @@ test("상단 띠 배너 자리 — 이미지 배너만 · 높이 예약(64/90) �
   assert.match(ph, /^"use client";/);
   assert.match(ph, /if \(alive && \(s\?\.user\?\.role \?\? ""\) === "admin"\) setAdmin\(true\);/);
   assert.match(ph, /if \(!admin\) return null;/);
-  assert.match(ph, /등록된 띠 배너 없음 · 관리자에게만 보이는 표시/);
+  /* [1204] 관리자 빈 자리 표시는 오른쪽 한 줄 글자(점선 큰 상자 → 정리) */
+  assert.match(ph, /띠 배너 없음\(\{PLACEMENT_KO\[placement\]\}\)/);
   /* 화면 글에 느낌표 · "준비 중" 없음(코드의 ! 연산자는 제외 — JSX 글만) */
   const phText = (ph.match(/>([^<>{}]+)</g) ?? []).join(" ");
   assert.doesNotMatch(phText, /!|준비 중/);
