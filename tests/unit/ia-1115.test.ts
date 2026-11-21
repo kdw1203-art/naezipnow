@@ -319,11 +319,11 @@ test("[1126] 화면 — 자사 안내 카드 한 번 · 홈 내 관심 지역 ·
 });
 
 /* ── [1127] 토스 심사 완료 뒤 잔여분 ── */
-test("[1127] 상단 메뉴 — 핵심 넷만 펼치고 뉴스 · 요금제는 더보기(자료 여섯은 그대로)", async () => {
+test("[1127 → 1202] 상단 메뉴 — 핵심 넷만 펼치고 도구 · 요금제는 더보기(자료 여섯)", async () => {
   const { NAV } = await import("../../app/components/nav-data.ts");
-  assert.deepEqual(NAV.filter((i) => !i.more).map((i) => i.label), ["임장노트", "지도", "AI 분석", "동네"]);
-  assert.deepEqual(NAV.filter((i) => i.more).map((i) => i.label), ["뉴스", "요금제"]);
-  assert.equal(NAV.length, 6, "좌측 내비 · 모바일 전체 메뉴는 여섯 그대로");
+  assert.deepEqual(NAV.filter((i) => !i.more).map((i) => i.label), ["임장노트", "지도·분석", "동네", "뉴스"]);
+  assert.deepEqual(NAV.filter((i) => i.more).map((i) => i.label), ["도구", "요금제"]);
+  assert.equal(NAV.length, 6, "좌측 내비 · 모바일 전체 메뉴는 여섯");
   const h = read("app/components/Header.tsx");
   assert.match(h, /NAV\.filter\(\(item\) => !item\.more\)\.map/);
   assert.match(h, /moreItems\.map\(\(item\) =>/);
@@ -1717,7 +1717,9 @@ test("[1198] 홈 시안 A — 지도 첫 화면 · 말풍선은 스냅샷 값만
 
 test("[1199] 홈 접기 — 처음 순서 · 지역 동향 · 거래 많은 단지는 두 개만, 나머지는 펼치기", () => {
   const page = readFileSync("app/page.tsx", "utf8");
-  assert.match(page, /<StartSteps from="home" fold /);
+  /* [1202] 홈의 "처음이라면 이 순서로" 카드는 걷었다 — 검색 판 "처음이라면 ⓘ" 가 맡는다. 접기 부품 자체는 그대로(노트 · 뉴스 상세) */
+  assert.doesNotMatch(page, /<StartSteps from="home"/);
+  assert.match(page, /title="처음 오신 분께"/);
   assert.match(page, /<HomeRegionTable regions=\{tableRegions\} fold=\{2\} \/>/);
   assert.match(page, /chunkPages\(notes, 2\)/);
   const steps = readFileSync("app/components/nav/StartSteps.tsx", "utf8");

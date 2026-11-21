@@ -168,14 +168,16 @@ test("③ 임장노트 분석(/notes/analysis) — 허브의 기록 묶음 · �
   assert.match(read("lib/seo/build-sitemap.ts"), /\{ path: "\/notes\/analysis", priority: 0\.5 \}/);
 });
 
-test("④ 메뉴 6 · 실거래 대분류 없음 · 지도가 실거래 화면을 켠다 · 푸터 데이터 묶음에 넷 · AI 하위 둘 · 임장노트 하위에 노트 분석", () => {
-  assert.deepEqual(NAV.map((g) => g.label), ["임장노트", "지도", "AI 분석", "동네", "뉴스", "요금제"]);
-  const map = NAV.find((g) => g.label === "지도")!;
-  assert.deepEqual([...(map.also ?? [])].sort(), ["/complex", "/dong", "/region", "/reports", "/tx"]);
-  const ai = NAV.find((g) => g.label === "AI 분석")!;
-  assert.deepEqual((ai.children ?? []).map((c) => [c.label, c.href]), [["분석 허브", "/analysis"], ["단지 분석", "/analysis#tier-complex"], ["지역 시세", "/analysis/timing"]]);
+test("④ [1202] 메뉴 — 상단 넷 · 실거래 대분류 없음 · 지도·분석이 실거래 · 분석 화면을 켠다 · 푸터 데이터 묶음에 넷 · 임장노트 하위 셋", () => {
+  assert.deepEqual(NAV.filter((g) => !g.more).map((g) => g.label), ["임장노트", "지도·분석", "동네", "뉴스"]);
+  const map = NAV.find((g) => g.label === "지도·분석")!;
+  assert.deepEqual([...(map.also ?? [])].sort(), ["/analysis", "/complex", "/dong", "/region", "/reports", "/tx"]);
+  assert.deepEqual((map.children ?? []).map((c) => [c.label, c.href]), [["통합 지도", "/map"], ["지역 시세", "/analysis/timing"], ["단지 비교", "/complex/compare"], ["AI 분석", "/analysis"]]);
   const notes = NAV[0];
-  assert.deepEqual((notes.children ?? []).map((c) => c.href), ["/notes/new", "/notes", "/notes/analysis", "/journey", "/journey/contract", "/quiz"]);
+  assert.deepEqual((notes.children ?? []).map((c) => c.href), ["/notes/new", "/notes", "/notes/analysis"]);
+  const tools = NAV.find((g) => g.label === "도구")!;
+  assert.equal(tools.more, true);
+  assert.deepEqual((tools.children ?? []).map((c) => c.href), ["/journey", "/journey/contract", "/calculator", "/quiz"]);
   const footer = read("app/components/Footer.tsx");
   for (const [label, href] of [["실거래 구간", "/tx"], ["동별 실거래", "/dong"], ["월간 리포트", "/reports"], ["시장 온도", "/analysis/temperature"]]) {
     assert.ok(footer.includes(`{ label: "${label}", href: "${href}", bold: false, group: "data" }`), href);
@@ -189,7 +191,7 @@ test("⑤ E2E 스모크 — 지금 화면의 문구를 본다(낡은 19건) · �
   for (const gone of ['"이 집은 이사 갔어요"', '"비밀번호를 잊으셨나요?"', "/멤버십 요금제/", "/대출·수익률 계산기/", '"단지·매물·임장노트·뉴스 통합 검색"', 'getByText("로그인이 필요해요")', "/눌러서 변경/", "/이 템플릿으로 노트 쓰기/", 'name: "오픈 알림 받기"']) {
     assert.ok(!smoke.includes(gone), `낡은 문구가 남았다: ${gone}`);
   }
-  for (const now of ['for (const name of ["임장노트", "지도", "AI 분석", "동네", "뉴스", "요금제"])', "/기록은 무료, 판단은 더 깊게/", "/대출 계산기/", "/페이지 없음/", '"비밀번호 찾기", exact: true', 'getByPlaceholder(/^단지·지역/)', '"로그인 필요"']) {
+  for (const now of ['for (const name of ["임장노트", "지도·분석", "동네", "뉴스"])', "/기록은 무료, 판단은 더 깊게/", "/대출 계산기/", "/페이지 없음/", '"비밀번호 찾기", exact: true', 'getByPlaceholder(/^단지·지역/)', '"로그인 필요"']) {
     assert.ok(smoke.includes(now), `지금 문구가 없다: ${now}`);
   }
   assert.match(read("tests/e2e/install-prompt.spec.ts"), /localStorage\.setItem\("nuguzip:visit-days", JSON\.stringify\(\[d\(2\), d\(1\), d\(0\)\]\)\)/);

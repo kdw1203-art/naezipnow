@@ -42,78 +42,65 @@ export const NAV: NavItem[] = [
      임장노트와 한 덩어리로 읽힌다. 맨 앞에 따로 둘 만큼 다른 축이 아니었다.
      주소는 그대로다(/journey · /journey/contract · /quiz) — 색인·공유 링크 손해 0.
      순서는 소유자 지시: 임장노트 본래 기능(노트 쓰기·공개 노트)이 먼저, 그다음 내 집 마련. */
+  /* [1202 · 디자인 총괄 통폐합] 소유자 2026-11-21 "필요없는 부분은 과감히 통폐합 · 심플하게".
+     근거 = 30일 실측(page_view_daily_agg): 뉴스 기사 937 · 노트 쓰기 567 · 단지 415 · 지역 시세 143 이 핵심이고,
+     여정 6 · 일정표 · 게임 3 · 계산기 5 · 토론 18 · 모임 2 는 메뉴 한 칸 값을 못 했다.
+     - "지도"와 "AI 분석"을 한 칸(지도·분석)으로 — 둘 다 "시세를 보고 판단한다"는 같은 일이다.
+     - 비운 자리에 뉴스(가장 많이 읽히는 화면)를 올린다. 상단 넷 + 더보기 틀([1127])은 그대로.
+     - 여정 · 일정표 · 계산기 · 게임은 더보기 "도구"로 모은다(메뉴에서 사라지지 않게).
+     - 토론 · 모임은 메뉴에서 뺀다(홈 실시간 토론 · 동네 화면에서 닿는다). 주소는 전부 그대로. */
   {
     label: "임장노트",
     href: "/notes",
     children: [
       { label: "노트 쓰기", href: "/notes/new" },
       { label: "공개 노트", href: "/notes" },
-      /* [1110] 임장노트 분석 · 후보 단지 비교 · 에이전트 — AI 분석 허브의 "내 임장노트" 묶음이 이리로 왔다(/notes/analysis) */
       { label: "노트 분석·비교", href: "/notes/analysis" },
-      { label: "내 집 마련 여정", href: "/journey" },
-      { label: "계약·잔금 일정표", href: "/journey/contract" },
-      { label: "실거래가 게임", href: "/quiz" },
     ],
   },
   {
-    label: "지도",
+    label: "지도·분석",
     href: "/map",
-    /* [1110] 실거래 화면(단지 · 지역 · 구간 · 동별 · 리포트)은 지도 대분류가 켜진다 — 실거래 현황의 머리가 지도다(소유자 2026-11-08).
-       3D 지도(/map/3d · 5일 방문 10)는 지도의 다른 보기라 하위로 — 예전엔 메뉴 어디에도 없어 지도 화면 안 단추로만 닿았다. */
-    also: ["/complex", "/region", "/tx", "/dong", "/reports"],
+    also: ["/complex", "/region", "/tx", "/dong", "/reports", "/analysis"],
     children: [
-      { label: "통합 지도 (탐색·실거래·매물)", shortLabel: "통합 지도", href: "/map" },
-      /* [1121 · 기능 통폐합] 3D 지도 메뉴 줄은 뺐다 — 지도 단지 판 · 단지 · 동 화면의 「3D로 보기」와 3D 화면의 「2D」로 오간다(같은 지도의 다른 보기) */
-    ],
-  },
-  {
-    label: "AI 분석",
-    href: "/analysis",
-    children: [
-      /* [958] 이름은 허브 카드(tool-catalog)와 글자까지 같게 */
-      { label: "분석 허브", href: "/analysis" },
-      /* [993] 핵심 4종을 GNB 에 바로 두었던 것을 [1108 · 통폐합] 허브의 질문 세 계열(tool-catalog TIERS — 단지 분석 · 지역 시세 ·
-         내 임장노트)로 바꾼다. 12개 도구 이름을 외워야 고를 수 있는 구조였고(AI 진입 12곳), 허브는 이미 2026-08-25 부터
-         이 세 질문으로 짜여 있다(app/analysis/page.tsx #tier-*). 도구 주소는 그대로(허브 카드에서 닿는다). 이름은 TIERS.label 과 같게. */
-      { label: "단지 분석", href: "/analysis#tier-complex" },
-      /* [1110] 지역 시세 = 지역 시세 분석 화면(시 · 구 · 동 검색 → 지역 종합). 내 임장노트 분석은 임장노트 카테고리(/notes/analysis)로 —
-         소유자 2026-11-07 "임장노트 카테고리에서 끝낼 수 있도록 · AI 분석에서는 제외". */
+      { label: "통합 지도", href: "/map" },
       { label: "지역 시세", href: "/analysis/timing" },
+      { label: "단지 비교", href: "/complex/compare" },
+      { label: "AI 분석", href: "/analysis" },
     ],
   },
   {
     label: "동네",
     href: "/town",
-    /* [996] 소유자 지시 — 하위 메뉴에 뉴스·청약만 보여 동네이야기(허브)·정비사업이 안 보였다.
-       넷을 나란히. [1006] 순서를 화면과 맞춘다: 동네이야기(사람의 기록, 허브)가 먼저,
-       뉴스(뉴스룸)는 그다음 — 동네이야기와 뉴스는 다른 재질의 두 화면이다. */
-    /* [1044] 뉴스룸을 뺐다(소유자 지시 2026-10-06: "뉴스랑 동네글을 분리해줘" — 메뉴까지). 동네 = 사람이 쓴 글과
-       동네 단위 공공데이터(청약·정비사업), 뉴스 = 자동수집 기사. 뉴스는 바로 아래 제 대분류에 선다. */
-    /* [1108 · 통폐합] 토론(/talk) · 모임(/town/groups)을 하위에 — 사람이 쓰는 글이 글 · 토론 · 모임 세 화면인데 메뉴에는 글 하나만 있어
-       토론은 홈 맨 아래 한 줄과 단지 화면에서만 닿았다. /talk 는 /town 아래가 아니라 also 로 동네를 켠다(탭바 TOWN_TAB_EXTRA 와 같은 판정). */
     also: ["/talk"],
     children: [
       { label: "동네이야기", href: "/town" },
-      { label: "토론", href: "/talk" },
-      { label: "모임", href: "/town/groups" },
       { label: "청약", href: "/apply" },
       { label: "정비사업", href: "/redevelopment" },
-      /* [1047] 전문가 — 보관 해제(소유자 지시 2026-10-09 "전문가 등록 · 카테고리 · 숨고처럼 홍보"). 주소가 /town 아래라 동네가 켜진다 */
       { label: "전문가 찾기", href: "/town/experts" },
     ],
   },
-  /* [1044] 뉴스 — 동네에서 떼어 낸 대분류(5 → 6). 주소는 그대로다(/town/news · /digest — 색인·공유 링크 손해 0).
-     주소가 /town 아래라 활성 판정은 "가장 긴 접두가 이긴다"(navItemActive) — /town/news 에서는 뉴스만 켜지고 동네는 꺼진다.
-     주간 다이제스트(/digest)는 뉴스 하위 화면이라 also 로 함께 켠다.
-     하위 라벨 "뉴스룸"은 화면 제목·다른 화면의 링크("뉴스룸 전체 ›")와 같은 이름이다([1007 · P2]). */
+  /* 뉴스: 주소가 /town 아래라 활성 판정은 "가장 긴 접두가 이긴다"(navItemActive) — /town/news 에서는 뉴스만 켜진다. */
   {
     label: "뉴스",
     href: "/town/news",
-    more: true,
     also: ["/digest"],
     children: [
       { label: "뉴스룸", href: "/town/news" },
       { label: "주간 다이제스트", href: "/digest" },
+    ],
+  },
+  /* 도구 — 집 마련 단계별 계산·일정. 쓰임은 적지만 지우지 않고 더보기 한 칸에 모은다. */
+  {
+    label: "도구",
+    href: "/journey",
+    more: true,
+    also: ["/calculator", "/quiz"],
+    children: [
+      { label: "내 집 마련 여정", href: "/journey" },
+      { label: "계약·잔금 일정표", href: "/journey/contract" },
+      { label: "대출 계산기", href: "/calculator" },
+      { label: "실거래가 게임", href: "/quiz" },
     ],
   },
   /* [1003] 요금제 — GNB 에 결제 진입로가 **하나도 없었다**(푸터 한 줄이 전부).

@@ -40,16 +40,12 @@ const LEGAL_LINKS = [
   { label: "임장 가이드", href: "/imjang", bold: false, group: "service" },
   /* [945 #25] 가이드 허브 — 검색 유입 콘텐츠의 내부 크롤 경로 */
   { label: "실전 가이드", href: "/guides", bold: false, group: "service" },
-  /* [1025] 시장 12가지 반영 — 결정 카드(⑨)·살까 빌릴까(⑪)·중개사·임대인(③⑫) 입구를 모든 페이지에서 닿게 */
-  { label: "결정 카드", href: "/decide", bold: false, group: "service" },
-  { label: "살까, 빌릴까", href: "/calculator/rent-vs-buy", bold: false, group: "service" },
-  { label: "중개사·임대인", href: "/pro", bold: false, group: "service" },
-  { label: "데이터 방법론", href: "/methodology", bold: false, group: "data" },
+  /* [1202 · 통폐합] 22 → 17. 30일 방문 3 이하였던 결정 카드 · 살까 빌릴까 · 중개사·임대인 · 공개 API 와,
+     데이터 출처 화면이 이미 잇는 데이터 방법론을 뺐다. 주소는 그대로 — 결정 카드 · 살까 빌릴까는 계산기(CalculatorNav),
+     방법론은 데이터 출처, 공개 API 는 사이트맵이 잇는다. 묶음은 넷 그대로(서비스 2 · 데이터 6 · 회사·고객 4 · 약관·정책 5). */
   /* [945 #33] 출처·한계 한 장 — 신뢰 문서의 크롤·도달 경로 */
   { label: "데이터 출처", href: "/data-sources", bold: false, group: "data" },
   { label: "용어사전", href: "/glossary", bold: false, group: "data" },
-  /* N20 — 공개 집계 API 문서. 링크가 없으면 크롤러도 사람도 도달하지 못한다. */
-  { label: "공개 API", href: "/developers", bold: false, group: "data" },
   /* [1110] 상단 메뉴의 "실거래" 대분류를 뺐다(소유자 2026-11-08 "실거래 현황은 지도에서 · 메인 카테고리에서는 제외") — 그 하위에 있던
      실거래 구간 · 동별 실거래 · 월간 리포트 · 시장 온도 허브 넷은 여기 데이터 묶음으로 돌아온다(1069 · 1094 "끊긴 묶음" 크롤 경로 보존).
      단지 찾기(/complex/browse) · 단지 비교는 지도 · 홈 · 지역 화면이 잇는다. 푸터 18 → 22. */

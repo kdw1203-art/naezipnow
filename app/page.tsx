@@ -8,7 +8,6 @@ import { Fineprint } from "./components/Fineprint";
 import { ResumeDraftPopupLazy as ResumeDraftPopup } from "./components/home/ResumeDraftPopupLazy";
 import { EmptyState, ErrorState } from "./components/ui/EmptyState";
 import { AdZone } from "./components/ads/AdZone";
-import { StartSteps } from "./components/nav/StartSteps";
 import { AdSenseUnit } from "./components/ads/AdSenseUnit";
 import { Footer } from "./components/Footer";
 import { HomeHeroSearch } from "./components/home/HomeHeroSearch";
@@ -222,7 +221,7 @@ export default async function Home() {
                       "단지 종합 진단: 단지 이름으로 실거래·전월세·공급·뉴스를 한 화면에",
                       "계약·잔금 일정표: 계약일·잔금일로 할 일과 법정 기한을 날짜순으로",
                       "내 집 마련 여정: 시장 파악부터 계약·입주까지 6단계",
-                      "단지 종합 진단은 메뉴 AI 분석, 나머지 셋은 메뉴 임장노트에 있어요.",
+                      "단지 종합 진단은 메뉴 지도·분석, 나머지 셋은 메뉴 더보기 › 도구에 있어요.",
                     ]}
                     source={[coverageLine, "예산으로 찾기는 지도의 가격 필터"].filter(Boolean).join(" · ")}
                   />
@@ -233,7 +232,8 @@ export default async function Home() {
 
           {/* [1098 · 배너] 상단 띠 배너 자리(없으면 관리자에게만 점선 자리) · [1124] 비회원 네 단계 */}
           <TopBanner placement="home_feed" plan={null} className="mt-3 md:mt-4" />
-          <StartSteps from="home" fold className="mt-3 md:mt-4" />
+          {/* [1202] "처음이라면 이 순서로" 카드는 걷었다 — 검색 판의 "처음이라면 ⓘ" 가 같은 안내를 한 줄로 맡는다(겹친 입구 정리).
+              비회원 네 단계(StartSteps)는 공개 노트 · 뉴스 상세 끝에서 그대로 보인다. */}
 
           {/* ② 첫 줄 — 지도(8) | 숫자 칸 · 오늘의 시장(4) */}
           <div className="mt-3 grid grid-cols-1 gap-3 md:mt-4 lg:grid-cols-12 lg:gap-4">
