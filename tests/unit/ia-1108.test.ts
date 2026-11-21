@@ -37,21 +37,14 @@ function navHrefs(): string[] {
   return out;
 }
 
-/* [1110] ① 1108 의 "실거래" 대분류는 다시 뺐다(소유자 2026-11-08 "실거래 현황은 지도에서 · 메인 카테고리에서는 제외") — 여섯 묶음.
-   AI 분석 하위는 둘(단지 분석 · 지역 시세 = /analysis/timing), 내 임장노트 분석은 임장노트 하위(/notes/analysis). 지도는 실거래 화면에서 켜진다(also). */
-test("① 메뉴 — 여섯 묶음 · 실거래 대분류 없음 · 지도가 실거래 화면을 켠다 · AI 2 계열 · 동네에 토론 · 모임 · 요금제 그대로", () => {
-  assert.deepEqual(
-    NAV.map((g) => g.label),
-    ["임장노트", "지도", "AI 분석", "동네", "뉴스", "요금제"],
-  );
-  const map = NAV.find((g) => g.label === "지도");
-  assert.deepEqual((map?.children ?? []).map((c) => c.href), ["/map"]); /* [1121] 3D 는 지도의 다른 보기(단지 판 · 단지 · 동 화면 「3D로 보기」) */
-  assert.deepEqual([...(map?.also ?? [])].sort(), ["/complex", "/dong", "/region", "/reports", "/tx"].sort());
-  const ai = NAV.find((g) => g.label === "AI 분석");
-  assert.deepEqual(
-    (ai?.children ?? []).map((c) => c.href),
-    ["/analysis", "/analysis#tier-complex", "/analysis/timing"],
-  );
+/* [1202] ① 디자인 총괄 통폐합 — 상단 넷(임장노트 · 지도·분석 · 동네 · 뉴스) + 더보기(도구 · 요금제).
+   지도와 AI 분석은 한 칸(지도·분석). 실거래 대분류는 여전히 없고 지도·분석이 실거래 · 분석 화면에서 켜진다(also). */
+test("① 메뉴 — 상단 넷 + 더보기 둘 · 지도·분석 한 칸 · 실거래 대분류 없음 · 토론 · 모임은 메뉴 밖 · 요금제 그대로", () => {
+  assert.deepEqual(NAV.map((g) => g.label), ["임장노트", "지도·분석", "동네", "뉴스", "도구", "요금제"]);
+  assert.deepEqual(NAV.filter((g) => !g.more).map((g) => g.label), ["임장노트", "지도·분석", "동네", "뉴스"]);
+  const map = NAV.find((g) => g.label === "지도·분석");
+  assert.deepEqual((map?.children ?? []).map((c) => c.href), ["/map", "/analysis/timing", "/complex/compare", "/analysis"]);
+  assert.deepEqual([...(map?.also ?? [])].sort(), ["/analysis", "/complex", "/dong", "/region", "/reports", "/tx"].sort());
   /* 허브 앵커가 실재한다 — 기록 계열 앵커는 없다(임장노트 분석 화면으로) */
   const hub = read("app/analysis/page.tsx");
   for (const id of ["tier-complex", "tier-market"]) assert.ok(hub.includes(`id="${id}"`), id);
@@ -59,30 +52,44 @@ test("① 메뉴 — 여섯 묶음 · 실거래 대분류 없음 · 지도가 �
   assert.ok((NAV[0].children ?? []).some((c) => c.href === "/notes/analysis" && c.label === "노트 분석·비교"));
   const town = NAV.find((g) => g.label === "동네");
   assert.deepEqual(town?.also, ["/talk"]);
-  assert.ok((town?.children ?? []).some((c) => c.href === "/talk" && c.label === "토론"));
-  assert.ok((town?.children ?? []).some((c) => c.href === "/town/groups" && c.label === "모임"));
+  assert.ok(!(town?.children ?? []).some((c) => c.href === "/talk" || c.href === "/town/groups"), "토론 · 모임은 메뉴 밖");
   /* 요금제 — 심사 종료까지 자리 · 하위 그대로 */
   const pay = NAV[NAV.length - 1];
   assert.equal(pay.label, "요금제");
   assert.equal((pay.children ?? []).length, 3);
-  /* 아이콘 표 두 곳에 실거래 없음 */
+  /* 아이콘 표 두 곳에 실거래 없음 · 지도·분석 · 도구 있음 */
   for (const f of ["app/components/DesktopSideNavGroups.tsx", "app/components/MobileMenu.tsx"]) {
-    assert.doesNotMatch(read(f), /실거래: "bar",/, f);
+    const src = read(f);
+    assert.doesNotMatch(src, /실거래: "bar",/, f);
+    assert.match(src, /"지도·분석": "map",/, f);
+    assert.match(src, /도구: "calculator",/, f);
   }
 });
 
-test("② 푸터 22 — 묶음 4 · 여정 · 일정표는 메뉴 하위에 · 구간 · 동별 · 리포트 · 온도는 데이터 묶음 · 심사 줄(요금제 · 카드 결제 수단 안내)은 그대로", () => {
+/* [1202] ② 푸터 22 → 17. 뺀 다섯은 다른 화면이 잇는다 — 크롤 경로가 끊기지 않는지 잠근다. */
+test("② 푸터 17 — 묶음 4 · 구간 · 동별 · 리포트 · 온도는 데이터 묶음 · 뺀 다섯은 다른 화면이 잇는다 · 심사 줄 그대로", () => {
   const hrefs = footerHrefs();
-  assert.equal(hrefs.length, 22);
+  assert.equal(hrefs.length, 17);
   const f = read("app/components/Footer.tsx");
   const groups = [...f.matchAll(/group: "(service|data|help|policy)"/g)].map((m) => m[1]);
   assert.deepEqual(
     { service: groups.filter((g) => g === "service").length, data: groups.filter((g) => g === "data").length, help: groups.filter((g) => g === "help").length, policy: groups.filter((g) => g === "policy").length },
-    { service: 5, data: 8, help: 4, policy: 5 },
+    { service: 2, data: 6, help: 4, policy: 5 },
   );
-  for (const h of ["/journey", "/journey/contract"]) assert.ok(!hrefs.includes(h), `푸터에 남음: ${h}`);
   for (const h of ["/reports", "/tx", "/dong", "/analysis/temperature"]) assert.ok(hrefs.includes(h), `푸터 데이터 묶음에 없음: ${h}`);
-  const union = new Set([...hrefs, ...navHrefs()]);
+  /* 뺀 것 → 잇는 화면 */
+  const elsewhere: Record<string, string> = {
+    "/decide": "app/calculator/CalculatorNav.tsx",
+    "/calculator/rent-vs-buy": "app/calculator/CalculatorNav.tsx",
+    "/methodology": "app/data-sources/page.tsx",
+    "/developers": "app/data-sources/page.tsx",
+    "/pro": "lib/town/category-links.ts",
+  };
+  for (const [h, file] of Object.entries(elsewhere)) {
+    assert.ok(!hrefs.includes(h), `푸터에 남음: ${h}`);
+    assert.ok(read(file).includes(`"${h}"`), `${h} 를 잇는 곳 없음(${file})`);
+  }
+  const union = new Set([...hrefs, ...navHrefs(), ...Object.keys(elsewhere)]);
   for (const h of OLD_FOOTER_HREFS) assert.ok(union.has(h), `크롤 경로 끊김: ${h}`);
   for (const keep of ['label: "요금제·결제 수단", href: "/subscription"', 'label: "카드 결제 수단 안내", href: "/subscription/payment-methods"', 'label: "법적 고지", href: "/legal"']) {
     assert.ok(f.includes(keep), keep);

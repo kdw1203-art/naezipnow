@@ -25,12 +25,13 @@ const code = (p: string) =>
 
 /* ── ① 내비 ─────────────────────────────────────────────────────────────── */
 
-test("뉴스는 제 대분류 — 동네 다음, 요금제 앞 · 주소는 그대로", () => {
-  /* [1108] 맨 앞에 "실거래"(통폐합) → [1110] 다시 뺐다(여섯). 뉴스는 여전히 동네 다음 · 요금제 앞 */
+test("뉴스는 제 대분류 — 동네 다음 · [1202] 상단 넷에 펼친다 · 주소는 그대로", () => {
+  /* [1202] 지도 + AI 분석 → 지도·분석 한 칸, 비운 자리에 뉴스(더보기에서 올라옴) */
   assert.deepEqual(
     NAV.map((g) => g.label),
-    ["임장노트", "지도", "AI 분석", "동네", "뉴스", "요금제"],
+    ["임장노트", "지도·분석", "동네", "뉴스", "도구", "요금제"],
   );
+  assert.ok(!NAV.find((g) => g.label === "뉴스")?.more, "뉴스는 상단에 펼친다");
   const news = NAV.find((g) => g.label === "뉴스");
   assert.ok(news);
   assert.equal(news.href, "/town/news", "주소는 옮기지 않는다(색인 · 공유 링크)");
@@ -44,8 +45,8 @@ test("뉴스는 제 대분류 — 동네 다음, 요금제 앞 · 주소는 그�
   const town = NAV.find((g) => g.label === "동네");
   assert.deepEqual(
     (town?.children ?? []).map((c) => c.href),
-    /* [1047] 전문가 찾기 — 보관 해제(소유자 지시 2026-10-09) · [1108] 토론 · 모임 하위 추가(글 · 토론 · 모임) */
-    ["/town", "/talk", "/town/groups", "/apply", "/redevelopment", "/town/experts"],
+    /* [1202] 토론 · 모임은 메뉴 밖(30일 18 · 2) — 동네이야기 · 청약 · 정비사업 · 전문가 */
+    ["/town", "/apply", "/redevelopment", "/town/experts"],
   );
 });
 
@@ -69,8 +70,9 @@ test("navGroupOf — 가장 긴 접두 하나: 뉴스 화면에서 동네는 꺼
     assert.equal(label(p), "동네", p);
   }
   assert.equal(label("/notes/new"), "임장노트");
-  assert.equal(label("/map"), "지도");
-  assert.equal(label("/analysis/ai/ai-diagnosis"), "AI 분석");
+  assert.equal(label("/map"), "지도·분석");
+  assert.equal(label("/analysis/ai/ai-diagnosis"), "지도·분석");
+  assert.equal(label("/calculator"), "도구");
   assert.equal(label("/subscription/checkout"), "요금제");
   /* 세그먼트 단위 — 비슷한 글자로 시작하는 남의 경로는 켜지 않는다 */
   for (const p of ["/", "/townhouse", "/town/newsletter", "/digests", "/mapping", "/my"]) {

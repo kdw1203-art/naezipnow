@@ -19,10 +19,11 @@ type Group = NavItem & { icon: string };
 const CAT_ICON: Record<string, string> = {
   /* [1110] 실거래 대분류는 뺐다(nav-data) — 여섯 묶음 */
   임장노트: "notebook-pen",
-  지도: "map",
-  "AI 분석": "sparkles",
+  /* [1202] 지도 + AI 분석 → 지도·분석 한 칸 · 더보기 "도구" */
+  "지도·분석": "map",
   동네: "messages-square",
   뉴스: "newspaper",
+  도구: "calculator",
   요금제: "credit-card",
 };
 

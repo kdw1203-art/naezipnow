@@ -88,8 +88,9 @@ test("C5 푸터 — 묶음 4개 · 링크·목적지 그대로 · 사업자 고�
   }
   /* 링크 22개([1108] 24 → 18 — 여섯은 상단 메뉴 하위로 · [1110] 실거래 대분류를 빼며 넷(구간 · 동별 · 리포트 · 온도)이 데이터 묶음으로 복귀) */
   const links = f.match(/\{ label: "[^"]+", href: "[^"]+", bold: (true|false), group: "(service|data|help|policy)" \}/g) ?? [];
-  assert.equal(links.length, 22);
-  for (const href of ["/legal/terms", "/legal/privacy", "/subscription", "/subscription/payment-methods", "/support", "/imjang", "/developers"]) {
+  /* [1202] 22 → 17 — 결정 카드 · 살까 빌릴까 · 중개사·임대인 · 공개 API · 방법론은 다른 화면이 잇는다(tests/unit/ia-1108 ②) */
+  assert.equal(links.length, 17);
+  for (const href of ["/legal/terms", "/legal/privacy", "/subscription", "/subscription/payment-methods", "/support", "/imjang"]) {
     assert.ok(f.includes(`href: "${href}"`), href);
   }
   /* 개인정보처리방침은 여전히 굵게 */

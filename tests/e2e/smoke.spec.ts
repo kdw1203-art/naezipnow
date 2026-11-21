@@ -11,12 +11,14 @@ import { test, expect } from "@playwright/test";
 
 /* [1110] 대분류 여섯 — 임장노트 · 지도 · AI 분석 · 동네 · 뉴스 · 요금제(nav-data). "동네이야기"는 1044 에 "동네"가 됐고,
    1108 의 "실거래" 대분류는 1110 에 뺐다(실거래 현황은 지도가 머리). 라벨이 바뀌면 이 검사와 nav-data 를 함께 고친다. */
-test("1. home renders with GNB labels 임장노트·지도·AI 분석·동네·뉴스·요금제", async ({ page }) => {
+/* [1202] 상단 넷(임장노트 · 지도·분석 · 동네 · 뉴스) + 더보기(도구 · 요금제) */
+test("1. home renders with GNB labels 임장노트·지도·분석·동네·뉴스 + 더보기", async ({ page }) => {
   await page.goto("/");
   const nav = page.locator("header nav");
-  for (const name of ["임장노트", "지도", "AI 분석", "동네", "뉴스", "요금제"]) {
+  for (const name of ["임장노트", "지도·분석", "동네", "뉴스"]) {
     await expect(nav.getByRole("link", { name, exact: true })).toBeVisible();
   }
+  await expect(nav.getByRole("button", { name: "더보기", exact: true })).toBeVisible();
   await expect(nav.getByRole("link", { name: "실거래", exact: true })).toHaveCount(0);
   await expect(nav.getByRole("link", { name: "동네이야기", exact: true })).toHaveCount(0);
 });

@@ -184,7 +184,12 @@ export default async function DataSourcesPage() {
           <Link href="/methodology" className="tap-line font-bold text-primary">
             데이터 방법론
           </Link>
-          에 있습니다.
+          에 있습니다. 집계값을 직접 받아 쓰려면{" "}
+          {/* [1202] 푸터에서 공개 API 를 뺀 뒤의 내부 링크 자리 */}
+          <Link href="/developers" className="tap-line font-bold text-primary">
+            공개 API
+          </Link>
+          .
         </p>
 
         {/* ── [987 · 신뢰 근거] 지금 실제로 가진 것 ──────────────────────────
