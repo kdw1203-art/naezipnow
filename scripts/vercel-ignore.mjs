@@ -50,11 +50,17 @@ const SKIP_BRANCH_PREFIXES = ["dependabot/"];
 
 /**
  * 순수 판정.
- * @param {{ ref?: string | null, changedFiles?: string[] | null }} input
+ * @param {{ ref?: string | null, changedFiles?: string[] | null, vercelEnv?: string | null, previewEnvReady?: boolean }} input
  * @returns {{ skip: boolean, reason: string }}
  */
 export function shouldSkipBuild(input) {
   const ref = (input.ref ?? "").trim();
+  /* [1206] 미리보기 환경 변수가 비어 있으면(Vercel → Environment Variables 에 Preview 체크 없음) 미리보기 빌드는
+     validate-env(STRICT_ENV_CHECK) 에서 반드시 죽는다 — 2026-11-21 PR #395(문서 1개)까지 빨간 상태 · Build CPU 소모.
+     값이 들어오면 저절로 다시 빌드한다. 운영(production)은 이 규칙과 무관하다. */
+  if (input.vercelEnv === "preview" && input.previewEnvReady === false) {
+    return { skip: true, reason: "미리보기 환경 변수 미설정(NEXT_PUBLIC_SUPABASE_URL 없음) → 미리보기 빌드 생략" };
+  }
   for (const p of SKIP_BRANCH_PREFIXES) {
     if (ref === p || ref.startsWith(p.endsWith("/") ? p : `${p}/`)) return { skip: true, reason: `브랜치 ${ref} — 의존성 봇 PR 은 미리보기 빌드를 만들지 않는다` };
   }
@@ -117,7 +123,12 @@ function main() {
   const ref = process.env.VERCEL_GIT_COMMIT_REF ?? null;
   if (!base) base = baseRef(ref);
   const changedFiles = base ? changedFilesBetween(base, head) : null;
-  const verdict = shouldSkipBuild({ ref, changedFiles });
+  const verdict = shouldSkipBuild({
+    ref,
+    changedFiles,
+    vercelEnv: process.env.VERCEL_ENV ?? null,
+    previewEnvReady: Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL?.trim()),
+  });
   console.log(`[vercel-ignore] base=${base ?? "(없음)"} ref=${ref ?? "(없음)"} files=${changedFiles?.length ?? "?"} → ${verdict.skip ? "생략" : "빌드"} — ${verdict.reason}`);
   if (dry >= 0) return;
   process.exit(verdict.skip ? 0 : 1);

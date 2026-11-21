@@ -6,7 +6,8 @@ name: Synthetic monitoring
 
 on:
   schedule:
-    - cron: "0 21,9 * * *"
+    # [1206] 하루 2회 → 3시간마다 — Vercel 프로젝트 정지(2026-11-21 · 503 DEPLOYMENT_PAUSED)를 사람이 먼저 발견했다
+    - cron: "17 */3 * * *"
   workflow_dispatch:
 
 permissions:
@@ -22,9 +23,14 @@ jobs:
         run: |
           BASE="https://naezipnow.com"
           FAILED=""
+          PAUSED=0
           for P in / /notes /town /calculator /api/health; do
-            CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 --retry 2 --retry-delay 5 "$BASE$P" || echo 000)
+            CODE=$(curl -s -o /tmp/probe-body -w "%{http_code}" --max-time 30 --retry 2 --retry-delay 5 "$BASE$P" || echo 000)
             echo "$P -> $CODE"
+            # [1206] 정지는 따로 — 본문/헤더에 DEPLOYMENT_PAUSED 가 있으면 코드가 아니라 Vercel 계정(사용량·결제) 문제다
+            if [ "$CODE" = "503" ] && grep -q "DEPLOYMENT_PAUSED" /tmp/probe-body 2>/dev/null; then
+              PAUSED=1
+            fi
             if [ "$CODE" != "200" ]; then
               FAILED="$FAILED $P($CODE)"
             fi
@@ -41,6 +47,7 @@ jobs:
             echo "failed=${FAILED# }"
             echo "health_status=$HEALTH_STATUS"
             echo "health_checks=$HEALTH_CHECKS"
+            echo "paused=$PAUSED"
           } >> "$GITHUB_OUTPUT"
 
           if [ -n "$FAILED" ] || [ "$HEALTH_STATUS" != "ok" ]; then
@@ -56,8 +63,18 @@ jobs:
           FAILED: ${{ steps.probe.outputs.failed }}
           HEALTH_STATUS: ${{ steps.probe.outputs.health_status }}
           HEALTH_CHECKS: ${{ steps.probe.outputs.health_checks }}
+          PAUSED: ${{ steps.probe.outputs.paused }}
         run: |
           TITLE="Synthetic monitoring failure: naezipnow.com"
+          if [ "$PAUSED" = "1" ]; then
+            # [1206] 정지는 코드로 못 고친다 — 소유자가 Vercel 대시보드(Usage · Spend Management · Billing)에서 풀어야 한다
+            gh api repos/${{ github.repository }}/issues \
+              -f title="🚨 Vercel 프로젝트 정지(DEPLOYMENT_PAUSED) — naezipnow.com 전체 503" \
+              -f body="$(date -u +%FT%TZ) 합성 점검: 모든 화면이 503 DEPLOYMENT_PAUSED.
+
+          할 일(소유자): Vercel → nuguzip-homepage → Settings/Usage · Spend Management 에서 정지 사유 확인 후 Resume.
+          코드 배포로는 풀리지 않습니다. run: ${{ github.run_id }}" || true
+          fi
           # 중복 이슈 방지 — 같은 제목의 open 이슈가 있으면 스킵
           EXISTING=$(gh api "repos/${{ github.repository }}/issues?state=open&per_page=100" \
             --jq "[.[] | select(.title == \"$TITLE\")] | length" || echo 0)

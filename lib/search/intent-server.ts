@@ -165,7 +165,7 @@ export function preParse(rawQ: string): { nameQuery: string; filtered: boolean }
 /** 검색어 하나를 읽어 계획을 세운다(search_areas 1회) */
 export async function planSearch(rawQ: string): Promise<SearchPlan> {
   const year = currentYearKst();
-  const parsed = parseSearchIntent(rawQ, year);
+  let parsed = parseSearchIntent(rawQ, year);
   let rows: AreaRow[] = [];
   let areasFailed = false;
   const restText = parsed.rest.join(" ").trim();
@@ -182,7 +182,41 @@ export async function planSearch(rawQ: string): Promise<SearchPlan> {
       }
     }
   }
+  /* [1206] 붙여 쓴 "지역+단지명"("광명롯데캐슬시그니처") — 한 덩어리라 지역을 못 읽고 이름으로만 찾아 0건이었다.
+     지역이 안 잡혔고 한 낱말(한글 5자 이상)이면 앞 2~4자를 지역 이름으로 한 번 더 물어(search_areas 1회),
+     시·군·구가 그대로 맞으면 "광명 롯데캐슬시그니처" 로 나눠 읽는다(뒤가 3자 이상일 때만). */
+  if (!areasFailed && parsed.rest.length === 1 && !rows.some((r) => r.matchRank >= 2)) {
+    const split = await splitGluedArea(parsed.rest[0]);
+    if (split) {
+      parsed = { ...parsed, rest: [split.head, split.tail] };
+      rows = [...rows, ...split.rows];
+    }
+  }
   return buildPlan(rawQ, parsed, rows, areasFailed);
+}
+
+/** [1206] 붙여 쓴 낱말의 앞부분이 시·군·구 이름이면 { head, tail, rows } — 아니면 null(조회 실패도 null) */
+async function splitGluedArea(tok: string): Promise<{ head: string; tail: string; rows: AreaRow[] } | null> {
+  if (!/^[가-힣]{5,}$/.test(tok)) return null;
+  const heads = [4, 3, 2].map((n) => tok.slice(0, n)).filter((h) => tok.length - h.length >= 3);
+  if (heads.length === 0) return null;
+  const sb = getReadOnlySupabase();
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb.rpc("search_areas", { p_q: heads.join(" "), p_limit: 6 });
+    if (error || !data) return null;
+    const got = (data as Record<string, unknown>[])
+      .map(toAreaRow)
+      .filter((r) => r.matchRank >= 2 && r.kind !== "dong" && r.matchToken != null && heads.includes(r.matchToken));
+    /* 긴 앞부분이 먼저("광명시" > "광명") */
+    for (const h of heads) {
+      const hit = got.filter((r) => r.matchToken === h);
+      if (hit.length) return { head: h, tail: tok.slice(h.length), rows: hit };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /** 읽은 조건 + 지역 행 → 계획(DB 없음 — 앞 낱말 계획도 같은 행으로 세운다) */

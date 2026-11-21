@@ -3,6 +3,8 @@
  * URL: http://openapi.seoul.go.kr:8088/{KEY}/{json|xml}/{service}/{start}/{end}/{...}
  */
 
+import { decodeXmlEntities } from "@/lib/national-data/xml-entities";
+
 export class SeoulApiError extends Error {
   readonly code: string;
 
@@ -72,7 +74,7 @@ function parseXmlRows(xml: string, serviceName: string): SeoulFetchResult {
     const row: Record<string, unknown> = {};
     const fields = block.matchAll(/<([A-Z0-9_]+)>([^<]*)<\/\1>/g);
     for (const m of fields) {
-      row[m[1]] = m[2];
+      row[m[1]] = decodeXmlEntities(m[2]);
     }
     if (Object.keys(row).length > 0) rows.push(row);
   }

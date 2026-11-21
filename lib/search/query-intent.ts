@@ -373,6 +373,16 @@ function unsupported(o: ParsedIntent, token: string, label: string): boolean {
 }
 
 /**
+ * [1206] 행정동 → 법정동 — "개포3동" · "상계10동" · "역삼1동" 은 행정동이고 실거래 · 동 화면은 법정동("개포동")이다.
+ * 30일 무결과 검색에 "개포3동" 이 있었다. 한글 1~4자 + 1~2자리 번호(가운뎃점 묶음 "1·2") + 동 만 — 3자리 이상은
+ * 단지 안 건물 번호("래미안101동")라 건드리지 않는다.
+ */
+export function adminDongToLegal(tok: string): string {
+  const m = /^([가-힣]{1,4})[1-9][0-9]?(?:[·.,][1-9][0-9]?)*동$/.exec(tok);
+  return m ? `${m[1]}동` : tok;
+}
+
+/**
  * 검색어 → 조건 + 나머지 낱말. 조건이 겹치면(신축 + 2015년 이후) 뒤의 것이 이긴다 — 칩은 둘 다 남아 지울 수 있다.
  * 조건만 있고 나머지가 없으면 rest=[] (전국 조건 검색).
  */
@@ -419,7 +429,7 @@ export function parseSearchIntent(raw: string, year: number = currentYearKst()):
 
   const toks = s
     .split(" ")
-    .map((t) => t.trim())
+    .map((t) => adminDongToLegal(t.trim()))
     .filter(Boolean);
   const kept = toks.filter((t) => !NOISE.has(t));
   const noise = toks.filter((t) => NOISE.has(t));

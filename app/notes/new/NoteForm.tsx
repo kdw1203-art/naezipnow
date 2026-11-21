@@ -20,7 +20,7 @@ import { readAuthedHint } from "@/lib/auth/authed-hint";
 import { Switch } from "@/app/components/ui/Switch";
 import { useToast } from "@/app/components/toast/use-toast";
 
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
@@ -1174,6 +1174,27 @@ export function NoteForm({
     };
   }, [isEdit]);
 
+  /* [1206] 노트 쓰기 깔때기 — 30일 작성 화면 568회 → 사용자 노트 0편, 어디서 빠지는지 몰랐다.
+     단계마다 한 번씩(open → save_attempt → login_required → save_done) platform_activity_events 로.
+     계측 모듈은 부를 때만 받는다(작성 화면 첫 로드 예산 470KB) · 실패해도 작성 흐름과 무관. */
+  const funnelFired = useRef<Set<string>>(new Set());
+  const noteFunnel = useCallback(
+    (step: "note_form_open" | "note_save_attempt" | "note_save_login_required" | "note_save_done", meta?: Record<string, unknown>) => {
+      if (isEdit || funnelFired.current.has(step)) return;
+      funnelFired.current.add(step);
+      void import("@/lib/platform-events-client")
+        .then(({ trackPlatformEvent }) =>
+          trackPlatformEvent({ eventName: step, source: "note_form", campaign: "funnel", metadata: { funnel: "note", ...meta } }),
+        )
+        .catch(() => {});
+    },
+    [isEdit],
+  );
+  useEffect(() => {
+    if (isGuest === null) return;
+    noteFunnel("note_form_open", { guest: isGuest });
+  }, [isGuest, noteFunnel]);
+
   /* [1006] 설정 기본값 조회 — 로그인이 확정(isGuest === false)된 작성 모드에서 1회.
      비회원·모름(null)은 부르지 않는다(비회원 응답은 어차피 기본값이고, 모름은 세션이
      없을 가능성이 커 401 을 받으러 갈 이유가 없다). 실패는 조용히 — 기본값 그대로. */
@@ -2065,6 +2086,7 @@ export function NoteForm({
       locationRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "center" });
       return;
     }
+    noteFunnel("note_save_attempt", { guest: isGuest === true, step });
     setSaving(true);
     setNeedLogin(false);
     setSaveError(null);
@@ -2195,6 +2217,7 @@ export function NoteForm({
       );
       if (res.status === 401) {
         setNeedLogin(true);
+        noteFunnel("note_save_login_required");
         /* [1086 · A1] 초안을 지금 상태로 한 번 더 적고(1초 자동 저장을 기다리지 않는다), 돌아올 주소에 재개 표식을 싣는다 —
            가입(→ 관심 지역)을 마치고 돌아오면 작성 화면이 초안을 채우고 저장을 잇는다 */
         writeDraft();
@@ -2288,6 +2311,7 @@ export function NoteForm({
           }),
         )
         .catch(() => {});
+      noteFunnel("note_save_done", { photos: photos.length, visibility: isPublic ? "public" : "private" });
       router.push(afterSaveHref(noteId));
     } catch {
       /* [OPT-46] 오프라인 임장 — 현장(지하주차장 등)에서 신호가 끊겨도 기록은 안전하다.
