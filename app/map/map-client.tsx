@@ -100,7 +100,7 @@ import {
   redevStageCounts,
   type RedevLabelMode,
 } from "@/lib/redevelopment/map-layer";
-import { ZONE_SHAPES_CREDIT, ZONE_SHAPES_URL, matchZoneShape, type ZoneShape, type ZoneShapeFile } from "@/lib/redevelopment/zone-shapes";
+import { ZONE_HISTORY_COLOR, ZONE_HISTORY_LABEL, ZONE_SHAPES_CREDIT, ZONE_SHAPES_URL, historyShapesIn, matchZoneShape, type ZoneShape, type ZoneShapeFile } from "@/lib/redevelopment/zone-shapes";
 import { Icon } from "@/app/components/Icon";
 import { TabBar } from "@/app/components/TabBar";
 import {
@@ -2593,7 +2593,16 @@ export function MapClient({
                 경계 있는 구역만
               </button>
             </div>
-            {zoneShapes && showZoneShapes && <p className="m-0 t-caption text-text-3">{ZONE_SHAPES_CREDIT}</p>}
+            {zoneShapes && showZoneShapes && (
+              <>
+                {/* [1203] 옅은 점선 = 서울시 지정 이력 구역(진행 목록과 짝 없음) — 구 단위로 확대하면 보인다 */}
+                <p className="m-0 flex items-center gap-1.5 t-caption text-text-3">
+                  <span aria-hidden="true" className="inline-block h-2.5 w-4 rounded-sm border border-dashed" style={{ borderColor: ZONE_HISTORY_COLOR }} />
+                  {ZONE_HISTORY_LABEL} · 구 단위로 확대하면 표시
+                </p>
+                <p className="m-0 t-caption text-text-3">{ZONE_SHAPES_CREDIT}</p>
+              </>
+            )}
             <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="마커 색">
               <span className="basis-full t-caption font-bold text-text-2">색</span>
               {REDEV_COLOR_MODES.map((m) => (
@@ -3697,8 +3706,16 @@ export function MapClient({
       used.add(s);
       out.push({ id: `zone:${p.id}`, path: s.p, color: redevMarkerColor(p, redevColorMode) });
     }
+    /* [1203] 서울 전역 — 구 단위로 들어왔을 때(화면 폭 약 0.2° 이하) 나머지 지정 이력 구역도 옅은 점선으로.
+       거르기(사업 종류 · 단계)를 걸었을 때는 그리지 않는다 — 이력 구역은 종류 · 단계를 모른다. */
+    const zoomedIn = viewBounds && viewBounds.neLng - viewBounds.swLng <= 0.2;
+    if (zoomedIn && !redevFilterActive && !onlyWithShape) {
+      for (const s of historyShapesIn(zoneShapes, used, viewBounds, 600)) {
+        out.push({ id: `zonehist:${s.n}:${s.c[0]}`, path: s.p, color: ZONE_HISTORY_COLOR, faint: true });
+      }
+    }
     return out;
-  }, [showRedevelopment, zoneShapes, redevShown, redevColorMode, showZoneShapes]);
+  }, [showRedevelopment, zoneShapes, redevShown, redevColorMode, showZoneShapes, viewBounds, redevFilterActive, onlyWithShape]);
 
   const redevLegend = useMemo<{ color: string; label: string }[]>(() => {
     if (!showRedevelopment) return [];

@@ -144,7 +144,13 @@ export interface MapIdleInfo {
 }
 
 /** [1161] 지도 위 다각형(정비구역 경계) — path 는 [경도, 위도] 쌍을 이어 붙인 숫자 배열 */
-export type MapPolygonData = { id: string; path: readonly number[]; color: string };
+export type MapPolygonData = {
+  id: string;
+  path: readonly number[];
+  color: string;
+  /** [1203] 옅게 — 진행 여부를 모르는 지정 이력 구역(점선 · 거의 투명한 채움). 진행 중 구역은 그대로 진하게 */
+  faint?: boolean;
+};
 
 export type NaverNativeLayers = {
   traffic?: boolean;
@@ -611,7 +617,9 @@ export function NaverMap({
       const Polygon = maps.Polygon;
       quiet(() => {
         polygonRefs.current.push(
-          new Polygon({ map, paths: [path], strokeColor: p.color, strokeOpacity: 0.9, strokeWeight: 2, fillColor: p.color, fillOpacity: 0.16, clickable: false }),
+          p.faint
+            ? new Polygon({ map, paths: [path], strokeColor: p.color, strokeOpacity: 0.6, strokeWeight: 1, strokeStyle: "shortdash", fillColor: p.color, fillOpacity: 0.04, clickable: false, zIndex: 1 })
+            : new Polygon({ map, paths: [path], strokeColor: p.color, strokeOpacity: 0.9, strokeWeight: 2, fillColor: p.color, fillOpacity: 0.16, clickable: false, zIndex: 2 }),
         );
       });
     }

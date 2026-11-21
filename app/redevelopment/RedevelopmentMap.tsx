@@ -2,8 +2,8 @@
 
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { NaverMap } from "@/components/map/NaverMapLazy";
-import type { MapMarkerData, MapPolygonData } from "@/components/map/NaverMap";
-import { ZONE_SHAPES_CREDIT, ZONE_SHAPES_URL, matchZoneShape, type ZoneShape, type ZoneShapeFile } from "@/lib/redevelopment/zone-shapes";
+import type { MapIdleInfo, MapMarkerData, MapPolygonData } from "@/components/map/NaverMap";
+import { ZONE_HISTORY_COLOR, ZONE_HISTORY_LABEL, ZONE_SHAPES_CREDIT, ZONE_SHAPES_URL, historyShapesIn, matchZoneShape, type ZoneShape, type ZoneShapeFile } from "@/lib/redevelopment/zone-shapes";
 import {
   STAGES,
   colorForType,
@@ -181,6 +181,8 @@ export function RedevelopmentMap({
   const [zoneShapes, setZoneShapes] = useState<ZoneShape[] | null>(null);
   /* [1166] 구역 경계 켜고 끄기 */
   const [showShapes, setShowShapes] = useState(true);
+  /* [1203] 지금 화면 범위 — 지정 이력 구역(약 2,000곳)은 구 단위로 들어왔을 때 화면 안 것만 그린다(서울 전체에서 한꺼번에 그리면 지도가 무거워진다) */
+  const [viewBounds, setViewBounds] = useState<MapIdleInfo["bounds"]>(null);
   useEffect(() => {
     if (view !== "map" || zoneShapes) return;
     let alive = true;
@@ -204,8 +206,15 @@ export function RedevelopmentMap({
       used.add(s);
       out.push({ id: `zone:${p.id}`, path: s.p, color: redevMarkerColor(p, colorMode) });
     }
+    /* [1203] 서울 전역 — 짝지어지지 않은 지정 이력 구역도 옅은 회색 점선으로(진행 여부 미확인). 종류 · 단계 · 지역을 걸면 그리지 않는다 */
+    const zoomedIn = viewBounds && viewBounds.neLng - viewBounds.swLng <= 0.2;
+    if (zoomedIn && filtered.length === initialProjects.length) {
+      for (const s of historyShapesIn(zoneShapes, used, viewBounds, 600)) {
+        out.push({ id: `zonehist:${s.n}:${s.c[0]}`, path: s.p, color: ZONE_HISTORY_COLOR, faint: true });
+      }
+    }
     return out;
-  }, [zoneShapes, filtered, colorMode, showShapes]);
+  }, [zoneShapes, filtered, colorMode, showShapes, initialProjects.length, viewBounds]);
   /* [1158] 범례 — 지금 보이는 구역에 실제로 있는 색만 */
   const colorLegend = useMemo(() => {
     const seen = new Map<string, { key: string; color: string; label: string }>();
@@ -434,6 +443,15 @@ export function RedevelopmentMap({
         <div className="card overflow-hidden rounded-2xl p-1.5">
           <div className="flex flex-wrap items-center justify-between gap-2 px-1.5 pb-1.5">
             <span className="t-caption text-text-3">{polygons.length > 0 ? ZONE_SHAPES_CREDIT : "점은 대표 지번 위치 · 구역 경계 아님"}</span>
+            {polygons.some((pg) => pg.faint) && (
+              <span className="inline-flex items-center gap-1.5 t-caption text-text-3">
+                <span aria-hidden="true" className="inline-block h-2.5 w-4 rounded-sm border border-dashed" style={{ borderColor: ZONE_HISTORY_COLOR }} />
+                {ZONE_HISTORY_LABEL}
+              </span>
+            )}
+            {zoneShapes && showShapes && !polygons.some((pg) => pg.faint) && (
+              <span className="t-caption text-text-3">구 단위로 확대하면 서울시 지정 이력 구역(점선)도 보입니다</span>
+            )}
             <div className="flex items-center gap-1.5" role="group" aria-label="마커 색">
               {REDEV_COLOR_MODES.map((m) => (
                 <button
@@ -489,6 +507,7 @@ export function RedevelopmentMap({
               onMarkerClick={handleMarkerClick}
               nativeLayers={nativeLayers}
               polygons={polygons}
+              onIdle={(info) => setViewBounds(info.bounds)}
             />
           </div>
         </div>

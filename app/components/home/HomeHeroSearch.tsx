@@ -282,8 +282,11 @@ export function HomeHeroSearch({
        예전에는 칩 행이 상자 안(560px)에 갇혀 있어서 "칩 + 커버리지 한 줄"이 항상
        두 줄로 접혔다 — 데스크톱은 1,200px 을 쓸 수 있는데도. */
     <div className="w-full">
+      {/* [1203] 소유자 2026-11-21 "처음이라면은 검색 오른쪽에" — PC 는 검색 상자 바로 오른쪽 한 칸(상자는 가운데 그대로),
+          폰은 폭이 모자라 칩 줄 끝에 둔다(아래). */}
+      <div className="relative mx-auto flex w-full max-w-[560px] items-center md:max-w-none md:justify-center md:gap-3">
       {/* 검색 상자 + 자동완성 패널 — 바깥 클릭 감지(boxRef)와 절대배치 기준이 여기다 */}
-      <div ref={boxRef} className="relative mx-auto w-full max-w-[560px]">
+      <div ref={boxRef} className="relative w-full md:max-w-[560px]">
         {/* [968 · 9] <form> 으로 감싼다 — 모바일 키보드의 "검색" 키(enterKeyHint)가
             폼 제출로 이어지고, Enter 도 같은 경로(onSubmit)로 수렴한다. */}
         <form
@@ -362,6 +365,8 @@ export function HomeHeroSearch({
           />
         )}
       </div>
+      {coverage && <div className="hidden shrink-0 md:block">{coverage}</div>}
+      </div>
 
       {/* 칩 — 최근 검색·최근 본 단지 (실기록), 없으면 커버 지역 바로가기.
           [963] 커버리지 한 줄을 **같은 행**에 둔다(소유자 지시 2026-09-04 "한 줄로").
@@ -426,7 +431,7 @@ export function HomeHeroSearch({
             </>
           )
         )}
-        {coverage}
+        {coverage && <span className="md:hidden">{coverage}</span>}
       </div>
     </div>
   );
