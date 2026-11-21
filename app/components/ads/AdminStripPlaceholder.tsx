@@ -31,15 +31,14 @@ export function AdminStripPlaceholder({ placement, className = "" }: { placement
   }, []);
   if (!admin) return null;
   return (
-    <aside className={`ad-strip ${className}`} aria-label="광고 배너 자리" data-placement={placement}>
-      <div className="ad-strip__placeholder">
-        <span>
-          상단 띠 배너 자리({PLACEMENT_KO[placement]}) · 등록된 띠 배너 없음 · 관리자에게만 보이는 표시
-        </span>
+    /* [1204 · 정리정돈] 소유자 2026-11-21 "여기도 정리정돈" — 점선 큰 상자(높이 약 70px)를 오른쪽 끝 한 줄 글자로. 관리자에게만 보인다 */
+    <aside className={`flex justify-end ${className}`} aria-label="광고 배너 자리" data-placement={placement}>
+      <p className="m-0 t-caption text-text-3">
+        띠 배너 없음({PLACEMENT_KO[placement]}) ·{" "}
         <Link href="/admin/banners" className="tap-line font-bold text-primary no-underline">
           배너 등록 ›
         </Link>
-      </div>
+      </p>
     </aside>
   );
 }

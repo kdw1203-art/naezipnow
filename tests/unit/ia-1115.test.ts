@@ -458,7 +458,8 @@ test("[1137] 홈 — 비회원은 시세판만 · 로그인하면 탭 둘 + 자�
   assert.match(a, /prefers-reduced-motion: reduce/);
   assert.match(a, /inert=\{tab !== "market"\}/);
   assert.match(a, /inert=\{tab !== "mine"\}/);
-  assert.equal((a.match(/col-start-1 row-start-1/g) ?? []).length, 2, "두 판이 한 칸에 겹친다");
+  /* [1204] 칸 높이 = 시세판 — 내 화면은 같은 높이 안에서 겹쳐 스크롤(시세판이 비었으면 흐름에 선다) */
+  assert.match(a, /\$\{marketEmpty \? "relative" : "absolute inset-0 overflow-y-auto overscroll-contain"\}/);
   for (const k of ["HomeMyRegions", "HomeWatchlistBrief", "HomeEngagementCard"]) assert.match(a, new RegExp(`const ${k} = dynamic\\(`), `${k} 는 로그인 뒤에만 받는다`);
 });
 

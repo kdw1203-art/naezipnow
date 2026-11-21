@@ -52,7 +52,8 @@ export function HomeRegionMap({
   );
 
   return (
-    <section aria-labelledby="home-map-h" className="card relative overflow-hidden rounded-2xl p-0">
+    /* [1204 · 빈 공간 없이] PC 는 첫 줄 높이를 다 채운다 — 오른쪽 열(숫자 칸 + 오늘의 시장)이 더 길면 지도 아래가 비었다(운영 캡처). 최소 440px 그대로 */
+    <section aria-labelledby="home-map-h" className="card relative flex flex-col overflow-hidden rounded-2xl p-0 lg:h-full">
       <div className={fallback ? "border-b border-line px-4 pt-3.5" : "pointer-events-none absolute left-3 top-3 z-[6] rounded-xl border border-line bg-surface px-3 py-2 shadow-sm"}>
         <h2 id="home-map-h" className="m-0 t-sub font-bold text-ink">
           {view.sido} 지역 시세 지도
@@ -61,7 +62,7 @@ export function HomeRegionMap({
           평균 매매가 · 전월 대비{periodLabel ? ` · ${periodLabel}` : ""}
         </p>
       </div>
-      <div className={fallback ? "" : "relative h-[300px] md:h-[440px]"}>
+      <div className={fallback ? "" : "relative h-[300px] md:h-[440px] lg:h-auto lg:min-h-[440px] lg:flex-1"}>
         <NaverMap
           markers={data}
           center={view.center}
