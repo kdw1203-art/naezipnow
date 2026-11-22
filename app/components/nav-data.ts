@@ -81,14 +81,12 @@ export const NAV: NavItem[] = [
     ],
   },
   /* 뉴스: 주소가 /town 아래라 활성 판정은 "가장 긴 접두가 이긴다"(navItemActive) — /town/news 에서는 뉴스만 켜진다. */
+  /* [1209] 소유자 "기능이 너무 많다는 의견 다수" — 하위 메뉴를 뉴스룸 하나로. 주간 다이제스트(30일 3회)는 뉴스룸 안에서 닿는다 */
   {
     label: "뉴스",
     href: "/town/news",
     also: ["/digest"],
-    children: [
-      { label: "뉴스룸", href: "/town/news" },
-      { label: "주간 다이제스트", href: "/digest" },
-    ],
+    children: [{ label: "뉴스룸", href: "/town/news" }],
   },
   /* 도구 — 집 마련 단계별 계산·일정. 쓰임은 적지만 지우지 않고 더보기 한 칸에 모은다. */
   {
@@ -96,11 +94,11 @@ export const NAV: NavItem[] = [
     href: "/journey",
     more: true,
     also: ["/calculator", "/quiz"],
+    /* [1209] 도구 4 → 2(30일: 계산기 4 · 여정 4 · 일정표 3 · 게임 3) — 계약·잔금 일정표는 여정 안 한 단계라 여정에서 열고,
+       실거래가 게임은 메뉴에서 뺀다(주소 /quiz 그대로 · 홈 · 단지 화면 진입점 유지) */
     children: [
-      { label: "내 집 마련 여정", href: "/journey" },
-      { label: "계약·잔금 일정표", href: "/journey/contract" },
       { label: "대출 계산기", href: "/calculator" },
-      { label: "실거래가 게임", href: "/quiz" },
+      { label: "내 집 마련 여정", href: "/journey" },
     ],
   },
   /* [1003] 요금제 — GNB 에 결제 진입로가 **하나도 없었다**(푸터 한 줄이 전부).

@@ -177,7 +177,7 @@ test("④ [1202] 메뉴 — 상단 넷 · 실거래 대분류 없음 · 지도·
   assert.deepEqual((notes.children ?? []).map((c) => c.href), ["/notes/new", "/notes", "/notes/analysis"]);
   const tools = NAV.find((g) => g.label === "도구")!;
   assert.equal(tools.more, true);
-  assert.deepEqual((tools.children ?? []).map((c) => c.href), ["/journey", "/journey/contract", "/calculator", "/quiz"]);
+  assert.deepEqual((tools.children ?? []).map((c) => c.href), ["/calculator", "/journey"]); /* [1209] 4 → 2 · 일정표는 여정 · 게임은 계산기 메뉴가 잇는다 */
   const footer = read("app/components/Footer.tsx");
   for (const [label, href] of [["실거래 구간", "/tx"], ["동별 실거래", "/dong"], ["월간 리포트", "/reports"], ["시장 온도", "/analysis/temperature"]]) {
     assert.ok(footer.includes(`{ label: "${label}", href: "${href}", bold: false, group: "data" }`), href);

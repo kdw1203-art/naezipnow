@@ -39,7 +39,7 @@ test("뉴스는 제 대분류 — 동네 다음 · [1202] 상단 넷에 펼친�
     (news.children ?? []).map((c) => [c.label, c.href]),
     [
       ["뉴스룸", "/town/news"],
-      ["주간 다이제스트", "/digest"],
+      /* [1209] 주간 다이제스트는 메뉴에서 뺐다(30일 3회) — 뉴스룸 머리(NewsHead)가 잇는다 */
     ],
   );
   const town = NAV.find((g) => g.label === "동네");
