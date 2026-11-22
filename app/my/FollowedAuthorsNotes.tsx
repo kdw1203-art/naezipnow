@@ -25,6 +25,8 @@ export async function FollowedAuthorsNotes({ email }: { email: string }) {
   const followsNobody = feed.ok && feed.value.followingCount === 0;
   const section = sectionState(feed.ok ? loaded(feed.value.items) : { ok: false }, ROWS);
 
+  /* [1209] 팔로우한 사람이 없으면 칸을 그리지 않는다(안내 한 줄이 마이 화면에 상시 자리를 차지했다) */
+  if (followsNobody) return null;
   return (
     <section className="card rounded-lg px-4 py-3" aria-label="팔로우한 작성자의 새 노트">
       <div className="flex items-center justify-between gap-3">

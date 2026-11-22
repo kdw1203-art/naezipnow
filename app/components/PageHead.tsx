@@ -44,6 +44,8 @@ export type PageHeadProps = {
   /** 제목 id(스킵 링크·aria-labelledby 용) */
   titleId?: string;
   className?: string;
+  /** [1209] 폰에서도 오른쪽 단추를 제목과 같은 줄에(단추 하나 · 짧은 링크일 때). 기본은 폰에서 한 줄을 다 쓴다(검색칸 등) */
+  inlineActions?: boolean;
 };
 
 export function PageHead({
@@ -58,6 +60,7 @@ export function PageHead({
   as: Heading = "h1",
   titleId,
   className = "",
+  inlineActions = false,
 }: PageHeadProps) {
   return (
     <div className={`page-head rise-in flex flex-col gap-2 ${className}`.trim()}>
@@ -79,7 +82,7 @@ export function PageHead({
         {actions && (
           /* [1201] 폰에서 줄이 바뀌면 이 칸이 내용 폭으로 줄어든다 — 안의 w-full 검색칸(지역 시세 분석)이 20px 로 접혔다.
              폰에서는 한 줄을 다 쓰게 한다(버튼은 justify-end 로 그대로 오른쪽). */
-          <div className="flex flex-wrap items-center justify-end gap-2 max-md:w-full">{actions}</div>
+          <div className={`flex flex-wrap items-center justify-end gap-2 ${inlineActions ? "max-md:gap-3" : "max-md:w-full"}`}>{actions}</div>
         )}
       </div>
       {facts && (

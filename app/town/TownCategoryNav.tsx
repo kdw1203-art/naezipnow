@@ -73,7 +73,7 @@ export function TownCategoryNav({
       /* [1043] 고정 모드에서 w-full 을 뺐다 — w-full(=100%) 에 음수 좌우 여백을 주면 폭은 그대로인 채 왼쪽으로만 밀려
          오른쪽 끝이 본문보다 20px(폰 14px) 짧았다(청약·뉴스룸 등 하위 화면의 카드 줄이 본문 카드와 어긋나 보이던 이유).
          폭을 auto 로 두면 음수 여백만큼 양쪽으로 넓어져 안쪽 패딩과 상쇄된다. */
-      className={`rise-in mb-5 flex gap-2 overflow-x-auto pb-1 ${stick ? "" : "w-full"} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)] md:[mask-image:none] ${
+      className={`rise-in mb-5 flex gap-2 overflow-x-auto pb-1 max-md:mb-3 ${stick ? "" : "w-full"} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,black_calc(100%-28px),transparent)] md:[mask-image:none] ${
         stick
           ? /* 헤더는 sticky top-0 이고 스크롤 시 높이가 56px(패딩 8 + h-12)로 줄어든다.
                그 아래에 붙이고 z-40(헤더 z-50 미만)으로 두어 헤더가 항상 위에 오게 한다.
@@ -103,7 +103,8 @@ export function TownCategoryNav({
             /* 제안 모바일2(2026-08-03) — 카드 축소: 모바일 92×76px(기존 104×92).
                md+ 는 가로 균등 분배 유지. */
             /* [959] 램프 상향(sub 12·caption 10)에 맞춰 높이 +4px. 그림자는 토큰 3단 중 md. */
-            className={`press relative flex w-[96px] shrink-0 flex-col items-center justify-center rounded-2xl border px-2 text-center no-underline transition-all duration-300 ease-out md:w-auto md:min-w-0 md:flex-1 md:basis-0 ${
+            /* [1209] 소유자 "중복 · 크기 정리" — 폰은 큰 타일(80px · 설명 두 줄) 대신 알약 한 줄(아이콘 + 이름 · 40px). PC 그대로 */
+            className={`press relative flex w-[96px] shrink-0 flex-col items-center justify-center rounded-2xl border px-2 text-center no-underline transition-all duration-300 ease-out max-md:!h-10 max-md:!w-auto max-md:flex-row max-md:gap-1.5 max-md:!rounded-full max-md:px-3 md:w-auto md:min-w-0 md:flex-1 md:basis-0 ${
               pinned
                 ? "h-[68px] border-primary bg-primary-soft shadow-[var(--shadow-md)] md:h-[76px]"
                 : /* [1044] 뉴스룸 입구 칸(한지 면)은 없어졌다 — 뉴스는 제 대분류(nav-data "뉴스") */
@@ -113,7 +114,7 @@ export function TownCategoryNav({
             {/* 아이콘 칩 — 9칸이 전부 같은 잉크색이라 목록이 평평했다.
                 성격별 색을 입혀 스캔이 되게 한다. */}
             <span
-              className={`tile-ico flex h-8 w-8 items-center justify-center rounded-lg transition-colors ${
+              className={`tile-ico flex h-8 w-8 items-center justify-center rounded-lg transition-colors max-md:!h-6 max-md:!w-6 max-md:shrink-0 ${
                 pinned ? "bg-primary text-surface" : l.tone
               }`}
             >
@@ -132,7 +133,7 @@ export function TownCategoryNav({
               />
             ) : null}
             <span
-              className={`mt-1.5 w-full truncate t-sub font-bold transition-colors ${
+              className={`mt-1.5 w-full truncate t-sub font-bold transition-colors max-md:!mt-0 max-md:!w-auto max-md:whitespace-nowrap max-md:!overflow-visible ${
                 pinned ? "text-primary" : "text-ink"
               }`}
             >
@@ -143,14 +144,14 @@ export function TownCategoryNav({
                 "요약·주간 다…" 로 잘렸다 — 두 줄 clamp 로 전부 보이게(카드 높이 80px 안에서
                 caption 10px 두 줄이 들어간다). */}
             <span
-              className={`clamp-2 w-full t-caption leading-[1.25] text-text-3 transition-all duration-300 ease-out ${
+              className={`clamp-2 w-full t-caption leading-[1.25] text-text-3 transition-all duration-300 ease-out max-md:!hidden ${
                 pinned ? "mt-0 max-h-0 opacity-0" : "mt-0.5 max-h-7 opacity-100"
               }`}
             >
               {l.desc}
             </span>
             {pinned ? (
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary" />
+              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary max-md:!hidden" />
             ) : null}
           </Link>
         );

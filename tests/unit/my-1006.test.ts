@@ -106,12 +106,14 @@ test("마이 화면에 포인트 '충전' 문구가 없다(적립·교환만)", 
     assert.equal(/충전/.test(src), false);
     assert.equal(/pointToKrw|payoutReady|plan_pro_1m/.test(src), false);
   }
-  assert.ok(VIEW.includes('href="/points/shop"'), "포인트 상점 링크는 유지");
+  /* [1209] 상점 카드는 포인트 목록 한 줄로(href: "/points/shop") */
+  assert.ok(VIEW.includes('href: "/points/shop"'), "포인트 상점 링크는 유지");
 });
 
-test("빈 상태 그림(EmptyState)은 마이 화면에서 한 번만 쓴다", () => {
+test("빈 상태 그림(EmptyState)은 마이 화면에서 쓰지 않는다 — [1209] 빈 칸은 전부 한 줄(OneLine)", () => {
   const uses = VIEW.match(/<EmptyState\b/g) ?? [];
-  assert.equal(uses.length, 1);
+  assert.equal(uses.length, 0);
+  assert.match(VIEW, /<OneLine text="임장노트 없음" href="\/notes\/new" label="첫 노트 쓰기" \/>/);
 });
 
 test("보관(비노출) 경로로 가는 입구를 다시 만들지 않는다", () => {
