@@ -8959,3 +8959,13 @@ body {
     justify-content: center;
   }
 }
+
+/* [1208] 소유자 "난잡한 느낌 · 심플하게" — 섹션 제목 앞 색 점(6px)을 걷는다. 마크업 깊이에 따라 붙는 카드 · 안 붙는 카드가
+   섞여(홈: "• 지역 동향" vs "뉴스룸") 오히려 어수선했다. 제목은 글자(t-section)만으로 선다. 같은 특이도 · 뒤에 와서 이긴다. */
+main :is(section, article) > :is(h2, h3).t-section::before,
+main :is(section, article) > div > :is(h2, h3).t-section::before,
+main .pro-lay details > summary > .t-section::before,
+.note-form :is(section, article) > :is(h2, h3).t-section::before {
+  content: none;
+  display: none;
+}
