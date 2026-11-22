@@ -69,7 +69,8 @@ export function NoteDetailActions({
   const shareUrl = `/notes/${encodeURIComponent(noteId)}?utm_source=share&utm_medium=note`;
   /* [1009 · T] 터치 화면에선 btn-soft 가 높이 44px(globals (pointer: coarse))인데 <a>(카드·수정)는 글자가 위에 붙어
      옆 <button>(가운데)과 7px 어긋났다(실측 390px) → 모두 inline-flex 가운데 정렬. */
-  const shareClass = "btn-soft inline-flex items-center px-3.5 py-2 t-body";
+  /* [1211 · 정리정돈] 상단 단추 줄은 한 꼴 — 높이 40 · 같은 글자(t-sub 굵게) · 같은 옅은 바탕 */
+  const shareClass = "btn-soft inline-flex h-10 items-center px-3.5 t-sub font-bold";
 
   /* [1009 · T] 공개 ↔ 비공개 — 결과 토스트에 "되돌리기"(같은 PATCH 를 반대로). 예전엔 전환하면 되돌릴 길이 버튼을 다시
      찾아 누르는 것뿐이었고, 실패 문구는 원인을 말하지 않았다. 연타는 ref 로 막는다(토스트의 되돌리기는 다른 렌더에서 온다). */
@@ -118,7 +119,7 @@ export function NoteDetailActions({
           "카드 덱"(/deck)과 헷갈렸고, 상단 줄에 primary 가 둘("지도에서 비교"와)이었다. */}
       <Link
         href={`/notes/${noteId}/card`}
-        className="btn-soft inline-flex items-center px-3.5 py-2 t-body font-bold no-underline"
+        className="btn-soft inline-flex h-10 items-center px-3.5 t-sub font-bold no-underline"
       >
         {/* [1012 · 규칙 4] UI 이모지 없음 — "나만의 카드" 글자만 */}
         {isOwner ? "카드 만들기" : "카드 보기"}
@@ -128,7 +129,7 @@ export function NoteDetailActions({
       {isOwner && (
         <Link
           href={`/notes/${noteId}/edit`}
-          className="btn-soft inline-flex items-center px-3.5 py-2 t-body no-underline"
+          className="btn-soft inline-flex h-10 items-center px-3.5 t-sub font-bold no-underline"
         >
           수정
         </Link>
@@ -137,7 +138,7 @@ export function NoteDetailActions({
       {isOwner && (
         <Link
           href={`/notes/${noteId}/cover`}
-          className="btn-soft inline-flex items-center px-3.5 py-2 t-body no-underline"
+          className="btn-soft inline-flex h-10 items-center px-3.5 t-sub font-bold no-underline"
         >
           썸네일 바꾸기
         </Link>
@@ -147,7 +148,7 @@ export function NoteDetailActions({
           type="button"
           onClick={toggleVisibility}
           disabled={busy}
-          className="btn-soft inline-flex items-center px-3.5 py-2 t-body disabled:opacity-60"
+          className="btn-soft inline-flex h-10 items-center px-3.5 t-sub font-bold disabled:opacity-60"
         >
           {busy ? "전환 중…" : isPublic ? "비공개로 전환" : "공개로 전환"}
         </button>
@@ -175,7 +176,7 @@ export function NoteDetailActions({
         <button
           type="button"
           onClick={() => setConfirmDelete(true)}
-          className="btn-soft inline-flex items-center px-3.5 py-2 t-body text-danger"
+          className="btn-soft inline-flex h-10 items-center px-3.5 t-sub font-bold text-danger"
         >
           삭제
         </button>

@@ -1105,7 +1105,8 @@ export function NotesFeedClient({
         <div className="flex flex-wrap items-center gap-2 px-1">
           {/* [1023 · 임장노트 ①] 검색칸 — 필터 칩 줄 왼쪽(폰은 한 줄 통째, sm+ 는 왼쪽 220px). 높이 40 · 지우기 × 40px.
               제목·지역·단지명을 손에 든 목록에서 즉시 거른다(추가 조회 없음). */}
-          <div className="field-focus relative flex h-10 basis-full items-center rounded-xl border border-line bg-surface sm:w-[220px] sm:basis-auto">
+          {/* [1210 · 정리정돈] 검색 · 정렬 칩 · 보기 전환의 꼴을 하나로 — 셋 다 높이 40 · 알약(둥근 끝) · 같은 글자 크기(t-sub 굵게) */}
+          <div className="field-focus relative flex h-10 basis-full items-center rounded-full border border-line bg-surface sm:w-[220px] sm:basis-auto">
             <Icon name="search" size={16} className="pointer-events-none absolute left-3 text-text-3" />
             <input
               type="search"
@@ -1115,7 +1116,7 @@ export function NotesFeedClient({
               aria-label="노트 검색"
               enterKeyHint="search"
               autoComplete="off"
-              className="h-10 w-full min-w-0 bg-transparent pl-9 pr-10 t-body text-ink outline-none placeholder:text-text-3 [&::-webkit-search-cancel-button]:hidden"
+              className="h-10 w-full min-w-0 bg-transparent pl-9 pr-10 t-sub text-ink outline-none placeholder:text-text-3 [&::-webkit-search-cancel-button]:hidden"
             />
             {queryActive && (
               <button
@@ -1133,14 +1134,14 @@ export function NotesFeedClient({
             /* [1006] 내 노트 — 필터는 아래 전용 줄(MineFilterBar). 여기엔 뷰 전환만 */
             <span className="t-caption text-text-3">보기 방식</span>
           ) : (
-          <div className="-mx-1 flex min-w-0 gap-2 overflow-x-auto px-1 t-body [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="-mx-1 flex min-w-0 gap-1.5 overflow-x-auto px-1 t-sub [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {filters.map((f) => (
               <button
                 key={f}
                 type="button"
                 aria-pressed={activeFilter === f}
                 onClick={() => setFilter(f)}
-                className={`chip press shrink-0 px-4 py-2 ${
+                className={`chip press inline-flex h-10 shrink-0 items-center px-3.5 font-bold ${
                   activeFilter === f
                     ? "chip-active"
                     : "border border-line bg-surface text-text-2"

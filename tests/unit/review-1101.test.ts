@@ -61,7 +61,8 @@ test("지역 탭 — 여섯 화면이 같은 부품 · 같은 자리(머리 아�
   const hero = strip(read("app/region/[id]/RegionHero.tsx"));
   assert.doesNotMatch(hero, /월간 리포트 ›|동네 홈 ›/, "머리 카드의 칩 셋 → 탭");
   assert.match(hero, /const showHeadline = tiles\.length === 0;/, "칸이 있으면 큰 제목 줄 없음");
-  assert.match(hero, /foot=\{overview\.subline \? `\$\{overview\.subline\} · 부동산원` : `\$\{ymLong\(index\.ym\)\} · 부동산원`\}/, "1년 전 대비는 첫 칸 발로");
+  /* [1210] 칸마다 되풀이되던 "달 · 부동산원"은 걷었다(머리 한 줄이 말한다) — 1년 전 대비(subline)는 그대로 첫 칸 발로 */
+  assert.match(hero, /foot=\{overview\.subline \?\? null\}/, "1년 전 대비는 첫 칸 발로");
   const region = strip(read("app/region/[id]/page.tsx"));
   /* 요약 문단(speakable)은 본문 끝 · 시장 흐름 요약 카드는 시세 흐름 카드 아래 줄 */
   assert.ok(region.indexOf('id="ai-summary"') > region.indexOf('id="complexes"'), "요약 문단은 단지별 현황 뒤");

@@ -508,6 +508,16 @@ const POPULAR_SNAPPED_FETCH_LIMIT = 30;
 /** [1053] 지도 idle → 분포(막대그래프) 재조회 디바운스(ms) — 패널이 열려 있을 때만 조회한다 */
 const FACETS_FETCH_DEBOUNCE_MS = 400;
 
+/** [1211] 정비구역 목록이 같은가 — 길이 · 순서대로 id · 단계(색 · 이름표가 단계를 쓴다) · 갱신 시각만 본다 */
+function sameRedevItems(a: readonly RedevelopmentProject[], b: readonly RedevelopmentProject[]): boolean {
+  if (a === b) return true;
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i].id !== b[i].id || a[i].stageKey !== b[i].stageKey || a[i].updatedAt !== b[i].updatedAt) return false;
+  }
+  return true;
+}
+
 interface PopularItem {
   id: string;
   name: string;
@@ -3344,12 +3354,20 @@ export function MapClient({
     const controller = new AbortController();
     const t = window.setTimeout(() => {
       setRedevFailed(false);
-      const bbox = b ? `&bbox=${b.swLat},${b.swLng},${b.neLat},${b.neLng}` : "";
+      /* [1211 · 지도 반응] 다른 레이어처럼 격자에 스냅(밖으로 확장) — 조금 옮기면 같은 주소 · 같은 결과(CDN 캐시 · 위 같은 목록 유지).
+         줌 대신 화면 폭으로 격자를 고른다(snapViewportBounds 와 같은 단계: 0.01 · 0.05 · 0.2°) */
+      const snapped = b
+        ? snapViewportBounds(b, b.neLng - b.swLng < 0.06 ? 15 : b.neLng - b.swLng < 0.6 ? 12 : 10)
+        : null;
+      const bbox = snapped ? `&bbox=${snapped.swLat},${snapped.swLng},${snapped.neLat},${snapped.neLng}` : "";
       fetch(`/api/redevelopment/projects?limit=2000${bbox}`, { signal: controller.signal })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
         .then((json: { items?: RedevelopmentProject[] }) => {
           if (controller.signal.aborted) return;
-          setRedevItems(Array.isArray(json.items) ? json.items : []);
+          /* [1211 · 지도 반응] 같은 구역 묶음이면 예전 배열을 그대로 둔다 — 새 배열이면 짝짓기(구역 × 도형) · 마커 2천 개 다시 만들기 ·
+             겹침 정리가 지도를 멈출 때마다 처음부터 돌았다(조금 옮겨도 같은 구역이 대부분이다) */
+          const nextItems = Array.isArray(json.items) ? json.items : [];
+          setRedevItems((prev) => (sameRedevItems(prev, nextItems) ? prev : nextItems));
           setRedevFailed(false);
           setRedevLoaded(true);
         })
@@ -3712,27 +3730,33 @@ export function MapClient({
       alive = false;
     };
   }, [showRedevelopment, zoneShapes]);
-  /* 지금 화면의 구역 가운데 도형이 짝지어진 것만 — 색은 마커와 같은 기준 */
-  const redevPolygons = useMemo<MapPolygonData[]>(() => {
-    if (!showRedevelopment || !zoneShapes || !showZoneShapes) return [];
+  /* 지금 화면의 구역 가운데 도형이 짝지어진 것만 — 색은 마커와 같은 기준.
+     [1211 · 지도 반응] 짝짓기(구역 2천 × 도형 2천여)는 화면 범위와 무관하다 — 예전엔 한 memo 에 범위(viewBounds)가 섞여
+     지도를 멈출 때마다 짝짓기를 처음부터 다시 했다. 짝짓기 memo 와 범위 memo(옅은 이력 구역)를 나눈다. */
+  const redevMatched = useMemo(() => {
     const out: MapPolygonData[] = [];
     const used = new Set<ZoneShape>();
+    if (!showRedevelopment || !zoneShapes || !showZoneShapes) return { out, used };
     for (const p of redevShown) {
       const s = matchZoneShape(p, zoneShapes);
       if (!s || used.has(s)) continue;
       used.add(s);
       out.push({ id: `zone:${p.id}`, path: s.p, color: redevMarkerColor(p, redevColorMode) });
     }
+    return { out, used };
+  }, [showRedevelopment, zoneShapes, redevShown, redevColorMode, showZoneShapes]);
+  const redevPolygons = useMemo<MapPolygonData[]>(() => {
+    if (!showRedevelopment || !zoneShapes || !showZoneShapes) return [];
     /* [1203] 서울 전역 — 구 단위로 들어왔을 때(화면 폭 약 0.2° 이하) 나머지 지정 이력 구역도 옅은 점선으로.
        거르기(사업 종류 · 단계)를 걸었을 때는 그리지 않는다 — 이력 구역은 종류 · 단계를 모른다. */
     const zoomedIn = viewBounds && viewBounds.neLng - viewBounds.swLng <= 0.2;
-    if (zoomedIn && !redevFilterActive && !onlyWithShape) {
-      for (const s of historyShapesIn(zoneShapes, used, viewBounds, 600)) {
-        out.push({ id: `zonehist:${s.n}:${s.c[0]}`, path: s.p, color: ZONE_HISTORY_COLOR, faint: true });
-      }
+    if (!zoomedIn || redevFilterActive || onlyWithShape) return redevMatched.out;
+    const out = redevMatched.out.slice();
+    for (const s of historyShapesIn(zoneShapes, redevMatched.used, viewBounds, 600)) {
+      out.push({ id: `zonehist:${s.n}:${s.c[0]}`, path: s.p, color: ZONE_HISTORY_COLOR, faint: true });
     }
     return out;
-  }, [showRedevelopment, zoneShapes, redevShown, redevColorMode, showZoneShapes, viewBounds, redevFilterActive, onlyWithShape]);
+  }, [showRedevelopment, zoneShapes, showZoneShapes, redevMatched, viewBounds, redevFilterActive, onlyWithShape]);
 
   const redevLegend = useMemo<{ color: string; label: string }[]>(() => {
     if (!showRedevelopment) return [];

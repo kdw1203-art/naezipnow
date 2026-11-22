@@ -123,7 +123,7 @@ test("단지 화면 — 실거래 없는 단지에서 같은 문장 셋 → 그�
 
 test("토론 칸 — min-h 160 은 뼈대 동안만(빈 상태 · 실패 안내는 제 높이)", () => {
   const src = strip(read("app/components/talk/TalkPanel.tsx"));
-  assert.match(src, /className=\{`relative flex-1 overflow-y-auto \$\{feedMax\} \$\{feed\.status !== "ok" \|\| feed\.regionId !== selectedId \? "min-h-\[160px\]" : ""\}`\}/);
+  assert.match(src, /className=\{`relative min-h-0 flex-1 overflow-y-auto \$\{feedMax\} \$\{variant === "page" \|\| scoped \? "" : "md:max-h-none"\} \$\{feed\.status !== "ok" \|\| feed\.regionId !== selectedId \? "min-h-\[160px\]" : ""\}`\}/);
 });
 
 test("옆으로 미는 표 — 첫 열 고정(HScroll stickyFirst) · 동 화면 단지 표 두 벌에 적용 · 밀린 뒤에만 선", () => {

@@ -1027,7 +1027,7 @@ export default async function NoteDetailPage({
         )}
         {/* 지역 컨텍스트를 넘겨 지도 비교 루프가 끊기지 않게 한다.
             [1015 · 규칙 J] 채움 파랑은 판단 카드의 다음 행동 하나만 — 상단 줄은 outline */}
-        <Link href={mapCompareHref} className="btn-outline px-3.5 py-2 t-body no-underline">
+        <Link href={mapCompareHref} className="btn-outline inline-flex h-10 items-center px-3.5 t-sub font-bold no-underline">
           지도에서 비교
         </Link>
       </div>

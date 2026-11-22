@@ -296,15 +296,7 @@ export function TimingClient({
                   <span className="t-caption text-text-3">
                     {selected.label} · 지수(선){volume.length > 0 ? " + 거래량(막대)" : ""}
                   </span>
-                  {latestIdx !== null && (
-                    <div className="flex flex-wrap items-baseline gap-2">
-                      <span className="t-num t-display text-ink">
-                        {(Math.round(latestIdx * 10) / 10).toLocaleString("ko-KR")}
-                        <span className="t-sub font-bold text-text-3">pt</span>
-                      </span>
-                      {trend && <span className="chip chip-soft chip-pad t-caption">{trend.verdict}</span>}
-                    </div>
-                  )}
+                  {/* [1211 · 정리정돈] 큰 지수 숫자(96.7pt) + 추세 칩을 걷었다 — 바로 위 결론 카드가 같은 지수 · 추세를 한 줄로 말한다 */}
                 </div>
                 <div className="tmo-legend">
                   {trend && (
