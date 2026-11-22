@@ -17,6 +17,7 @@ export function RegionSiseClient({
   counts,
   panels,
   autoFocus = false,
+  searchOnly = false,
 }: {
   regions: RegionSiseRegion[];
   markers: RegionMapMarker[];
@@ -24,6 +25,8 @@ export function RegionSiseClient({
   counts: number[];
   panels: ReactNode[];
   autoFocus?: boolean;
+  /** [1209] 검색칸만(표 · 지도 보기 없음) — AI 분석 첫 화면. "지도로 찾기"는 지역 시세 분석 화면의 지도 보기로 보낸다 */
+  searchOnly?: boolean;
 }) {
   const [view, setView] = useState<"table" | "map">("table");
   const seg = (v: "table" | "map", label: string) => (
@@ -37,6 +40,13 @@ export function RegionSiseClient({
       {label}
     </button>
   );
+  if (searchOnly) {
+    return (
+      <div className="card rounded-2xl p-3.5">
+        <RegionSearchBox regions={regions} autoFocus={autoFocus} onMapClick={() => window.location.assign("/analysis/timing")} />
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-3">
       <div className="card rounded-2xl p-3.5">

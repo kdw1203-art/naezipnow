@@ -14,7 +14,7 @@ const read = (p: string) => readFileSync(p, "utf8");
 test("T1 한 가지 꼴 — [1110] 기록 계열 표는 임장노트 분석 화면에 · 지역 시세는 고르는 자리(표는 시/도 필터 안)", () => {
   const page = read("app/analysis/page.tsx");
   assert.doesNotMatch(page, /<ToolRows/, "허브에는 시장·기록 표가 없다(1110)");
-  assert.match(page, /<RegionSiseEntry data=\{regionSise\} \/>/);
+  assert.match(page, /<RegionSiseEntry data=\{regionSise\} compact \/>/ /* [1209] 첫 화면은 시세판 + 검색칸만(표 · 지도는 지역 시세 분석 화면) */);
   const notes = read("app/notes/analysis/page.tsx");
   assert.match(notes, /<ToolRows tools=\{RECORD_LIVE\} nowLabel="내 기록"/);
   assert.ok(!page.includes("<ToolCard") && !notes.includes("<ToolCard"), "카드가 남았다");

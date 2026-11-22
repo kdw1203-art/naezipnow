@@ -7,6 +7,8 @@ import type { AiAnalysisToolId } from "@/lib/ai/ai-tools";
 
 export type ToolStep = { label: string; note?: string };
 
+const FRAME_TOOL_IDS: ReadonlySet<string> = new Set(["ai-diagnosis", "ai-prediction", "ai-timing", "ai-inspection"]);
+
 export function toolSteps(p: {
   tool: AiAnalysisToolId;
   /** 고른 단지 이름 — 없으면 null */
@@ -37,5 +39,10 @@ export function toolSteps(p: {
   }
   const n = p.compareCount ?? 0;
   const first = p.tool === "ai-compare" && n >= 2 ? `단지 · ${n}곳` : p.pickedName ? `단지 · ${p.pickedName}` : "단지";
+  /* [1209] 소유자 "이용 단계 · 절차를 단순하게" — 단지를 고르면 판정이 바로 선다(내 조건은 결과 아래 "(선택)" 접힘).
+     예전 4칸(단지 → 내 조건 → 결과 → 추천 기능)은 고를 게 셋 더 있는 것처럼 보였다. 단지 분석 4종은 두 칸 */
+  if (FRAME_TOOL_IDS.has(p.tool)) {
+    return { steps: [{ label: first }, result], current: p.pickedName ? 1 : 0 };
+  }
   return { steps: [{ label: first }, { label: "내 조건" }, result, next], current: p.pickedName ? 2 : 0 };
 }

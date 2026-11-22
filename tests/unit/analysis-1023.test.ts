@@ -102,7 +102,7 @@ test("[1110] 허브 — 티저 파일 없음 · 지역 시세 분석 조각을 �
   }
   const page = code("app/analysis/page.tsx");
   assert.match(page, /loadRegionSiseData\("\[\/analysis\]"\)/);
-  assert.match(page, /<RegionSiseEntry data=\{regionSise\} \/>/);
+  assert.match(page, /<RegionSiseEntry data=\{regionSise\} compact \/>/ /* [1209] 첫 화면은 시세판 + 검색칸만(표 · 지도는 지역 시세 분석 화면) */);
   assert.ok(!page.includes("teasersByRegion"), "지역별 티저 배선 없음");
 });
 

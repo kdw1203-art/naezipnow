@@ -181,8 +181,23 @@ function Panel({ g }: { g: RegionSiseGroup }) {
   );
 }
 
-export function RegionSiseEntry({ data, autoFocus = false }: { data: RegionSiseData; autoFocus?: boolean }) {
+export function RegionSiseEntry({ data, autoFocus = false, compact = false }: { data: RegionSiseData; autoFocus?: boolean; compact?: boolean }) {
   const failed = [data.snapshotFailed ? "평균 매매가 · 전세가율" : null, data.tempFailed ? "시장 온도" : null].filter(Boolean);
+  /* [1209] AI 분석 첫 화면(compact) — 소유자 "화면 구성을 단순하게". 시세판 + 검색칸만 두고 시 · 구 전체 표 · 지도 · 지역 비교 링크는
+     지역 시세 분석 화면(/analysis/timing)에 맡긴다. 첫 화면이 3,229px(폰)이던 가장 긴 덩어리가 이 표였다. */
+  if (compact) {
+    return (
+      <div className="flex flex-col gap-3">
+        <RegionTickerBoard pages={data.tickerPages} failed={data.tickerFailed} />
+        <RegionSiseClient regions={data.regions} markers={data.markers} sidos={[]} counts={[]} panels={[]} searchOnly />
+        <p className="m-0 px-1 t-sub">
+          <Link href="/analysis/timing" className="tap-line font-bold text-primary no-underline">
+            모든 지역 · 지역 비교 보기 ›
+          </Link>
+        </p>
+      </div>
+    );
+  }
   return (
     <div className="flex flex-col gap-3">
       {/* [1115] 시세판 — 4×4 칸(폰 2×4) · 쪽이 아래에서 위로 넘어간다(서울 주요 구 → 상승 큰 곳 → 하락 큰 곳) */}

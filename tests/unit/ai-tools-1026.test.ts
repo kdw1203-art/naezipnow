@@ -189,12 +189,13 @@ test("[1026] 절차 한 줄 — StepLine 하나(단지 · {단지명} → 내 �
   assert.match(frameBranch, /<StepLine current=\{flow\.current\} steps=\{flow\.steps\} \/>/);
   assert.match(frameBranch, /bandLabel: shownVerdict\?\.bandLabel \?\? null/);
   for (const tool of FRAME_TOOLS) {
+    /* [1209] 단지 분석 4종은 두 칸(단지 → 결과) — 내 조건은 결과 아래 "(선택)" 접힘 · 소유자 "절차를 단순하게" */
     const before = toolSteps({ tool, pickedName: null, ready: false });
-    assert.deepEqual(before.steps.map((x) => x.label), ["단지", "내 조건", "결과", "추천 기능"], tool);
+    assert.deepEqual(before.steps.map((x) => x.label), ["단지", "결과"], tool);
     assert.equal(before.current, 0);
     const after = toolSteps({ tool, pickedName: "공작아파트", ready: true, bandLabel: "보통" });
-    assert.deepEqual(after.steps, [{ label: "단지 · 공작아파트" }, { label: "내 조건" }, { label: "결과", note: "보통" }, { label: "추천 기능" }], tool);
-    assert.equal(after.current, 2);
+    assert.deepEqual(after.steps, [{ label: "단지 · 공작아파트" }, { label: "결과", note: "보통" }], tool);
+    assert.equal(after.current, 1);
   }
   assert.match(frameBranch, /<div className="nz-dot-blue flex flex-col gap-3">/);
 });

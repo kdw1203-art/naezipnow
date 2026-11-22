@@ -160,7 +160,7 @@ export default async function AnalysisHubPage() {
             className="rise-in-2 flex scroll-mt-24 flex-col gap-3"
           >
             <TierHead id="market" count={regionSise.regions.length} unit="곳" />
-            <RegionSiseEntry data={regionSise} />
+            <RegionSiseEntry data={regionSise} compact />
           </section>
 
           {/* [1110] 내 임장노트 묶음 · 에이전트 · 예시 계산은 이 화면에 없다 — 임장노트 분석(/notes/analysis)과 1109 참고. 화면의 묶음은 둘(단지 · 지역). */}
