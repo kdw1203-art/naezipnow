@@ -1,6 +1,5 @@
 /* [1022 · 정렬·글씨·테마] 지시 4 — 머리 한 모양(PageHead) · 램프 글자 · 흰 카드 테마 · 사실 문장. 자세한 사유는 본문의 [1022 · 정렬·글씨·테마] 주석. */
 import type { ReactNode } from "react";
-import { Icon } from "@/app/components/Icon";
 
 /* ============================================================
    [1022 · 정렬·글씨·테마] 페이지 머리 — 한 모양.
@@ -48,8 +47,9 @@ export type PageHeadProps = {
 };
 
 export function PageHead({
-  icon,
-  tone = "bg-primary-soft text-primary",
+  /* [1208] 아이콘 칩을 걷었다(아래 주석) — icon · tone 은 호출부 호환으로만 받는다 */
+  icon: _icon,
+  tone: _tone,
   title,
   sub,
   subOnPhone = false,
@@ -63,14 +63,8 @@ export function PageHead({
     <div className={`page-head rise-in flex flex-col gap-2 ${className}`.trim()}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3">
-          {icon && (
-            <span
-              className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${tone}`}
-              aria-hidden="true"
-            >
-              <Icon name={icon} size={20} />
-            </span>
-          )}
+          {/* [1208] 소유자 "난잡한 느낌 · 심플하게" — 제목 앞 아이콘 칩(40px)을 뺀다. 화면마다 제목 시작점이 60px/11px 로 달랐다(칩 유무).
+              이제 모든 화면 제목이 본문 왼쪽 끝에서 시작한다. icon · tone 은 호출부 호환으로만 받는다 */}
           <div className="min-w-0">
             <Heading id={titleId} className="t-title text-ink">
               {title}
