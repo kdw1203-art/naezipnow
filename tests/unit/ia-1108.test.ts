@@ -89,7 +89,14 @@ test("② 푸터 17 — 묶음 4 · 구간 · 동별 · 리포트 · 온도는 �
     assert.ok(!hrefs.includes(h), `푸터에 남음: ${h}`);
     assert.ok(read(file).includes(`"${h}"`), `${h} 를 잇는 곳 없음(${file})`);
   }
-  const union = new Set([...hrefs, ...navHrefs(), ...Object.keys(elsewhere)]);
+  /* [1209] 메뉴에서 뺀 셋 → 잇는 화면(크롤 경로 보존) */
+  const navElsewhere: Record<string, string> = {
+    "/digest": "app/town/news/NewsHead.tsx",
+    "/quiz": "app/calculator/CalculatorNav.tsx",
+    "/journey/contract": "app/journey/JourneyBoard.tsx",
+  };
+  for (const [h, file] of Object.entries(navElsewhere)) assert.ok(read(file).includes(h), `${h} 를 잇는 곳 없음(${file})`);
+  const union = new Set([...hrefs, ...navHrefs(), ...Object.keys(elsewhere), ...Object.keys(navElsewhere)]);
   for (const h of OLD_FOOTER_HREFS) assert.ok(union.has(h), `크롤 경로 끊김: ${h}`);
   for (const keep of ['label: "요금제·결제 수단", href: "/subscription"', 'label: "카드 결제 수단 안내", href: "/subscription/payment-methods"', 'label: "법적 고지", href: "/legal"']) {
     assert.ok(f.includes(keep), keep);

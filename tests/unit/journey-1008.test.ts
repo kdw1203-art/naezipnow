@@ -486,7 +486,9 @@ test("내비 — [1202] '내 집 마련' 셋 + 계산기는 더보기 \"도구\"
   const tools = NAV.find((n) => n.label === "도구");
   assert.equal(tools?.more, true);
   const kids = (tools?.children ?? []).map((c) => c.href);
-  assert.deepEqual(kids, ["/journey", "/journey/contract", "/calculator", "/quiz"]);
+  assert.deepEqual(kids, ["/calculator", "/journey"]); /* [1209] 4 → 2 */
+  assert.match(read("app/journey/JourneyBoard.tsx"), /\/journey\/contract/);
+  assert.match(read("app/calculator/CalculatorNav.tsx"), /"\/quiz"/);
   assert.equal(NAV.some((n) => n.label === "내 집 마련"), false);
   const footer = read("app/components/Footer.tsx");
   assert.doesNotMatch(footer, /href: "\/journey"/);
