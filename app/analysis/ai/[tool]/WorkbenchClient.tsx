@@ -68,6 +68,8 @@ const ResultViewLazy = dynamic(() => import("./ResultView").then((m) => m.Result
 /* [1008 · 리뷰 A-3] 내 자산 구성 진단 — 관심 단지를 불러왔을 때만 */
 const PortfolioMixLazy = dynamic(() => import("./PortfolioMix").then((m) => m.PortfolioMix), { ssr: false });
 /* [1021] 오른쪽 레일(내 조건·다음 행동) — 결과가 선 뒤에만. [1026b] 12종 공통(경제지표 알림 패널도 이 청크) */
+/* [1209] 같은 단지 · 다른 판정 셋 — 단지를 고른 뒤에만 쓰므로 첫 로드 번들에 싣지 않는다 */
+const OtherVerdictsLazy = dynamic(() => import("./OtherVerdicts").then((m) => m.OtherVerdicts), { ssr: false });
 const ResultRailLazy = dynamic(() => import("./ResultRail").then((m) => m.ResultRail), { ssr: false });
 
 function ResultSkeleton() {
@@ -913,6 +915,8 @@ export function WorkbenchClient({
               }
             />
           )}
+          {/* [1209] 같은 단지의 다른 판정 셋(규칙 판정 · AI 호출 없음) — 탭을 하나씩 눌러 다시 열지 않아도 된다 */}
+          {header && picked && ready && !isCompare && <OtherVerdictsLazy tool={tool} complexId={picked.id} />}
         </div>
 
         {/* ── 레일(lg+ 오른쪽 sticky · 폰은 본문 뒤): 내 조건(lg) · 다음 행동 · (타이밍) 이 지역 알림 · (경제지표) 기준금리 알림 ── */}

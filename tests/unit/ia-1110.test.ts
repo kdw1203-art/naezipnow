@@ -69,7 +69,7 @@ test("①② 허브 — 단지 분석은 바로 열기 · 지역 시세는 조�
   const hub = strip(read("app/analysis/page.tsx"));
   assert.match(hub, /<WorkbenchGrid core=\{workbenchCards\.core\} \/>/);
   assert.match(hub, /<TierHead id="market" count=\{regionSise\.regions\.length\} unit="곳" \/>/);
-  assert.match(hub, /<RegionSiseEntry data=\{regionSise\} \/>/);
+  assert.match(hub, /<RegionSiseEntry data=\{regionSise\} compact \/>/ /* [1209] 첫 화면은 시세판 + 검색칸만(표 · 지도는 지역 시세 분석 화면) */);
   for (const gone of ['id="tier-record"', 'href="/agent"', "<ToolRows", "HubNoteAnalysis", "HubRecordStart", "loadHubTeasers"]) assert.ok(!hub.includes(gone), gone);
   const tiers = strip(read("app/analysis/hub-tiers.tsx"));
   assert.ok(!/openId|role="region"|접기|단지 고르고 \$\{c\.title\}/.test(tiers), "펼침 칸 없음");
