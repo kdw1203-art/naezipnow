@@ -8,7 +8,8 @@ export type ZoneShape = { n: string; k: string; c: [number, number]; a: number; 
 export type ZoneShapeFile = { meta: { source: string; asOf: string; note: string }; zones: ZoneShape[] };
 
 export const ZONE_SHAPES_URL = "/data/seoul-zone-shapes.json";
-export const ZONE_SHAPES_CREDIT = "구역 경계 서울특별시 의제처리구역 위치정보(2026-09) · 법적 효력 없는 참고 자료";
+/* [1206] 서울 밖은 브이월드 지구단위계획구역(정비사업 이름) 참고 경계 — lib/redevelopment/vworld-zone-shapes */
+export const ZONE_SHAPES_CREDIT = "구역 경계 서울특별시 의제처리구역 위치정보(2026-09) · 서울 밖 국토교통부 도시계획정보(지구단위계획구역) · 법적 효력 없는 참고 자료";
 
 /** 점이 고리 안에 있나 — p 는 [경도, 위도, 경도, 위도 …] */
 export function pointInShape(lng: number, lat: number, p: readonly number[]): boolean {
