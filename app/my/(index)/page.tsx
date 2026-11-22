@@ -453,6 +453,8 @@ export default async function MyPage() {
       {/* [1131] 홈에서 옮겨 온 묶음 — 내 관심 지역 칩 · 내 관심단지 주간 브리핑 */}
       <MyHomeBrief />
       {/* [1056 · C2] 저장한 글 — 동네 글의 "저장"(북마크 type=post)이 어디에도 모이지 않았다. 3건 + 전체(/my/watchlist?tab=saved). */}
+      {/* [1209] 저장한 글이 없으면 칸을 그리지 않는다(관심 단지 대시보드 "저장" 탭이 같은 목록) */}
+      {!(savedPostsLoaded.ok && savedPostsLoaded.value.length === 0) && (
       <section className="card rounded-lg px-4 py-3" aria-label="저장한 글">
         <div className="flex items-center justify-between gap-3">
           <span className="t-caption font-bold text-text-3">저장한 글</span>
@@ -480,6 +482,7 @@ export default async function MyPage() {
           </ul>
         )}
       </section>
+      )}
       {/* [1057 · C2] 팔로우한 작성자의 새 노트 — 피드 API 는 있었으나 어느 화면도 그리지 않았다. 5건 · 자기 조회·자기 상태(서버 컴포넌트) */}
       <FollowedAuthorsNotes email={email} />
           </>

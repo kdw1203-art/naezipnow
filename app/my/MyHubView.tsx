@@ -1,7 +1,6 @@
 import Link from "@/app/components/IntentLink";
 import { ExpertBadge } from "@/app/components/ExpertBadge";
 import { Icon } from "@/app/components/Icon";
-import { EmptyState } from "@/app/components/ui/EmptyState";
 import { SectionHead } from "@/app/components/ui/SectionHead";
 import { planLabel, type ProfilePlanTier } from "@/lib/subscriptions/labels";
 import {
@@ -368,13 +367,8 @@ export function MyHubView({
 포인트 잔액 불러오기 실패 · 잠시 후 다시
           </span>
         )}
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-          <Link
-            href="/my/points"
-            className="inline-flex min-h-[24px] items-center self-start t-sub font-semibold text-primary no-underline"
-          >
-            지갑 전체 보기 ›
-          </Link>
+        {/* [1209] "지갑 전체 보기 ›" 는 위 포인트 칸과 같은 곳(/my/points)이라 걷었다 — 출석 단추만 */}
+        <div className="flex sm:justify-end">
           <div className="w-full sm:w-auto sm:min-w-[220px]">
             <AttendanceButton />
           </div>
@@ -456,10 +450,13 @@ export function MyHubView({
           {/* ── 내 임장노트 — 빈 상태 그림은 여기 한 곳만. [1015 · 규칙 H·I] 썸네일 행 목록 = hanji 톤 ── */}
           <section className="flex flex-col gap-2.5">
             {/* [1162] 다녀온 곳 · 분석 기록을 날짜 줄로 — 내 임장 이력 */}
-            <Link href="/my/history" className="card press flex min-h-12 items-center justify-between gap-3 rounded-2xl px-4 py-3 no-underline">
-              <span className="t-body font-bold text-ink">내 임장 이력</span>
-              <span className="t-sub font-bold text-primary">날짜순 보기 ›</span>
-            </Link>
+            {/* [1209] 노트가 없으면 이력도 비어 있다 — 그때는 줄을 그리지 않는다 */}
+            {notes.kind === "items" && (
+              <Link href="/my/history" className="card press flex min-h-12 items-center justify-between gap-3 rounded-2xl px-4 py-3 no-underline">
+                <span className="t-body font-bold text-ink">내 임장 이력</span>
+                <span className="t-sub font-bold text-primary">날짜순 보기 ›</span>
+              </Link>
+            )}
             {groupLine && (
               <Link href={groupLine.href} className="card press flex min-h-12 items-center justify-between gap-3 rounded-2xl px-4 py-3 no-underline">
                 <span className="shrink-0 t-body font-bold text-ink">{groupLine.label}</span>
@@ -477,11 +474,8 @@ export function MyHubView({
                 tone="error"
               />
             ) : notes.kind === "empty" ? (
-              <EmptyState
-                icon="notebook-pen"
-                title="임장노트 없음"
-                action={{ label: "첫 노트 쓰기", href: "/notes/new" }}
-              />
+              /* [1209] 큰 빈 상태 그림(약 300px) → 한 줄 */
+              <OneLine text="임장노트 없음" href="/notes/new" label="첫 노트 쓰기" />
             ) : (
               <>
                 {/* [1049 · 그래프] 최근 6개월 월별 기록 수 + 평균 기록 점수 · 공개 수 — 목록 위 한 장 */}
@@ -574,6 +568,10 @@ export function MyHubView({
           {/* [1015 · 규칙 I] 관심 단지·저장 노트·알림 세 줄 = blue 톤 리퀴드 판 */}
           <section className="flex flex-col gap-2.5">
             <SectionHead title="관심" href="/my/watchlist" hrefLabel="관심 단지 대시보드" />
+            {/* [1209] 셋 다 비었으면 세 줄 대신 한 줄(위 요약 칸의 0 과 같은 말을 세 번 하지 않는다) */}
+            {watchlistCount.ok && watchlistCount.value === 0 && savedNotes.kind === "empty" && alerts.kind === "empty" ? (
+              <OneLine text="관심 단지 · 저장한 노트 · 알림 없음" href="/map" label="지도에서 담기" />
+            ) : (
             <div className="lq-panel flex flex-col py-1" data-tone="blue">
               {/* 관심 단지 */}
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-b py-3">
@@ -661,6 +659,7 @@ export function MyHubView({
                 )}
               </div>
             </div>
+            )}
           </section>
 
           {/* ── 구매한 리포트 (재열람) — 이미 산 리포트는 "언제든 다시 열람" 약속대로 개별 링크 ── */}
@@ -693,6 +692,10 @@ export function MyHubView({
           )}
 
           {/* ── [1047] 전문가 — 보관 해제(소유자 지시 2026-10-09). 인증 전문가는 프로필 관리 · 상담함, 아니면 등록 입구 하나. ── */}
+          {/* [1209] 전문가가 아니면 등록 입구 한 줄만(제목 + 설명 + 단추 카드 → 한 줄) */}
+          {!expert.isVerified ? (
+            <OneLine text="전문가 등록 · 인증 마크" href="/town/experts/apply" label="등록하기" />
+          ) : (
           <section className="flex flex-col gap-2.5">
             <SectionHead title="전문가" />
             <div className="card flex flex-col gap-3 rounded-2xl p-5 max-md:p-3.5 md:flex-row md:items-center md:justify-between">
@@ -722,6 +725,7 @@ export function MyHubView({
               </div>
             </div>
           </section>
+          )}
 
           {/* ── 중개 — 공인중개사 인증 회원에게만. 받은 문의(/my/leads)는 보관(비노출) 영역이라 입구를 그리지 않는다. ── */}
           {expert.isVerified && expert.isBroker && (
@@ -785,16 +789,14 @@ export function MyHubView({
                   {plan === "free" ? "업그레이드" : "구독 관리"}
                 </Link>
               </div>
+              {/* [1209] 사용량 표를 플랜 카드 안으로(카드 둘 → 하나) */}
+              {usage && usage.length > 0 && (
+                <div className="flex flex-col gap-1.5 border-t border-divider pt-3">
+                  <span className="t-sub font-bold text-ink">사용량</span>
+                  <UsageTable rows={usage} />
+                </div>
+              )}
             </div>
-
-            {/* [1049 · 표] 사용량 — AI 분석 · 북마크 · 관심 단지를 한 표로(사용/한도 · 막대 · 남음). 표를 못 만들면 아래 AI 칸 그대로 */}
-            {usage && usage.length > 0 && (
-              <div className="card flex flex-col gap-1.5 rounded-2xl p-4 max-md:p-3.5">
-                {/* [1052] 기간은 줄마다 적는다(이번 달 · 누적 · 보유가 섞여 있다) — 제목은 "사용량" 하나 */}
-                <span className="t-sub font-bold text-ink">사용량</span>
-                <UsageTable rows={usage} />
-              </div>
-            )}
             {/* 무료 가치 카운터 — AI 분석 사용량 */}
             {!(usage && usage.length > 0) && aiUsage &&
               (() => {
@@ -858,16 +860,13 @@ export function MyHubView({
                 { label: "미션", href: "/my/points?tab=missions", desc: "시작 3미션 200P · 주간 미션 매주 리셋" },
                 /* [1121] AI 분석 기록은 「내 분석」 칸으로(포인트 칸에 있을 자리가 아니었다) */
                 { label: "친구 초대", href: "/my/points?tab=referral", desc: "내 링크 가입 시 친구와 나 모두 300P" },
+                /* [1209] 포인트 상점 카드(단추 하나)를 같은 목록 줄로 */
+                { label: "포인트 상점", href: "/points/shop" },
               ]}
             />
             {/* [1015] "리포트·이용권을 교환해요" 는 사실이 아니었다(포인트↔이용권 교환은 2026-08-23 토스 회신으로 제거,
                 상점 품목은 매물 상단 노출·추천글·닉네임 효과) — 설명 문장을 지우고 링크만. 채움 파랑 → soft. */}
-            <div className="card flex flex-wrap items-center justify-between gap-3 rounded-2xl p-4 max-md:p-3.5">
-              <span className="t-body font-bold text-ink">포인트 상점</span>
-              <Link href="/points/shop" className="btn-soft btn-md shrink-0 no-underline">
-                포인트 상점 가기
-              </Link>
-            </div>
+
           </section>
 
           {rightExtra}

@@ -139,8 +139,13 @@ export default async function TownPage() {
         title="동네이야기"
         sub="이웃 글 · 동네 단위"
         className="mb-3 md:mb-4"
+        inlineActions
         actions={
           <>
+            {/* [1209] 게시판 · 글 검색을 쓰기 단추 옆으로(따로 한 줄이던 것) · 폰도 제목과 같은 줄(작은 단추) */}
+            <Link href="/board" className="tap-line t-sub font-bold text-primary no-underline">
+              글 검색
+            </Link>
             <Link href="/town/write" className="btn-primary btn-md rounded-xl no-underline">
               이야기 쓰기
             </Link>
@@ -203,11 +208,7 @@ export default async function TownPage() {
       {/* [1078] 이웃 글이 0건이면 빈 피드 카드가 화면을 먼저 차지하고 동네 홈 인덱스(107곳 · 내용 있음)가 그 아래 있었다(운영 실측)
           → 0건일 때는 인덱스가 먼저, 빈 피드는 그 아래(order). 글이 생기면 예전 순서 그대로. */}
       {/* [1143] 오래된 글 찾기 — 쪽 번호로 넘기고 제목 · 내용 · 키워드로 찾는 게시판 */}
-      <p className="m-0 mb-2 px-1 text-right">
-        <Link href="/board" className="tap-line t-sub font-bold text-primary">
-          게시판 · 글 검색 ›
-        </Link>
-      </p>
+      {/* [1209] "게시판 · 글 검색 ›" 줄은 머리(PageHead 오른쪽 "글 검색")로 옮겼다 */}
       <div className="flex flex-col">
       <div className={!loadFailed && firstPage.length === 0 ? "order-2" : ""}>
       <TownFeed
