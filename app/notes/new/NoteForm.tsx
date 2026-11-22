@@ -1193,24 +1193,42 @@ export function NoteForm({
     },
     [isEdit],
   );
-  useEffect(() => {
-    if (isGuest === null) return;
-    noteFunnel("note_form_open", { guest: isGuest });
-  }, [isGuest, noteFunnel]);
-  /* [1210 · 27] 깔때기 한 칸 더 — "첫 입력"(위치 고름 · 글자 입력 · 점수 고름). 열림 → 저장 누름 사이 어디서 손을 놓는지.
-     진입 때 채워진 값(?apt= 프리필 · 메모 초안)은 기준선으로 두고, 그 뒤 처음 바뀐 칸 하나만 한 번 센다. */
+  /* [1212] 깔때기는 **사람이 손을 댄 뒤**부터 센다 — 11-22 실측: 열림 117 · 첫 입력 103(전부 비회원 · 전부 "위치") · 저장 0.
+     크롤러가 "이 단지 임장노트 쓰기"(?apt=) 링크를 따라와 화면을 열었고, 주소 프리필이 기준선을 잡은 다음 렌더에 들어와 "위치 입력"으로 세졌다.
+     이제 첫 탭 · 키 입력이 있어야 "열림"을 세고, 그 순간의 값을 기준선으로 잡아 그 뒤 바뀐 칸만 "첫 입력"으로 센다. */
+  const [interacted, setInteracted] = useState(false);
   const firstInputBase = useRef<{ apt: string; memo: string; checks: number } | null>(null);
+  const latestInputs = useRef({ apt: "", memo: "", checks: 0 });
+  latestInputs.current = { apt: loc.aptName, memo, checks: Object.keys(checks).length };
   useEffect(() => {
-    if (isEdit || isGuest === null) return;
+    if (isEdit || interacted) return;
+    const on = () => {
+      /* 기준선은 손이 닿는 그 순간의 값 — 그 탭이 곧바로 단지를 고르는 탭이어도 "첫 입력"으로 센다 */
+      if (!firstInputBase.current) firstInputBase.current = { ...latestInputs.current };
+      setInteracted(true);
+    };
+    window.addEventListener("pointerdown", on, { once: true, passive: true });
+    window.addEventListener("keydown", on, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", on);
+      window.removeEventListener("keydown", on);
+    };
+  }, [isEdit, interacted]);
+  useEffect(() => {
+    if (isGuest === null || !interacted) return;
+    noteFunnel("note_form_open", { guest: isGuest });
+  }, [isGuest, interacted, noteFunnel]);
+
+  /* [1210 · 27] 깔때기 한 칸 더 — "첫 입력"(위치 고름 · 글자 입력 · 점수 고름). 열림 → 저장 누름 사이 어디서 손을 놓는지.
+     [1212] 기준선은 첫 손댐 때의 값(프리필 · 초안 · 자동 채움은 기준선에 들어간다) — 그 뒤 처음 바뀐 칸 하나만 한 번 센다. */
+  useEffect(() => {
+    if (isEdit || isGuest === null || !interacted) return;
     const now = { apt: loc.aptName, memo, checks: Object.keys(checks).length };
     const base = firstInputBase.current;
-    if (!base) {
-      firstInputBase.current = now;
-      return;
-    }
+    if (!base) return;
     const what = now.apt !== base.apt ? "location" : now.memo !== base.memo ? "text" : now.checks !== base.checks ? "check" : null;
     if (what) noteFunnel("note_first_input", { guest: isGuest, what });
-  }, [isEdit, isGuest, loc.aptName, memo, checks, noteFunnel]);
+  }, [isEdit, isGuest, interacted, loc.aptName, memo, checks, noteFunnel]);
 
   /* [1006] 설정 기본값 조회 — 로그인이 확정(isGuest === false)된 작성 모드에서 1회.
      비회원·모름(null)은 부르지 않는다(비회원 응답은 어차피 기본값이고, 모름은 세션이

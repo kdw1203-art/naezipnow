@@ -31,11 +31,13 @@ type ClusterItem = { key: string; lat: number; lng: number; count: number };
 type Viewport = { mode: "points"; points: PointItem[] } | { mode: "clusters"; clusters: ClusterItem[] };
 const EMPTY: Viewport = { mode: "points", points: [] };
 
+/* [1212] 기본은 **접힘** — 폰 첫 화면에서 지도 칸(약 200px)이 "저장" 단추를 화면 밖으로 밀어냈다(실측 · 저장 단추 위 694px · 화면 660px).
+   위 검색칸이 먼저 · 지도는 "펼치기"로. 한 번 펼친 사람은 그대로 기억한다(OPEN_KEY "1"). */
 function readOpen(): boolean {
   try {
-    return window.localStorage.getItem(OPEN_KEY) !== "0";
+    return window.localStorage.getItem(OPEN_KEY) === "1";
   } catch {
-    return true;
+    return false;
   }
 }
 
@@ -60,7 +62,7 @@ export function NoteMapPick({
   fallbackCenter?: { lat: number; lng: number } | null;
 }) {
   const hasXY = typeof value.lat === "number" && typeof value.lng === "number" && value.lat !== 0 && value.lng !== 0;
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   useEffect(() => {
     setOpen(readOpen());
   }, []);
