@@ -45,7 +45,9 @@ export function PageShell({
         id="main-content"
         style={toolScope}
         className={`mx-auto w-full flex-1 px-3.5 pb-6 pt-3.5 md:px-5 md:pb-16 md:pt-5 ${
-          wide ? "max-w-[1400px]" : "max-w-[1240px]"
+          /* [1208] 소유자 "사이즈 일관성 · 심플하게" — 넓은 판(1400)과 보통 판(1240)이 화면마다 달라 옮길 때 본문 폭이 뛰었다.
+             한 폭(1240)으로. wide 는 호출부 호환으로만 남긴다 */
+          wide ? "max-w-[1240px]" : "max-w-[1240px]"
         }${toolScope ? " tool-scope" : ""}`}
       >
         <div data-autotrim="" className="min-w-0">

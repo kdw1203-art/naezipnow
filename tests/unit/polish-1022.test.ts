@@ -38,7 +38,8 @@ function scopedFiles(): string[] {
 
 test("[1022] PageHead — 아이콘 칩 40px + h1.t-title + 사실 한 줄(t-sub) | 오른쪽 액션, 캡션 줄은 t-caption", () => {
   const src = read("app/components/PageHead.tsx");
-  assert.match(src, /h-10 w-10 shrink-0 items-center justify-center rounded-xl/);
+  /* [1208] 아이콘 칩은 걷었다(소유자 "심플하게") — 제목이 본문 왼쪽 끝에서 시작 */
+  assert.doesNotMatch(src, /h-10 w-10 shrink-0 items-center justify-center rounded-xl/);
   assert.match(src, /className="t-title text-ink"/);
   assert.match(src, /t-sub text-text-2/);
   assert.match(src, /justify-end gap-2/);
