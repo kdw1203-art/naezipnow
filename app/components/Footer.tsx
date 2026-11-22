@@ -72,10 +72,13 @@ export function Footer() {
      슬로건 한 줄이 세리프 글꼴(51KB)을 모든 화면 첫 방문에 받게 했다(운영 Lighthouse: 쪽마다 무거운 자원 3위).
      화면에 가까워질 때 그린다 — DOM·크롤러·찾기(Ctrl+F)에는 그대로 있다. */
   return (
-    <footer className="footer-cv mt-auto border-t border-line bg-surface px-5 pb-[76px] pt-4 md:pb-10 md:pt-10">
-      <div className="mx-auto flex max-w-[1240px] flex-col gap-2 t-sub text-text-3">
+    <footer className="footer-cv mt-auto border-t border-line bg-surface px-5 pb-[76px] pt-4 max-md:pt-3 md:pb-10 md:pt-10">
+      {/* [1209 · 폰 푸터 60%] 소유자 2026-11-22 "세로 길이 줄이고 자간 줄여서 지금의 60% 수준으로" — 폰만: 글자 한 단계 작게(t-caption) · 줄 간격 1.45 ·
+          자간 -0.02em · 묶음 제목을 링크와 같은 줄에(제목 줄 4개 절약) · 묶음/줄 사이 여백 절반 · 브랜드 줄은 숨김(헤더에 같은 로고) ·
+          "사업자 정보 ▾" 의 터치 최소 높이(빈 줄처럼 보였다)를 푼다. 법정 고지 문장은 그대로 보인다. PC 그대로 */}
+      <div className="mx-auto flex max-w-[1240px] flex-col gap-2 t-sub text-text-3 max-md:gap-1 max-md:text-[length:var(--fs-caption)] max-md:leading-[1.35] max-md:tracking-[-0.02em]">
         {/* [962] 0행: 브랜드 잠금 + 슬로건 — 모든 페이지의 마지막 줄이 브랜드로 끝난다 */}
-        <div className="mb-1 flex flex-wrap items-center justify-between gap-3 border-b border-divider pb-3 md:mb-2 md:pb-4">
+        <div className="mb-1 flex flex-wrap items-center justify-between gap-3 border-b border-divider pb-3 max-md:hidden md:mb-2 md:pb-4">
           {/* [970 · A-19] 푸터 18개 링크는 뷰포트 프리페치를 끈다 — 페이지마다 RSC 프리페치
               24건의 대부분이 푸터였다(사유·예외는 Header.tsx / TabBar.tsx). */}
           {/* [989] 실측 86×23 — 세로가 손가락 기준의 절반이었다. 위아래 패딩으로 45px 을
@@ -99,10 +102,10 @@ export function Footer() {
             PC 는 4열. 각 열은 items-start 라 링크가 글자 폭만큼만 눌린다(줄 전체가 눌리지 않게). */}
         {/* [1204 · 폰 컴팩트] 소유자 2026-11-21 "이 부분은 더 작고 컴팩트하게" — 폰은 묶음마다 제목 한 줄 + 링크를 옆으로 흘려 접는다
             (예전 2열 세로 목록은 폰 한 화면을 다 썼다). 줄 간격 8px — tap-line 히트(약 27px)가 겹치지 않는 최소. PC 4열 세로 목록 그대로. */}
-        <nav aria-label="사이트 안내" className="grid grid-cols-1 gap-y-3 pb-4 pt-1 md:grid-cols-4 md:gap-x-8 md:gap-y-7 md:pb-6">
+        <nav aria-label="사이트 안내" className="grid grid-cols-1 gap-y-3 pb-4 pt-1 max-md:gap-y-1 max-md:pb-2 max-md:pt-0 md:grid-cols-4 md:gap-x-8 md:gap-y-7 md:pb-6">
           {LINK_GROUPS.map((g) => (
-            <div key={g.id} className="flex min-w-0 flex-wrap items-baseline gap-x-3.5 gap-y-2 md:flex-col md:items-start md:gap-y-2.5">
-              <h2 className="basis-full t-caption font-bold text-text-2 md:basis-auto">{g.title}</h2>
+            <div key={g.id} className="flex min-w-0 flex-wrap items-baseline gap-x-3.5 gap-y-2 max-md:gap-x-2.5 max-md:gap-y-0.5 md:flex-col md:items-start md:gap-y-2.5">
+              <h2 className="t-caption font-bold text-text-2 max-md:mr-0.5 md:basis-auto">{g.title}</h2>
               {LEGAL_LINKS.filter((l) => l.group === g.id).map((l) => (
                 <Link
                   key={l.href}
@@ -124,21 +127,22 @@ export function Footer() {
         </nav>
 
         {/* 1행: 사업자 고지 — [1073] 링크 묶음 아래 한 칸(가는 선 위) · 보조 글자. 문장·값은 그대로 */}
-        <div className="flex flex-col gap-1 border-t border-divider pt-4 t-caption">
+        <div className="flex flex-col gap-1 border-t border-divider pt-4 t-caption max-md:block max-md:pt-2">
           {/* [1191] 소유자(2026-11-16): "대표자 이름을 숨기고 싶어" — 한 줄에서는 빼고 "사업자 정보 ▾" 접기 안에 둔다(DOM 에는 그대로) */}
-          <div className="flex flex-wrap items-baseline gap-x-1">
+          <div className="flex flex-wrap items-baseline gap-x-1 max-md:inline">
             <span>
               내집나우 · 상호: {biz.legalName}({biz.domain}) · 사업자등록번호:{" "}
               {biz.registrationNumber || "—"} ·
             </span>
             <details className="inline-block">
               {/* dead-control-ok: summary 가 눌리는 자리 — 꺾쇠는 열림 표시 */}
-              <summary className="inline-block cursor-pointer list-none py-[5px] text-text-3 underline-offset-2 hover:underline">사업자 정보 ▾</summary>
+              <summary className="inline-block cursor-pointer list-none py-[5px] text-text-3 underline-offset-2 hover:underline max-md:!min-h-0 max-md:py-0">사업자 정보 ▾</summary>
               <span>대표: {biz.representative || "—"}</span>
             </details>
           </div>
-          <div>
-            주소: {biz.address || "—"}
+          {/* [1209] 폰은 상호 · 등록번호 · 사업자 정보 · 주소 · 연락처를 한 문단으로 이어 쓴다(줄 끝 빈칸 절약) */}
+          <div className="max-md:inline">
+            {" "}주소: {biz.address || "—"}
             {/* 신고번호가 아직 없으면 "—" 대신 진행 상태를 적는다(소유자 확인:
                 정부24 신고 진행 중). 번호가 env 로 들어오면 자동으로 번호 표기로
                 바뀐다 — 문구가 낡은 채 남을 수 없는 구조다. */}
@@ -155,7 +159,7 @@ export function Footer() {
                    서로의 탭을 훔친다. 이런 자리의 기준은 WCAG 2.5.8 의 24px 이다:
                    inline-block + 세로 패딩으로 글자줄(14px)만 24px 로 키운다.
                    같은 줄에 나란히 선 링크라 좌우로는 서로를 침범하지 않는다. */
-                className="inline-block py-[5px] text-text-3 underline-offset-2 hover:underline"
+                className="inline-block py-[5px] text-text-3 underline-offset-2 hover:underline max-md:py-0"
               >
                 {biz.phone}
               </a>
@@ -165,7 +169,7 @@ export function Footer() {
             ·{" "}
             <a
               href={`mailto:${biz.supportEmail}`}
-              className="inline-block py-[5px] text-text-3 underline-offset-2 hover:underline"
+              className="inline-block py-[5px] text-text-3 underline-offset-2 hover:underline max-md:py-0"
             >
               문의 {biz.supportEmail}
             </a>
@@ -178,7 +182,7 @@ export function Footer() {
 
           {/* 수익 보장 문구 영구 미기재 방침 — 전 페이지 고지(소유자 방침 2026-08-11).
               문구 단일 출처는 app/components/ComplianceNotice.tsx */}
-          <div>{NO_PROFIT_GUARANTEE_TEXT}</div>
+          <div className="max-md:mt-1">{NO_PROFIT_GUARANTEE_TEXT}</div>
         </div>
 
         {/* 3행: 출처 + 브랜드·상호 관계.
