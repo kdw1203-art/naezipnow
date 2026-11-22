@@ -57,42 +57,34 @@ async function readFreshGroups(sb: Sb, hours: number, now: Date): Promise<FreshG
   const sinceIso = new Date(now.getTime() - hours * 3_600_000).toISOString();
   const ymFrom = utcYmMonthsAgo(1, now);
   const seen = new Set<string>();
-  const groups: FreshGroup[] = [];
-  let cursor: { deal: number; id: string } | null = null;
-  for (let page = 0; page < FRESH_MAX_PAGES && groups.length < FRESH_CANDIDATE_CAP; page++) {
-    let q = sb
-      .from("market_transactions")
-      .select("id, complex_name, region_name, area_m2, deal_amount_krw, contract_ym, contract_day")
-      .eq("transaction_type", "trade")
-      .eq("property_type", "apartment")
-      .eq("is_cancelled", false)
-      .gt("created_at", sinceIso)
-      .not("deal_amount_krw", "is", null)
-      .not("area_m2", "is", null)
-      .not("complex_name", "is", null)
-      .gte("contract_ym", ymFrom);
-    if (cursor) {
-      q = q.or(`deal_amount_krw.lt.${cursor.deal},and(deal_amount_krw.eq.${cursor.deal},id.gt.${cursor.id})`);
-    }
-    const { data, error } = await q
-      .order("deal_amount_krw", { ascending: false })
-      .order("id", { ascending: true })
-      .limit(FRESH_PAGE_ROWS);
-    if (error) throw new Error(`market_transactions(새 매매) 조회 실패: ${error.message}`);
-    const rows = (data ?? []) as Array<Record<string, unknown>>;
-    const fresh: FreshTradeRow[] = rows.map((r) => ({
-      complex_name: String(r.complex_name ?? ""),
-      region_name: String(r.region_name ?? ""),
-      area_m2: Number(r.area_m2),
-      deal_amount_krw: Number(r.deal_amount_krw),
-      contract_ym: String(r.contract_ym ?? ""),
-      contract_day: r.contract_day == null ? null : Number(r.contract_day),
-    }));
-    groups.push(...collectFreshGroups(fresh, seen));
-    if (rows.length < FRESH_PAGE_ROWS) break;
-    const last = rows[rows.length - 1];
-    cursor = { deal: Number(last.deal_amount_krw), id: String(last.id) };
-  }
+  /* [1212] 한 번에 읽는다(색인만으로) — 11-22 실측: 7일 창에 매매 375,294행(과거 계약 백필)이 들어와 뉴스 수집의 신고가 탐지가
+     시간 초과(57014)였다. 예전엔 id(색인에 없음)를 함께 읽고 id 로 커서를 이어 최대 5쪽을 돌아, 쪽마다 수십만 행을 표에서 다시 읽고 정렬했다.
+     이제 색인(mt_trade_apt_created_idx · INCLUDE 금액 · 면적 · 단지 · 지역 · 계약월 · 일)에 있는 칸만 · 금액 상위 5,000행 한 번.
+     후보 300묶음에는 충분하다(같은 단지·면적 묶음은 collectFreshGroups 가 합친다). */
+  const { data, error } = await sb
+    .from("market_transactions")
+    .select("complex_name, region_name, area_m2, deal_amount_krw, contract_ym, contract_day")
+    .eq("transaction_type", "trade")
+    .eq("property_type", "apartment")
+    .eq("is_cancelled", false)
+    .gt("created_at", sinceIso)
+    .not("deal_amount_krw", "is", null)
+    .not("area_m2", "is", null)
+    .not("complex_name", "is", null)
+    .gte("contract_ym", ymFrom)
+    .order("deal_amount_krw", { ascending: false })
+    .limit(FRESH_PAGE_ROWS * FRESH_MAX_PAGES);
+  if (error) throw new Error(`market_transactions(새 매매) 조회 실패: ${error.message}`);
+  const rows = (data ?? []) as Array<Record<string, unknown>>;
+  const fresh: FreshTradeRow[] = rows.map((r) => ({
+    complex_name: String(r.complex_name ?? ""),
+    region_name: String(r.region_name ?? ""),
+    area_m2: Number(r.area_m2),
+    deal_amount_krw: Number(r.deal_amount_krw),
+    contract_ym: String(r.contract_ym ?? ""),
+    contract_day: r.contract_day == null ? null : Number(r.contract_day),
+  }));
+  const groups = collectFreshGroups(fresh, seen);
   /* 쪽마다 금액 내림차순이고 쪽끼리도 내림차순이라 이어 붙이면 전체가 내림차순이다 */
   return groups.slice(0, FRESH_CANDIDATE_CAP);
 }

@@ -520,6 +520,9 @@ function sameRedevItems(a: readonly RedevelopmentProject[], b: readonly Redevelo
   return true;
 }
 
+/** [1212] 넓게 본 화면의 정비구역 마커 상한 */
+const REDEV_WIDE_MAX = 300;
+
 interface PopularItem {
   id: string;
   name: string;
@@ -3693,11 +3696,19 @@ export function MapClient({
   /* [1027] 걸러 본 구역(redevShown)만 찍는다 · 이름표는 고른 값(구역명/진행단계/세대수) ·
      안내창은 /redevelopment 와 같은 것(lib/redevelopment/map-layer — 글자 이스케이프 · http(s) 출처만 ·
      구역 상세 링크). 예전 안내창은 구역명·주소·출처 주소를 이스케이프 없이 innerHTML 에 넣었다. */
+  /* 넓게 본 화면인가 — 값(참/거짓)만 바뀔 때 마커를 다시 만든다(멈출 때마다가 아니라) */
+  const redevWide = Boolean(viewBounds && viewBounds.neLng - viewBounds.swLng > 0.25);
   const redevelopmentMarkers = useMemo<MapMarkerData[]>(() => {
     if (!showRedevelopment) return [];
     /* [1030 · G5] 이름표는 시세 핀에 양보한다(priority −1 → 겹치면 구역이 색 점으로 접히고 시세 핀이 남는다).
        예전엔 동점(0)이라 id 사전순("redev:" < "region:")으로 구역 이름표가 이기고 구 시세 핀이 회색 점이 됐다. */
-    return redevShown.map((p) => ({
+    /* [1212 · 지도 반응] 넓게 본 화면(폭 0.25° 넘음 · 시 하나 이상)에서는 구역 마커를 세대수 큰 순 300곳까지 — 수백~2천 개의 HTML 마커가
+       끌 때마다 함께 움직여 지도가 굼떴다. 확대하면 그 범위의 구역이 전부 다시 나온다(조회는 화면 범위 · 위 격자 스냅) */
+    const wide = redevWide;
+    const shown = wide && redevShown.length > REDEV_WIDE_MAX
+      ? [...redevShown].sort((a, b) => (b.households ?? 0) - (a.households ?? 0)).slice(0, REDEV_WIDE_MAX)
+      : redevShown;
+    return shown.map((p) => ({
       id: `redev:${p.id}`,
       lat: p.lat,
       lng: p.lng,
@@ -3707,7 +3718,7 @@ export function MapClient({
       infoHtml: buildRedevInfoHtml(p),
       priority: -1,
     }));
-  }, [showRedevelopment, redevShown, redevLabelMode, redevColorMode]);
+  }, [showRedevelopment, redevShown, redevLabelMode, redevColorMode, redevWide]);
 
   // 정비사업 레이어 범례 (#20) — 화면에 실제 존재하는 사업종류만 색상칩으로 노출
   useEffect(() => {

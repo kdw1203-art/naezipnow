@@ -237,9 +237,10 @@ test("④ 신고가 크론 · 주간 시황 — RPC 를 부르지 않는다 · �
   assert.doesNotMatch(ph, /coalesce/);
   assert.match(prior, /\.gte\("contract_ym", ymFloor\)\s*\.lt\("contract_ym", g\.contract_ym\)\s*\.gte\("area_m2", area\.gte\)\s*\.lt\("area_m2", area\.lt\)/);
   assert.match(prior, /\.order\("deal_amount_krw", \{ ascending: false, nullsFirst: false \}\)\s*\.limit\(1\)/);
-  /* 새 매매 — 금액 내림차순 키셋 */
-  assert.match(ph, /q\.or\(`deal_amount_krw\.lt\.\$\{cursor\.deal\},and\(deal_amount_krw\.eq\.\$\{cursor\.deal\},id\.gt\.\$\{cursor\.id\}\)`\)/);
-  assert.match(ph, /\.order\("deal_amount_krw", \{ ascending: false \}\)\s*\.order\("id", \{ ascending: true \}\)/);
+  /* 새 매매 — [1212] 색인에 있는 칸만 · 금액 상위 한 번(id 키셋 쪽 넘김은 표를 다시 읽어 7일 창에서 시간 초과였다) */
+  assert.match(ph, /\.select\("complex_name, region_name, area_m2, deal_amount_krw, contract_ym, contract_day"\)/);
+  assert.match(ph, /\.order\("deal_amount_krw", \{ ascending: false \}\)\s*\.limit\(FRESH_PAGE_ROWS \* FRESH_MAX_PAGES\)/);
+  assert.doesNotMatch(ph, /id\.gt\.\$\{cursor\.id\}/);
   /* 금액 순으로 보다가 limit 건이 차면 멈춘다 */
   assert.match(ph, /for \(let i = 0; i < candidates\.length && out\.length < limit; i \+= PRIOR_CONCURRENCY\)/);
 });

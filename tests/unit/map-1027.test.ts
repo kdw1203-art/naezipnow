@@ -202,7 +202,9 @@ test("map-client — 바탕 지도(위성·지적편집도)를 NaverMap 에 넘�
 
 test("map-client — 정비사업 마커·범례·패널이 걸러 본 목록 하나를 본다 · 안내창은 공용 빌더", () => {
   assert.ok(mapClient.includes("filterRedevProjects(redevItems, redevGroups, redevStages)"));
-  assert.ok(mapClient.includes("return redevShown.map((p) => ({"));
+  /* [1212] 넓게 본 화면에서는 같은 목록(redevShown)에서 세대수 큰 순 상한만 자른다 — 출처는 여전히 걸러 본 목록 하나 */
+  assert.ok(mapClient.includes("? [...redevShown].sort((a, b) => (b.households ?? 0) - (a.households ?? 0)).slice(0, REDEV_WIDE_MAX)"));
+  assert.ok(mapClient.includes(": redevShown;\n    return shown.map((p) => ({"));
   assert.ok(mapClient.includes("label: redevMarkerLabel(p, redevLabelMode),"));
   assert.ok(mapClient.includes("infoHtml: buildRedevInfoHtml(p),"));
   assert.ok(mapClient.includes("for (const p of redevShown) {"), "범례도 걸러 본 구역에서만");
