@@ -77,7 +77,8 @@ export function regionHeroTiles(overview: RegionOverview): React.ReactNode[] {
         delta={index.momPct !== null ? <Delta pct={index.momPct} srContext="전월보다" /> : null}
         basis="전월 대비"
         /* [1101] 1년 전 대비(예전 제목 아래 굵은 줄 · overview.subline)를 이 칸 발에 — 제목 줄을 걷으며 사실은 남긴다 */
-        foot={overview.subline ? `${overview.subline} · 부동산원` : `${ymLong(index.ym)} · 부동산원`}
+        /* [1210 · 정리정돈] 칸마다 되풀이되던 "2026년 10월 · 부동산원"을 걷었다 — 기준 달 · 원천은 카드 머리 한 줄이 말한다. 다른 달일 때만 칸에 적는다 */
+        foot={overview.subline ?? null}
       />,
     );
   }
@@ -112,7 +113,9 @@ export function regionHeroTiles(overview: RegionOverview): React.ReactNode[] {
         value={formatKrwShort(avgPrice.krw)}
         foot={
           reb
-            ? `${avgPrice.ym ? `${ymLong(avgPrice.ym)} · ` : ""}부동산원`
+            ? avgPrice.ym && avgPrice.ym !== index?.ym
+              ? `${ymLong(avgPrice.ym)} 기준`
+              : null
             : `${avgPrice.ym ? `${ymMonth(avgPrice.ym)} ` : ""}계약 ${avgPrice.trades?.toLocaleString("ko-KR") ?? ""}건 평균`
         }
       />,
@@ -136,7 +139,7 @@ export function regionHeroTiles(overview: RegionOverview): React.ReactNode[] {
         value={`${jeonse.value.toFixed(1)}%`}
         delta={jeonse.ppChange !== null ? <Delta pp={jeonse.ppChange} srContext="전월보다" /> : null}
         basis="전월 대비"
-        foot={jeonse.ym ? `${ymLong(jeonse.ym)} · 부동산원` : "부동산원"}
+        foot={jeonse.ym && jeonse.ym !== index?.ym ? `${ymLong(jeonse.ym)} 기준` : null}
       />,
     );
   }

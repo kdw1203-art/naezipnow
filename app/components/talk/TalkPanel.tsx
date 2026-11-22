@@ -509,10 +509,12 @@ export function TalkPanel({
       )}
 
       {/* [1205] 홈(PC): 글 칸이 왼쪽 순위 목록 높이까지 늘어나 글이 적으면 속이 비었다 — 홈에서는 두 칸을 각자 내용 높이로(items-start) */}
-      <div className={`grid grid-cols-1 gap-3 ${scoped ? "" : "md:grid-cols-[minmax(0,300px)_minmax(0,1fr)]"} ${variant === "page" ? "" : "md:items-start"}`}>
+      {/* [1210] 소유자 "왼쪽 오른쪽 세로높이를 맞춰줘" — 홈(넓은 화면)은 두 칸을 같은 높이(520px)로 세우고 순위 · 글 목록이 칸 안에서 스크롤한다.
+          예전엔 오른쪽 칸이 글 수만큼만 서서(md:items-start) 순위 목록 옆 아래가 통째로 비었다 */}
+      <div className={`grid grid-cols-1 gap-3 ${scoped ? "" : "md:grid-cols-[minmax(0,300px)_minmax(0,1fr)]"} ${variant === "page" || scoped ? "" : "md:h-[520px]"}`}>
         {/* 왼쪽 — 지역 순위(단지 범위엔 없다) */}
         {!scoped && (
-        <div className="overflow-hidden rounded-xl border border-line bg-surface">
+        <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-surface">
           <div className="flex items-center justify-between border-b border-line bg-bg px-3 py-1.5 t-caption font-bold text-text-3">
             <span>지역</span>
             <span>{tab ? valueHead(tab, board) : ""}</span>
@@ -547,7 +549,7 @@ export function TalkPanel({
               {q.trim() ? `'${q.trim()}' 지역 없음` : tab === "hot" ? "최근 7일 토론글 없음" : "이 기준의 지역 없음"}
             </p>
           ) : (
-            <ol className={`m-0 list-none overflow-y-auto p-1 ${listMax}`}>
+            <ol className={`m-0 min-h-0 list-none overflow-y-auto p-1 ${listMax} ${variant === "page" ? "" : "md:max-h-none md:flex-1"}`}>
               {pinned && regionRow(pinned, null, true)}
               {shown.map((x) => regionRow(x.r, x.rank, false))}
             </ol>
@@ -556,7 +558,7 @@ export function TalkPanel({
         )}
 
         {/* 오른쪽 — 고른 지역의 글 */}
-        <div ref={feedBoxRef} className="flex min-w-0 scroll-mt-20 flex-col overflow-hidden rounded-xl border border-line bg-surface">
+        <div ref={feedBoxRef} className="flex min-h-0 min-w-0 scroll-mt-20 flex-col overflow-hidden rounded-xl border border-line bg-surface">
           <div className="flex items-center justify-between gap-2 border-b border-line px-3.5 py-2">
             <span className="min-w-0 truncate t-body font-bold text-ink">{feedTitle}</span>
             {scope ? (
@@ -581,7 +583,7 @@ export function TalkPanel({
             }}
             /* [1091] min-h 160 은 뼈대(skeleton)가 보이는 동안만 — 글이 0건이면 "토론글 없음" 한 줄 아래 110px 이 비어 있었다(운영 실측 ·
                단지 화면 폰). 빈 상태 · 실패 안내는 제 높이(py-8)로 선다 */
-            className={`relative flex-1 overflow-y-auto ${feedMax} ${feed.status !== "ok" || feed.regionId !== selectedId ? "min-h-[160px]" : ""}`}
+            className={`relative min-h-0 flex-1 overflow-y-auto ${feedMax} ${variant === "page" || scoped ? "" : "md:max-h-none"} ${feed.status !== "ok" || feed.regionId !== selectedId ? "min-h-[160px]" : ""}`}
           >
             {fresh > 0 && (
               <div className="sticky top-1.5 z-10 flex justify-center">

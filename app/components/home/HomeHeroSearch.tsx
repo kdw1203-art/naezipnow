@@ -7,10 +7,9 @@ import dynamic from "next/dynamic";
 import Link from "@/app/components/IntentLink";
 import { useRouter } from "next/navigation";
 import { Icon } from "@/app/components/Icon";
-import { pushRecentSearch, readRecentSearches } from "@/lib/search/recent-searches";
+import { pushRecentSearch } from "@/lib/search/recent-searches";
 import { useRecentComplexes } from "@/app/components/RecentComplexes";
 import { useSettledSearchQuery } from "@/lib/search/settle";
-import { complexHrefFromId } from "@/lib/seo/complex-slug";
 import { useShellActive, type Shell } from "@/lib/client/viewport-shell";
 import { useReducedData } from "@/lib/client/network-hints";
 import {
@@ -130,18 +129,11 @@ export function HomeHeroSearch({
   const [nextWords, setNextWords] = useState<NextWordJson[]>([]);
   const [completeWords, setCompleteWords] = useState<NextWordJson[]>([]);
   const inputRef = useRef<HTMLInputElement>(null);
-  const [recents, setRecents] = useState<string[]>([]);
   /* [968 · 8] 최근 본 단지(로컬 + 서버 병합)도 보이는 벌만 읽는다 */
   const { items: recentComplexes } = useRecentComplexes(active);
   const boxRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const { query: settledQuery, compositionProps } = useSettledSearchQuery(q);
-
-  /* 최근 검색은 마운트 후에만 (SSR 불일치 방지) */
-  useEffect(() => {
-    if (!active) return;
-    setRecents(readRecentSearches());
-  }, [active]);
 
   /* 제안 조회 — HeaderSearch 와 같은 unified 엔드포인트 */
   useEffect(() => {
@@ -280,8 +272,6 @@ export function HomeHeroSearch({
     }
   }
 
-  const hasHistory = recents.length > 0 || recentComplexes.length > 0;
-
   return (
     /* [963] 검색 상자만 560px 로 죄고, 칩·커버리지 행은 바깥 폭을 그대로 쓴다.
        예전에는 칩 행이 상자 안(560px)에 갇혀 있어서 "칩 + 커버리지 한 줄"이 항상
@@ -381,36 +371,9 @@ export function HomeHeroSearch({
           flex-wrap 이라 칩이 여럿이거나 좁은 화면에서는 알아서 접힌다. */}
       {/* [1024] 소유자: "홈 모바일도 처음이라면 부분을 위로 올려서 한 줄로" — 폰은 줄바꿈 대신 한 줄 가로 스크롤(칩 + ⓘ 같은 줄). */}
       <div className="scroll-x-hidden-bar mt-3 flex items-center gap-x-2 gap-y-1.5 max-md:-mx-3.5 max-md:mt-2 max-md:flex-nowrap max-md:overflow-x-auto max-md:px-3.5 max-md:py-1 md:flex-wrap md:justify-center">
-        {hasHistory ? (
-          <>
-            {recents.slice(0, 3).map((k) => (
-              <Link
-                key={`r-${k}`}
-                href={searchHref(k)}
-                prefetch={chipPrefetch}
-                /* 최근 검색 재사용 기록 — 이동을 막지 않고 곁에서 남긴다 */
-                onClick={() => pushRecentSearch(k)}
-                className={`${HERO_CHIP} max-w-[160px] bg-surface text-text-2 shadow-sm`}
-              >
-                <span className="truncate">
-                  <span aria-hidden="true">⌕ </span>
-                  {k}
-                </span>
-              </Link>
-            ))}
-            {recentComplexes.slice(0, 3).map((c) => (
-              <Link
-                key={`c-${c.id}`}
-                href={complexHrefFromId(c.id)}
-                prefetch={chipPrefetch}
-                className={`${HERO_CHIP} max-w-[180px] bg-primary-soft text-primary`}
-              >
-                <span className="truncate">{c.name}</span>
-              </Link>
-            ))}
-          </>
-        ) : (
-          regionChips.length > 0 && (
+        {/* [1210] 소유자 "이건 지워줘" — 최근 검색 · 최근 본 단지 칩(⌕ 공작부영아파트 · 초원부영 …)을 걷었다(기록 자체는 기기에 남는다 · 검색창 안내 문구의 최근 본 단지는 그대로).
+            칩 줄은 누구에게나 같은 바로 보기 지역만 */}
+        {regionChips.length > 0 && (
             <>
               {/* [950] "열린 지역 · 수요 순 확장 중" 은 전국 218개 시군구를 다루는 지금과
                   맞지 않는 문구였다. 바로 눌러 볼 수 있는 지역(시세 카드와 같은 곳)만 보인다. */}
@@ -436,7 +399,6 @@ export function HomeHeroSearch({
                 지도에서 내 동네 찾기
               </Link>
             </>
-          )
         )}
         {/* [1206] 소유자 "상하좌우 정렬" — 칩과 같은 높이 줄에서 세로 가운데 · 오른쪽 끝을 검색 상자 오른쪽 끝에 맞춘다(ml-auto) */}
         {coverage && <span className="ml-auto inline-flex h-10 shrink-0 items-center md:hidden">{coverage}</span>}

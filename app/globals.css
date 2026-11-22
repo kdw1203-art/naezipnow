@@ -8969,3 +8969,34 @@ main .pro-lay details > summary > .t-section::before,
   content: none;
   display: none;
 }
+
+/* [1210 · 세로 높이 맞춤] 소유자 "왼쪽 오른쪽 세로높이를 맞춰줘" — 다단(columns)은 열마다 끝이 달라(캡처: 512 · 430 · 322px) 아래가 들쭉날쭉했다.
+   태블릿 2열 · PC 3열을 **격자**로 바꿔 같은 줄 카드의 높이를 맞춘다(줄 높이 = 가장 긴 카드). 칸 안 마지막 카드가 남은 높이를 채운다.
+   DOM 순서 = 읽는 순서 그대로(왼→오, 위→아래). 빈 칸(:empty)은 자리를 남기지 않는다(위 규칙). */
+@media (min-width: 768px) {
+  .home-flow {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: stretch;
+    gap: 12px;
+    column-count: auto;
+  }
+  .home-flow-item {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 0;
+  }
+  .home-flow-item > :last-child {
+    flex: 1 1 auto;
+  }
+}
+@media (min-width: 1024px) {
+  .home-flow {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+  }
+  .home-flow-item {
+    margin-bottom: 0;
+  }
+}

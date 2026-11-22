@@ -234,7 +234,8 @@ test("D7 목록 상태 — 노트 실패≠없음 · 동네 ?mine=1 · 재설정
   assert.match(reset, /링크 확인 실패 · 잠시 후 다시/);
   const hero = read("app/components/home/HomeHeroSearch.tsx");
   assert.match(hero, /\.catch\(\(\) => \{[\s\S]*?if \(ac\.signal\.aborted\) return;[\s\S]*?setFailed\(true\)/);
-  assert.match(hero, /<span aria-hidden="true">⌕ <\/span>/);
+  /* [1210] 소유자 "이건 지워줘" — 최근 검색 칩(⌕)을 걷었다 */
+  assert.doesNotMatch(hero, /<span aria-hidden="true">⌕ <\/span>/);
   const pulse = read("app/components/home/RegionPulseCards.tsx");
   assert.match(pulse, /if \(doneRef\.current\) setText\(price\);\s*\}, \[price\]\)/);
   const roll = read("app/components/home/RollingPanel.tsx");

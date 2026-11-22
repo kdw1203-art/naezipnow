@@ -247,9 +247,28 @@ export default function ComparePage() {
           </span>
         ))}
       </div>
-      {picker}
+      {/* [1210] 단지 검색은 본문 맨 위 "단지 더하기" 한 곳으로 옮겼다(여기는 담은 목록만) */}
     </section>
   );
+
+  /* [1210] 소유자 "후보 단지를 어디서 어떻게 추가로 넣어야 할지 도저히 모르겠어" — 검색 칸이 오른쪽 레일 담은 목록 아래(폰은 접힌 패널 안)에
+     작게 숨어 있었다. 본문 맨 위에 "단지 더하기 n/5" 한 칸으로 꺼내 둔다(가득 차면 칸 대신 한 줄). 한 곳뿐이면 무엇을 해야 하는지 한 줄 더 */
+  const addBar =
+    count < COMPARE_TRAY_MAX ? (
+      <section className={CARD} aria-label="비교할 단지 더하기">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-2">
+          <h2 className="t-section text-ink">
+            비교할 단지 더하기 <span className="tabular-nums text-primary">{count}/{COMPARE_TRAY_MAX}</span>
+          </h2>
+          <span className="t-caption text-text-3">
+            {count < 2 ? "한 곳 더 담으면 비교가 시작돼요" : "단지명으로 찾거나 지도에서 고르기"}
+          </span>
+        </div>
+        {picker}
+      </section>
+    ) : (
+      <p className="m-0 t-sub text-text-3">비교함이 가득 찼어요({COMPARE_TRAY_MAX}곳) · 오른쪽 담은 단지에서 ✕ 로 빼고 다시 담기</p>
+    );
 
   /* 다음 행동 카드 + 이어서 분석 — 데스크톱 레일 · 폰 본문 끝(채움 파랑은 하단 바가 맡아 카드 안에서는 lg 에서만) */
   const railNodes = (
@@ -307,6 +326,7 @@ export default function ComparePage() {
         ) : (
           <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-6">
             <div className="flex min-w-0 flex-col gap-3">
+              {addBar}
               {/* [1026b] 결론 한 줄 — 비교표의 1위 칸. 불러오는 동안 자리만 */}
               {count >= 2 && (loading && !items ? <SkBlock h={92} className="rounded-2xl" /> : conclusion && <VerdictCard conclusion={conclusion} />)}
 
