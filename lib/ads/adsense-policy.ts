@@ -55,7 +55,6 @@ export const ADSENSE_EXCLUDED_PATH_PREFIXES = [
   "/search",
   "/notifications",
   "/messages",
-  "/complex/compare",
   "/analysis/compare",
   "/quiz",
   "/offline",

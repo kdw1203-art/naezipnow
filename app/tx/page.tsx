@@ -257,7 +257,7 @@ export default async function TxIndexPage() {
           {/* /analysis/price 는 robots Disallow(데모 수치) — 색인 허브에서 차단 경로로 링크하지 않는다(항목 46c). timing 은 색인 허용이다. */}
           {[
             ["/complex/browse", "단지 실거래 보기"],
-            ["/complex/compare", "단지 vs 단지 비교"],
+            ["/analysis/compare", "후보 단지 비교"],
             ["/analysis/timing", "지역 시세 분석"],
             ["/imjang", "임장 가이드"],
           ].map(([href, label]) => (

@@ -14,7 +14,6 @@ import {
   loadStoryEntries,
   loadRedevelopmentEntries,
   loadNoteEntries,
-  loadPairEntries,
   loadRegionEntries,
   loadReportEntries,
   loadStaticEntries,
@@ -152,11 +151,7 @@ export const SITEMAP_SECTIONS: readonly SitemapSection[] = [
   { slug: "complexes-6", label: "단지 6/6", required: true, load: () => loadComplexChunkEntries(5), hub: "/map" },
   { slug: "regions", label: "지역 허브", required: true, load: loadRegionEntries, hub: "/map" },
   { slug: "tx", label: "실거래 구간", required: true, load: loadBandEntries, hub: "/tx" },
-  /* 단지 비교를 required 로 두는 이유: 조합의 통과 기준(같은 동 · 양쪽 12개월
-     20건 이상 · 동별 상위 3개)은 서울·수도권 62개 구를 훑어 669개 조합을 남긴다.
-     이 숫자가 0 이 되는 현실적인 경로는 "거래가 전부 사라졌다"가 아니라
-     "조회가 실패했다"뿐이다. 그러니 0개는 실패로 다루는 편이 사실에 가깝다. */
-  { slug: "pairs", label: "단지 비교", required: true, load: loadPairEntries, hub: "/map" },
+  /* [1211] 단지 비교 사이트맵(pairs)은 걷었다 — 비교 화면을 지우고 지도 팝업으로(옛 주소는 영구 이동) */
   { slug: "reports", label: "월간 리포트", required: false, load: loadReportEntries, hub: "/reports" },
   { slug: "notes", label: "공개 임장노트", required: false, load: loadNoteEntries, hub: "/notes" },
   { slug: "glossary", label: "용어사전", required: true, load: loadGlossaryEntries, hub: "/glossary" },

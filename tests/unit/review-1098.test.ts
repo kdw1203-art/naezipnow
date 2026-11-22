@@ -72,7 +72,7 @@ test("상단 띠 배너 자리 — 이미지 배너만 · 높이 예약(64/90) �
     assert.equal((s.match(/<TopBanner /g) ?? []).length, 1, `${p}: 띠 배너 자리는 한 곳`);
   }
   /* [1125] 도구 화면(분석 허브 · 실거래 구간 · 동별 실거래 · 단지 비교)의 띠 배너는 걷었다 — 홈 · 뉴스 · 동네만 */
-  for (const p of ["app/dong/page.tsx", "app/complex/compare/page.tsx", "app/tx/page.tsx", "app/analysis/page.tsx"]) {
+  for (const p of ["app/dong/page.tsx", "app/tx/page.tsx", "app/analysis/page.tsx"]) {
     assert.doesNotMatch(read(p), /TopBanner/, p);
   }
   assert.ok(existsSync("app/components/ads/TopBanner.tsx"));

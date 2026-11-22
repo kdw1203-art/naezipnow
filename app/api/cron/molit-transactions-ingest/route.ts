@@ -17,7 +17,6 @@
 import { NextResponse } from "next/server";
 import { revalidatePath, revalidateTag } from "next/cache";
 import { complexInvalidationTagsFor } from "@/lib/complex/region-tag";
-import { complexPairPath, listComplexPairs } from "@/lib/market/complex-pairs";
 import { authorizeCron } from "@/lib/cron/authorize";
 import { currentTargetMonth, defaultTargetMonth, ingestMolitTransactions, type MolitIngestResult } from "@/lib/market/molit-transactions";
 import { ingestErrorMessage, logIngest } from "@/lib/market/store";
@@ -191,10 +190,6 @@ async function handle(req: Request) {
  *    (두 라우트가 서로 다른 id 표기로 캐시돼 있다 — lib/complex/complex-cache-paths.ts 주석)
  *  · `/complex/tx/{단지명--지역id}` — 같은 실거래 행만으로 그려지는 화면.
  *    내부 지역 목록(서울 25구 + 광역 탐색 구 + 세종)으로 되짚을 수 없는 표기는 건너뛴다.
- *  · `/complex/compare` 와 `/complex/compare/[slug]` — 조합 화이트리스트(complex_pair_mv)와
- *    표의 숫자가 모두 이 실거래에서 나온다. 조합은 **어느 단지가 낀 조합인지** 를 알려면
- *    MV 를 한 번 더 읽어야 해서(운영 실측 669행), 대신 라우트 단위로 한 번에 비운다 —
- *    호출 2회로 끝나고, 조합 페이지는 669장이라 재렌더 비용이 롱테일과 비교가 안 된다.
  *
  * 재검증 실패가 적재 결과를 되돌리면 안 된다 — 헬퍼가 이미 예외를 삼키지만 호출도 감싼다.
  */
@@ -228,11 +223,7 @@ async function invalidateTouchedComplexes(result: MolitIngestResult): Promise<{ 
        하루 → 7일로 늘리는 대신, 이번 슬라이스가 건드린 지역만 비운다. 슬러그 규칙은
        /tx/{slug} 와 같은 한 줄(regionToSlug)이라 지역 표기를 그대로 넘긴다. */
     invalidateImjangForTxRegions(result.touchedComplexes.map((c) => c.region));
-    revalidatePath("/complex/compare");
-    /* [1093 · 비용] 비교 조합 화면(1,119쪽)을 적재마다 라우트 단위로 통째 비우던 것 → **바뀐 단지가 낀 조합만**. 1091 부터 "건드린 단지"가
-       실제로 바뀐 행의 단지뿐이라 가능해졌다. 조합 목록(complex_pair_source · 1,119행 · 이름 두 개)을 한 번 읽어 고른다 —
-       목록을 못 읽거나 건드린 단지가 상한에 잘린 날은 예전처럼 라우트 단위로 비운다(빠뜨리지 않는다). */
-    await invalidateTouchedPairs(result);
+    /* [1211] 비교 조합 화면은 지웠다(지도 팝업 · /api/map/complex-pair 는 CDN 6시간) — 조합 화면 비우기를 걷었다 */
     if (stats.truncated || result.touchedTruncated) {
       logger.warn(
         "[molit-tx] 단지 무효화 일부 생략 — 남은 단지는 TTL(7일)로 처리",
@@ -247,28 +238,6 @@ async function invalidateTouchedComplexes(result: MolitIngestResult): Promise<{ 
   }
 }
 
-/** [1093] 바뀐 단지가 낀 비교 조합만 비운다. 조합 키 = 지역 이름 + 단지 이름(실거래 표기 · 둘 다 같은 원천). */
-async function invalidateTouchedPairs(result: MolitIngestResult): Promise<void> {
-  const fallback = () => revalidatePath("/complex/compare/[slug]", "page");
-  if (result.touchedTruncated || result.touchedComplexes.length === 0) {
-    fallback();
-    return;
-  }
-  try {
-    const key = (region: string, name: string) => `${region.trim()}\u0001${name.trim()}`;
-    const touched = new Set(result.touchedComplexes.map((c) => key(c.region, c.name)));
-    const pairs = await listComplexPairs();
-    const paths = pairs
-      .filter((p) => touched.has(key(p.regionName, p.complexA)) || touched.has(key(p.regionName, p.complexB)))
-      .map(complexPairPath);
-    const stats = invalidatePathList(paths, { budget: 600, label: "complex-pair" });
-    if (stats.truncated) fallback();
-    logger.info(`[molit-ingest] 비교 조합 비움 — ${paths.length}/${pairs.length}쪽${stats.truncated ? " (상한 → 라우트 단위)" : ""}`);
-  } catch (e) {
-    logger.warn("[molit-tx] 비교 조합 목록 읽기 실패 — 라우트 단위로 비운다", e);
-    fallback();
-  }
-}
 
 export async function GET(req: Request) {
   return handle(req);

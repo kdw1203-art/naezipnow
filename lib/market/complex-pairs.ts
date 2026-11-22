@@ -106,8 +106,12 @@ function toPair(row: SourceRow): ComplexPair | null {
 /** slug = encodeURIComponent(A) + "--" + encodeURIComponent(B) + "--" + regionId — [1096] 조립식은 complex-pair-slug(클라이언트 안전)에 */
 export { buildComplexPairSlug };
 
+/** [1211] 비교는 지도 팝업으로 — 예전 /complex/compare/[slug] 화면은 지웠다(next.config 가 옛 주소를 이 주소로 영구 이동) */
 export function complexPairPath(pair: ComplexPair): string {
-  return `/complex/compare/${buildComplexPairSlug(pair.complexA, pair.complexB, pair.region.id)}`;
+  return complexPairMapHref(buildComplexPairSlug(pair.complexA, pair.complexB, pair.region.id));
+}
+export function complexPairMapHref(slug: string): string {
+  return `/map?pair=${encodeURIComponent(slug)}`;
 }
 
 /**

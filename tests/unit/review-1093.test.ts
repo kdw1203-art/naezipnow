@@ -75,15 +75,4 @@ test("공개 노트 허브 — 셸은 (index) 레이아웃 한 벌 · 피드 보
 
 /* ── 비용 — 비교 조합 ─────────────────────────────────────────────────── */
 
-test("실거래 적재 — 비교 조합은 바뀐 단지가 낀 조합만 비운다 · 목록 실패 · 상한이면 라우트 단위로 · 허브(/complex/compare)는 그대로", () => {
-  const route = strip(read("app/api/cron/molit-transactions-ingest/route.ts"));
-  assert.match(route, /import \{ complexPairPath, listComplexPairs \} from "@\/lib\/market\/complex-pairs";/);
-  assert.match(route, /revalidatePath\("\/complex\/compare"\);\s*await invalidateTouchedPairs\(result\);/);
-  assert.match(route, /async function invalidateTouchedPairs\(result: MolitIngestResult\): Promise<void> \{\s*const fallback = \(\) => revalidatePath\("\/complex\/compare\/\[slug\]", "page"\);/);
-  assert.match(route, /if \(result\.touchedTruncated \|\| result\.touchedComplexes\.length === 0\) \{\s*fallback\(\);\s*return;\s*\}/);
-  assert.match(route, /touched\.has\(key\(p\.regionName, p\.complexA\)\) \|\| touched\.has\(key\(p\.regionName, p\.complexB\)\)/);
-  assert.match(route, /invalidatePathList\(paths, \{ budget: 600, label: "complex-pair" \}\);\s*if \(stats\.truncated\) fallback\(\);/);
-  assert.match(route, /catch \(e\) \{\s*logger\.warn\("\[molit-tx\] 비교 조합 목록 읽기 실패 — 라우트 단위로 비운다", e\);\s*fallback\(\);/);
-  /* 라우트 단위 비움은 대체 경로 안에만 */
-  assert.equal((route.match(/revalidatePath\("\/complex\/compare\/\[slug\]", "page"\)/g) ?? []).length, 1);
-});
+/* [1211] 단지 vs 단지 비교 화면을 지웠다(지도 팝업) — 그 화면만 보던 검사를 걷었다: 실거래 적재 — 비교 조합은 */

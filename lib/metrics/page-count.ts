@@ -110,7 +110,6 @@ export function normalizeRoute(path: string): string {
   const p = path.split("?")[0].split("#")[0];
   const rules: [RegExp, string][] = [
     [/^\/complex\/browse/, "/complex/browse"],
-    [/^\/complex\/compare/, "/complex/compare"],
     [/^\/complex\/[^/]+\/tx/, "/complex/[id]/tx"],
     [/^\/complex\/[^/]+/, "/complex/[id]"],
     [/^\/region\/[^/]+/, "/region/[id]"],

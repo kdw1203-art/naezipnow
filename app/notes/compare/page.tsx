@@ -234,7 +234,7 @@ export default async function NotesComparePage({
                 지도에서 비교
               </Link>
               <Link
-                href="/complex/compare"
+                href="/analysis/compare"
                 className="rounded-full border border-line bg-surface px-2.5 py-1.5 font-bold text-text-2 no-underline"
               >
                 단지 A/B 비교

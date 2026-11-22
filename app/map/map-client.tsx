@@ -75,6 +75,8 @@ const ListingPreviewPanel = dynamic(
   () => import("./ListingPreviewPanel").then((m) => m.ListingPreviewPanel),
   { ssr: false },
 );
+/* [1211] 단지 vs 단지 비교 팝업 — ?pair= 로 들어왔을 때만 받는다 */
+const ComplexPairPopup = dynamic(() => import("./ComplexPairPopup").then((m) => m.ComplexPairPopup), { ssr: false });
 import {
   PROJECT_GROUPS,
   STAGES,
@@ -4156,6 +4158,31 @@ export function MapClient({
     [],
   );
 
+  /* [1211] 단지 vs 단지 비교 — 주소의 ?pair=(예전 /complex/compare/[slug] 이 이리로 영구 이동) 를 마운트 때 한 번 읽어 팝업을 연다 */
+  const [pairSlug, setPairSlug] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const v = new URLSearchParams(window.location.search).get("pair")?.trim();
+      if (v) setPairSlug(v);
+    } catch {
+      /* 주소를 못 읽으면 팝업 없음 */
+    }
+  }, []);
+  const closePairPopup = useCallback(() => {
+    setPairSlug(null);
+    try {
+      const u = new URL(window.location.href);
+      u.searchParams.delete("pair");
+      window.history.replaceState(window.history.state, "", u.toString());
+    } catch {
+      /* 무시 */
+    }
+  }, []);
+  const locatePair = useCallback((c: { lat: number; lng: number }) => {
+    setCenter(c);
+    setLevel(LEVEL_BY_ZOOM.danji);
+  }, []);
+
   const closeInfoPanel = useCallback(() => {
     setInfoComplex(null);
     setSearchMarker(null);
@@ -5517,6 +5544,9 @@ export function MapClient({
           onLoaded={handleInfoLoaded}
         />
       )}
+
+      {/* ===== [1211] 단지 vs 단지 비교 팝업 ===== */}
+      {pairSlug && <ComplexPairPopup slug={pairSlug} onClose={closePairPopup} onLocate={locatePair} />}
 
       {/* ===== 매물 미리보기 패널 (하단 시트) ===== */}
       {listingPreviewId && (

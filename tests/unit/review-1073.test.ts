@@ -54,7 +54,6 @@ test("C3 화면 제목 하나의 단계 — h1 은 t-title", () => {
     "app/legal/privacy-request/page.tsx",
     "app/digest/(index)/page.tsx",
     "app/components/NotFoundBody.tsx",
-    "app/complex/compare/[slug]/not-found.tsx",
     "app/my/expert-profile/page.tsx",
     "app/notes/[id]/card/page.tsx",
     "app/u/[handle]/page.tsx",

@@ -376,13 +376,7 @@ test("[1030 · 2차] line-clamp 와 block 을 같이 쓰지 않는다(block 이 
   assert.equal(hits, "", hits);
 });
 
-test("[1030 · 2차] 단지 비교 목록 — 지역 바로가기 + 첫 지역만 펼침(details) · 리포트 진열대 커버 비율 1200:630", () => {
-  const c = src1030("app/complex/compare/page.tsx");
-  assert.ok(c.includes('aria-label="지역 바로가기"'));
-  assert.ok(c.includes("open={gi === 0}"));
-  /* [1075] 연구소 커버(4:5)는 제 비율, 넓은 커버는 그대로 1200:630 */
-  assert.ok(src1030("app/notes/market/page.tsx").includes('className={`relative w-full overflow-hidden bg-bg ${lab ? "aspect-[4/5]" : "aspect-[1200/630]"}`}'));
-});
+/* [1211] 단지 vs 단지 비교 화면을 지웠다(지도 팝업) — 그 화면만 보던 검사를 걷었다: [1030 · 2차] 단지 비교 목록 */
 
 test("[1030 · 2차] 열린 면적 구간 화면 이름 — /tx 셀·면적대별 실거래가 선반·노트 상세도 같은 함수", () => {
   assert.ok(src1030("lib/market/tx-bands.ts").includes("bandLabel: areaBandDisplayLabel(label),"));
@@ -497,7 +491,7 @@ test("[1030 · 5차] K-apt 테스트 행 이름은 대장에 넣지 않는다", 
 import { ADSENSE_EXCLUDED_PATH_PREFIXES as ADS_EX_1031 } from "@/lib/ads/adsense-policy";
 import { buildAdSenseBootScript as bootScript1031, pathExcluded as pathExcluded1031 } from "@/lib/ads/adsense-boot";
 test("[1031] 본문 없는 화면엔 광고 스크립트 없음 — 로그인·검색·비교·알림 제외 · 404 는 data-nz-noads", () => {
-  for (const p of ["/login", "/signup", "/search", "/complex/compare", "/analysis/compare", "/notifications", "/messages", "/quiz"]) assert.equal(pathExcluded1031(p, ADS_EX_1031), true, p);
+  for (const p of ["/login", "/signup", "/search", "/analysis/compare", "/notifications", "/messages", "/quiz"]) assert.equal(pathExcluded1031(p, ADS_EX_1031), true, p);
   for (const p of ["/", "/guides/x", "/notes/abc", "/region/gangnam", "/town/news/1"]) assert.equal(pathExcluded1031(p, ADS_EX_1031), false, p);
   const js = bootScript1031("ca-pub-test", ADS_EX_1031);
   assert.ok(js.includes('document.querySelector("[data-nz-noads]")'));

@@ -71,38 +71,7 @@ test("동 허브 — 시/도 details(첫 묶음 펼침) · 줄은 클라이언�
   assert.doesNotMatch(c, /gradient|font-extrabold|font-black|!/, "그라데이션 · 800 · 느낌표 없음");
 });
 
-test("비교 허브 — 타일 1,119개는 클라이언트 조각(압축 행) · 주소는 이름·지역에서(비교 화면과 같은 규칙) · 칩이 가리키는 접힌 지역 펼침", () => {
-  assert.equal(buildComplexPairSlug("래미안 A", "B단지", "seoul-gangnam"), `${encodeURIComponent("래미안 A")}--${encodeURIComponent("B단지")}--seoul-gangnam`);
-  const pairs = strip(read("lib/market/complex-pairs.ts"));
-  assert.match(pairs, /import \{ buildComplexPairSlug \} from "@\/lib\/market\/complex-pair-slug";/);
-  assert.match(pairs, /export \{ buildComplexPairSlug \};/);
-  assert.match(pairs, /return `\/complex\/compare\/\$\{buildComplexPairSlug\(pair\.complexA, pair\.complexB, pair\.region\.id\)\}`;/);
-  const page = strip(read("app/complex/compare/page.tsx"));
-  assert.match(page, /<ComparePairTiles\s+regionId=\{group\.regionId\}\s+pairs=\{group\.pairs\.map\(\(pair\): ComparePairWire => \[pair\.complexA, pair\.complexB, pair\.dong, pair\.tradeCountA, pair\.tradeCountB\]\)\}\s*\/>/);
-  assert.doesNotMatch(page, /pair\.complexA\s*<span|complexPairPath\(pair\)/, "타일 마크업은 서버 쪽에 없다");
-  /* 1074 · 1029 가 고정한 것은 그대로 — 칩 nav · details open · 지역 화면 링크 · groups.map 두 번 */
-  assert.match(page, /aria-label="지역 바로가기"/);
-  assert.match(page, /open=\{gi === 0\}/);
-  assert.equal((page.match(/groups\.map\(/g) ?? []).length, 2);
-  assert.match(page, /<OpenDetailsOnHash \/>/);
-  /* 요약 줄 — 두 절 사이 가운뎃점 없이 간격(gap-x-3)으로(가운뎃점이 줄 끝·줄 머리에 홀로 남지 않는다) */
-  assert.match(page, /<p className="rise-in mb-5 flex flex-wrap items-center gap-x-3 gap-y-0\.5 t-sub text-text-2 max-md:mb-3">/);
-  assert.match(page, /\{lastYm && ` · \$\{lastYm\} 신고분까지`\}\s*<\/span>/);
-  assert.doesNotMatch(page, /신고분까지`\} ·\{" "\}/);
-  const tiles = strip(read("app/complex/compare/ComparePairTiles.tsx"));
-  assert.match(tiles, /^"use client";/);
-  assert.match(tiles, /export type ComparePairWire = \[string, string, string, number, number\];/);
-  assert.match(tiles, /const slug = buildComplexPairSlug\(a, b, regionId\);/);
-  /* [1119] 맞대결 줄 — 건수 몫 막대 · 앞 10개 + 닫힌 접힘(링크는 HTML 그대로) */
-  assert.match(tiles, /<Link href=\{`\/complex\/compare\/\$\{slug\}`\} className="tile block rounded-lg border border-border px-3 py-2\.5 no-underline">/);
-  assert.match(tiles, /const share = txA \+ txB > 0 \? Math\.round\(\(txA \/ \(txA \+ txB\)\) \* 100\) : 50;/);
-  assert.match(tiles, /const SHOWN = 10;/);
-  const open = strip(read("app/components/OpenDetailsOnHash.tsx"));
-  assert.match(open, /^"use client";/);
-  assert.match(open, /if \(el instanceof HTMLDetailsElement && !el\.open\) el\.open = true;/);
-  assert.match(open, /window\.addEventListener\("hashchange", openHashDetails\);/);
-  assert.match(open, /return null;/);
-});
+/* [1211] 단지 vs 단지 비교 화면을 지웠다(지도 팝업) — 그 화면만 보던 검사를 걷었다: 비교 허브 — 타일 */
 
 test("썸네일 srcset — 고정 px sizes 는 그 칸의 1x·2x·3x 허용 폭만 · vw 는 종전 목록 · 허용 폭 목록은 next.config 과 같다", () => {
   assert.deepEqual(srcSetWidthsFor("62px"), [64, 128, 256]);

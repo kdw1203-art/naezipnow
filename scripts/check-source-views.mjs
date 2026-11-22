@@ -71,7 +71,7 @@ const VIEWS = [
        (밑단 GRANT: 20260726061500_restore_market_agg_mv_grants.sql) */
     name: "complex_pair_source",
     roles: ["anon", "service"],
-    note: "/complex/compare · /complex/compare/[slug] · /sitemap-pairs.xml",
+    note: "동 화면 · 단지 화면의 단지 비교 줄 · 지도 비교 팝업(/api/map/complex-pair)",
   },
 ];
 

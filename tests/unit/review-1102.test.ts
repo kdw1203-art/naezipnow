@@ -63,15 +63,7 @@ test("지도 패널 — 단지 조건 0곳 접기 · 등록 매물 조건 묶음
 });
 
 test("잔여 화면 — 단지 비교 폰 표 · 전세가율 · 시장 온도 · 전월세 · 지역 탭 · 공매", () => {
-  const cmp = strip(read("app/complex/compare/[slug]/page.tsx"));
-  assert.match(cmp, /<table className="w-full t-body md:min-w-\[420px\]">/);
-  assert.match(cmp, /<table className="w-full text-left t-body md:min-w-\[460px\]">/);
-  assert.doesNotMatch(cmp, /className="w-full min-w-\[4[26]0px\]/);
-  /* [1105] 폰 항목 줄은 그대로(값 위 한 줄) — 다만 보이는 글일 뿐이라 aria-hidden · td(예전 th scope=colgroup 은 아래 값 전부의 열 머리로 읽혔다).
-     colSpan 은 폰에도 남긴 폭 0 칸(행 머리 · 차이)까지 덮는 3 · 4. 연결은 행 머리 th + headers(tests/unit/a11y-1105) */
-  assert.match(cmp, /<tr className="md:hidden" aria-hidden="true">\s*<td colSpan=\{3\}/);
-  assert.match(cmp, /<tr className="md:hidden" aria-hidden="true">\s*<td colSpan=\{4\}/);
-  assert.doesNotMatch(cmp, /scope="colgroup"/);
+  /* [1211] 단지 비교 화면(/complex/compare/[slug])은 지웠다(지도 팝업) */
   const gap = strip(read("app/analysis/gap/GapScreener.tsx"));
   assert.doesNotMatch(gap, /조건에 맞는 곳<\/span>|가장 높은 곳<\/span>|전세가율 중앙값/);
   assert.match(gap, /가장 낮은 곳<\/span>/);
