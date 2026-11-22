@@ -9,6 +9,7 @@ import Link from "@/app/components/IntentLink";
 import { notFound } from "next/navigation";
 import { AdZone } from "@/app/components/ads/AdZone";
 import { RegionAlertButton } from "@/app/components/RegionAlertButton";
+import { seoulGuByName, seoulGuHref } from "@/lib/seoul/upis-gu";
 import { CitationBlock } from "@/app/components/CitationBlock";
 import { Fineprint } from "@/app/components/Fineprint";
 import { HScroll } from "@/app/components/HScroll";
@@ -191,8 +192,22 @@ export default async function DongLandingPage({ params }: { params: Promise<Para
       </p>
       {/* [1206] 동 화면(30일 착지 1,190 · 사람 유입 1위)에 구독이 하나도 없었다 — 그 구 알림(청약 공고 · 새 등록 매물) 한 번 누르기.
           구독 대상은 동이 아니라 구/시(알림 크론 규칙 — lib/alerts/region-value). 문구·로그인 안내는 공용 버튼이 한다 */}
-      <div className="rise-in -mt-2 mb-4 max-md:-mt-1 max-md:mb-3">
+      {/* [1210 · 48] 같은 지역 정보 잇기 — 정비사업(서울은 구 결정 조서 화면) · 청약 공고. 알림 버튼과 한 줄 */}
+      <div className="rise-in -mt-2 mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 t-sub max-md:-mt-1 max-md:mb-3">
         <RegionAlertButton variant="link" region={region} name={region} />
+        <Link
+          href={(() => {
+            const gu = region.startsWith("서울") ? seoulGuByName(lastToken) : null;
+            return gu ? seoulGuHref(gu.slug) : "/redevelopment";
+          })()}
+          prefetch={false}
+          className="tap-line font-bold text-primary"
+        >
+          {region.startsWith("서울") ? `${lastToken} 정비사업 ›` : "정비구역 지도 ›"}
+        </Link>
+        <Link href="/apply" prefetch={false} className="tap-line font-bold text-primary">
+          청약 공고 ›
+        </Link>
       </div>
       {/* [1127] 0건이어도 줄은 선다(소유자 "데이터가 없더라도") — "없음"으로 적고 첫 노트 쓰기로 잇는다. 조회 실패만 줄 없음 */}
       {guNotes != null && (

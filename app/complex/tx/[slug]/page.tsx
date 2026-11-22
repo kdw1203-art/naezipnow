@@ -416,8 +416,9 @@ export default async function ComplexTxPage({
 
       {/* CTA */}
       <section className="rise-in-3 mb-4 flex flex-wrap gap-2">
+        {/* [1210 · 26] 단지가 채워진 채 시작 — 위치 고르기 단계를 건너뛴다(NoteForm 이 ?apt=&region=&complexId= 를 읽는다) */}
         <Link
-          href="/notes/new"
+          href={`/notes/new?${new URLSearchParams({ apt: complexName, region: regionLabel, ...(aptMatch?.id ? { complexId: `apt:${aptMatch.id}` } : {}) }).toString()}`}
           className="rounded-xl bg-primary px-5 py-3 t-body font-bold text-white shadow-[var(--shadow-cta)]"
         >
           이 단지 임장노트 쓰기

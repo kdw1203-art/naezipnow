@@ -180,6 +180,17 @@ export function foldHealthAlerts(
 }
 
 /**
+ * [1210 · 17] "설정 필요" — 고장이 아니라 소유자가 키를 넣거나 활용신청을 해야 풀리는 경보.
+ * 11-22 실측: rail(KRIC 키 미설정) · naver-buzz(네이버 키 미설정) · kapt-mgmt-fee(활용신청 필요) · kosis(유효하지 않은 인증키)가
+ * 매일 경보판 · 관리자 상단 critical 띠를 채워, 진짜 장애(news 시간 초과 등)가 묻혔다. 판은 이것들을 따로 한 줄 목록으로 보인다.
+ * 판정은 detail 문구만(수집 로그가 적는 사유) — 순수.
+ */
+const SETUP_NEEDED_RE = /(미설정|활용신청|유효하지 않은 인증\s*KEY|인증키 확인 필요|키 없음|not configured|missing (?:api )?key)/i;
+export function isSetupNeededAlert(detail: string | null | undefined): boolean {
+  return Boolean(detail && SETUP_NEEDED_RE.test(detail));
+}
+
+/**
  * [1045] 배너에 적을 검사 이름 — 같은 검사에 문제가 여럿이면 이름 한 번 + 건수("seo.sitemap_source(2)").
  * 순서는 들어온 순서(= 접기 정렬) 그대로.
  */

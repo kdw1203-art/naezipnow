@@ -23,7 +23,7 @@ import { logger } from "@/lib/log";
  */
 
 export type { HealthAlertRow } from "./health-alerts-fold";
-import { foldHealthAlerts, type HealthAlertRow } from "./health-alerts-fold";
+import { foldHealthAlerts, isSetupNeededAlert, type HealthAlertRow } from "./health-alerts-fold";
 
 /** 최근 N일 경보를 check_name 기준으로 접어, 진행 중 → 심각도 → 최근 순으로 돌려준다. */
 export async function loadRecentHealthAlerts(days = 7, limit = 12): Promise<HealthAlertRow[]> {
@@ -57,5 +57,6 @@ export async function loadRecentHealthAlerts(days = 7, limit = 12): Promise<Heal
  * [999] 24시간 안에 울렸더라도 이미 그친 것은 배너에 올리지 않는다(판에는 "해소"로 남는다). */
 export async function loadCriticalAlerts24h(): Promise<HealthAlertRow[]> {
   const alerts = await loadRecentHealthAlerts(1, 12);
-  return alerts.filter((a) => a.severity === "critical" && a.active);
+  /* [1210 · 17] 키 · 활용신청 대기는 장애가 아니다 — 상단 critical 띠에서 뺀다(운영 콘솔 "설정 필요" 줄에 따로) */
+  return alerts.filter((a) => a.severity === "critical" && a.active && !isSetupNeededAlert(a.detail));
 }

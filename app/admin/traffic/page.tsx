@@ -128,6 +128,7 @@ const EVENT_LABEL: Record<string, string> = {
   signup_complete: "가입 완료",
   /* [1206] 노트 쓰기 깔때기(app/notes/new/NoteForm noteFunnel) — 단계 사이 차이가 그 자리에서 그만둔 사람 */
   note_form_open: "노트 쓰기 1 · 화면 열림",
+  note_first_input: "노트 쓰기 1.5 · 첫 입력(위치 · 글자 · 점수)",
   note_save_attempt: "노트 쓰기 2 · 저장 누름(위치 통과)",
   note_save_login_required: "노트 쓰기 3 · 로그인 요구",
   note_save_done: "노트 쓰기 4 · 저장 완료",

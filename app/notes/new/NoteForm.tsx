@@ -966,7 +966,10 @@ export function NoteForm({
      있으면 **한 화면**(위치 → 사진 → 한 줄 메모 → 저장)만 그리고, "자세히 적기"가
      끄면 3단계가 그대로 드러난다(이동 없음 — 상태만 바뀌고 입력은 남는다).
      저장 페이로드는 같다: 안 채운 칸은 일반 흐름의 기본값과 동일하다. */
-  const [quickMode, setQuickMode] = useState(quickStart && !isEdit);
+  /* [1210 · 25] 새 노트는 **한 화면(위치 · 사진 · 한 줄 → 저장)**이 기본 — 깔때기 실측 열림 6 → 저장 누름 0(로그인 단계 전).
+     벽은 3단계 폼 자체였다. 세부(체크 · 태그 · 판단)는 "자세히 적기 ›"로 그대로 이어진다(입력은 남는다).
+     템플릿(?tpl) · 회차(?revisit)는 세부 칸을 채워 오는 진입이라 3단계 그대로 · ?quick=0 은 언제나 3단계. */
+  const [quickMode, setQuickMode] = useState(!isEdit && (quickStart || (!quickExplicit && !template && !revisitOf)));
   /* [1026] 데스크톱(lg+) 레일 — 퀵모드(현장 한 화면)는 레일 없이 가운데 한 열 그대로 */
   const isDesktop = useSyncExternalStore(subscribeDesktop, readDesktop, readDesktopServer);
   const showRail = isDesktop && !quickMode;
@@ -1179,7 +1182,7 @@ export function NoteForm({
      계측 모듈은 부를 때만 받는다(작성 화면 첫 로드 예산 470KB) · 실패해도 작성 흐름과 무관. */
   const funnelFired = useRef<Set<string>>(new Set());
   const noteFunnel = useCallback(
-    (step: "note_form_open" | "note_save_attempt" | "note_save_login_required" | "note_save_done", meta?: Record<string, unknown>) => {
+    (step: "note_form_open" | "note_first_input" | "note_save_attempt" | "note_save_login_required" | "note_save_done", meta?: Record<string, unknown>) => {
       if (isEdit || funnelFired.current.has(step)) return;
       funnelFired.current.add(step);
       void import("@/lib/platform-events-client")
@@ -1194,6 +1197,20 @@ export function NoteForm({
     if (isGuest === null) return;
     noteFunnel("note_form_open", { guest: isGuest });
   }, [isGuest, noteFunnel]);
+  /* [1210 · 27] 깔때기 한 칸 더 — "첫 입력"(위치 고름 · 글자 입력 · 점수 고름). 열림 → 저장 누름 사이 어디서 손을 놓는지.
+     진입 때 채워진 값(?apt= 프리필 · 메모 초안)은 기준선으로 두고, 그 뒤 처음 바뀐 칸 하나만 한 번 센다. */
+  const firstInputBase = useRef<{ apt: string; memo: string; checks: number } | null>(null);
+  useEffect(() => {
+    if (isEdit || isGuest === null) return;
+    const now = { apt: loc.aptName, memo, checks: Object.keys(checks).length };
+    const base = firstInputBase.current;
+    if (!base) {
+      firstInputBase.current = now;
+      return;
+    }
+    const what = now.apt !== base.apt ? "location" : now.memo !== base.memo ? "text" : now.checks !== base.checks ? "check" : null;
+    if (what) noteFunnel("note_first_input", { guest: isGuest, what });
+  }, [isEdit, isGuest, loc.aptName, memo, checks, noteFunnel]);
 
   /* [1006] 설정 기본값 조회 — 로그인이 확정(isGuest === false)된 작성 모드에서 1회.
      비회원·모름(null)은 부르지 않는다(비회원 응답은 어차피 기본값이고, 모름은 세션이

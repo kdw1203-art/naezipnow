@@ -497,6 +497,23 @@ function toDetailPatch(d: AptComplexDetail): Record<string, unknown> {
  */
 const DETAIL_POISON_ATTEMPTS = 3;
 
+/**
+ * [1210 · 3] 원천에 상세가 **없는** 단지 — 오류(429 · 장애) 없이 빈 응답만 이만큼 받으면 "absent" 로 따로 둔다.
+ * 시도 횟수만으로는 못 가른다: 11-22 실측 ok 행 중 881곳이 4번째 시도에서 받았다(429 탓 miss 였다).
+ * 그래서 **오류 없는 빈 응답**만 센다(detailEmpty). absent 는 매시 miss 재시도에서 빠지고, miss 가 바닥나면
+ * 30일 넘게 안 본 absent 만 한 번씩 다시 본다(준공 직후 미등록이 나중에 채워지는 경우).
+ */
+export const DETAIL_ABSENT_EMPTY = 3;
+const DETAIL_ABSENT_RECHECK_DAYS = 30;
+
+/** 이번 결과까지의 빈 응답 횟수 → 다음 상태(순수 · 테스트) */
+export function nextDetailMissState(prevEmpty: unknown, cleanEmpty: boolean): { detailEmpty: number; detailStatus: "miss" | "absent" } {
+  const raw = Number(prevEmpty);
+  const base = Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
+  const detailEmpty = cleanEmpty ? base + 1 : base;
+  return { detailEmpty, detailStatus: detailEmpty >= DETAIL_ABSENT_EMPTY ? "absent" : "miss" };
+}
+
 export interface AptDetailEnrichResult {
   /** 상세 조회를 시도한 행 수 */
   processed: number;
@@ -575,6 +592,19 @@ export async function retryAptDetailMissBatch(limit: number): Promise<AptDetailE
     return { processed: 0, enriched: 0, failed: limit, mode: "retry-miss", errors: [selectError.message] };
   }
   const rows = (data as AptDetailRow[] | null) ?? [];
+  /* [1210 · 3] miss 가 한도보다 적으면 남은 칸을 오래된 absent(30일+)로 채운다 */
+  if (rows.length < limit) {
+    const cutoff = new Date(Date.now() - DETAIL_ABSENT_RECHECK_DAYS * 86_400_000).toISOString();
+    const { data: absentRows } = await sb
+      .from("apartment_complexes")
+      .select("external_id, name, address, lawd_cd, metadata")
+      .eq("source_key", APT_MASTER_SOURCE_KEY)
+      .eq("metadata->>detailStatus", "absent")
+      .lt("metadata->>detailFetchedAt", cutoff)
+      .order("metadata->>detailFetchedAt", { ascending: true })
+      .limit(limit - rows.length);
+    rows.push(...((absentRows as AptDetailRow[] | null) ?? []));
+  }
   if (rows.length === 0) {
     return { processed: 0, enriched: 0, failed: 0, skipped: "no-rows", mode: "retry-miss", errors: [] };
   }
@@ -689,7 +719,7 @@ async function runDetailBatch(
     ...missOutcomes.map((o) =>
       anyOk || o.attempts >= DETAIL_POISON_ATTEMPTS
         ? toWriteRow(o.r, {
-            detailStatus: "miss",
+            ...nextDetailMissState(o.r.metadata?.detailEmpty, !("error" in o && o.error)),
             detailAttempts: o.attempts,
             detailFetchedAt: fetchedAt,
           })

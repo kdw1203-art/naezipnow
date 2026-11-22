@@ -92,6 +92,24 @@ export async function GET(req: NextRequest) {
       : null;
   const series = wantSeries ? fullSeries : null;
   const footnotes = contextFootnotes(ctx);
+  /* [1210 · 34] 여러 도구의 판정만 한 번에(?tools=a,b,c) — 단지 화면 "AI 한 줄 판정"이 컨텍스트를 한 번만 만들게(예전 방식이면 4번).
+     판정만 싣는다(컨텍스트 · 그래프 · 인사이트 없음) — 응답이 작고 규칙 판정이라 외부 AI 호출 0. */
+  const toolsParam = url.searchParams.get("tools");
+  if (toolsParam) {
+    const ids = [...new Set(toolsParam.split(",").map((t) => t.trim()))].filter(isAiAnalysisToolId).slice(0, 6);
+    const verdicts: Record<string, ReturnType<typeof buildVerdict>> = {};
+    for (const id of ids) {
+      verdicts[id] = buildVerdict({
+        tool: id,
+        ctx,
+        footnotes,
+        input: { similarCount: similar.length, compareCount },
+        extras: { recent6: fullSeries?.recent6 ?? ctx.complex?.recent6 ?? null },
+        now,
+      });
+    }
+    return NextResponse.json({ ok: true, verdicts }, { headers: { "Cache-Control": "private, max-age=300" } });
+  }
   /* [993] 판단 카드 — 실데이터·규칙 판정만 조립(lib/ai/verdict.ts). 실행 전에도 보인다:
      결과값(대표 수치·핵심 숫자·근거)은 실행 버튼이 아니라 데이터가 만든다. */
   const verdict = buildVerdict({
