@@ -77,13 +77,16 @@ test("①② 허브 — 단지 분석은 바로 열기 · 지역 시세는 조�
   /* 지역 시세 분석 조각 — 검색칸(클라이언트 · 카탈로그 import 없음) · 시/도 필터(클라이언트 · 판은 서버) · 비교 화면 글자 링크 3 */
   const entry = strip(read("app/analysis/region-sise-entry.tsx"));
   /* [1111] 검색칸 · 시/도 표 · 지도 보기는 클라이언트 묶음(region-sise-client)이 하나로 — 판(표)은 서버가 그려 넘긴다 */
-  assert.match(entry, /<RegionSiseClient\s+regions=\{data\.regions\}\s+markers=\{data\.markers\}/);
-  assert.match(entry, /panels=\{data\.groups\.map\(\(g\) => <Panel key=\{g\.sido\} g=\{g\} \/>\)\}/);
+  /* [1211] 시 · 구 전체 표는 지웠다(소유자 "삭제해줘") — 검색칸만(searchOnly) */
+  assert.match(entry, /<RegionSiseClient regions=\{data\.regions\} markers=\{data\.markers\} sidos=\{\[\]\} counts=\{\[\]\} panels=\{\[\]\} searchOnly \/>/);
+  assert.doesNotMatch(entry, /<Panel /);
   const client = strip(read("app/analysis/region-sise-client.tsx"));
   assert.match(client, /<RegionSearchBox regions=\{regions\} autoFocus=\{autoFocus\} onMapClick=\{\(\) => setView\("map"\)\} \/>/);
   assert.match(client, /<SidoFilter sidos=\{sidos\} counts=\{counts\} panels=\{panels\} \/>/);
   assert.match(client, /<RegionMapPicker markers=\{markers\}/);
-  for (const h of ["/analysis/temperature", "/analysis/gap", "/analysis/scenario"]) assert.ok(entry.includes(`href="${h}"`), h);
+  /* [1211] 지역 비교 화면 셋은 "더보기" 접힘 안(배열로 그린다) */
+  for (const h of ["/analysis/temperature", "/analysis/gap", "/analysis/scenario"]) assert.ok(entry.includes(`"${h}"`), h);
+  assert.match(entry, /더보기 <span aria-hidden="true"/);
   assert.match(entry, /loadWithinPrerenderBudget\(`\$\{what\} 스냅샷`, \(\) => getAllRegionSnapshots\(\), BUDGET_MS\)/);
   assert.match(entry, /loadWithinPrerenderBudget\(`\$\{what\} 온도`, \(\) => listLatestTemperatures\(\), BUDGET_MS\)/);
   const box = strip(read("app/analysis/region-search-box.tsx"));

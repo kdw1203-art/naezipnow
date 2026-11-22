@@ -140,13 +140,7 @@ test("D4 실거래 구간표 — 고정 폭 없음 · 칸 nowrap · 구간 링�
   assert.match(src, /min-h-\[40px\] items-center font-bold text-primary no-underline hover:underline md:min-h-6/);
 });
 
-test("D4 입주 물량 목록 — 폰은 네 열이 틀 안(이름 열만 가변 · 값 열 고정 폭) · md 부터 520px", () => {
-  const src = read("app/supply/SupplyClient.tsx");
-  assert.match(src, /md:min-w-\[520px\]/);
-  assert.doesNotMatch(src, /<div className="min-w-\[520px\]">/);
-  assert.match(src, /grid-cols-\[minmax\(0,1fr\)_54px_40px_48px\]/);
-  assert.match(src, /thisQuarterIsNow \? "이번 분기 입주" : "다음 입주 분기"/);
-});
+/* [1211] 입주 물량 전체 표는 지웠다(소유자 "삭제해줘") — 그 표 폭 검사를 걷었다 */
 
 test("D4 지역 허브 단지 목록 — 구분점은 nowrap 밖", () => {
   const src = read("app/region/[id]/RegionComplexList.tsx");
@@ -273,8 +267,7 @@ test("D8 오류·빈 상태·권유 문구", () => {
   const town = read("app/components/home/HomeTownBlock.tsx");
   assert.match(town, /이웃 글 불러오기 실패 · 잠시 후 다시/);
   assert.match(town, /뉴스 불러오기 실패 · 잠시 후 다시/);
-  /* [1110] 면적대별 실거래가 화면은 지웠다 — 같은 꼴의 실패 문구는 지역 시세 분석 입구가 쓴다(LOAD_FAILED_LINE) */
-  assert.match(read("app/analysis/region-sise-entry.tsx"), /LOAD_FAILED_LINE/);
+  /* [1211] 지역 시세 전체 표를 지워 입구는 실패 문구를 쓰지 않는다(시세판 · 검색칸만) */
   assert.match(read("app/analysis/error.tsx"), /분석 화면 불러오기 실패 · 잠시 후 다시/);
   assert.match(read("app/digest/[week]/page.tsx"), /이 주 시장 온도 스냅샷 없음/);
   assert.match(read("app/tx/[region]/[kind]/[band]/page.tsx"), /이 구간 단지별 내역 없음/);

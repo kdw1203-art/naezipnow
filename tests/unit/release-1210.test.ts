@@ -53,7 +53,8 @@ test("폰 정리 — 쿠키 배너 한 줄 · 관리자 배너 자리 숨김 · 
   const banner = read("components/consent/cookie-consent-banner.tsx");
   assert.match(banner, /max-md:flex-row max-md:items-center/);
   assert.match(banner, /aria-label="필수만 허용"/, "e2e 이름 유지");
-  assert.match(read("app/components/ads/AdminStripPlaceholder.tsx"), /max-md:!hidden/);
+  /* [1211] 관리자 배너 자리 줄은 폰 · PC 모두 걷었다 */
+  assert.match(read("app/components/ads/AdminStripPlaceholder.tsx"), /return null;/);
   const dong = read("app/dong/[region]/[dong]/page.tsx");
   assert.match(dong, /seoulGuHref\(gu\.slug\)/);
   assert.match(dong, /href="\/apply"/);

@@ -28,7 +28,6 @@ import { Explain } from "@/app/components/explain/Explain";
  */
 
 /* [1084] 200 → 40 — 200행을 한 번에 그려 쪽이 11,239px 였다(운영 실측). 나머지는 "더 보기"(행 수를 숨기지 않는다) */
-const TABLE_INITIAL_ROWS = 12;
 
 type MonthBucket = { ym: string; count: number; households: number };
 
@@ -152,7 +151,6 @@ export function SupplyClient({
   const items = useMemo(() => fromSupplyWire(itemsWire), [itemsWire]);
   // SSR/첫 하이드레이션은 전국(null) — 프리렌더 HTML 과 정확히 일치.
   const [region, setRegion] = useState<string | null>(null);
-  const [tableExpanded, setTableExpanded] = useState(false);
   /* [2026-08-22] 지역 목록이 상위 5개에서 잘려 6위 이하 시도는 URL 을 손으로
      고치지 않으면 선택 자체가 불가능했다 — 전체 보기 토글로 연다. */
   const [regionsOpen, setRegionsOpen] = useState(false);
@@ -165,7 +163,6 @@ export function SupplyClient({
     setRegion(readRegionFromLocation());
     const onPop = () => {
       setRegion(readRegionFromLocation());
-      setTableExpanded(false);
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
@@ -173,7 +170,6 @@ export function SupplyClient({
 
   const selectRegion = (next: string | null) => {
     setRegion(next);
-    setTableExpanded(false);
     const url = next ? `/supply?region=${encodeURIComponent(next)}` : "/supply";
     window.history.pushState(null, "", url);
   };
@@ -226,16 +222,6 @@ export function SupplyClient({
   const noMonthHouseholds = noMonth.reduce((a, s) => a + (Number(s.households ?? 0) || 0), 0);
   const monthlyMax = monthlyShown.reduce((m, b) => Math.max(m, b.households), 0);
 
-  /* [1084] 표 순서 — 이번 달 이후 입주(가까운 순)가 먼저, 지난 입주(최근 순)는 뒤. 예전엔 입주월 오름차순 그대로라 "입주 예정" 표의
-     첫 행이 이미 입주한 2026.01 단지였다(운영 실측). 입주월 없는 단지는 맨 뒤 */
-  const nowYmKey = kstYm(nowMs);
-  const tableOrdered = [
-    ...list.filter((s) => validYm(s.moveInYm) && String(s.moveInYm) >= nowYmKey),
-    ...list.filter((s) => validYm(s.moveInYm) && String(s.moveInYm) < nowYmKey).reverse(),
-    ...list.filter((s) => !validYm(s.moveInYm)),
-  ];
-  const tableRows = tableExpanded ? tableOrdered : tableOrdered.slice(0, TABLE_INITIAL_ROWS);
-  const tableHiddenCount = tableOrdered.length - tableRows.length;
 
   return (
     <div className="grid grid-cols-1 gap-4 max-md:gap-3 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -427,83 +413,13 @@ export function SupplyClient({
             })()}
             {featuredMore > 0 && (
               <p className="rise-in-2 px-1 t-sub text-text-3">
-                외 {featuredMore.toLocaleString()}곳 · 아래 표
+                외 {featuredMore.toLocaleString()}곳
               </p>
             )}
           </>
         )}
 
-        {/* [1186 · 통폐합] "다가오는 입주(예정)" 6줄은 걷었다 — 바로 아래 전체 표의 첫 줄들(이번 달 이후 · 가까운 순)과 같은 단지였다.
-            전체 표는 처음 12곳만 펼치고 나머지는 "더 보기"(운영 실측 2026-11-15: 폰 화면 5,808px). */}
-        {/* 지난·전체 입주 예정 단지 — 곳수는 전량 기준(조용한 200 상한 정정),
-            표는 200행에서 시작하고 "더 보기"로 펼친다 (상한을 가리지 않는다). */}
-        <h2 className="rise-in-4 px-1 pt-1.5 t-section font-bold text-text-2">
-          {list.length > 0
-            ? `전체 입주 단지 · ${list.length.toLocaleString()}곳`
-            : "전체 입주 단지"}
-        </h2>
-        {list.length > 0 && <p className="-mt-1 px-1 t-caption text-text-3">이번 달 이후 입주(가까운 순) · 지난 입주(최근 순) · 입주월 미상</p>}
-        {list.length === 0 ? (
-          <div className="rise-in-4 card rounded-2xl px-4 py-8 text-center t-body text-text-3">
-해당 지역 입주 예정 물량 데이터 없음
-          </div>
-        ) : (
-          /* [1015] 표 껍데기 = 리퀴드 판(sand — 입주 일정 톤, 브리프 규칙 I) */
-          <div data-tone="sand"><HScroll className="rise-in-4 lq-panel py-1">
-            {/* [1054] 폰은 520px 고정 폭을 걷고 네 열을 틀 안에 넣는다 — 단지 이름 열만 줄이고(minmax(0,1fr)) 나머지는 고정 폭
-                (머리 줄과 행이 따로 그리는 격자라 auto 로 두면 행마다 열 자리가 어긋난다 · 입주월 54 · 세대수 40 · 유형 48px).
-                지역은 폰에서 이름 아래 줄로. 데스크톱 비율(1.8/.8/.8/.9)은 그대로. 폰에서 "세대수·사업유형" 열이 잘려
-                안 보이던 것(운영 실측 390px)을 고친다. */}
-            <div className="md:min-w-[520px]">
-              <div className="grid grid-cols-[minmax(0,1fr)_54px_40px_48px] gap-x-2 gap-y-2 border-b border-divider py-2 t-caption text-text-3 md:grid-cols-[1.8fr_.8fr_.8fr_.9fr] md:gap-x-3">
-                <span>단지 · 지역</span>
-                <span className="text-center">입주월</span>
-                <span className="text-center">세대수</span>
-                <span className="text-center">사업유형</span>
-              </div>
-              {tableRows.map((item, i, arr) => (
-                <div
-                  key={`row-${item.aptName ?? "미정"}-${i}`}
-                  className={`grid grid-cols-[minmax(0,1fr)_54px_40px_48px] items-center gap-x-2 gap-y-2 py-2.5 text-xs md:grid-cols-[1.8fr_.8fr_.8fr_.9fr] md:gap-x-3 ${
-                    i < arr.length - 1 ? "border-b border-divider" : ""
-                  }`}
-                >
-                  <span className="min-w-0 font-bold text-ink">
-                    <span className="block truncate md:inline">{item.aptName ?? "미정"}</span>
-                    <span className="block truncate t-caption font-medium text-text-3 md:ml-1 md:inline">
-                      {item.region}
-                    </span>
-                  </span>
-                  <span className="text-center font-bold text-text-1">
-                    {fmtYm(item.moveInYm)}
-                  </span>
-                  <span className="text-center font-bold tabular-nums text-text-1">
-                    {item.households ? item.households.toLocaleString("ko-KR") : "—"}
-                  </span>
-                  <span className="text-center font-bold text-primary">
-                    {item.bizType ?? "—"}
-                  </span>
-                </div>
-              ))}
-              {tableHiddenCount > 0 && (
-                <div className="py-2">
-                  <button
-                    type="button"
-                    onClick={() => setTableExpanded(true)}
-                    className="press inline-flex min-h-[40px] w-full items-center justify-center rounded-lg border border-line bg-surface py-2 text-xs font-bold text-text-1"
-                  >
-                    {/* 글을 span 으로 — 40px 버튼 높이를 12px 글자 줄 수로 읽어 "3줄"로 오판하던 narrow-text 검사가 글 상자만 잰다 */}
-                    <span>나머지 {tableHiddenCount.toLocaleString()}곳 더 보기</span>
-                  </button>
-                </div>
-              )}
-              <div className="pb-2 pt-1 t-caption text-text-3">
-                출처 청약홈 분양공고(매일 갱신) · 공공데이터 입주예정물량(2026년 2월)
-                {asOfLabel ? ` · ${asOfLabel} 기준` : ""}
-              </div>
-            </div>
-          </HScroll></div>
-        )}
+        {/* [1211] 소유자 "삭제해줘" — "전체 입주 단지 · 1,053곳" 표를 지웠다. 이 지역 단지는 위 지도 · 대표 단지 줄과 월별 그래프로 본다 */}
       </div>
 
       {/* ── 우측 사이드 (청약 센터 aside 구성) ── */}
