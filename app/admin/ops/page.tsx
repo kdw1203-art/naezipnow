@@ -5,7 +5,7 @@ import { loadAdminKpi } from "@/lib/admin/stats";
 import { listBanners, type Banner } from "@/lib/admin/banners";
 import { loadRecentErrors } from "@/lib/admin/error-log";
 import { loadRecentHealthAlerts } from "@/lib/admin/health-alerts";
-import { outageWindowOf } from "@/lib/admin/health-alerts-fold";
+import { isSetupNeededAlert, outageWindowOf } from "@/lib/admin/health-alerts-fold";
 import { formatKstDateTime } from "@/lib/format/kst";
 import { listAuditLog, type AuditRow } from "@/lib/admin/audit";
 import { mailStatus } from "@/lib/email/send";
@@ -114,9 +114,12 @@ export default async function AdminOpsPage() {
     listAuditLog(15).catch(() => [] as AuditRow[]),
   ]);
   /* [999] critical 종 수는 "지금 울리는 것"만 — 해소된 경보는 판에 남되 수에 안 들어간다 */
-  const criticalAlerts = alerts.filter((a) => a.severity === "critical" && a.active);
-  const activeAlerts = alerts.filter((a) => a.active);
-  const resolvedAlerts = alerts.filter((a) => !a.active);
+  /* [1210 · 17] 키 미설정 · 활용신청 대기는 경보 목록에서 빼고 "설정 필요" 한 줄로 — 진짜 장애가 묻히지 않게 */
+  const setupAlerts = alerts.filter((a) => a.active && isSetupNeededAlert(a.detail));
+  const boardAlerts = alerts.filter((a) => !(a.active && isSetupNeededAlert(a.detail)));
+  const criticalAlerts = boardAlerts.filter((a) => a.severity === "critical" && a.active);
+  const activeAlerts = boardAlerts.filter((a) => a.active);
+  const resolvedAlerts = boardAlerts.filter((a) => !a.active);
   const outage = outageWindowOf(alerts);
   const hasFunnel = funnel.length > 0 && funnel.some((s) => s.count > 0);
 
@@ -187,8 +190,14 @@ export default async function AdminOpsPage() {
               GitHub › Actions › ETL 실행 기록을 확인(스케줄 비활성 · 분 한도 소진이면 멈춘다 · 1099 부터 plan-expiry · points-expiry 는 Vercel 크론도 돈다)
             </div>
           )}
+          {setupAlerts.length > 0 && (
+            <div className="rounded-xl border border-[rgba(255,255,255,.08)] px-3 py-2 text-[12px] leading-relaxed text-ai-muted">
+              <span className="font-bold text-[#c9d2e0]">설정 필요 {setupAlerts.length}</span> · 장애가 아니라 키 · 활용신청 대기 —{" "}
+              {setupAlerts.map((a) => a.checkName.replace(/^ops\.ingest:/, "")).join(" · ")}
+            </div>
+          )}
           <div className="flex flex-col">
-            {alerts.map((a) => (
+            {boardAlerts.map((a) => (
               <div
                 key={`${a.checkName}-${a.severity}-${a.target}`}
                 className={`flex flex-wrap items-baseline gap-x-2 gap-y-0.5 border-b border-[rgba(255,255,255,.06)] py-2 last:border-0 ${

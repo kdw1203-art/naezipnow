@@ -37,7 +37,7 @@ const strip = (src: string) =>
 test("C1 use-near-viewport — 래퍼마다 복제된 관찰자 코드를 한 훅으로 · 11개 *Lazy.tsx 어디에도 new IntersectionObserver 없음", () => {
   const dir = path.join(ROOT, "app/complex/[id]");
   const lazies = readdirSync(dir).filter((f) => /Lazy\.tsx$/.test(f));
-  assert.equal(lazies.length, 11, "지연 래퍼 11개");
+  assert.equal(lazies.length, 12, "지연 래퍼 12개([1210] AI 한 줄 판정 추가)");
   for (const f of lazies) {
     const src = strip(read(`app/complex/[id]/${f}`));
     assert.doesNotMatch(src, /new IntersectionObserver/, `${f} 에 관찰자 보일러플레이트가 남아 있다`);

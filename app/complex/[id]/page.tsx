@@ -1,5 +1,6 @@
 /* [1026c · 번들] 방문 기록기(RecentComplexRecorder)·거리뷰 버튼(RoadviewButtonLazy)만 첫 로드에서 가볍게 — 배포 빌드 479/480KB 여유. */
 /* [1012 · 규칙 8] font-bold(800) → font-bold(700) — 굵기 3단(400·500·700). 이 파일의 모든 자리에 적용. */
+import { ComplexAiVerdictsLazy } from "./ComplexAiVerdictsLazy";
 import { RegionExpertPromo } from "@/app/components/experts/ExpertPromo";
 import { cache } from "react";
 import { loanRegionFromRegionName } from "@/lib/finance/loan-rules";
@@ -1819,6 +1820,8 @@ export default async function ComplexHubPage({
             regionName={axisRegionName(v.city, v.dong)}
             series={trend ? { yms: trend.yms, counts: trend.all.counts, mainValues: trend.types[0]?.values } : null}
           />
+          {/* [1210 · 34] 단지를 보면 바로 4가지 AI 판정 한 줄씩(규칙 판정 · 화면에 들어올 때 한 번 받는다) */}
+          <ComplexAiVerdictsLazy complexId={complexId} className="mt-3" />
           {/* [1108] 이 단지 AI 입구는 위 결과 요약 머리의 "이 단지 AI 종합 진단 받기 ›"(ComplexInsightView) 하나 — 예전엔 아래 임장노트 카드 안
               "AI 분석" 소제목 + 단추가 하나 더 섰다(AI 진입 12 → 3 · 화면당 입구 하나). 폰 하단 바의 AI 칸(analysisHref)은 그대로. */}
 

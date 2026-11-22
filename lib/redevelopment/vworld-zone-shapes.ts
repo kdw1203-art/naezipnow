@@ -9,7 +9,8 @@ import type { ZoneShape } from "./zone-shapes";
 
 export const VWORLD_ZONE_LAYER = "LT_C_UPISUQ161";
 export const VWORLD_ZONE_SHAPES_URL = "/api/redevelopment/vworld-shapes";
-export const VWORLD_ZONE_KEYWORDS = ["재개발", "재건축", "정비구역", "촉진", "주거환경", "도시환경"] as const;
+/* [1210 · 9] 소규모 정비(가로주택 · 소규모재건축 · 모아타운)도 — 첫 수집 112곳이 큰 정비사업 이름뿐이었다 */
+export const VWORLD_ZONE_KEYWORDS = ["재개발", "재건축", "정비구역", "촉진", "주거환경", "도시환경", "가로주택", "소규모주택", "모아타운"] as const;
 /** 대한민국 전역(제주 · 울릉 포함) */
 export const KOREA_BOX = "BOX(124.5,33.0,131.9,38.7)";
 export const VWORLD_ZONE_SHAPES_NOTE =

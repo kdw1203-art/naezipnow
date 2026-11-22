@@ -71,10 +71,12 @@ export function CookieConsentBanner() {
           40px 높이 한 줄. 탭바와 같이 서도 하단 1/3 을 넘지 않는다. 블러(backdrop-blur)는
           걷었다 — 탭바 글래스 위에 블러 층을 하나 더 얹을 이유가 없고(항목 13), 블러
           없이 80% 유리면 밑 글자가 비치므로 면은 불투명 surface 토큰(양 테마)으로. */}
-      <div className="mx-auto flex max-w-[560px] flex-col gap-1.5 rounded-2xl border border-line bg-surface p-2.5 shadow-[var(--shadow-md)] md:max-w-[360px] md:gap-2 md:p-3.5">
-        <p className="text-[12px] leading-[1.5] text-text-1">
+      {/* [1210 · 43] 폰은 **한 줄 띠** — 문구 왼쪽 · 단추 둘 오른쪽(높이 약 52px). 예전 두 줄 카드가 캡처마다 탭바 위를 크게 가렸다 */}
+      <div className="mx-auto flex max-w-[560px] flex-col gap-1.5 rounded-2xl border border-line bg-surface p-2.5 shadow-[var(--shadow-md)] max-md:flex-row max-md:items-center max-md:gap-2 max-md:rounded-xl max-md:px-3 max-md:py-1.5 md:max-w-[360px] md:gap-2 md:p-3.5">
+        <p className="text-[12px] leading-[1.5] text-text-1 max-md:min-w-0 max-md:flex-1 max-md:leading-[1.35]">
           {/* [1187] 두 문장(폰 두 줄) → 한 줄. 운영 실측(2026-11-15 · 390px): 배너가 화면 아래 110px 를 덮었다 */}
-          통계 분석 쿠키는 <b>동의한 경우에만</b> 사용 ·{" "}
+          <span className="max-md:hidden">통계 분석 쿠키는 <b>동의한 경우에만</b> 사용 ·{" "}</span>
+          <span className="md:hidden">분석 쿠키는 <b>동의 시에만</b> ·{" "}</span>
           {/* [970 · A-19] 셸 링크 — 프리페치 없음 */}
           {/* [989] 문단 속 단독 링크 — 인라인 세로 패딩은 줄 높이를 바꾸지 않으면서
               히트만 24px 로 넓힌다(이 문단에 다른 링크가 없어 겹칠 상대가 없다) */}
@@ -83,21 +85,23 @@ export function CookieConsentBanner() {
             prefetch={false}
             className="py-1 font-bold text-primary underline"
           >
-            개인정보처리방침
+            <span className="max-md:hidden">개인정보처리방침</span>
+            <span className="md:hidden">방침</span>
           </Link>
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-2 max-md:shrink-0 max-md:gap-1.5">
           <button
             type="button"
             onClick={() => decide(false)}
-            className="min-h-[40px] flex-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-[12px] font-bold text-text-1"
+            aria-label="필수만 허용"
+            className="min-h-[40px] flex-1 rounded-[10px] border border-line bg-surface px-3 py-2 text-[12px] font-bold text-text-1 max-md:min-h-[36px] max-md:flex-none max-md:px-2.5 max-md:py-1"
           >
-            필수만 허용
+            필수만
           </button>
           <button
             type="button"
             onClick={() => decide(true)}
-            className="btn-primary min-h-[40px] flex-1 rounded-[10px] px-3 py-2 text-[12px]"
+            className="btn-primary min-h-[40px] flex-1 rounded-[10px] px-3 py-2 text-[12px] max-md:min-h-[36px] max-md:flex-none max-md:px-2.5 max-md:py-1"
           >
             모두 허용
           </button>

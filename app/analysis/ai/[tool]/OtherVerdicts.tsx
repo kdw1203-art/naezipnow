@@ -24,20 +24,23 @@ export function OtherVerdicts({ tool, complexId }: { tool: string; complexId: st
     let alive = true;
     setRows(null);
     const others = FRAME_TABS.filter((t) => t.id !== tool);
-    Promise.all(
-      others.map((t) =>
-        fetch(`/api/ai/context?complexId=${encodeURIComponent(complexId)}&tool=${encodeURIComponent(t.id)}`, { cache: "no-store" })
-          .then((r) => (r.ok ? r.json() : null))
-          .then((j): Row | null => {
-            const v = j?.ok ? j.verdict : null;
-            if (!v || typeof v.headline !== "string" || !v.headline.trim()) return null;
-            return { id: t.id, label: t.label, bandLabel: String(v.bandLabel ?? ""), band: String(v.band ?? "mixed"), headline: v.headline };
-          })
-          .catch(() => null),
-      ),
-    ).then((list) => {
-      if (alive) setRows(list.filter((x): x is Row => x !== null));
-    });
+    /* [1210] 세 도구를 한 요청에(?tools=) — 컨텍스트를 세 번 만들던 것을 한 번으로 */
+    fetch(`/api/ai/context?complexId=${encodeURIComponent(complexId)}&tools=${others.map((t) => t.id).join(",")}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!alive) return;
+        const vs = (j?.ok ? j.verdicts : null) as Record<string, { headline?: unknown; bandLabel?: unknown; band?: unknown } | null> | null;
+        const list: Row[] = [];
+        for (const t of others) {
+          const v = vs?.[t.id];
+          if (!v || typeof v.headline !== "string" || !v.headline.trim()) continue;
+          list.push({ id: t.id, label: t.label, bandLabel: String(v.bandLabel ?? ""), band: String(v.band ?? "mixed"), headline: v.headline });
+        }
+        setRows(list);
+      })
+      .catch(() => {
+        if (alive) setRows([]);
+      });
     return () => {
       alive = false;
     };

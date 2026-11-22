@@ -47,7 +47,7 @@ export async function fetchVworldZoneShapesLive(): Promise<VworldShapesResult> {
 }
 
 /** 한 달 캐시 판 — 지도 화면 라우트가 쓴다 */
-export const getVworldZoneShapes = unstable_cache(fetchVworldZoneShapesLive, ["vworld-zone-shapes-v1"], {
+export const getVworldZoneShapes = unstable_cache(fetchVworldZoneShapesLive, ["vworld-zone-shapes-v2"], {
   revalidate: VWORLD_ZONE_SHAPES_TTL_S,
   tags: [VWORLD_ZONE_SHAPES_TAG],
 });
