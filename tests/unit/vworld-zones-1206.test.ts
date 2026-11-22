@@ -60,3 +60,9 @@ test("매월 크론 · 지도 두 곳 연결 · 서울 자료 유지", () => {
   assert.match(fetchSrc, /revalidate: VWORLD_ZONE_SHAPES_TTL_S/);
   assert.match(fetchSrc, /attrFilter: `dgm_nm:like:\$\{kw\}`/);
 });
+
+test("브이월드 NOT_FOUND 는 빈 모음(실패 아님) · 실패 문구에 status", () => {
+  const src = readFileSync("lib/vworld/client.ts", "utf8");
+  assert.match(src, /if \(status === "NOT_FOUND"\) \{\s*return \{ totalFeatureCount: 0/);
+  assert.match(src, /failed \(status=\$\{status \?\? "없음"\}\)/);
+});

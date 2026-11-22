@@ -105,10 +105,15 @@ export async function fetchVworldGetFeature(options: {
 
   const json = (await res.json()) as VworldDataResponse;
   const status = json.response?.status;
+  /* [1208] NOT_FOUND 는 "조건에 맞는 지물 없음"이다 — 실패가 아니다. 예전엔 던져서 키워드 하나가 비면 전국 정비구역 경계 수집 전체가
+     "VWorld … failed" 로 버려졌다(2026-11-22 운영). 빈 모음으로 돌려준다. */
+  if (status === "NOT_FOUND") {
+    return { totalFeatureCount: 0, featureCollection: { type: "FeatureCollection", features: [] } };
+  }
   if (status !== "OK") {
     throw new VworldApiError(
       json.response?.error?.code ?? "API_ERROR",
-      json.response?.error?.text ?? `VWorld ${options.data} failed`,
+      json.response?.error?.text ?? `VWorld ${options.data} failed (status=${status ?? "없음"})`,
     );
   }
 
