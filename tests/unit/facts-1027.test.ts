@@ -247,18 +247,7 @@ test("[1027 · 22] 자료 0건 쪽은 검색 제외·사이트맵 제외 — [10
 
 /* ── 23 · 주소 정리 ─────────────────────────────────────────────────────── */
 
-test("[1027 · 23] 사라진 비교 주소는 그 단지 화면으로 이동(임시) · 단지 링크는 정본 · 보관 주소 링크 없음", () => {
-  const cmp = code("app/complex/compare/[slug]/page.tsx");
-  assert.match(cmp, /const loadGoneTarget = cache\(async \(slug: string\): Promise<string \| null> => \{/);
-  assert.match(cmp, /for \(const name of \[parsed\.first, parsed\.second\]\) \{/);
-  assert.match(cmp, /if \(regionName\) return complexHrefFromNames\(regionName, name\);/);
-  /* 임시 이동(307) — 20건 경계의 조합은 다음 날 돌아올 수 있다. 정규 주소로 가는 기존 이동(순서 뒤바뀜)만 영구 */
-  assert.match(cmp, /if \(!data\) \{\s*const goneTarget = await loadGoneTarget\(slug\);\s*if \(goneTarget\) redirect\(goneTarget\);\s*notFound\(\);\s*\}/);
-  assert.match(cmp, /if \(needsRedirect\) permanentRedirect\(`\/complex\/compare\/\$\{canonicalSlug\}`\);/);
-  assert.match(cmp, /side\.latest\?\.regionName\s*\?\s*complexHrefFromNames\(side\.latest\.regionName, side\.name\)/);
-  assert.equal((cmp.match(/\/complex\/tx\/\$\{buildComplexTxSlug\(/g) ?? []).length, 1, "우회 주소는 region_name 이 빈 예외 한 곳뿐");
-  assert.doesNotMatch(code("app/notes/notes-feed-client.tsx"), /href="\/notes\/templates"/);
-});
+/* [1211] 단지 vs 단지 비교 화면을 지웠다(지도 팝업) — 그 화면만 보던 검사를 걷었다: [1027 · 23] 사라진 비교 주소 */
 
 /* ── 운영 DB 에 적용한 변경의 사본 ──────────────────────────────────────── */
 

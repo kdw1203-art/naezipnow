@@ -192,7 +192,7 @@ export default async function ComplexBrowsePage({
         </Link>
         {/* [1102] "지도에서 보기" · "임장노트 쓰기"는 아래 탭바(지도 · 기록)와 같은 길이라 뺐다 */}
         <Link
-          href="/complex/compare"
+          href="/analysis/compare"
           className="card tile px-5 py-3 t-body font-bold text-ink"
         >
           단지끼리 비교하기

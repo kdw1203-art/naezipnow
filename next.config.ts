@@ -176,6 +176,14 @@ const nextConfig: NextConfig = {
     "*.ngrok-free.app",
     "*.ngrok.io",
   ],
+  /* [1211] 단지 vs 단지 비교 화면을 지웠다(소유자 "지도에서 비교 표시를 하면 팝업으로 · 해당 페이지는 삭제") — 옛 주소(색인 · 공유 링크)는
+     지도 팝업으로 영구 이동한다. 비교 허브(/complex/compare)는 지도로. */
+  async redirects() {
+    return [
+      { source: "/complex/compare", destination: "/map", permanent: true },
+      { source: "/complex/compare/:slug", destination: "/map?pair=:slug", permanent: true },
+    ];
+  },
   async headers() {
     const isDev = process.env.NODE_ENV === "development";
     const csp = buildContentSecurityPolicy(isDev);

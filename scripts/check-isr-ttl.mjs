@@ -34,7 +34,6 @@ const ROUTES = [
   "tx/[region]",
   "tx/[region]/[kind]/[band]",
   "region/[id]",
-  "complex/compare/[slug]",
   "complex/tx/[slug]",
   "imjang/[slug]",
   "reports/[ym]",

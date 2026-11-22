@@ -172,7 +172,7 @@ test("④ [1202] 메뉴 — 상단 넷 · 실거래 대분류 없음 · 지도·
   assert.deepEqual(NAV.filter((g) => !g.more).map((g) => g.label), ["임장노트", "지도·분석", "동네", "뉴스"]);
   const map = NAV.find((g) => g.label === "지도·분석")!;
   assert.deepEqual([...(map.also ?? [])].sort(), ["/analysis", "/complex", "/dong", "/region", "/reports", "/tx"]);
-  assert.deepEqual((map.children ?? []).map((c) => [c.label, c.href]), [["통합 지도", "/map"], ["지역 시세", "/analysis/timing"], ["단지 비교", "/complex/compare"], ["AI 분석", "/analysis"]]);
+  assert.deepEqual((map.children ?? []).map((c) => [c.label, c.href]), [["통합 지도", "/map"], ["지역 시세", "/analysis/timing"], ["단지 비교", "/analysis/compare"], ["AI 분석", "/analysis"]]);
   const notes = NAV[0];
   assert.deepEqual((notes.children ?? []).map((c) => c.href), ["/notes/new", "/notes", "/notes/analysis"]);
   const tools = NAV.find((g) => g.label === "도구")!;

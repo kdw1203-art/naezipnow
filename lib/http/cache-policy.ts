@@ -162,10 +162,7 @@ export const PUBLIC_CACHE_RULES: readonly PublicCacheRule[] = [
   { path: "/tx", sMaxAge: 604800, swr: 86400 },
   /* [1083] 동별 실거래 허브 — 라우트 revalidate 86_400 과 같은 눈금 */
   { path: "/dong", sMaxAge: 86400, swr: 86400 },
-  /* N10 단지 비교 허브 — 같은 성격의 공개 집계. 라우트 revalidate 와 눈금을 맞춘다.
-     [1010] 라우트 revalidate 가 7일이 되면서 같이 올린다 — 내용이 바뀌는 지점(실거래 적재)에서
-     revalidatePath("/complex/compare") 가 돌기 때문에 시간은 안전망일 뿐이다. */
-  { path: "/complex/compare", sMaxAge: 604_800, swr: 604_800 },
+  /* [1211] N10 단지 비교 허브 · 비교 화면은 지웠다(지도 팝업 · next.config 영구 이동) */
   /* N11 시장 온도 주간 기록 허브 — 크론이 하루 두 번 갱신하므로 같은 눈금(1시간)이면
      충분하다. 지역별 상세는 동적 라우트라 여기 대상이 아니다(프리렌더 매니페스트에
      없으면 check-cache-policy 가 실패한다). */
@@ -248,12 +245,6 @@ export const PUBLIC_CACHE_PATTERN_RULES: readonly PublicCachePatternRule[] = [
   { route: "/complex/[id]", test: /^\/complex\/[^/]+$/, sMaxAge: 604_800, swr: 604_800 },
   /* [1010] 아래 둘은 라우트 revalidate 604_800(7일)과 눈금을 맞춘다 — 둘 다 국토부 실거래만으로
      그려지고, 적재 크론이 끝나면 각각 경로·라우트 단위로 비운다. */
-  {
-    route: "/complex/compare/[slug]",
-    test: /^\/complex\/compare\/[^/]+$/,
-    sMaxAge: 604_800,
-    swr: 604_800,
-  },
   { route: "/complex/tx/[slug]", test: /^\/complex\/tx\/[^/]+$/, sMaxAge: 604_800, swr: 604_800 },
   /* ── [1010] 지역·실거래·리포트 축: s-maxage 를 라우트 revalidate 와 같은 눈금으로 ──────
      s-maxage 는 "같은 주소 하나에 오리진 렌더를 얼마나 자주 치를 것인가" 를 재는 눈금이다

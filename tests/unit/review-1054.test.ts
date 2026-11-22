@@ -117,7 +117,6 @@ test("D4 HScroll — 넘칠 때만 끝 흐림·안내, 끝에 닿으면 '표 끝
     "app/tx/[region]/page.tsx",
     "app/tx/[region]/[kind]/[band]/BandComplexTable.tsx", // [1092] 표는 클라이언트 조각으로
     "app/complex/tx/[slug]/page.tsx",
-    "app/complex/compare/[slug]/page.tsx",
     "app/rent/[region]/page.tsx",
     "app/digest/[week]/page.tsx",
     "app/supply/SupplyClient.tsx",

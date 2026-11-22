@@ -43,7 +43,7 @@ test("① 메뉴 — 상단 넷 + 더보기 둘 · 지도·분석 한 칸 · 실
   assert.deepEqual(NAV.map((g) => g.label), ["임장노트", "지도·분석", "동네", "뉴스", "도구", "요금제"]);
   assert.deepEqual(NAV.filter((g) => !g.more).map((g) => g.label), ["임장노트", "지도·분석", "동네", "뉴스"]);
   const map = NAV.find((g) => g.label === "지도·분석");
-  assert.deepEqual((map?.children ?? []).map((c) => c.href), ["/map", "/analysis/timing", "/complex/compare", "/analysis"]);
+  assert.deepEqual((map?.children ?? []).map((c) => c.href), ["/map", "/analysis/timing", "/analysis/compare", "/analysis"]);
   assert.deepEqual([...(map?.also ?? [])].sort(), ["/analysis", "/complex", "/dong", "/region", "/reports", "/tx"].sort());
   /* 허브 앵커가 실재한다 — 기록 계열 앵커는 없다(임장노트 분석 화면으로) */
   const hub = read("app/analysis/page.tsx");

@@ -125,11 +125,7 @@ test("[1117] 시장 온도 레일 — 0~100 막대(지역 시세 표와 같은 �
 test("[1119] 입주 물량 월별 숫자 접힘 · 단지 비교 지역 고르기 접힘 · 맞대결 줄", () => {
   const sup = strip(read("app/supply/SupplyClient.tsx"));
   assert.match(sup, /<details className="group" open=\{monthlyShown\.length <= 2\}>/);
-  const cmp = strip(read("app/complex/compare/page.tsx"));
-  assert.match(cmp, /지역 고르기 · \{groups\.length\}곳/);
-  assert.equal((cmp.match(/groups\.map\(/g) ?? []).length, 2, "링크 63개는 HTML 에 그대로(고르기 판 · 접힘)");
-  const t = strip(read("app/complex/compare/ComparePairTiles.tsx"));
-  assert.match(t, /조합 \{rest\.length\}개 더 보기/);
+  /* [1211] 단지 비교 허브(/complex/compare)는 지웠다(지도 팝업) */
 });
 
 test("[1120] 정비사업 머리 '최다 단계' 없음 · 동네 홈 다른 동네 = 고르기 접힘 · 동 최근 실거래 앞 8건", () => {
@@ -147,11 +143,11 @@ import { COMPARE_TABS, GUIDE_TABS, REPORT_TABS } from "../../lib/nav/section-tab
 import { map3dPathFromAddress } from "../../lib/map3d/geo.ts";
 
 test("[1121] 기능 통폐합 1 · 3단계 — 묶음 탭(비교 · 리포트 · 가이드) · 계산기에 시나리오 · 지도 2D|3D · 지역 탭 임장 가이드 · 내 분석", () => {
-  assert.deepEqual(COMPARE_TABS.map((t) => t.href), ["/complex/compare", "/notes/compare", "/listings/compare"]);
+  /* [1211] 단지 짝 비교 화면을 지워 "단지" 탭은 후보 단지 비교로 */
+  assert.deepEqual(COMPARE_TABS.map((t) => t.href), ["/analysis/compare", "/notes/compare", "/listings/compare"]);
   assert.deepEqual(REPORT_TABS.map((t) => t.href), ["/reports", "/digest"]);
   assert.deepEqual(GUIDE_TABS.map((t) => t.label), ["전체", "임장", "계약", "규제", "데이터"]);
   const uses: Array<[string, string]> = [
-    ["app/complex/compare/page.tsx", 'tabs={COMPARE_TABS} current="/complex/compare"'],
     ["app/notes/compare/page.tsx", 'tabs={COMPARE_TABS} current="/notes/compare"'],
     ["app/listings/compare/page.tsx", 'tabs={COMPARE_TABS} current="/listings/compare"'],
     ["app/reports/(index)/page.tsx", 'tabs={REPORT_TABS} current="/reports"'],
@@ -164,7 +160,6 @@ test("[1121] 기능 통폐합 1 · 3단계 — 묶음 탭(비교 · 리포트 ·
     ["app/data-sources/page.tsx", 'tabs={GUIDE_TABS} current="/methodology"'],
   ];
   for (const [p, needle] of uses) assert.ok(read(p).includes(needle), p);
-  assert.match(read("app/complex/compare/page.tsx"), /href="\/analysis\/compare"/);
   assert.match(read("app/calculator/CalculatorNav.tsx"), /\{ href: "\/analysis\/scenario", label: "시장·대출 시나리오" \}/);
   assert.match(read("app/analysis/scenario/ScenarioClient.tsx"), /<CalculatorNav current="\/analysis\/scenario" \/>/);
   assert.match(read("app/imjang/[slug]/page.tsx"), /current="imjang"/);

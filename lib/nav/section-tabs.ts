@@ -4,7 +4,8 @@ export type SectionTab = { href: string; label: string };
 
 /** 비교 — 단지 짝 비교 · 노트 회차 비교 · 매물 비교함(후보 단지 비교 /analysis/compare 는 "단지" 탭 안 링크) */
 export const COMPARE_TABS: readonly SectionTab[] = [
-  { href: "/complex/compare", label: "단지" },
+  /* [1211] 단지 짝 비교 화면은 지웠다(지도 팝업) — "단지" 탭은 후보 단지 비교로 */
+  { href: "/analysis/compare", label: "단지" },
   { href: "/notes/compare", label: "노트" },
   { href: "/listings/compare", label: "매물" },
 ];

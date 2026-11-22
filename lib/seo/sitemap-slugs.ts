@@ -43,7 +43,6 @@ export const SITEMAP_SECTION_SLUGS = [
   "complexes-6",
   "regions",
   "tx",
-  "pairs",
   "reports",
   "notes",
   "glossary",

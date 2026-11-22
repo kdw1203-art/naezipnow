@@ -12,15 +12,7 @@ import { readFileSync } from "node:fs";
 
 const read = (p: string) => readFileSync(p, "utf8");
 
-test("P1 단지 비교 — 폰 한 줄 가로 밀기 · PC 줄바꿈 · 지역 화면 링크 40px", () => {
-  const s = read("app/complex/compare/page.tsx");
-  /* [1101] PC 도 한 줄 가로 밀기(얇은 막대) — 63개 칩이 PC 에서 일곱 줄이었다 */
-  /* [1119] 칩 줄 → "지역 고르기" 접힘 — 판 안 칸도 40px */
-  assert.match(s, /className="flex min-h-10 items-center justify-between gap-2 rounded-lg px-2\.5 t-sub font-bold text-text-2 no-underline hover:bg-bg"/);
-  assert.match(s, /className="mt-1 inline-flex min-h-\[40px\] items-center t-sub font-bold text-primary md:min-h-6"/);
-  /* 63개 링크는 그대로 HTML 에(검색 색인) — groups.map 두 번(칩 · 접힘) */
-  assert.equal((s.match(/groups\.map\(/g) ?? []).length, 2);
-});
+/* [1211] 단지 vs 단지 비교 화면을 지웠다(지도 팝업) — 그 화면만 보던 검사를 걷었다: P1 단지 비교 */
 
 test("P2 실거래 구간 — 이름 밑줄 없음(손 올리면) · 폰 40px · 지역 칸 이름 한 줄", () => {
   /* [1092] 표는 클라이언트 조각(BandComplexTable · 압축 행) — 같은 마크업 */

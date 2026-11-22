@@ -65,7 +65,7 @@ export const NAV: NavItem[] = [
     children: [
       { label: "통합 지도", href: "/map" },
       { label: "지역 시세", href: "/analysis/timing" },
-      { label: "단지 비교", href: "/complex/compare" },
+      { label: "단지 비교", href: "/analysis/compare" },
       { label: "AI 분석", href: "/analysis" },
     ],
   },
