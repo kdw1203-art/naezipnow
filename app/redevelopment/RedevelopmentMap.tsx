@@ -5,6 +5,7 @@ import { NaverMap } from "@/components/map/NaverMapLazy";
 import type { MapIdleInfo, MapMarkerData, MapPolygonData, NaverBaseMap } from "@/components/map/NaverMap";
 import { ZONE_HISTORY_COLOR, ZONE_HISTORY_LABEL, ZONE_SHAPES_CREDIT, ZONE_SHAPES_URL, historyShapesIn, matchZoneShape, type ZoneShape, type ZoneShapeFile } from "@/lib/redevelopment/zone-shapes";
 import { NEWTOWN_SHAPES_NOTE, NEWTOWN_SHAPES_URL } from "@/lib/redevelopment/newtown-shapes";
+import { VWORLD_ZONE_SHAPES_URL } from "@/lib/redevelopment/vworld-zone-shapes";
 import {
   STAGES,
   colorForType,
@@ -196,8 +197,14 @@ export function RedevelopmentMap({
         .then((r) => (r.ok ? (r.json() as Promise<ZoneShapeFile>) : null))
         .then((j) => (j && Array.isArray(j.zones) ? j.zones : []))
         .catch(() => [] as ZoneShape[]);
+    /* [1206] 서울 밖 정비구역 참고 경계(브이월드 · 매월 갱신)는 느릴 수 있어 뒤따라 붙인다 — 서울 도형이 먼저 그려진다 */
     Promise.all([getZones(ZONE_SHAPES_URL), getZones(NEWTOWN_SHAPES_URL)]).then(([seoul, newtown]) => {
       if (alive && seoul.length + newtown.length > 0) setZoneShapes([...seoul, ...newtown]);
+      void getZones(VWORLD_ZONE_SHAPES_URL).then((nation) => {
+        /* alive 를 보지 않는다 — 앞의 setZoneShapes 가 이 효과를 다시 돌려(cleanup → alive=false) 늦게 온 전국 도형이 버려진다.
+           언마운트 뒤 setState 는 React 18 에서 무해하다 */
+        if (nation.length > 0) setZoneShapes((prev) => [...(prev ?? [...seoul, ...newtown]), ...nation]);
+      });
     });
     return () => {
       alive = false;

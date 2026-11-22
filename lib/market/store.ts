@@ -189,6 +189,8 @@ export type IngestSource =
   | MarketSource
   | "molit"
   | "apt-master"
+  /* [1206] 전국 정비구역 참고 경계(브이월드 · 매월) */
+  | "redev-shapes"
   | "apt-detail"
   | "ecos"
   | "economy-alerts"

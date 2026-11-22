@@ -41,6 +41,10 @@
       "schedule": "50 5,17 * * *"
     },
     {
+      "path": "/api/cron/redev-zone-shapes-refresh",
+      "schedule": "17 18 1 * *"
+    },
+    {
       "path": "/api/cron/kb-ingest",
       "schedule": "0 1 * * *"
     },
