@@ -597,8 +597,11 @@ export function NaverMap({
     toggleLayer(bicycleLayerRef, maps.BicycleLayer, nativeLayers?.bicycle);
   }, [loaded, nativeLayers?.traffic, nativeLayers?.cadastral, nativeLayers?.bicycle]);
 
-  /* [1161] 다각형 오버레이 — 목록이 바뀌면 지우고 다시 그린다(수백 개 수준 · 누를 수 없음) */
-  const polygonRefs = useRef<NaverLayer[]>([]);
+  /* [1161] 다각형 오버레이(누를 수 없음).
+     [1211] 소유자 "지도가 너무 느리게 반응해" — 예전엔 목록이 바뀔 때마다(= 지도를 멈출 때마다 · 화면 범위가 memo 의존이라)
+     수백 개를 **전부 지우고 다시** 만들었다(구 단위 화면에서 최대 600여 개 · 멈출 때마다 지도 SDK 가 전부 다시 그림).
+     이제 id 로 비교해 바뀐 것만 더하고 뺀다 — 같은 구역 · 같은 색 · 같은 꼴이면 그대로 둔다. */
+  const polygonRefs = useRef<Map<string, { layer: NaverLayer; sig: string }>>(new Map());
   useEffect(() => {
     if (!loaded || !mapRef.current) return;
     const maps = getNaverMapsWindow().naver?.maps;
@@ -610,27 +613,54 @@ export function NaverMap({
         /* 지도가 이미 내려간 뒤의 정리 — 무시 */
       }
     };
-    for (const pg of polygonRefs.current) quiet(() => pg.setMap(null));
-    polygonRefs.current = [];
-    if (!maps?.Polygon || !polygons || polygons.length === 0) return;
-    for (const p of polygons) {
-      const path: unknown[] = [];
-      for (let i = 0; i + 1 < p.path.length; i += 2) path.push(new maps.LatLng(p.path[i + 1], p.path[i]));
-      if (path.length < 3) continue;
+    const store = polygonRefs.current;
+    const next = new Set<string>();
+    if (maps?.Polygon && polygons) {
       const Polygon = maps.Polygon;
-      quiet(() => {
-        polygonRefs.current.push(
-          p.faint
+      for (const p of polygons) {
+        const sig = `${p.color}|${p.faint ? 1 : 0}|${p.path.length}`;
+        const have = store.get(p.id);
+        if (have && have.sig === sig) {
+          next.add(p.id);
+          continue;
+        }
+        if (have) {
+          quiet(() => have.layer.setMap(null));
+          store.delete(p.id);
+        }
+        const path: unknown[] = [];
+        for (let i = 0; i + 1 < p.path.length; i += 2) path.push(new maps.LatLng(p.path[i + 1], p.path[i]));
+        if (path.length < 3) continue;
+        quiet(() => {
+          const layer = p.faint
             ? new Polygon({ map, paths: [path], strokeColor: p.color, strokeOpacity: 0.6, strokeWeight: 1, strokeStyle: "shortdash", fillColor: p.color, fillOpacity: 0.04, clickable: false, zIndex: 1 })
-            : new Polygon({ map, paths: [path], strokeColor: p.color, strokeOpacity: 0.9, strokeWeight: 2, fillColor: p.color, fillOpacity: 0.16, clickable: false, zIndex: 2 }),
-        );
-      });
+            : new Polygon({ map, paths: [path], strokeColor: p.color, strokeOpacity: 0.9, strokeWeight: 2, fillColor: p.color, fillOpacity: 0.16, clickable: false, zIndex: 2 });
+          store.set(p.id, { layer, sig });
+          next.add(p.id);
+        });
+      }
     }
-    return () => {
-      for (const pg of polygonRefs.current) quiet(() => pg.setMap(null));
-      polygonRefs.current = [];
-    };
+    for (const [id, v] of store) {
+      if (!next.has(id)) {
+        quiet(() => v.layer.setMap(null));
+        store.delete(id);
+      }
+    }
   }, [loaded, polygons]);
+  /* 지도가 내려갈 때 남은 다각형 정리 */
+  useEffect(() => {
+    const store = polygonRefs.current;
+    return () => {
+      for (const v of store.values()) {
+        try {
+          v.layer.setMap(null);
+        } catch {
+          /* 무시 */
+        }
+      }
+      store.clear();
+    };
+  }, []);
 
   // 지도 유형 (일반/위성)
   useEffect(() => {
