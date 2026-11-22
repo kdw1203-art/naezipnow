@@ -285,7 +285,7 @@ export default async function Home() {
                     href="/map"
                     className="tap-line inline-block py-[5px] t-sub font-bold text-primary no-underline"
                   >
-                    지도에서 전체 보기 ›
+                    전체 ›
                   </Link>
                 </div>
                   <>
@@ -345,9 +345,9 @@ export default async function Home() {
                     )}
                     <Link
                       href="/notes"
-                      className="tap-line inline-block py-[5px] t-sub text-text-3 transition-colors hover:text-primary"
+                      className="tap-line inline-block shrink-0 py-[5px] t-sub font-bold text-primary no-underline"
                     >
-                      더보기
+                      전체 ›
                     </Link>
                   </span>
                 </div>

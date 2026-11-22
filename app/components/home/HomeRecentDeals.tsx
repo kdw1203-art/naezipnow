@@ -33,7 +33,7 @@ export function HomeRecentDeals({
           {regionName} 실거래 금액 순위
         </h2>
         <Link href={mapHref} className="tap-line inline-block shrink-0 py-[5px] t-sub font-bold text-primary no-underline">
-          지도에서 전체 ›
+          전체 ›
         </Link>
       </div>
       {ranked.length === 0 ? (

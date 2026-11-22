@@ -62,9 +62,9 @@ export function HomeTownBlock({
           {/* [1054] tap-line — 폰에서 27px 이던 세로 히트를 32px 로(레이아웃 불변) */}
           <Link
             href="/town"
-            className="tap-line inline-block py-[5px] t-sub text-text-3 transition-colors hover:text-primary"
+            className="tap-line inline-block shrink-0 py-[5px] t-sub font-bold text-primary no-underline"
           >
-            더보기
+            전체 ›
           </Link>
         </div>
         {failed ? (
@@ -121,9 +121,9 @@ export function HomeTownBlock({
           <h2 className="t-section text-ink">뉴스룸</h2>
           <Link
             href="/town/news"
-            className="tap-line inline-block py-[5px] t-sub text-text-3 transition-colors hover:text-primary"
+            className="tap-line inline-block shrink-0 py-[5px] t-sub font-bold text-primary no-underline"
           >
-            더보기
+            전체 ›
           </Link>
         </div>
         {failed ? (
