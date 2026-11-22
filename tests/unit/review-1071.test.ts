@@ -18,10 +18,7 @@ test("T1 한 가지 꼴 — [1110] 기록 계열 표는 임장노트 분석 화�
   const notes = read("app/notes/analysis/page.tsx");
   assert.match(notes, /<ToolRows tools=\{RECORD_LIVE\} nowLabel="내 기록"/);
   assert.ok(!page.includes("<ToolCard") && !notes.includes("<ToolCard"), "카드가 남았다");
-  /* 지역 시세 표도 같은 칸 폭(tool-cols) · 줄은 링크 */
-  const entry = read("app/analysis/region-sise-entry.tsx");
-  assert.match(entry, /from "\.\/tool-cols"/);
-  assert.match(entry, /\$\{TOOL_COL_NAME\}/);
+  /* [1211] 지역 시세 전체 표는 지웠다 */
   /* 줄 전체가 눌린다 — 단지 분석 표와 같은 손맛 */
   const rows = read("app/analysis/hub-tool-rows.tsx");
   assert.match(rows, /<ClickRow/);
@@ -47,8 +44,7 @@ test("T3 사실 보존 — [1110] 지금 값은 지역 시세 표의 칸으로(�
   assert.doesNotMatch(rows, /teaser\.|<Sparkline/, "티저 · 추세선 배선은 지역 시세 분석으로 넘어갔다");
   assert.match(rows, /marketPersonaByHref\(t\.href\)/);
   assert.match(rows, /ACCEPTS_COMPLEX\.has\(t\.href\)/);
-  const entry = read("app/analysis/region-sise-entry.tsx");
-  for (const needle of ["평균 매매가", "전세가율", "시장 온도", "formatKrwShort(r.avgSaleKrw)", "r.jeonseRatio.toFixed(1)", "r.temp.score"]) assert.ok(entry.includes(needle), needle);
+  /* [1211] 지역 시세 전체 표(평균 매매가 · 전세가율 · 온도 칸)는 지웠다 — 같은 값은 지역 화면(/region/[id])이 말한다 */
   const notes = read("app/notes/analysis/page.tsx");
   assert.match(notes, /"\/analysis\/compare": <CompareTrayCount bare \/>/);
   assert.match(notes, /<HubNoteAnalysis \/>/);

@@ -27,11 +27,7 @@ test("공개 임장노트 — 오른쪽 레일은 광고만(표 첫 줄들과 �
   assert.doesNotMatch(f, />최근 임장</);
 });
 
-test("지역 시세 표 — 시장 온도 0~100 막대(50 눈금)", () => {
-  const e = strip(read("app/analysis/region-sise-entry.tsx"));
-  assert.match(e, /r\.temp\.score >= 55 \? "bg-up" : r\.temp\.score <= 45 \? "bg-down" : "bg-text-3"/);
-  assert.match(e, /left-1\/2 w-px bg-surface/);
-});
+/* [1211] 지역 시세 전체 표(시장 온도 막대)는 지웠다 — 소유자 "삭제해줘" */
 
 import { buildTickerPages, seriesSince, toTickerCard } from "../../lib/region/region-ticker.ts";
 

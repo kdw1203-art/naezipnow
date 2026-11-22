@@ -104,21 +104,23 @@ export function TownCategoryNav({
                md+ 는 가로 균등 분배 유지. */
             /* [959] 램프 상향(sub 12·caption 10)에 맞춰 높이 +4px. 그림자는 토큰 3단 중 md. */
             /* [1209] 소유자 "중복 · 크기 정리" — 폰은 큰 타일(80px · 설명 두 줄) 대신 알약 한 줄(아이콘 + 이름 · 40px). PC 그대로 */
-            className={`press relative flex w-[96px] shrink-0 flex-col items-center justify-center rounded-2xl border px-2 text-center no-underline transition-all duration-300 ease-out max-md:!h-10 max-md:!w-auto max-md:flex-row max-md:gap-1.5 max-md:!rounded-full max-md:px-3 md:w-auto md:min-w-0 md:flex-1 md:basis-0 ${
+            /* [1211] 소유자 "정리정돈"(PC 캡처) — PC 도 폰과 같은 알약 한 줄(아이콘 + 이름 · 40px). 큰 타일(96px · 설명 줄)이 머리 아래를 크게 차지했다.
+               설명은 aria-label · title 에 그대로 */
+            className={`press relative flex h-10 shrink-0 flex-row items-center justify-center gap-1.5 rounded-full border px-3 text-center no-underline transition-colors md:px-3.5 ${
               pinned
-                ? "h-[68px] border-primary bg-primary-soft shadow-[var(--shadow-md)] md:h-[76px]"
+                ? "border-primary bg-primary-soft"
                 : /* [1044] 뉴스룸 입구 칸(한지 면)은 없어졌다 — 뉴스는 제 대분류(nav-data "뉴스") */
-                  "card tile h-[80px] border-transparent md:h-[96px]"
+                  "card tile border-transparent"
             }`}
           >
             {/* 아이콘 칩 — 9칸이 전부 같은 잉크색이라 목록이 평평했다.
                 성격별 색을 입혀 스캔이 되게 한다. */}
             <span
-              className={`tile-ico flex h-8 w-8 items-center justify-center rounded-lg transition-colors max-md:!h-6 max-md:!w-6 max-md:shrink-0 ${
+              className={`tile-ico flex h-6 w-6 shrink-0 items-center justify-center rounded-lg transition-colors ${
                 pinned ? "bg-primary text-surface" : l.tone
               }`}
             >
-              <Icon name={l.icon} size={pinned ? 16 : 17} />
+              <Icon name={l.icon} size={14} />
             </span>
             {/* [959] 사람이 채우는 칸(전문가·모임·자료)은 "모집" 점 — 비어 있어도 놀라지 않게
                 [974] `&& !pinned` 를 뺐다. 활성 카드에서만 점을 숨기니 **보고 있는
@@ -128,31 +130,17 @@ export function TownCategoryNav({
                 따로 말하므로 둘은 겹치지 않는다. */}
             {l.humanSupplied ? (
               <span
-                className="absolute left-2 top-2 h-1.5 w-1.5 rounded-full bg-brand-red"
+                className="absolute right-1.5 top-1 h-1.5 w-1.5 rounded-full bg-brand-red"
                 aria-hidden="true"
               />
             ) : null}
             <span
-              className={`mt-1.5 w-full truncate t-sub font-bold transition-colors max-md:!mt-0 max-md:!w-auto max-md:whitespace-nowrap max-md:!overflow-visible ${
+              className={`whitespace-nowrap t-sub font-bold transition-colors ${
                 pinned ? "text-primary" : "text-ink"
               }`}
             >
               {l.label}
             </span>
-            {/* 고정 시 설명이 접히며 카드가 세로로 살짝 줄어든다.
-                [970 · C-37] truncate(한 줄 말줄임)라 "요약·주간 다이제스트" 가 96px 카드에서
-                "요약·주간 다…" 로 잘렸다 — 두 줄 clamp 로 전부 보이게(카드 높이 80px 안에서
-                caption 10px 두 줄이 들어간다). */}
-            <span
-              className={`clamp-2 w-full t-caption leading-[1.25] text-text-3 transition-all duration-300 ease-out max-md:!hidden ${
-                pinned ? "mt-0 max-h-0 opacity-0" : "mt-0.5 max-h-7 opacity-100"
-              }`}
-            >
-              {l.desc}
-            </span>
-            {pinned ? (
-              <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary max-md:!hidden" />
-            ) : null}
           </Link>
         );
       })}

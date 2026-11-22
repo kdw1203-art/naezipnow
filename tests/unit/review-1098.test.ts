@@ -45,15 +45,8 @@ test("상단 띠 배너 자리 — 이미지 배너만 · 높이 예약(64/90) �
   assert.match(top, /<span className="ad-strip__label">광고<\/span>/);
   assert.match(top, /rel="noopener noreferrer nofollow"/);
   assert.match(top, /\{plan == null \? <AdFreeGate>\{body\}<\/AdFreeGate> : body\}/);
-  const ph = strip(read("app/components/ads/AdminStripPlaceholder.tsx"));
-  assert.match(ph, /^"use client";/);
-  assert.match(ph, /if \(alive && \(s\?\.user\?\.role \?\? ""\) === "admin"\) setAdmin\(true\);/);
-  assert.match(ph, /if \(!admin\) return null;/);
-  /* [1204] 관리자 빈 자리 표시는 오른쪽 한 줄 글자(점선 큰 상자 → 정리) */
-  assert.match(ph, /띠 배너 없음\(\{PLACEMENT_KO\[placement\]\}\)/);
-  /* 화면 글에 느낌표 · "준비 중" 없음(코드의 ! 연산자는 제외 — JSX 글만) */
-  const phText = (ph.match(/>([^<>{}]+)</g) ?? []).join(" ");
-  assert.doesNotMatch(phText, /!|준비 중/);
+  /* [1211] 관리자 빈 자리 줄은 걷었다(소유자 캡처마다 본문 사이에 끼었다) — 부르는 쪽 계약은 그대로 · 아무것도 그리지 않는다 */
+  assert.match(strip(read("app/components/ads/AdminStripPlaceholder.tsx")), /export function AdminStripPlaceholder\(_props: \{ placement: AdPlacement; className\?: string \}\) \{\s*return null;\s*\}/);
   const css = read("app/globals.css");
   assert.match(css, /\.ad-strip__box \{[\s\S]*?height: 64px;[\s\S]*?border: 1px solid var\(--border\);/);
   assert.match(css, /@media \(min-width: 768px\) \{\s*\.ad-strip__box,\s*\.ad-strip__placeholder \{\s*height: 90px;/);

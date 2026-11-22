@@ -13,18 +13,6 @@
  */
 
 import type { AdPlacement } from "@/lib/ads/adsense-policy";
-import { PLAN_FEATURE_MATRIX } from "@/lib/subscriptions/plans";
-
-/** 요금제 비교표(PLAN_FEATURE_MATRIX)의 무료 칸 — 카드가 표와 다른 숫자를 말하지 않게 표에서 읽는다 */
-function freeLimitLine(features: readonly string[]): string {
-  return features
-    .map((f) => {
-      const v = PLAN_FEATURE_MATRIX.find((r) => r.feature === f)?.free;
-      return v ? `${f} ${v}` : null;
-    })
-    .filter((x): x is string => x !== null)
-    .join(" · ");
-}
 
 export type HouseAd = {
   id: string;
@@ -69,17 +57,8 @@ export const HOUSE_ADS: HouseAd[] = [
     href: "/map",
     showWhenSignedIn: true,
   },
-  {
-    id: "house_subscription",
-    eyebrow: "요금제",
-    /* [970 · B-29] /analysis 허브의 "단지 분석 월 2회"(AI 임장노트 자동정리)와 다른 한도라
-       어느 기능의 숫자인지 적는다 — 둘 다 PLAN_FEATURE_MATRIX(plans.ts)의 실제 값이다. */
-    title: "무료 요금제 한도",
-    body: freeLimitLine(["AI 분석 도구", "AI 임장노트 자동정리"]),
-    ctaLabel: "요금제 비교",
-    href: "/subscription",
-    showWhenSignedIn: true,
-  },
+  /* [1211] 소유자 "삭제해줘" — "무료 요금제 한도" 안내 카드(house_subscription)를 걷었다. 한도는 요금제 화면 · 한도에 닿았을 때 안내가 말한다 */
+
   /* [992 · A1] house_expert · house_expert_join 배너 제거 — 전문가(/town/experts)는 보관(비노출).
      community_feed · report_free_body 슬롯은 남은 배너(구독 안내 등)로 채워진다. */
 ];

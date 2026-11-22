@@ -18,7 +18,6 @@ import type { HubDeal } from "../../lib/complex/hub-price.ts";
 import { sidoShort, sigunguDistribution } from "../../lib/onbid/region-summary.ts";
 import { HOUSE_ADS } from "../../lib/ads/house-ads.ts";
 import { SUPPLY_WINDOW_MONTHS, addMonthsYm, inSupplyWindow, shownMonths, supplyWindow } from "../../lib/supply/window.ts";
-import { PLAN_FEATURE_MATRIX } from "../../lib/subscriptions/plans.ts";
 
 const code = (p: string) => readFileSync(join(process.cwd(), p), "utf8");
 
@@ -258,12 +257,8 @@ test("[1028 · 20] 시장 온도 — 구간 이름은 눈금만 말하고(경계
 /* ── 11. 틀린 설명 ─────────────────────────────────────────────────────── */
 
 test("[1028 · 11] 요금제 안내 카드 — 한도는 요금제 비교표의 무료 칸과 같은 말(걸리지 않는 한도를 말하지 않는다)", () => {
-  const ad = HOUSE_ADS.find((a) => a.id === "house_subscription");
-  assert.ok(ad);
-  const free = (f: string) => PLAN_FEATURE_MATRIX.find((r) => r.feature === f)?.free;
-  assert.equal(ad.body, `AI 분석 도구 ${free("AI 분석 도구")} · AI 임장노트 자동정리 ${free("AI 임장노트 자동정리")}`);
-  assert.equal(ad.body, "AI 분석 도구 누적 3회 · AI 임장노트 자동정리 월 2회");
-  assert.ok(!ad.body.includes("동네 분석 요약"), "[1004]에 비교표에서 뺀 한도(실제로 걸리지 않음)");
+  /* [1211] 요금제 안내 카드는 걷었다(소유자 "삭제해줘") */
+  assert.equal(HOUSE_ADS.find((a) => a.id === "house_subscription"), undefined);
   for (const a of HOUSE_ADS) {
     assert.ok(!/[?!]/.test(a.title), `${a.id} 제목에 물음·느낌표 없음`);
     assert.ok(!/보세요|하세요/.test(a.body), `${a.id} 본문에 권유 없음`);
