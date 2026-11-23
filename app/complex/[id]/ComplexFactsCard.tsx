@@ -118,13 +118,15 @@ export function ComplexFactsCard({
 
         {/* 자료 완성도 — 없는 항목과 **이유**(대장 미연결·신고 없음·조회 실패)를 그대로. "—" 나열 금지. */}
         {(gaps.length > 0 || (!facts.jeonseRatio && facts.jeonseRatioReason)) && (
-          <div>
-            <h3 className="t-sub font-bold text-text-2">
+          /* [1212] 접힘 — 단지 화면 끝에 "없는 자료" 목록이 펼쳐져 길이만 늘렸다(폰 6,650px). 제목 줄(n/m)만 보이고 누르면 이유 목록 */
+          <details className="group">
+            <summary className="cursor-pointer list-none t-sub font-bold text-text-2 [&::-webkit-details-marker]:hidden">
               비어 있는 자료{" "}
               <span className="font-medium text-text-3 tabular-nums">
                 {have.length}/{have.length + missing.length}
-              </span>
-            </h3>
+              </span>{" "}
+              <span aria-hidden="true" className="inline-block t-caption text-text-3 transition-transform group-open:rotate-180">▾</span>
+            </summary>
             <ul className="mt-1 flex list-none flex-col gap-0.5 p-0">
               {gaps.map((g) => (
                 <li key={g.labels.join("·")} className="t-caption leading-[1.6] text-text-3">
@@ -150,7 +152,7 @@ export function ComplexFactsCard({
                 </li>
               )}
             </ul>
-          </div>
+          </details>
         )}
 
         {/* G5+G13 — 실데이터 Q&A + FAQPage 스키마(보이는 질문·답과 같은 배열) */}

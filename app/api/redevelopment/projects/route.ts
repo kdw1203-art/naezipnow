@@ -50,9 +50,15 @@ export async function GET(req: NextRequest) {
      정비사업이 없다"고 그리게 되고, 그건 장애를 사실로 바꿔 말하는 것이다. */
   try {
     const items = await listProjects(filter);
+    /* [1212] ?view=map — 지도는 요약(summary) · 출처 이름(source · 모든 행에 같은 긴 글) · 예시 표식을 쓰지 않는다. 2,000행이면 61만 바이트였다.
+       CDN 캐시(s-maxage)도 건다 — max-age 만으로는 엣지가 한 벌도 재사용하지 않았다(지도는 격자 스냅 주소라 같은 동네면 같은 주소). */
+    const lite = sp.get("view") === "map";
+    const body = lite
+      ? items.map(({ summary: _s, source: _src, isSample: _x, ...rest }) => rest)
+      : items;
     return NextResponse.json(
-      { items },
-      { headers: { "Cache-Control": "public, max-age=60, stale-while-revalidate=300" } },
+      { items: body },
+      { headers: { "Cache-Control": "public, max-age=60, s-maxage=600, stale-while-revalidate=3600" } },
     );
   } catch (err) {
     return dbUnavailable("api/redevelopment/projects", err, "정비사업장을 불러오지 못했습니다.");

@@ -170,6 +170,8 @@ export type CountSummary = {
   signup: Array<{ route: string; label: string; n: number }>;
   /** [1125] 들어온 첫 화면을 유입 묶음(홈 · 임장노트 · 뉴스 · 전문가 · 지도 · 지역·단지 · 그 밖)으로 — 최근 7일 */
   entryGroups?: Array<{ key: string; label: string; n: number }>;
+  /** [1212] 사람 추정(최근 7일) — 폰 · 앱 안 브라우저이거나 들어온 곳(리퍼러 · utm)이 있는 방문. 리퍼러 없는 PC 방문(11-22 실측 88%)은 대부분 자동 수집이라 뺀다 */
+  likelyHuman7?: number;
 };
 
 /* [1125 · 유입 경로] 첫 화면(is_landing) 묶음 — 소유자 2026-11-10 "유입경로 임장노트 · 뉴스 · 전문가 등록". 익명 수라 사람 단위 가입 전환은 잇지 못한다(수만 센다). */
@@ -217,6 +219,7 @@ export function summarizeCounts(rows: AggRow[], today: string, isOutage: (day: s
   let prev7 = 0;
   let landings7 = 0;
   let inApp7 = 0;
+  let human7 = 0;
   const entries = new Map<string, number>();
   for (const r of rows) {
     const n = Number.isFinite(r.n) && r.n > 0 ? r.n : 0;
@@ -232,6 +235,7 @@ export function summarizeCounts(rows: AggRow[], today: string, isOutage: (day: s
     routes.set(r.route, (routes.get(r.route) ?? 0) + n);
     devices.set(r.device, (devices.get(r.device) ?? 0) + n);
     if (r.device.includes(":")) inApp7 += n;
+    if (r.device.startsWith("m") || r.ref_host || r.utm_source) human7 += n;
     if (r.is_landing) {
       landings7 += n;
       const host = r.ref_host || "";
@@ -261,6 +265,7 @@ export function summarizeCounts(rows: AggRow[], today: string, isOutage: (day: s
     topRefs: topOf(refs, 8).map(([host, n]) => ({ host, n })),
     devices: topOf(devices, 8).map(([device, n]) => ({ device, n })),
     inAppShare: last7 > 0 ? inApp7 / last7 : null,
+    likelyHuman7: human7,
     signup: SIGNUP_STEPS.map((s) => ({ ...s, n: routes.get(s.route) ?? 0 })),
     entryGroups: [...ENTRY_GROUPS.map((g) => ({ key: g.key, label: g.label, n: entries.get(g.key) ?? 0 })), { key: "other", label: "그 밖", n: entries.get("other") ?? 0 }],
   };

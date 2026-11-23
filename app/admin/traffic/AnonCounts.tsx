@@ -54,6 +54,13 @@ export function AnonCountsView({ data }: { data: CountSummary | null }) {
                 {delta !== null && ` · ${delta >= 0 ? "▲" : "▼"} ${Math.abs(delta)}%`}
                 {!comparable && ` · 운영 정지 ${outage7.last + outage7.prev}일 제외 · 증감 없음`}
               </div>
+              {/* [1212] 사람 추정 — 폰 · 앱 안 브라우저 · 들어온 곳(리퍼러 · utm)이 있는 방문만. 리퍼러 없는 PC 방문은 대부분 자동 수집 */}
+              {typeof data.likelyHuman7 === "number" && (
+                <div className="mt-0.5 text-[12px] font-bold text-text-2">
+                  사람 추정 {data.likelyHuman7.toLocaleString("ko-KR")}
+                  {data.last7 > 0 ? ` (${Math.round((data.likelyHuman7 / data.last7) * 100)}%)` : ""}
+                </div>
+              )}
             </div>
             <div>
               <div className="text-[12px] text-text-3">첫 화면(들어옴)</div>

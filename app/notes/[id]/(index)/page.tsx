@@ -1013,6 +1013,8 @@ export default async function NoteDetailPage({
             title={noteMetaTitle(noteDisplayTitle(realNote, unitFromMetadata(realNote.metadata)), realNote.region)}
             description={(realNote.summary?.trim() || `${realNote.region} 임장노트 · 채광·소음·주차·교통 평가`).slice(0, 100)}
             buttonTitle="노트 보기"
+            /* [1212] 옆 단추들(카드 보기 · 저장 · 공유 링크 · 지도에서 비교)과 같은 꼴 — 높이 40 · 옅은 파랑 · 둥근 모서리 8 */
+            className="!h-10 !rounded-lg !border-0 !bg-primary-soft !px-3.5 !text-primary"
           />
         )}
         {/* [993] "카드 덱"(/notes/[id]/deck) 버튼 제거 — 노트 출력 3종 중 card 만 남기고 보관(992)
