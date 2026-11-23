@@ -3365,7 +3365,7 @@ export function MapClient({
         ? snapViewportBounds(b, b.neLng - b.swLng < 0.06 ? 15 : b.neLng - b.swLng < 0.6 ? 12 : 10)
         : null;
       const bbox = snapped ? `&bbox=${snapped.swLat},${snapped.swLng},${snapped.neLat},${snapped.neLng}` : "";
-      fetch(`/api/redevelopment/projects?limit=2000${bbox}`, { signal: controller.signal })
+      fetch(`/api/redevelopment/projects?limit=2000&view=map${bbox}`, { signal: controller.signal })
         .then((r) => (r.ok ? r.json() : Promise.reject(new Error(String(r.status)))))
         .then((json: { items?: RedevelopmentProject[] }) => {
           if (controller.signal.aborted) return;
@@ -5553,6 +5553,7 @@ export function MapClient({
           focusNoteId={focusNoteId}
           onClose={closeInfoPanel}
           onLoaded={handleInfoLoaded}
+          onComparePair={setPairSlug}
         />
       )}
 

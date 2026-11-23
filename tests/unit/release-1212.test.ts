@@ -30,3 +30,19 @@ test("지도 — 넓게 본 화면의 정비구역 마커는 세대수 큰 순 3
   assert.match(map, /const REDEV_WIDE_MAX = 300;/);
   assert.match(map, /const redevWide = Boolean\(viewBounds && viewBounds\.neLng - viewBounds\.swLng > 0\.25\);/);
 });
+
+test("2차 — 판정 근거 한 줄 · 지도 같은 동 비교 · 없는 자료 접힘 · 빈 매물엔 광고 없음 · 정비구역 가벼운 응답 · 사람 추정", () => {
+  for (const f of ["app/complex/[id]/ComplexAiVerdicts.tsx", "app/analysis/ai/[tool]/OtherVerdicts.tsx"]) {
+    assert.match(read(f), /\{r\.reason && <span className="block truncate t-caption text-text-3">\{r\.reason\}<\/span>\}/, f);
+  }
+  assert.match(read("app/map/ComplexInfoPanel.tsx"), /onClick=\{\(\) => onComparePair\(p\.slug\)\}/);
+  assert.match(read("app/map/map-client.tsx"), /onComparePair=\{setPairSlug\}/);
+  assert.match(read("app/api/map/complex-pairs/route.ts"), /\.filter\(\(p\) => p\.region === decoded\.region && \(p\.a === decoded\.name \|\| p\.b === decoded\.name\)\)/);
+  assert.match(read("app/complex/[id]/ComplexFactsCard.tsx"), /<details className="group">\s*<summary[^>]*>\s*비어 있는 자료/);
+  assert.match(read("app/listings/page.tsx"), /\{items !== null && items\.length > 0 && <AdZone placement="page_bottom"/);
+  const api = read("app/api/redevelopment/projects/route.ts");
+  assert.match(api, /items\.map\(\(\{ summary: _s, source: _src, isSample: _x, \.\.\.rest \}\) => rest\)/);
+  assert.match(api, /s-maxage=600/);
+  assert.match(read("app/map/map-client.tsx"), /\/api\/redevelopment\/projects\?limit=2000&view=map\$\{bbox\}/);
+  assert.match(read("lib/metrics/page-count.ts"), /if \(r\.device\.startsWith\("m"\) \|\| r\.ref_host \|\| r\.utm_source\) human7 \+= n;/);
+});

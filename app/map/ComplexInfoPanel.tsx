@@ -206,6 +206,8 @@ export interface ComplexInfoPanelProps {
   focusNoteId?: string | null;
   onClose: () => void;
   onLoaded?: (info: { id: string; name: string; lat: number; lng: number }) => void;
+  /** [1212] 같은 동 비교 — 조합을 고르면 지도 위 비교 팝업을 연다(slug = 예전 비교 화면 주소의 조합 키) */
+  onComparePair?: (slug: string) => void;
 }
 
 /** 만원 → "8.4억"/"8,200만", 없으면 null — **평균·요약**의 짧은 표기(eok1, 허브·지도 말풍선과 같은 얼굴).
@@ -540,7 +542,24 @@ export function ComplexInfoPanel({
   focusNoteId = null,
   onClose,
   onLoaded,
+  onComparePair,
 }: ComplexInfoPanelProps) {
+  /* [1212] 이 단지가 낀 비교 조합(같은 동 · 최대 3) — 없거나 실패면 줄 없음 */
+  const [pairs, setPairs] = useState<{ slug: string; other: string; dong: string }[]>([]);
+  useEffect(() => {
+    if (!onComparePair) return;
+    let alive = true;
+    setPairs([]);
+    fetch(`/api/map/complex-pairs?complexId=${encodeURIComponent(complexId)}`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (alive && Array.isArray(j?.pairs)) setPairs(j.pairs);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [complexId, onComparePair]);
   const [data, setData] = useState<DetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -1361,6 +1380,25 @@ export function ComplexInfoPanel({
           )}
 
           <WatchlistToggle complexId={complexId} complexName={name} />
+
+          {/* [1212] 같은 동 비교 — 누르면 지도 위 비교 팝업(예전 단지 비교 화면 대신) */}
+          {pairs.length > 0 && onComparePair && (
+            <div className="flex flex-col gap-1.5">
+              <span className="t-caption font-bold text-text-3">같은 동 비교 · {pairs[0].dong}</span>
+              <div className="flex flex-wrap gap-1.5">
+                {pairs.map((p) => (
+                  <button
+                    key={p.slug}
+                    type="button"
+                    onClick={() => onComparePair(p.slug)}
+                    className="press inline-flex min-h-10 items-center rounded-full border border-line bg-surface px-3 t-sub font-bold text-ink"
+                  >
+                    vs {p.other}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-2">
             <Link href={noteHref} className="btn-secondary rounded-xl p-[11px] text-center t-sub">

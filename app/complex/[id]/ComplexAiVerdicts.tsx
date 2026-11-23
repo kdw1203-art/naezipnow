@@ -8,7 +8,7 @@ import { useEffect, useState } from "react";
 import Link from "@/app/components/IntentLink";
 import { FRAME_TABS, frameTabHref } from "@/lib/ai/frame-tabs";
 
-type Row = { id: string; label: string; bandLabel: string; band: string; headline: string };
+type Row = { id: string; label: string; bandLabel: string; band: string; headline: string; reason: string | null };
 
 /* lib/ai/outcome-band OutcomeBand — strong 좋음 · mixed 보통 · weak 주의 · thin 자료 부족 (OtherVerdicts 와 같은 표) */
 const BAND_CLASS: Record<string, string> = {
@@ -31,12 +31,12 @@ export function ComplexAiVerdicts({ complexId, className = "" }: { complexId: st
       .then((r) => (r.ok ? r.json() : null))
       .then((j) => {
         if (!alive) return;
-        const vs = (j?.ok ? j.verdicts : null) as Record<string, { headline?: unknown; bandLabel?: unknown; band?: unknown } | null> | null;
+        const vs = (j?.ok ? j.verdicts : null) as Record<string, { headline?: unknown; bandLabel?: unknown; band?: unknown; bandReason?: unknown } | null> | null;
         const list: Row[] = [];
         for (const t of FRAME_TABS) {
           const v = vs?.[t.id];
           if (!v || typeof v.headline !== "string" || !v.headline.trim()) continue;
-          list.push({ id: t.id, label: t.label, bandLabel: String(v.bandLabel ?? ""), band: String(v.band ?? "mixed"), headline: v.headline });
+          list.push({ id: t.id, label: t.label, bandLabel: String(v.bandLabel ?? ""), band: String(v.band ?? "mixed"), headline: v.headline, reason: typeof v.bandReason === "string" && v.bandReason.trim() ? v.bandReason.trim() : null });
         }
         setRows(list);
       })
@@ -69,7 +69,11 @@ export function ComplexAiVerdicts({ complexId, className = "" }: { complexId: st
                   {r.bandLabel && (
                     <span className={`chip shrink-0 px-2 py-0.5 t-caption font-bold ${BAND_CLASS[r.band] ?? BAND_CLASS.mixed}`}>{r.bandLabel}</span>
                   )}
-                  <span className="min-w-0 flex-1 truncate t-sub text-text-2">{r.headline}</span>
+                  {/* [1212] 판정 근거 한 줄(왜 이 판정인가 · verdict.bandReason) — 받았을 때만 */}
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate t-sub text-text-2">{r.headline}</span>
+                    {r.reason && <span className="block truncate t-caption text-text-3">{r.reason}</span>}
+                  </span>
                   <span className="shrink-0 t-sub text-text-3" aria-hidden="true">
                     ›
                   </span>

@@ -237,7 +237,7 @@ export default async function NotesComparePage({
                 href="/analysis/compare"
                 className="rounded-full border border-line bg-surface px-2.5 py-1.5 font-bold text-text-2 no-underline"
               >
-                단지 A/B 비교
+                후보 단지 비교
               </Link>
             </div>
             }

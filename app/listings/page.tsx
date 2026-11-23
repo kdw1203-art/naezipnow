@@ -96,7 +96,8 @@ export default async function ListingsPage() {
       {LISTING_COMPARE_ENTRY_OPEN && <ListingCompareTray />}
 
       {/* [1015 · 규칙 G] 광고 자리 — 페이지 끝 1곳(폰·데스크톱 같음). 첫 화면·필터·목록 사이에는 없다. */}
-      <AdZone placement="page_bottom" seed={3} plan={null} className="mt-8 max-md:mt-5" />
+      {/* [1212] 매물 0건이면 광고 자리(집 안내 "실거래가 지도")를 그리지 않는다 — 바로 위 빈 화면의 "지도에서 실거래 보기 ›"와 같은 목적지였다 */}
+      {items !== null && items.length > 0 && <AdZone placement="page_bottom" seed={3} plan={null} className="mt-8 max-md:mt-5" />}
 
       {/* 법적 고지 */}
       <div className="mt-4 rounded-xl bg-[rgba(0,0,0,.03)] px-4 py-3 t-sub leading-[1.7] text-text-3">
